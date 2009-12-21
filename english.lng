@@ -1,0 +1,83 @@
+# application title
+000 Total Commander hotkeys
+# Keyboard mapping table headers
+001 Key
+002 Type
+003 Command
+004 Description
+# soortden definities
+005 Default
+006 (Re)defined
+# modifier names
+007 Ctrl
+008 Alt
+009 Shift
+#  buttons
+010 Change keydef
+011 Remove
+012 Exit
+# screen text
+018 Key:
+019 Map key to:
+# save dialog
+020 Previously selected definition was changed - save now?
+# messages
+021 Cannot delete - No or incorrect key and/or command selected
+022 Cannot save - No or incorrect key and/or command selected
+023 Cannot delete - hotkey definitie not found
+024 Can't delete standard (builtin) definition
+025 Definitions have been changed - save now?
+026 Restart Total Commander now?
+027 Choose a language file
+028 Enter/choose the paths to the following files:
+029 Wincmd.ini
+030 Usercmd.ini
+031 Totalcmd.inc
+032 Keyboard.txt
+033 TC_hotkeys.csv
+034 The directory you specified for %s doesn't exist
+035 %s doesn't exits in the specified directory
+036 Specified restart programme doesn't exist
+037 You need to restart Total Commander for the changes to take effect
+038 Restart TC
+039 Specify the directory containing %s
+040 Choose the programme to restart Total Commander
+041 You haven't made any changes. Are you sure you want to do this?
+042 One or more of your settings files doesn't seem to exist. Please use Settings -> File Locations from the menu to check them.
+# New keyboard mapping table header
+043 Modifier(s)
+
+# key names
+100 Insert
+101 Del
+102 Home
+103 End
+104 PgUp
+105 PgDn
+106 Space
+107 Back
+108 Tab
+109 +
+110 -
+111 *
+112 /
+113 Enter
+114 Esc
+115 Left
+116 Right
+117 Up
+118 Down
+
+# menus/options
+200 &Application
+201 (re)&Read command files
+202 &Save command files and restart TC
+203 edit &Usercmd.ini
+209 e&Xit
+210 &Settings
+211 &File locations
+212 &Language
+290 &Help
+299 &About
+
+404 Function not yet implemented

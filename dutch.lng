@@ -1,0 +1,83 @@
+# application title
+000 Total Commander hotkeys
+# Keyboard mapping table headers
+001 Toets
+002 Soort
+003 Commando
+004 Omschrijving
+# soorten definities
+005 Standaard
+006 Aangepast
+# modifier namen
+007 Ctrl
+008 Alt
+009 Shift
+#  buttons
+010 Aanpassen
+011 Verwijderen
+012 Afsluiten
+# screen text
+018 Key:
+019 Map key to:
+# save dialog
+020 Eerder gekozen definitie is gewijzigd - nu opslaan?
+# messages
+021 Kan niet verwijderen - Toets en/of commando niet gekozen of niet correct
+022 Kan niet opslaan - Toets en/of commando niet gekozen of niet correct
+023 Kan niet verwijderen - toetsdefinitie niet gevonden
+024 Kan standaard toetsdefinitie niet verwijderen
+025 Definities zijn aangepast - wil je ze terugschrijven?
+026 Total Commander restarten?
+027 Kies een taalbestand
+028 Geef aan waar de volgende files zich bevinden:
+029 Wincmd.ini
+030 Usercmd.ini
+031 Totalcmd.inc
+032 Keyboard.txt
+033 TC_hotkeys.csv
+034 Opgegeven directory voor %s bestaat niet
+035 %s zit niet in de daarvoor opgegeven directory
+036 Opgegeven restart programma bestaat niet
+037 De nieuwe definities werken pas als Total Commander opnieuw gestart wordt
+038 Restart TC
+039 Kies de directory waar %s in zit
+040 Kies het programma om Total Commander te herstarten
+041 Je hebt niks gewijzigd. Weet je zeker dat je dit wilt doen?
+042 Een of meer bestanden met instellingen lijkt niet te bestaan. Gebruik Instellingen -> Bestandslocaties in het menu om ze te controleren.
+# New keyboard mapping table header
+043 Modifier(s)
+
+# key names
+100 Insert
+101 Del
+102 Home
+103 End
+104 PgUp
+105 PgDn
+106 Space
+107 Back,
+108 Tab
+109 +
+110 -
+111 *
+112 /
+113 Enter
+114 Esc
+115 Left
+116 Right
+117 Up
+118 Down
+
+# menus/options
+200 &Application
+201 (re)&Read command files
+202 &Save command files and restart TC
+203 edit &Usercmd.ini
+209 e&Xit
+210 &Instellingen
+211 &Bestandslocaties
+212 &Taal
+290 &Help
+299 &Over...
+
+404 Functie nog niet beschikbaar
