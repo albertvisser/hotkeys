@@ -330,12 +330,11 @@ class MainFrame(wx.Frame,TCCMMixin):
     def quit(self,evt):
         self.Destroy()
 
-class Main():
-    def __init__(self):
-        app = wx.App(redirect=False) # redirect=True,filename="tccm.log")
-        frm = MainFrame(None, -1)
-        app.MainLoop()
+def main():
+    app = wx.App(redirect=False) # redirect=True,filename="tccm.log")
+    frm = MainFrame(None, -1)
+    app.MainLoop()
 
 if __name__ == "__main__":
-    Main()
+    main()
 

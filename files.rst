@@ -1,6 +1,14 @@
 Files in this directory
 =======================
 
+tc_keys.py
+    starter voor tckey_gui.py in package directory "tcmdrkeys"
+tc_merge.py
+    starter voor tcmerge_wx.py in package directory "tcmdrkeys"
+
+files in package directory
+--------------------------
+
 __init__.py
     (lege) package indicator
 dutch.lng

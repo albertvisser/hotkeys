@@ -9,7 +9,7 @@ INI = "tckey.ini"
 
 import sys, os
 if __file__ != "tckey_gui.py":
-    drive = os.path.splitdrive(__file__)[0] + "\\"
+    drive = os.path.splitdrive(os.getcwd())[0] + "\\"
     with open(INI) as f_in:
         lines = f_in.readlines()
     for line in lines:
@@ -73,7 +73,7 @@ class Tcksettings(object):
             if 0 <= ix <= 4:
                 self.paden[ix] = waarde
             elif ix == 5:
-                self.lang = waarde
+                self.lang = os.path.join(os.path.split(__file__)[0],waarde)
             elif ix == 6:
                 self.restart = waarde
         self.tcpad, self.ucpad, self.cipad, self.ktpad, self.hkpad = self.paden
@@ -461,7 +461,7 @@ class EasyPrinter(html.HtmlEasyPrinting):
 class MainWindow(wx.Frame):
     def __init__(self,parent,id,args):
         self.captions = {}
-        self.ini = Tcksettings(os.path.join(os.path.split(__file__)[0],INI))
+        self.ini = Tcksettings(INI)
         for x in file(self.ini.lang):
             if x[0] == '#' or x.strip() == "":
                 continue
@@ -472,15 +472,15 @@ class MainWindow(wx.Frame):
         self.modified = False
         self.orig = ["",False,False,False,""]
         self.mag_weg = True
-        if len(args) == 0:
-            self.fpad  = ""
-        else:
+        if args:
             self.fpad = args[0]
             ext = os.path.splitext(self.fpad)[1]
             if ext == "" and not os.path.isdir(self.fpad):
                 self.fpad += ".xml"
             elif ext != ".xml":
                 self.fpad = ""
+        else:
+            self.fpad  = ""
         (self.dirname,self.filename) = os.path.split(self.fpad)
         #~ print self.dirname,self.filename
 
@@ -1076,11 +1076,13 @@ class MainWindow(wx.Frame):
             prt.Destroy()
         dlg.Destroy()
 
+def main(args=None):
+    app = wx.PySimpleApp(redirect=True,filename="tckey.log")
+    frame = MainWindow(None, -1, args)
+    app.MainLoop()
 
 if __name__ == '__main__':
     ## h = Tcksettings()
     ## h.set('paden',['ergens',])
     ## print h.__dict__
-    app = wx.PySimpleApp(redirect=True,filename="tckey.log")
-    frame = MainWindow(None, -1, sys.argv[1:])
-    app.MainLoop()
+    main(sys.argv[1:])
