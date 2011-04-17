@@ -179,6 +179,125 @@ def userkeys(root):
         pass
     return data
 
+def readkeys(data):
+    cl = tckeys(*data)
+    cmdict,self.omsdict = cl.read()
+    self.defkeys = cl.defkeys
+    ## kys = cl.keydict.keys()
+    ## kys.sort()
+    data = {}
+    for ix, hotkey in enumerate(sorted(cl.keydict.keys())):
+        try:
+            ky, mod = hotkey.split(" + ")
+        except ValueError:
+            ky,mod = hotkey,""
+        srt, desc, cmd = cl.keydict[hotkey]
+        data[ix] = (ky, mod, srt, cmd, desc)
+    return data
+
+def savekeys(data):
+    cl = tckeys(".")
+    for ky, mod, srt, cmd, desc in data:
+        hotkey = " + ".join((ky, mod)) if mod != '' else ky
+        cl.keydict[hotkey] = (srt, desc, cmd)
+    ## for x,y in cl.keydict.items():
+        ## print x,y
+    cl.write()
+
+class Tcksettings(object):
+    def __init__(self,fn):
+        self.fn = fn
+        self.namen = ['TC_PAD','UC_PAD','CI_PAD','KT_PAD','HK_PAD','LANG','RESTART']
+        self.paden = ['','','','','']
+        self.lang = ''
+        self.restart = ''
+        if not os.path.exists(self.fn):
+            return
+        for x in file(self.fn):
+            if x.strip() == "" or x.startswith('#'):
+                continue
+            naam,waarde = x.strip().split('=')
+            try:
+                ix = self.namen.index(naam)
+            except ValueError:
+                ix = -1
+            if 0 <= ix <= 4:
+                self.paden[ix] = waarde
+            elif ix == 5:
+                self.lang = os.path.join(os.path.split(__file__)[0],waarde)
+            elif ix == 6:
+                self.restart = waarde
+        self.tcpad, self.ucpad, self.cipad, self.ktpad, self.hkpad = self.paden
+        for x in reversed(self.paden):
+            if x == '':
+                self.paden.pop()
+            else:
+                break
+
+    def set(self,item,value):
+        items = []
+        argnamen = ("tcpad","ucpad","cipad","ktpad","hkpad")
+        if item in argnamen:
+            for i,x in enumerate(argnamen):
+                print i,x
+                if item == x:
+                    item = self.namen[i]
+                    while len(self.paden) <= i:
+                        self.paden.append('')
+                    print item,i
+                    self.paden[i] = value
+                    break
+        elif item == "paden":
+            if type(value) is list and len(value) == 6:
+                self.paden = value
+            else:
+                raise ValueError("Tcksettings needs list with 6 'paden'")
+        elif item == "lang":
+            item = self.namen[5]
+            self.lang = value
+        elif item == "restart":
+            item = self.namen[6]
+            self.restart = value
+        elif item in self.namen:
+            for i,x in enumerate(argnamen):
+                if item == x:
+                    if 0 <= i <= 4:
+                        self.paden[i] = value
+                    elif x == 5:
+                        self.lang = value
+                    elif ix == 6:
+                        self.restart = value
+                    break
+        else:
+            raise ValueError("Tcksettings object doesn't know '%s'" % item)
+        f = open(self.fn)
+        ini = f.readlines()
+        f.close()
+        f = open(INI,"w")
+        for x in ini:
+            if "=" in x:
+                try:
+                    naam,waarde = x.split("=",1)
+                except ValueError:
+                    pass
+                if naam == item:
+                    x = "=".join((naam,value)) + '\n'
+                elif naam in self.namen and naam != "LANG":
+                    i = self.namen.index(naam)
+                    if i == 6:
+                        i = 5
+                    x = "=".join((naam,self.paden[i])) + "\n"
+                ## # in plaats van:
+                ## elif item == "paden":
+                    ## for i,y in enumerate(self.namen):
+                        ## if i < 5 and h == y:
+                            ## x = "=".join((h,self.paden[i])) + '\n'
+                            ## break
+                        ## elif i == 6:
+                            ## self.restart = self.paden.pop()
+                            ## x = "=".join((h,self.restart)) + '\n'
+            f.write(x)
+        f.close()
 
 class tckeys(object):
     def __init__(self,*tc_dir):
