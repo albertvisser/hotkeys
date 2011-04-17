@@ -88,7 +88,7 @@ def defaultcommands(root):
     omsdict = {'': "no command available"}
     cmdict = {'': ''}
     try:
-        for x in file(os.path.join(root,'totalcmd.inc')):
+        for x in file(os.path.join(root,'TOTALCMD.INC')):
             h = x.strip()
             if h == '' or h[0] == '[' or h[0] == ';':
                 continue
@@ -230,15 +230,16 @@ class tckeys(object):
         iscmd = False
         try:
             for x in file(os.path.join(self.tcloc,'wincmd.ini')):
-                if x.strip() == '[Shortcuts]':
-                    iscmd = True
-                elif not iscmd:
-                    pass
-                elif x.strip()[0] == '[':
+                x = x.strip()
+                if not iscmd:
+                    if x == '[Shortcuts]':
+                        iscmd = True
+                elif x.startswith('['):
                     iscmd = False
                 else:
-                    h = x.strip().split('=')
+                    h = x.split('=')
                     k = keymods(h[0])
+                    print k, h
                     self.keydict[k] = ("U",omsdict[h[1]],h[1])
         except IOError:
             pass

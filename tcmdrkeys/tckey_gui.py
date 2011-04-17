@@ -3,12 +3,13 @@
 TTL = "A hotkey editor"
 VRS = "1.1.x"
 AUTH = "(C) 2008 Albert Visser"
-
 #globals om direct aan het begin van dit file te kunnen zien en aanpassen wanneer nodig
 INI = "tckey.ini"
 
 import sys, os
-if __file__ != "tckey_gui.py":
+WIN = True if sys.platform == "win32" else False
+LIN = True if sys.platform == 'linux2' else False
+if WIN and file_!= "tckey_gui.py":
     drive = os.path.splitdrive(os.getcwd())[0] + "\\"
     with open(INI) as f_in:
         lines = f_in.readlines()
@@ -52,6 +53,147 @@ C_MENU = (
     (M_HELP,(M_ABOUT,))
     )
 NOT_IMPLEMENTED = '404'
+
+def show_message(self, message_id, caption_id='000'):
+    dlg = wx.MessageDialog(self, self.captions[message_id],
+        self.captions[caption_id],
+        wx.YES_NO | wx.CANCEL | wx.NO_DEFAULT | wx.ICON_INFORMATION
+        )
+    h = dlg.ShowModal()
+    dlg.Destroy()
+    return h
+
+def m_read(self):
+    if not self.modified:
+        h = show_message(self, '041')
+        if h == wx.ID_YES:
+            self.readkeys()
+            self.page.PopulateList()
+
+def m_save(self):
+    if not self.modified:
+        h = show_message(self, '041')
+        if h == wx.ID_YES:
+            self.savekeys()
+            if self.ini.restart:
+                h = show_message(self, '026')
+                if h == wx.ID_YES:
+                    os.system(self.ini.restart) # "C:\Program Files\totalcmd\addons\ReloadTC.exe"
+            else:
+                h = show_message(self, '037')
+
+def m_user(self):
+    return self.captions[NOT_IMPLEMENTED]
+
+def m_exit(self):
+    self.Exit()
+
+def m_loc(self):
+    if self.modified:
+        h = show_message(self, '025')
+        if h == wx.ID_YES:
+            self.savekeys()
+        elif h == wx.ID_CANCEL:
+            return
+    paths = self.ini.paden
+    if self.ini.restart:
+        paths.append(self.ini.restart)
+    else:
+        paths.append('')
+    captions = [self.captions[x] for x in (
+        '028','029','030','031','032','033','039','038','040'
+        )]
+    ## captions = ['Define file locations for:', 'TC','UC','CI','KT','HK']
+    dlg = FilesDialog(self, -1, self.captions["000"], paths, captions,
+        size=(350, 200),
+        #style=wx.CAPTION | wx.SYSTEM_MENU | wx.THICK_FRAME,
+        style=wx.DEFAULT_DIALOG_STYLE, # & ~wx.CLOSE_BOX,
+        )
+    ## dlg.CenterOnScreen()
+    fout = "*"
+    while fout:
+        val = dlg.ShowModal()
+        paden = [
+            dlg.bTC.GetValue(),dlg.bUC.GetValue(),dlg.bCI.GetValue(),
+            dlg.bKT.GetValue(),dlg.bHK.GetValue()
+            ]
+        restarter = dlg.bRST.GetValue()
+        fout = ""
+        if val == wx.ID_OK:
+            text = "modified"
+            for i,pad in enumerate(paden):
+                if pad != "":
+                    naam = captions[i]
+                    if not os.path.isdir(pad):
+                        fout = self.captions['034'] % naam
+                    else:
+                        if naam == 'Hotkeys.hky':
+                            naam = 'tc default hotkeys.hky'
+                        if not os.path.exists(os.path.join(pad,naam)):
+                            fout = self.captions['035'] % naam
+                if fout:
+                    break
+            if restarter and not os.path.exists(restarter):
+                fout = self.captions['036'] % naam
+            else:
+                paden.append(restarter)
+        if fout:
+            mdlg = wx.MessageDialog(self,fout,self.captions["000"])
+            mdlg.ShowModal()
+            mdlg.Destroy()
+    dlg.Destroy()
+    if text:
+        ## for i,pad in enumerate(paden):
+            ## if pad != "":
+                ## self.ini.paden[i] = pad
+        self.ini.set("paden",paden)
+        text = ''
+
+def m_lang(self):
+    y = [x for x in os.listdir(os.getcwd()) if os.path.splitext(x)[1] == ".lng"]
+    dlg = wx.SingleChoiceDialog(
+        self,self.captions["027"],self.captions["000"],
+        y,
+        wx.CHOICEDLG_STYLE
+        )
+    for i,x in enumerate(y):
+        if x == self.ini.lang:
+            dlg.SetSelection(i)
+            break
+    h = dlg.ShowModal()
+    if h == wx.ID_OK:
+        lang = dlg.GetStringSelection()
+        self.ini.set('lang',lang)
+        for x in file(lang):
+            if x[0] == '#' or x.strip() == "":
+                continue
+            key,value = x.strip().split(None,1)
+            self.captions[key] = value
+        self.setcaptions()
+    dlg.Destroy()
+
+def m_about(self):
+    info = wx.AboutDialogInfo()
+    info.Name = self.captions['000']
+    info.Version = VRS
+    info.Copyright = AUTH
+    ## info.Description = TTL, 350, wx.ClientDC(self)
+    ## info.WebSite = ("http://en.wikipedia.org/wiki/Hello_world", "Hello World home page")
+    ## info.Developers = [ "Joe Programmer",
+                        ## "Jane Coder",
+                        ## "Vippy the Mascot" ]
+    ## info.License = wordwrap(licenseText, 500, wx.ClientDC(self))
+    wx.AboutBox(info)
+
+MENU_FUNC = {
+    M_READ: m_read,
+    M_SAVE: m_save,
+    M_USER: m_user,
+    M_EXIT: m_exit,
+    M_LOC: m_loc,
+    M_LANG: m_lang,
+    M_ABOUT: m_about,
+}
 
 class Tcksettings(object):
     def __init__(self,fn):
@@ -490,7 +632,8 @@ class MainWindow(wx.Frame):
         self.idlist = self.actlist = self.alist = []
         self.readkeys()
 
-        wx.Frame.__init__(self,parent,wx.ID_ANY, "tcmdrkeys",size = (688, 594),
+        wid = 768 if LIN else 688
+        wx.Frame.__init__(self,parent,wx.ID_ANY, "tcmdrkeys",size = (wid, 594),
                             style=wx.DEFAULT_FRAME_STYLE|wx.NO_FULL_REPAINT_ON_RESIZE|wx.BORDER_SIMPLE)
         self.sb = self.CreateStatusBar() # A Statusbar in the bottom of the window
 
@@ -739,151 +882,7 @@ class MainWindow(wx.Frame):
 
     def OnMenu(self, event):
         id = str(event.GetId())
-        text = ''
-        if id == M_READ:
-            if not self.modified:
-                dlg = wx.MessageDialog(self, self.captions['041'],
-                    self.captions["000"],
-                    wx.YES_NO | wx.CANCEL | wx.NO_DEFAULT | wx.ICON_INFORMATION
-                    )
-                h = dlg.ShowModal()
-                dlg.Destroy()
-                if h == wx.ID_YES:
-                    self.readkeys()
-                    self.page.PopulateList()
-
-        elif id == M_SAVE:
-            if not self.modified:
-                dlg = wx.MessageDialog(self, self.captions['041'],
-                    self.captions["000"],
-                    wx.YES_NO | wx.NO_DEFAULT | wx.ICON_INFORMATION
-                    )
-                h = dlg.ShowModal()
-                dlg.Destroy()
-                if h == wx.ID_YES:
-                    self.savekeys()
-                    if self.ini.restart:
-                        dlg = wx.MessageDialog(self,self.captions["026"],self.captions["000"],
-                            wx.YES_NO | wx.YES_DEFAULT)
-                        h = dlg.ShowModal()
-                        if h == wx.ID_YES:
-                            os.system(self.ini.restart) # "C:\Program Files\totalcmd\addons\ReloadTC.exe"
-                        dlg.Destroy()
-                    else:
-                        dlg = wx.MessageDialog(self,self.captions["037"],self.captions["000"])
-                        h = dlg.ShowModal()
-                        dlg.Destroy()
-
-        elif id == M_USER:
-            text = self.captions[NOT_IMPLEMENTED]
-
-        elif id == M_EXIT:
-            self.Exit()
-
-        elif id == M_LOC:
-            if  self.modified:
-                dlg = wx.MessageDialog(self, self.captions['025'],
-                    self.captions["000"],
-                    wx.YES_NO | wx.CANCEL | wx.NO_DEFAULT | wx.ICON_INFORMATION
-                    )
-                h = dlg.ShowModal()
-                dlg.Destroy()
-                if h == wx.ID_YES:
-                    self.savekeys()
-                elif h == wx.ID_CANCEL:
-                    return
-            paths = self.ini.paden
-            if self.ini.restart:
-                paths.append(self.ini.restart)
-            else:
-                paths.append('')
-            captions = [self.captions[x] for x in (
-                '028','029','030','031','032','033','039','038','040'
-                )]
-            ## captions = ['Define file locations for:', 'TC','UC','CI','KT','HK']
-            dlg = FilesDialog(self, -1, self.captions["000"], paths, captions,
-                size=(350, 200),
-                #style=wx.CAPTION | wx.SYSTEM_MENU | wx.THICK_FRAME,
-                style=wx.DEFAULT_DIALOG_STYLE, # & ~wx.CLOSE_BOX,
-                )
-            ## dlg.CenterOnScreen()
-            fout = "*"
-            while fout:
-                val = dlg.ShowModal()
-                paden = [
-                    dlg.bTC.GetValue(),dlg.bUC.GetValue(),dlg.bCI.GetValue(),
-                    dlg.bKT.GetValue(),dlg.bHK.GetValue()
-                    ]
-                restarter = dlg.bRST.GetValue()
-                fout = ""
-                if val == wx.ID_OK:
-                    text = "modified"
-                    for i,pad in enumerate(paden):
-                        if pad != "":
-                            naam = captions[i]
-                            if not os.path.isdir(pad):
-                                fout = self.captions['034'] % naam
-                            else:
-                                if naam == 'Hotkeys.hky':
-                                    naam = 'tc default hotkeys.hky'
-                                if not os.path.exists(os.path.join(pad,naam)):
-                                    fout = self.captions['035'] % naam
-                        if fout:
-                            break
-                    if restarter and not os.path.exists(restarter):
-                        fout = self.captions['036'] % naam
-                    else:
-                        paden.append(restarter)
-                if fout:
-                    mdlg = wx.MessageDialog(self,fout,self.captions["000"])
-                    mdlg.ShowModal()
-                    mdlg.Destroy()
-            dlg.Destroy()
-            if text:
-                ## for i,pad in enumerate(paden):
-                    ## if pad != "":
-                        ## self.ini.paden[i] = pad
-                self.ini.set("paden",paden)
-                text = ''
-
-        elif id == M_LANG:
-            y = [x for x in os.listdir(os.getcwd()) if os.path.splitext(x)[1] == ".lng"]
-            dlg = wx.SingleChoiceDialog(
-                self,self.captions["027"],self.captions["000"],
-                y,
-                wx.CHOICEDLG_STYLE
-                )
-            for i,x in enumerate(y):
-                if x == self.ini.lang:
-                    dlg.SetSelection(i)
-                    break
-            h = dlg.ShowModal()
-            if h == wx.ID_OK:
-                lang = dlg.GetStringSelection()
-                self.ini.set('lang',lang)
-                for x in file(lang):
-                    if x[0] == '#' or x.strip() == "":
-                        continue
-                    key,value = x.strip().split(None,1)
-                    self.captions[key] = value
-                self.setcaptions()
-            dlg.Destroy()
-
-        elif id == M_ABOUT:
-            info = wx.AboutDialogInfo()
-            info.Name = self.captions['000']
-            info.Version = VRS
-            info.Copyright = AUTH
-            ## info.Description = TTL, 350, wx.ClientDC(self)
-            ## info.WebSite = ("http://en.wikipedia.org/wiki/Hello_world", "Hello World home page")
-            ## info.Developers = [ "Joe Programmer",
-                                ## "Jane Coder",
-                                ## "Vippy the Mascot" ]
-            ## info.License = wordwrap(licenseText, 500, wx.ClientDC(self))
-
-            # Then we call wx.AboutBox giving it that info object
-            wx.AboutBox(info)
-
+        text = MENU_FUNC[id](self)
         if text:
             dlg = wx.MessageDialog(self,text,self.captions["000"], wx.OK)
             h = dlg.ShowModal()

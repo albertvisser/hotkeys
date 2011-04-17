@@ -13,8 +13,8 @@ class MainFrame(wx.Frame,TCCMMixin):
         self.files = {
             'key': ['KEYBOARD.TXT','',self.load_key],
             'cmd': ['TOTALCMD.INC','',self.load_cmd],
-            'usr': ['USERCMD.INI','',self.load_usr],
-            'ini': ['WINCMD.INI','',self.load_ini]
+            'usr': ['usercmd.ini','',self.load_usr],
+            'ini': ['wincmd.ini','',self.load_ini]
             }
         self.basedir = os.getcwd()
         wx.Frame.__init__(self,parent,id,"TCCM",size=(650,486))
@@ -145,9 +145,9 @@ class MainFrame(wx.Frame,TCCMMixin):
         naam = 'ini'
         pad = self.ask_file(naam)
         if pad:
-            for key in self.files.keys():
-                self.files[key][1] = pad
-                self.files[key][2](pad)
+            for naam in self.files.keys():
+                self.files[naam][1] = pad
+                self.files[naam][2](pad)
             self.setup()
 
     def ask_file(self,naam,ask=True):
@@ -167,13 +167,16 @@ class MainFrame(wx.Frame,TCCMMixin):
             if not pad or os.path.exists(os.path.join(pad,fn)):
                 break
             dlg = wx.MessageDialog(self,'Dit file staat niet in deze directory',
-                'Helaas',wx.OK)
-            dlg.ShowModal()
+                'Helaas',wx.OKCancel)
+            h = dlg.ShowModal()
             dlg.Destroy()
+            if h == wx.CANCEL:
+                break
         return pad
 
     def load_key(self,pad):
         self.keydict = dict(keyboardtext(pad))
+        print self.keydict
         self.cmb_key.Clear()
         self.cmb_key.AppendItems(sorted(self.keydict.keys()))
         self.cmb_key.SetSelection(0)
