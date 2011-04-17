@@ -1,0 +1,13 @@
+# use glob syntax.
+syntax: glob
+
+*bak
+*~
+*pyc
+*log
+*txt
+*csv
+*ini
+pylint*
+KEYBOARD.TXT
+TOTALCMD.INC
