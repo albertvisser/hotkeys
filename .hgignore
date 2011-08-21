@@ -11,3 +11,4 @@ syntax: glob
 pylint*
 KEYBOARD.TXT
 TOTALCMD.INC
+*zip
