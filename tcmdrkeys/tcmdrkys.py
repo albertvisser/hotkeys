@@ -3,14 +3,17 @@ import os
 ## import datetime
 from xml.etree import ElementTree as ET
 import csv
+import shutil
 
 def keymods(x):
-    m = {'A': 'Alt','C':'Ctrl','S':'Shift'}
+    """hulp bij omzetten wincmd.ini definitie in standaard definitie
+    """
+    m = {'A': 'Alt','C':'Ctrl','S':'Shift', 'W': 'Win'}
     if x == "NUM +":
         y = ''
         keyc = x
     else:
-        y = x.split('+',1)
+        y = x.split('+', 1)
         keyc = y[-1]
     keyc = keyc.replace(" ","").capitalize()
     if len(y) > 1:
@@ -19,6 +22,8 @@ def keymods(x):
     return keyc
 
 def keymods2(x):
+    """hulp bij omzetten keyboard.txt definitie in standaard definitie
+    """
     extra = ""
     if x[-1] == "+":
         x = x[:-1]
@@ -35,49 +40,48 @@ def keymods2(x):
     return keyc
 
 def keyboardtext(root):
+    """definities uit keyboard.txt omzetten in standaard definities
+    """
     data = []
     i = 0
     ky = []
     join_keys = False
-    try:
-        for x in file(os.path.join(root,'keyboard.txt')):
-            if i < 6:
-                i += 1
-                continue
-            if x.strip() == "Command Line: Keys":
-                break
-            if len(x) < 24:
-                continue
-            deel1 = x[:23].strip()
-            deel2 = x[23:].strip()
-            if deel1.strip() == '':
-                ky_desc = " ".join((ky_desc,deel2))
-            elif join_keys:
-                join_keys = False
-                ky_desc = " ".join((ky_desc,deel2))
-                ky[1] = deel1
+    with open(os.path.join(root,'KEYBOARD.TXT')) as f_in:
+        temp = f_in.readlines()
+    for x in temp[6:]:
+        x = x.rstrip()
+        if x == "":
+            break
+        ## if len(x) < 24:
+            ## continue
+        deel1 = x[:23].strip()
+        deel2 = x[23:].strip()
+        if deel1 == '':
+            ky_desc += " " + deel2
+        elif join_keys:
+            join_keys = False
+            ky_desc += " " + deel2
+            ky[1] = deel1
+        else:
+            if len(ky) > 0:
+                for k in ky:
+                    data.append((keymods2(k), ky_desc))
+            ky_desc = deel2
+            if " or " in deel1:
+                ky = deel1.split(" or ")
+                s2 = "+".join(ky[0].split("+")[:-1])
+                if s2 != "":
+                    for y in enumerate(ky[1:]):
+                        ky[y[0]+1] = "+".join((s2,y[1]))
+            elif deel1.endswith(" or"):
+                ky = [deel1[:-3],""]
+                join_keys = True
             else:
-                if len(ky) > 0:
-                    for k in ky:
-                        data.append((keymods2(k),ky_desc))
-                ky_desc = deel2
-                if " or " in deel1:
-                    ky = deel1.split(" or ")
-                    s2 = "+".join(ky[0].split("+")[:-1])
-                    if s2 != "":
-                        for y in enumerate(ky[1:]):
-                            ky[y[0]+1] = "+".join((s2,y[1]))
-                elif deel1.endswith(" or"):
-                    ky = [deel1[:-3],""]
-                    join_keys = True
-                else:
-                    ky = [deel1,]
+                ky = [deel1,]
             ## print ky,ky_desc
-    except IOError:
-        pass
     if len(ky) > 0:
         for k in ky:
-            data.append((keymods2(k),ky_desc))
+            data.append((keymods2(k), ky_desc))
     ## f = open("keyboard_keys.txt","w")
     ## for x,y in data:
         ## f.write("%s:: %s\n" % (x,y))
@@ -85,6 +89,11 @@ def keyboardtext(root):
     return data
 
 def defaultcommands(root):
+    """definities uit totalcmd.inc omzetten in standaard definites
+
+    geeft commandonamen en omschrijvingen terug in dictionaries met commandonummer
+    als sleutel
+    """
     omsdict = {'': "no command available"}
     cmdict = {'': ''}
     try:
@@ -99,11 +108,17 @@ def defaultcommands(root):
                 omsdict[cm_naam] = cm_oms # c[1] is omschrijving
     except IOError:
         pass
-    return cmdict,omsdict
+    return cmdict, omsdict
 
-def usercommands(root,cmdict=None,omsdict=None):
-    if cmdict is None: cmdict = {}
-    if omsdict is None: omsdict = {}
+def usercommands(root, cmdict=None, omsdict=None):
+    """definities uit usercmd.ini omzetten in standaard definities
+
+    vult cmdict en omsdict aan en retourneert ze
+    """
+    if cmdict is None:
+        cmdict = {}
+    if omsdict is None:
+        omsdict = {}
     s0 = ""
     try:
         for x in file(os.path.join(root,"usercmd.ini")):
@@ -131,16 +146,10 @@ def usercommands(root,cmdict=None,omsdict=None):
     return cmdict,omsdict
 
 def defaultkeys(root):
+    """definities lezen uit TC_hotkeys.csv (mijn eigen omzetter - in plaats van die
+    die bij Ultra TC Editors meekomt
+    """
     data = []
-    try:
-        rdr = csv.reader(open(os.path.join(root,"TC_hotkeys.csv"),'rb'))
-        data = [(row[0],row[1]) for row in rdr]
-    except IOError:
-        pass
-    return data
-
-## def defaultkeys(root):
-    ## data = []
     ## for x in file(os.path.join(root,"tc default hotkeys.hky")):
         ## if x[0] == ";":
             ## continue
@@ -162,27 +171,52 @@ def defaultkeys(root):
     ## #~ for x,y in data:
     ## #~     f.write("%s:: %s\n" % (x,y))
     ## #~ f.close()
-    ## return data
+    try:
+        rdr = csv.reader(open(os.path.join(root,"TC_hotkeys.csv"),'rb'))
+    except IOError:
+        rdr = []
+    for row in rdr:
+        data.append((row[0], row[1]))
+        ## data = [(row[0],row[1]) for row in rdr]
+    return data
 
 def userkeys(root):
-    data=[]
-    shortcut = False
-    try:
-        for x in file(os.path.join(root,"wincmd.ini")):
-            if shortcut:
+    """user key definities uit wincmd.ini lezen
+    """
+    data = []
+    in_user = in_win = False
+    with open(os.path.join(root,"wincmd.ini")) as f_in:
+        for x in f_in:
+            x = x.rstrip()
+            y = x.split("=")
+            if in_user:
                 if x.startswith("["):
-                    break
-                data.append(x[:-1].split("="))
+                    in_user = False
+                else:
+                    data.append(y)
+            elif in_win:
+                if x.startswith("["):
+                    in_win = False
+                else:
+                    if '+' in y[0]:
+                        y[0] = 'W' + y[0]
+                    else:
+                        y[0] = 'W+' + y[0]
+                    data.append(y)
             elif x.startswith("[Shortcuts]"):
-                shortcut = True
-    except IOError:
-        pass
+                in_user = True
+            elif x.startswith("[ShortcutsWin]"):
+                in_win = True
     return data
 
 def readkeys(data):
-    cl = tckeys(*data)
-    cmdict,self.omsdict = cl.read()
-    self.defkeys = cl.defkeys
+    """lees key definities vanuit tckeys object
+
+    geeft dictionaries terug met commando's, omschrijvingen en listbox data
+    """
+    cl = TCKeys(*data)
+    cl.read()
+    defkeys = cl.defkeys
     ## kys = cl.keydict.keys()
     ## kys.sort()
     data = {}
@@ -193,21 +227,23 @@ def readkeys(data):
             ky,mod = hotkey,""
         srt, desc, cmd = cl.keydict[hotkey]
         data[ix] = (ky, mod, srt, cmd, desc)
-    return data
+    return cl.cmdict, cl.omsdict, cl.defkeys, data
 
-def savekeys(data):
-    cl = tckeys(".")
-    for ky, mod, srt, cmd, desc in data:
+def savekeys(pad, data):
+    """schrijft de listbox data terug via een tckeys object
+    """
+    cl = TCKeys(pad)
+    for ky, mod, srt, cmd, desc in data.itervalues():
         hotkey = " + ".join((ky, mod)) if mod != '' else ky
         cl.keydict[hotkey] = (srt, desc, cmd)
     ## for x,y in cl.keydict.items():
         ## print x,y
     cl.write()
 
-class Tcksettings(object):
+class TckSettings(object):
     def __init__(self,fn):
         self.fn = fn
-        self.namen = ['TC_PAD','UC_PAD','CI_PAD','KT_PAD','HK_PAD','LANG','RESTART']
+        self.namen = ['TC_PAD','UC_PAD','CI_PAD','KB_PAD','HK_PAD','LANG','RESTART']
         self.paden = ['','','','','']
         self.lang = ''
         self.restart = ''
@@ -224,147 +260,141 @@ class Tcksettings(object):
             if 0 <= ix <= 4:
                 self.paden[ix] = waarde
             elif ix == 5:
-                self.lang = os.path.join(os.path.split(__file__)[0],waarde)
+                self.lang = waarde
             elif ix == 6:
                 self.restart = waarde
         self.tcpad, self.ucpad, self.cipad, self.ktpad, self.hkpad = self.paden
-        for x in reversed(self.paden):
-            if x == '':
-                self.paden.pop()
-            else:
-                break
+        ## for x in reversed(self.paden):
+            ## if x == '':
+                ## self.paden.pop()
+            ## else:
+                ## break
 
-    def set(self,item,value):
+    def set(self, item, value):
         items = []
         argnamen = ("tcpad","ucpad","cipad","ktpad","hkpad")
-        if item in argnamen:
-            for i,x in enumerate(argnamen):
-                print i,x
-                if item == x:
-                    item = self.namen[i]
-                    while len(self.paden) <= i:
-                        self.paden.append('')
-                    print item,i
-                    self.paden[i] = value
-                    break
-        elif item == "paden":
-            if type(value) is list and len(value) == 6:
-                self.paden = value
+        arg_found = False
+        for i,x in enumerate(argnamen):
+            print i,x
+            if item == x:
+                item = self.namen[i]
+                print item,i
+                self.paden[i] = value
+                arg_found = True
+                break
+        if not arg_found and item == "paden":
+            if isinstance(value, list) and len(value) == 6:
+                self.paden = value[:-1]
+                self.restart = value[-1]
+                arg_found = True
             else:
                 raise ValueError("Tcksettings needs list with 6 'paden'")
-        elif item == "lang":
-            item = self.namen[5]
-            self.lang = value
-        elif item == "restart":
-            item = self.namen[6]
-            self.restart = value
-        elif item in self.namen:
-            for i,x in enumerate(argnamen):
-                if item == x:
-                    if 0 <= i <= 4:
+        if not arg_found:
+            for i, x in enumerate(self.namen):
+                if item.upper() == x:
+                    if i <= 4:
                         self.paden[i] = value
-                    elif x == 5:
+                    elif i == 5:
                         self.lang = value
-                    elif ix == 6:
+                    elif i == 6:
                         self.restart = value
+                    arg_found = True
                     break
-        else:
-            raise ValueError("Tcksettings object doesn't know '%s'" % item)
-        f = open(self.fn)
-        ini = f.readlines()
-        f.close()
-        f = open(INI,"w")
-        for x in ini:
-            if "=" in x:
-                try:
-                    naam,waarde = x.split("=",1)
-                except ValueError:
-                    pass
-                if naam == item:
-                    x = "=".join((naam,value)) + '\n'
-                elif naam in self.namen and naam != "LANG":
-                    i = self.namen.index(naam)
-                    if i == 6:
-                        i = 5
-                    x = "=".join((naam,self.paden[i])) + "\n"
-                ## # in plaats van:
-                ## elif item == "paden":
-                    ## for i,y in enumerate(self.namen):
-                        ## if i < 5 and h == y:
-                            ## x = "=".join((h,self.paden[i])) + '\n'
-                            ## break
-                        ## elif i == 6:
-                            ## self.restart = self.paden.pop()
-                            ## x = "=".join((h,self.restart)) + '\n'
-            f.write(x)
-        f.close()
+        if not arg_found:
+            raise ValueError("Tcksettings object doesn't know about '%s'" % item)
+        new = self.fn
+        old = new + ".bak"
+        shutil.copyfile(new, old)
+        with open(old) as ini, open(new, "w") as f:
+            for x in ini:
+                if "=" in x:
+                    test = x.split('=')[0]
+                    for ix, naam in enumerate(self.namen):
+                        if test == naam:
+                            if ix == 5:
+                                y = self.lang
+                            elif ix == 6:
+                                y = self.restart
+                            else:
+                                y = self.paden[ix]
+                            f.write("{}={}\n".format(self.namen[ix], y))
+                            break
+                else:
+                    f.write(x)
+        self.tcpad, self.ucpad, self.cipad, self.ktpad, self.hkpad = self.paden
 
-class tckeys(object):
-    def __init__(self,*tc_dir):
-        self.tcloc = "C:\Program Files\totalcmd" # default
+class TCKeys(object):
+    """stel gegevens samen vanuit de diverse bestanden
+
+    kijkt naar de aangegeven locaties tenzij ze niet zijn ingesteld,
+    dan wordt de standaard programma locatie gebruikt
+    """
+    def __init__(self, *tc_dir):
+        self.ucloc = self.ciloc = self.ktloc = self.hkloc = ''
         try:
             self.tcloc = tc_dir[0] # plaats van wincmd.ini
         except IndexError:
-            pass
+            self.tcloc = "C:\totalcmd" # default
         try:
             self.ucloc = tc_dir[1] # plaats van usercmd.ini
         except IndexError:
+            pass
+        if not self.ucloc:
             self.ucloc = self.tcloc
         try:
             self.ciloc = tc_dir[2] # plaats van totalcmd.inc
         except IndexError:
+            pass
+        if not self.ciloc:
             self.ciloc = self.tcloc
         try:
             self.ktloc = tc_dir[3] # plaats van keyboard.txt
         except IndexError:
+            pass
+        if not self.ktloc:
             self.ktloc = self.tcloc
         try:
             self.hkloc = tc_dir[4] # plaats van tc_hotkeys.csv
         except IndexError:
+            pass
+        if not self.hkloc:
             self.hkloc = self.tcloc
         self.keydict = {}
 
     def read(self):
-        dk = defaultkeys(self.hkloc)
-        cmdict,omsdict = defaultcommands(self.ciloc)
-        cmdict,omsdict = usercommands(self.ucloc,cmdict,omsdict)
+        """leest de gegevens uit de bestanden
+
+        de gegevens worden omgezet in dictionaries
+        die attributen zijn van deze class
+        """
+        cmdict, omsdict = defaultcommands(self.ciloc)
+        self.cmdict, self.omsdict = usercommands(self.ucloc, cmdict, omsdict)
         defkeys = {}
-        for x,y in dk:
-            defkeys[x] = cmdict[y].strip()
+        for x, y in defaultkeys(self.hkloc):
+            defkeys[x] = self.cmdict[y].strip()
         self.keydict = {}
-        for key,oms in keyboardtext(self.ktloc):
-            cm = ""
+        for key, oms in keyboardtext(self.ktloc):
             if key in defkeys:
                 cm = defkeys[key]
             else:
+                cm = ""
                 defkeys[key] = oms
                 if key == "Backspace":
                     del defkeys["Back"]
-            self.keydict[key] = ("S",oms,cm)
+            self.keydict[key] = ("S", oms, cm)
+        print
         self.defkeys = defkeys
         ## f = open("defkeys.txt","w")
         ## for x in self.defkeys:
             ## f.write("%s:: %s\n" % (x,defkeys[x]))
         ## f.close()
-        iscmd = False
-        try:
-            for x in file(os.path.join(self.tcloc,'wincmd.ini')):
-                x = x.strip()
-                if not iscmd:
-                    if x == '[Shortcuts]':
-                        iscmd = True
-                elif x.startswith('['):
-                    iscmd = False
-                else:
-                    h = x.split('=')
-                    k = keymods(h[0])
-                    print k, h
-                    self.keydict[k] = ("U",omsdict[h[1]],h[1])
-        except IOError:
-            pass
-        return cmdict,omsdict
+        for key, action in userkeys(self.tcloc):
+            k = keymods(key)
+            self.keydict[k] = ("U", omsdict[action], action)
 
     def turn_into_xml(self):
+        """zet de gegevens uit keydict om in xml en schrijft ze weg
+        """
         kys = self.keydict.keys()
         kys.sort()
         root = ET.Element("keys")
@@ -378,45 +408,51 @@ class tckeys(object):
         tree.write(os.path.join(self.tcloc,"tcmdrkeys.xml"))
 
     def write(self):
-        schrijfdoor = True
-        for x,y in self.keydict.items():
-            print x,y
-        regels = []
-        fn = os.path.join(self.tcloc,'wincmd.ini')
-        for x in file(fn):
-            if not schrijfdoor and x.strip()[0] == "[":
-                schrijfdoor = True
-            elif x.strip() == '[Shortcuts]':
-                regels.append(x)
-                schrijfdoor = False
-                for x in self.keydict.keys():
-                    if self.keydict[x][0] == "U":
-                        regels.append('%s=%s\n' % (''.join(reversed(x.split())),self.keydict[x][2]))
-            if schrijfdoor:
-                regels.append(x)
-        os.rename(fn,fn + ".bak")
-        f = open(fn,"w")
-        for x in regels:
-            f.write(x)
-        f.close()
+        """schrijf de gegevens terug naar waar ze terecht moeten komen
+        """
+        shortcuts, shortcutswin = [], []
+        for key, item in self.keydict.items():
+            print key, item
+            if item[0] != 'U':
+                continue
+            test = [x for x in reversed(key.split())]
+            print test
+            if len(test) == 1:
+                shortcuts.append('{}={}\n'.format(test, item[2]))
+            elif 'W' in test[0]:
+                if 'W+' in test[0]:
+                    test[0] = test[0].replace('W+', '')
+                else:
+                    test[0] = test[0].replace('W', '')
+                shortcutswin.append('{}={}\n'.format(''.join(test), item[2]))
+            else:
+                shortcuts.append('{}={}\n'.format(''.join(test), item[2]))
 
-def test_keyboardtext():
-    ## print keymods2("F1")
-    ## print keymods2("ALT+SHIFT+F5")
-    ## print keymods2("NUM +")
-    ## print keymods2("SHIFT+NUM +")
-    ## print keymods2("SHIFT+NUM -")
-    ## return
-    kt = keyboardtext('.')
-
-def test_tckeys():
-    cl = tckeys(".")
-    cl.read()
-    ## cl.turn_into_xml()
-    cl.write()
-    ## h = raw_input()
-
-if __name__ == "__main__":
-    cl = tckeys(".")
-    ## test_tckeys()
-    ## test_keyboardtext()
+        fn = os.path.join(self.tcloc, 'wincmd.ini')
+        fno = fn + ".bak"
+        os.rename(fn, fno)
+        schrijfdoor, shortcuts_geschreven, win_geschreven = True, False, False
+        with open(fno) as f_in, open(fn, 'w') as f_out:
+            for line in f_in:
+                if not schrijfdoor and line.strip()[0] == "[":
+                    schrijfdoor = True
+                elif line.strip() == '[Shortcuts]':
+                    f_out.write(line)
+                    schrijfdoor = False
+                    shortcuts_geschreven = True
+                    for newline in shortcuts:
+                        f_out.write(newline)
+                elif line.strip() == '[ShortcutsWin]':
+                    f_out.write(line)
+                    schrijfdoor = False
+                    win_geschreven = True
+                    for newline in shortcutswin:
+                        f_out.write(newline)
+                if schrijfdoor:
+                    f_out.write(line)
+            if not shortcuts_geschreven and len(shortcuts) > 0:
+                for newline in shortcuts:
+                    f_out.write(newline)
+            if not shortcuts_geschreven and len(shortcuts) > 0:
+                for newline in shortcutswin:
+                    f_out.write(newline)

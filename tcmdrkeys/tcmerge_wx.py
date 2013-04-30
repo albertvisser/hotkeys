@@ -4,8 +4,8 @@ from tccm_mixin import TCCMMixin
 from tcmdrkys import keyboardtext, defaultcommands, usercommands, userkeys
 import csv
 
-# verbinden van een toets aan een "dummy" mogelijk maken zoadt de key in het bestand zit ook a;l is er geen
-# commando voor
+# verbinden van een toets aan een "dummy" mogelijk maken zodat de key in het bestand zit
+# ook al is er geen commando voor
 
 class MainFrame(wx.Frame,TCCMMixin):
     def __init__(self,parent,id):
@@ -180,7 +180,10 @@ class MainFrame(wx.Frame,TCCMMixin):
         self.cmb_key.Clear()
         self.cmb_key.AppendItems(sorted(self.keydict.keys()))
         self.cmb_key.SetSelection(0)
-        self.txt_key.SetValue(self.keydict[self.cmb_key.GetValue()])
+        try:
+            self.txt_key.SetValue(self.keydict[self.cmb_key.GetValue()])
+        except KeyError as msg:
+            print msg
 
     def load_cmd(self,pad):
         self.cmddict, self.omsdict = defaultcommands(pad)
@@ -205,6 +208,7 @@ class MainFrame(wx.Frame,TCCMMixin):
         self.data = []
 
     def load_links(self,evt):
+        pad = ''
         dlg = wx.FileDialog(self, message="Select definition file",
             defaultDir=self.basedir,
             defaultFile="TC_hotkeys.csv",

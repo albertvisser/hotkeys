@@ -1,4 +1,3 @@
-#! C:/python25/python
 # -*- coding: UTF-8 -*-
 import sys, os
 import wx
@@ -11,6 +10,7 @@ import tcmdrkys
 import string
 ## import datetime
 
+HERE = os.path.abspath(os.path.dirname(__file__))
 TTL = "A hotkey editor"
 VRS = "1.1.x"
 AUTH = "(C) 2008 Albert Visser"
@@ -18,6 +18,7 @@ INI = "tckey_config.py"
 WIN = True if sys.platform == "win32" else False
 LIN = True if sys.platform == 'linux2' else False
 
+# voorziening voor starten op usb-stick onder Windows (drive letters in config aanpassen)
 if WIN and __file__ != "tckey_gui.py":
     drive = os.path.splitdrive(os.getcwd())[0] + "\\"
     with open(INI) as f_in:
@@ -40,9 +41,10 @@ if WIN and __file__ != "tckey_gui.py":
                 else:
                     f_out.write(line)
 
+# constanten voor  captions en dergelijke 9correspondeert met nummers in language files)
 C_KEY, C_MOD, C_SRT, C_CMD, C_OMS = '001', '043', '002', '003', '004'
 C_DFLT, C_RDEF = '005', '006'
-M_CTRL, M_ALT, M_SHFT = '007', '008', '009'
+M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
 C_SAVE, C_DEL, C_EXIT, C_KTXT, C_CTXT ='010', '011', '012', '018', '019'
 M_APP, M_READ, M_SAVE, M_USER, M_EXIT = '200', '201', '202', '203', '209'
 M_SETT, M_LOC, M_LANG, M_HELP, M_ABOUT = '210', '211', '212', '290', '299'
@@ -54,6 +56,10 @@ C_MENU = (
 NOT_IMPLEMENTED = '404'
 
 def show_message(self, message_id, caption_id='000'):
+    """toon de boodschap geïdentificeerd door <message_id> in een dialoog
+    met als titel aangegeven door <caption_id> en retourneer het antwoord
+    na sluiten van de dialoog
+    """
     dlg = wx.MessageDialog(self, self.captions[message_id],
         self.captions[caption_id],
         wx.YES_NO | wx.CANCEL | wx.NO_DEFAULT | wx.ICON_INFORMATION
@@ -63,6 +69,11 @@ def show_message(self, message_id, caption_id='000'):
     return h
 
 def m_read(self):
+    """(menu) callback voor het lezen van de hotkeys
+
+    vraagt eerst of het ok is om de hotkeys (opnieuw) te lezen
+    zet de gelezen keys daarna ook in de gui
+    """
     if not self.modified:
         h = show_message(self, '041')
         if h == wx.ID_YES:
@@ -70,24 +81,39 @@ def m_read(self):
             self.page.PopulateList()
 
 def m_save(self):
+    """(menu) callback voor het terugschrijven van de hotkeys
+
+    vraagt eerst of het ok is om de hotkeys weg te schrijven
+    vraagt daarna eventueel of de betreffende applicatie geherstart moet worden
+    """
     if not self.modified:
         h = show_message(self, '041')
+        if h != wx.ID_YES:
+            return
+    self.savekeys()
+    if self.ini.restart:
+        h = show_message(self, '026')
         if h == wx.ID_YES:
-            self.savekeys()
-            if self.ini.restart:
-                h = show_message(self, '026')
-                if h == wx.ID_YES:
-                    os.system(self.ini.restart) # "C:\Program Files\totalcmd\addons\ReloadTC.exe"
-            else:
-                h = show_message(self, '037')
+            os.system(self.ini.restart)
+    else:
+        wx.MessageBox(self.captions['037'], self.captions['000'])
+        ## h = show_message(self, '037')
 
 def m_user(self):
+    """(menu) callback voor een nog niet geïmplementeerde actie"""
     return self.captions[NOT_IMPLEMENTED]
 
 def m_exit(self):
+    """(menu) callback om het programma direct af te sluiten"""
     self.Exit()
 
 def m_loc(self):
+    """(menu) callback voor aanpassen van de bestandslocaties
+
+    vraagt bij wijzigingen eerst of ze moeten worden opgeslagen
+    toont dialoog met bestandslocaties en controleert de gemaakte wijzigingen
+    (met name of de opgegeven paden kloppen)
+    """
     if self.modified:
         h = show_message(self, '025')
         if h == wx.ID_YES:
@@ -110,6 +136,7 @@ def m_loc(self):
         )
     ## dlg.CenterOnScreen()
     fout = "*"
+    text = ''
     while fout:
         val = dlg.ShowModal()
         paden = [
@@ -149,29 +176,32 @@ def m_loc(self):
         text = ''
 
 def m_lang(self):
-    y = [x for x in os.listdir(os.getcwd()) if os.path.splitext(x)[1] == ".lng"]
+    """(menu) callback voor taalkeuze
+
+    past de settings aan en leest het geselecteerde language file
+    """
+    y = [x for x in os.listdir(HERE) if os.path.splitext(x)[1] == ".lng"]
     dlg = wx.SingleChoiceDialog(
         self,self.captions["027"],self.captions["000"],
         y,
         wx.CHOICEDLG_STYLE
         )
-    for i,x in enumerate(y):
+    for i, x in enumerate(y):
+        print x, self.ini.lang
         if x == self.ini.lang:
             dlg.SetSelection(i)
             break
     h = dlg.ShowModal()
     if h == wx.ID_OK:
         lang = dlg.GetStringSelection()
-        self.ini.set('lang',lang)
-        for x in file(lang):
-            if x[0] == '#' or x.strip() == "":
-                continue
-            key,value = x.strip().split(None,1)
-            self.captions[key] = value
+        self.ini.set('lang', lang)
+        self.readcaptions()
         self.setcaptions()
     dlg.Destroy()
 
 def m_about(self):
+    """(menu) callback voor het tonen van de "about" dialoog
+    """
     info = wx.AboutDialogInfo()
     info.Name = self.captions['000']
     info.Version = VRS
@@ -184,6 +214,7 @@ def m_about(self):
     ## info.License = wordwrap(licenseText, 500, wx.ClientDC(self))
     wx.AboutBox(info)
 
+# dispatch table for  menu callbacks
 MENU_FUNC = {
     M_READ: m_read,
     M_SAVE: m_save,
@@ -195,12 +226,22 @@ MENU_FUNC = {
 }
 
 class MyListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
+    """base class voor de listcontrol
+
+    maakt het definiëren in de gui class wat eenvoudiger
+    """
     def __init__(self, parent, ID, pos=wx.DefaultPosition,
                  size=wx.DefaultSize, style=0):
         wx.ListCtrl.__init__(self, parent, ID, pos, size, style)
         listmix.ListCtrlAutoWidthMixin.__init__(self)
 
 class Page(wx.Panel, listmix.ColumnSorterMixin):
+    """base class voor het gedeelte van het hoofdscherm met de listcontrol erin
+
+    voornamelijk nodig om de specifieke verwerkingen met betrekking tot de lijst
+    bij elkaar en apart van de rest te houden
+    definieert feitelijk een "custom widget"
+    """
     def __init__(self,parent,id,top):
         self.parent = parent
         self.top = top
@@ -243,6 +284,7 @@ class Page(wx.Panel, listmix.ColumnSorterMixin):
         self.p0list.Bind(wx.EVT_KEY_DOWN, self.OnKeyPress)
 
     def doelayout(self):
+        """zet de list control op het scherm"""
         sizer0 = wx.BoxSizer(wx.VERTICAL)
         sizer0.Add(self.p0list,1,wx.EXPAND)
         self.SetAutoLayout(True)
@@ -251,6 +293,8 @@ class Page(wx.Panel, listmix.ColumnSorterMixin):
         sizer0.SetSizeHints(self)
 
     def OnKeyPress(self, evt):
+        """callback bij gebruik van een toets(encombinatie)
+        """
         keycode = evt.GetKeyCode()
         togo = keycode - 48
         if evt.GetModifiers() == wx.MOD_ALT: # evt.AltDown()
@@ -286,15 +330,25 @@ class Page(wx.Panel, listmix.ColumnSorterMixin):
         evt.Skip()
 
     def OnEvtText(self,evt):
+        """callback op het wijzigen van de tekst
+
+        zorgt ervoor dat de buttons ge(de)activeerd worden
+        """
         #~ print "self.init is", self.init
         if not self.init:
             #~ print "ok, enabling buttons"
             self.enableButtons()
 
     def OnEvtComboBox(self,evt):
+        """callback op het gebruik van een combobox
+
+        zorgt ervoor dat de buttons ge(de)activeerd worden
+        """
         self.enableButtons()
 
     def PopulateList(self):
+        """vullen van de list control
+        """
         ## print "populating list..."
         self.p0list.DeleteAllItems()
         self.p0list.DeleteAllColumns()
@@ -308,14 +362,14 @@ class Page(wx.Panel, listmix.ColumnSorterMixin):
         ## info.m_text = ""
         ## self.p0list.InsertColumnInfo(0, info)
 
-        for col,inf in enumerate((
-                (C_KEY,70),
-                (C_MOD,70),
-                (C_SRT,80),
-                (C_CMD,160),
-                (C_OMS,292)
+        for col, inf in enumerate((
+                (C_KEY, 70),
+                (C_MOD, 70),
+                (C_SRT, 80),
+                (C_CMD, 160),
+                (C_OMS, 452)  # was 292
             )):
-            inf,wid = inf
+            inf, wid = inf
             info.m_width = wid
             info.m_text = self.parent.parent.captions[inf]
             self.p0list.InsertColumnInfo(col, info)
@@ -344,9 +398,11 @@ class Page(wx.Panel, listmix.ColumnSorterMixin):
         self.top.defchanged = False
 
     def GetListCtrl(self):
+        """ten behoeve van de columnsorter mixin"""
         return self.p0list
 
     def GetSortImages(self):
+        """ten behoeve van de columnsorter mixin"""
         return (self.sm_dn, self.sm_up)
 
     def AfterSort(self):
@@ -360,19 +416,25 @@ class Page(wx.Panel, listmix.ColumnSorterMixin):
             kleur = not kleur
 
     def OnItemSelected(self, event):
+        """callback op het selecteren van een item
+
+        velden op het hoofdscherm worden bijgewerkt vanuit de selectie"""
         seli = self.p0list.GetItemData(event.m_itemIndex)
         ## print "Itemselected",seli,self.top.data[seli]
         self.top.vuldetails(seli)
         event.Skip()
 
     def OnItemDeselected(self, event):
+        """callback op het niet meer geselecteerd zijn van een item
+
+        er wordt gevraagd of de key definitie moet worden bijgewerkt"""
         seli = self.p0list.GetItemData(event.m_itemIndex)
         ## print "ItemDeselected",seli,self.top.data[seli]
         if self.top.defchanged:
             self.top.defchanged = False
             dlg = wx.MessageDialog(self,
-                self.parent.captions["020"],
-                self.parent.captions["000"],
+                self.top.captions["020"],
+                self.top.captions["000"],
                 wx.YES_NO | wx.NO_DEFAULT | wx.ICON_INFORMATION
                 )
             h = dlg.ShowModal()
@@ -382,27 +444,38 @@ class Page(wx.Panel, listmix.ColumnSorterMixin):
                 self.top.aanpassen()
 
     def OnItemActivated(self, event):
+        """callback op het activeren van een item (onderdeel van het selecteren)
+        """
         self.currentItem = event.m_itemIndex
 
     def OnColClick(self, event):
+        """callback op het klikken op een kolomtitel
+        """
         ## print "OnColClick: %d\n" % event.GetColumn()
         ## self.parent.sorter = self.GetColumnSorter()
         event.Skip()
 
     def OnDoubleClick(self, event):
+        """callback op dubbelklikken op een kolomtitel
+        """
         pass
         # self.log.WriteText("OnDoubleClick item %s\n" % self.p0list.GetItemText(self.currentItem))
         event.Skip()
 
 
-    def enableButtons(self,state=True):
-        pass # anders wordt de methode van de Page class geactiveerd
+    def enableButtons(self, state=True):
+        """anders wordt de gelijknamige methode van de Panel base class geactiveerd"""
+        pass
 
     def keyprint(self,evt):
         pass
 
 
 class FilesDialog(wx.Dialog):
+    """dialoog met meerdere FileBrowseButtons
+
+    voor het instellen van de bestandslocaties
+    """
     def __init__(self, parent, ID, title, locations, captions,
             size=wx.DefaultSize, pos=wx.DefaultPosition,
             style=wx.DEFAULT_DIALOG_STYLE
@@ -496,27 +569,31 @@ class FilesDialog(wx.Dialog):
         ## print "It's the FileBrowseButton for hotkeys.hky", evt.GetString()
 
 class EasyPrinter(html.HtmlEasyPrinting):
+    """class voor het besturen van het printen
+    """
     def __init__(self):
         html.HtmlEasyPrinting.__init__(self)
 
     def Print(self, text, doc_name):
+        """stel titel in en toon print preview scherm
+        (van waaruit er geprint kan worden)"""
         self.SetHeader(doc_name)
         self.PreviewText(text)
         #~ self.PrintText(text,doc_name)
 
 class MainWindow(wx.Frame):
+    """Hoofdscherm van de applicatie"""
     def __init__(self,parent,id,args):
         self.captions = {}
-        self.ini = Tcksettings(INI)
-        for x in file(self.ini.lang):
-            if x[0] == '#' or x.strip() == "":
-                continue
-            key,value = x.strip().split(None,1)
-            self.captions[key] = value
+        self.ini = tcmdrkys.TckSettings(INI)
+        if self.ini.paden[0] == '':
+            wx.MessageBox('Geen settings file ({}) in deze directory'.format(INI))
+            return
+        self.readcaptions()
         ## print "start",datetime.datetime.today()
         self.parent = parent
         self.modified = False
-        self.orig = ["",False,False,False,""]
+        self.orig = ["", False, False, False, False, ""]
         self.mag_weg = True
         if args:
             self.fpad = args[0]
@@ -527,7 +604,7 @@ class MainWindow(wx.Frame):
                 self.fpad = ""
         else:
             self.fpad  = ""
-        (self.dirname,self.filename) = os.path.split(self.fpad)
+        self.dirname,self.filename = os.path.split(self.fpad)
         #~ print self.dirname,self.filename
 
         self.printer = EasyPrinter()
@@ -536,9 +613,12 @@ class MainWindow(wx.Frame):
         self.idlist = self.actlist = self.alist = []
         self.readkeys()
 
-        wid = 768 if LIN else 688
+        wid = 860 if LIN else 688
         wx.Frame.__init__(self,parent,wx.ID_ANY, "tcmdrkeys",size = (wid, 594),
-                            style=wx.DEFAULT_FRAME_STYLE|wx.NO_FULL_REPAINT_ON_RESIZE|wx.BORDER_SIMPLE)
+                            style=wx.DEFAULT_FRAME_STYLE
+                                | wx.NO_FULL_REPAINT_ON_RESIZE
+                                ## | wx.BORDER_SIMPLE
+                                )
         self.sb = self.CreateStatusBar() # A Statusbar in the bottom of the window
 
     # --- schermen opbouwen: controls plaatsen -----------------------------------------------------------------------------------------
@@ -582,7 +662,7 @@ class MainWindow(wx.Frame):
         self.cmbKey = cb
         ## print "na opzetten keys combobox",datetime.datetime.today()
 
-        for x in (M_CTRL,M_ALT,M_SHFT):
+        for x in (M_CTRL, M_ALT, M_SHFT, M_WIN):
             cb = wx.CheckBox(self.pnl, -1, self.captions[x].join(("+","  "))) #, (65, 60), (150, 20), wx.NO_BORDER)
             cb.SetValue(False)
             self.Bind(wx.EVT_CHECKBOX, self.EvtCheckBox, cb)
@@ -592,6 +672,8 @@ class MainWindow(wx.Frame):
                 self.cbAlt = cb
             elif x == M_SHFT:
                 self.cbShift = cb
+            elif x == M_WIN:
+                self.cbWin = cb
         ## print "na opzetten checkboxen",datetime.datetime.today()
 
         self.txtCmd = wx.StaticText(self.pnl, -1, self.captions[C_CTXT] + " ")
@@ -641,6 +723,7 @@ class MainWindow(wx.Frame):
         sizer3.Add(self.cmbKey,0,wx.EXPAND,0)
         sizer2.Add(sizer3,0,wx.LEFT | wx.RIGHT | wx.EXPAND,4)
         sizer3 = wx.BoxSizer(wx.HORIZONTAL)
+        sizer3.Add(self.cbWin,0,wx.EXPAND,0)
         sizer3.Add(self.cbCtrl,0,wx.EXPAND,0)
         sizer3.Add(self.cbAlt,0,wx.EXPAND,0)
         sizer3.Add(self.cbShift,0,wx.EXPAND,0)
@@ -686,34 +769,54 @@ class MainWindow(wx.Frame):
         self.bSave.Enable(False)
         if soort == 'U':
             self.bDel.Enable(True)
-        self.orig =  [key,False,False,False,cmd]
+        self.orig =  [key, False, False, False, False, cmd]
         self.cbShift.SetValue(False)
         self.cbCtrl.SetValue(False)
         self.cbAlt.SetValue(False)
+        self.cbWin.SetValue(False)
         self.cmbKey.SetValue(key)
-        for mod in mods:
-            if mod == "S":
+        if 'S' in mods:
+        ## for mod in mods:
+            ## if mod == "S":
                 self.orig[1] = True
                 self.cbShift.SetValue(True)
-            elif mod == "C":
+        if 'C' in mods:
+            ## elif mod == "C":
                 self.orig[2] = True
                 self.cbCtrl.SetValue(True)
-            elif mod == "A":
+        if 'A' in mods:
+            ## elif mod == "A":
                 self.orig[3] = True
                 self.cbAlt.SetValue(True)
+        if 'W' in mods:
+            ## elif mod == "W":
+                self.orig[4] = True
+                self.cbWin.SetValue(True)
         self.cmbCommando.SetValue(cmd)
         self.txtOms.SetValue(oms)
 
-    def aanpassen(self,delete=False):
-        go = True
+    def aanpassen(self, delete=False):
+        oktocontinue = True
+        origkey = self.orig[0]
         key = self.cmbKey.GetValue()
         if key not in self.keylist:
             if key.upper() in self.keylist:
                 key = key.upper()
                 self.cmbKey.SetValue(key)
             else:
-                go = False
+                oktocontinue = False
+        origmods = ''
+        if self.orig[4]:
+            origmods += 'W'
+        if self.orig[2]:
+            origmods += 'C'
+        if self.orig[3]:
+            origmods += 'A'
+        if self.orig[1]:
+            origmods += 'S'
         mods = ""
+        if self.cbWin.GetValue():
+            mods += "W"
         if self.cbCtrl.GetValue():
             mods += "C"
         if self.cbAlt.GetValue():
@@ -722,10 +825,11 @@ class MainWindow(wx.Frame):
             mods += "S"
         ## if mods != "":
             ## key = " + ".join((key,mods))
+        origcmd = self.orig[5]
         cmd = self.cmbCommando.GetValue()
         if cmd not in self.omsdict.keys():
-            go = False
-        if not go:
+            oktocontinue = False
+        if not oktocontinue:
             h = self.captions['021'] if delete else self.captions['022']
             dlg = wx.MessageDialog(self, h, self.captions["000"],
                 wx.OK | wx.ICON_INFORMATION
@@ -734,24 +838,36 @@ class MainWindow(wx.Frame):
             dlg.Destroy()
             return
         gevonden = False
-        for x in enumerate(self.data.values()):
-            if x[1][0] == key:
+        print origkey, ';', origmods, ';', key, ';', mods
+        for number, value in self.data.iteritems():
+            ## print number, value
+            if value[0] == key and value[1] == mods:
                 gevonden = True
-                indx = x[0]
+                indx = number
                 break
+        if gevonden:
+            if key != origkey or mods != origmods:
+                dlg = wx.MessageDialog(self, self.captions["045"],
+                    self.captions["000"],
+                    wx.YES_NO | wx.NO_DEFAULT |  wx.ICON_INFORMATION
+                    )
+                h = dlg.ShowModal()
+                dlg.Destroy()
+                if h == wx.ID_NO:
+                    oktocontinue = False
         if not delete:
             if gevonden:
-                self.data[indx] = (key,mods,'U',cmd,self.omsdict[cmd])
+                if oktocontinue:
+                    self.data[indx] = (key, mods, 'U', cmd, self.omsdict[cmd])
             else:
                 newdata = self.data.values()
-                newdata.append((key,mods,'U',cmd,self.omsdict[cmd]))
+                newvalue = (key, mods, 'U', cmd, self.omsdict[cmd])
+                newdata.append(newvalue)
                 newdata.sort()
-                for x,y in enumerate(newdata):
+                for x, y in enumerate(newdata):
+                    if y == newvalue:
+                        indx = x
                     self.data[x] = y
-            self.page.PopulateList()
-            self.modified = True
-            self.bSave.Enable(False)
-            self.bDel.Enable(False)
         else:
             if not gevonden:
                 dlg = wx.MessageDialog(self, self.captions['023'],
@@ -760,6 +876,7 @@ class MainWindow(wx.Frame):
                     )
                 h = dlg.ShowModal()
                 dlg.Destroy()
+                oktocontinue = False
             elif self.data[indx][1] == "S":
                 dlg = wx.MessageDialog(self, self.captions['024'],
                     self.captions["000"],
@@ -767,6 +884,7 @@ class MainWindow(wx.Frame):
                     )
                 h = dlg.ShowModal()
                 dlg.Destroy()
+                oktocontinue = False
             else:
                 # kijk of er een standaard definitie bij de toets hoort, zo ja deze terugzetten
                 if self.data[indx][0] in self.defkeys:
@@ -776,13 +894,17 @@ class MainWindow(wx.Frame):
                     else:
                         oms = cmd
                         cmd = ""
-                    self.data[indx] = (key,'S',cmd,oms)
+                    self.data[indx] = (key, 'S', cmd, oms)
                 else:
                     del self.data[indx]
-                self.page.PopulateList()
-                self.modified = True
-                self.bSave.Enable(False)
-                self.bDel.Enable(False)
+                    indx -= 1
+        if oktocontinue:
+            self.page.PopulateList()
+            self.modified = True
+            self.SetTitle(self.captions["000"] + ' ' + self.captions['017'])
+            self.bSave.Enable(False)
+            self.bDel.Enable(False)
+            self.page.p0list.Select(indx)
 
     def OnMenu(self, event):
         id = str(event.GetId())
@@ -808,7 +930,7 @@ class MainWindow(wx.Frame):
             ## j = self.cmbKey.GetValue()
             ## print "h:",h
             ## print "j:",j
-            ## if h != self.orig[4] and h.strip() != "" and j.strip() != "":
+            ## if h != self.orig[5] and h.strip() != "" and j.strip() != "":
                 ## self.defchanged = True
                 ## self.txtOms.SetValue(self.omsdict[h])
                 ## self.bSave.Enable(True)
@@ -828,6 +950,11 @@ class MainWindow(wx.Frame):
                 self.bDel.Enable(True)
         elif cb == self.cbAlt:
             if cb.GetValue() != self.orig[3]:
+                self.defchanged = True
+                self.bSave.Enable(True)
+                self.bDel.Enable(True)
+        elif cb == self.cbWin:
+            if cb.GetValue() != self.orig[4]:
                 self.defchanged = True
                 self.bSave.Enable(True)
                 self.bDel.Enable(True)
@@ -876,7 +1003,7 @@ class MainWindow(wx.Frame):
             if h.strip() == "" or j.strip() == "":
                 self.bSave.Enable(False)
                 self.bDel.Enable(False)
-            elif h != self.orig[4]:
+            elif h != self.orig[5]:
                 self.defchanged = True
                 try:
                     self.txtOms.SetValue(self.omsdict[h])
@@ -911,31 +1038,42 @@ class MainWindow(wx.Frame):
         self.Close(True)
 
     def readkeys(self):
-        self.data = tcmdrkys.readkeys(self.ini.paden)
+        self.cmdict, self.omsdict, self.defkeys, self.data = tcmdrkys.readkeys(
+            self.ini.paden)
 
     def savekeys(self):
-        tcmdrkeys.savekeys(self.data.values)
+        tcmdrkys.savekeys(self.ini.tcpad, self.data)
+        self.modified = False
+        self.SetTitle(self.captions["000"])
+
+    def readcaptions(self):
+        for x in file(os.path.join(HERE, self.ini.lang)):
+            if x[0] == '#' or x.strip() == "":
+                continue
+            key,value = x.strip().split(None,1)
+            self.captions[key] = value
 
     def setcaptions(self):
-        self.SetTitle(self.captions["000"])
-        self.cbCtrl.SetLabel(self.captions[M_CTRL].join(("+","  ")))
-        self.cbAlt.SetLabel(self.captions[M_ALT].join(("+","  ")))
-        self.cbShift.SetLabel(self.captions[M_SHFT].join(("+","  ")))
+        title = self.captions["000"]
+        if self.modified:
+            title += ' ' + self.captions["017"]
+        self.SetTitle(title)
+        self.cbCtrl.SetLabel(self.captions[M_CTRL].join(("+", "  ")))
+        self.cbAlt.SetLabel(self.captions[M_ALT].join(("+", "  ")))
+        self.cbShift.SetLabel(self.captions[M_SHFT].join(("+", "  ")))
         self.bSave.SetLabel(self.captions[C_SAVE])
         self.bDel.SetLabel(self.captions[C_DEL])
         self.bExit.SetLabel(self.captions[C_EXIT])
         self.txtKey.SetLabel(self.captions[C_KTXT])
         self.txtCmd.SetLabel(self.captions[C_CTXT])
         for indx,menu in enumerate(self.menuBar.GetMenus()):
-            menu,title = menu
-            self.menuBar.SetLabelTop(indx,self.captions[C_MENU[indx][0]])
-            for indy,item in enumerate(menu.GetMenuItems()):
-                i,t = item.GetId(),item.GetItemLabel()
+            menu, title = menu
+            self.menuBar.SetLabelTop(indx, self.captions[C_MENU[indx][0]])
+            for indy, item in enumerate(menu.GetMenuItems()):
+                i, t = item.GetId(), item.GetItemLabel()
                 if i > 0:
                     item.SetItemLabel(self.captions[C_MENU[indx][1][indy]])
         self.page.PopulateList()
-
-        pass
 
     def afdrukken(self):
         self.css = ""
@@ -962,7 +1100,8 @@ class MainWindow(wx.Frame):
         dlg.Destroy()
 
 def main(args=None):
-    app = wx.PySimpleApp(redirect=True,filename="tckey.log")
+    app = wx.App(redirect=True, filename="tckey.log")
+    print '----------'
     frame = MainWindow(None, -1, args)
     app.MainLoop()
 

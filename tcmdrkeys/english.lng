@@ -12,10 +12,13 @@
 007 Ctrl
 008 Alt
 009 Shift
+013 Win (meta)
 #  buttons
 010 Change keydef
 011 Remove
 012 Exit
+# title indicator
+017 (modified)
 # screen text
 018 Key:
 019 Map key to:
@@ -30,10 +33,10 @@
 026 Restart Total Commander now?
 027 Choose a language file
 028 Enter/choose the paths to the following files:
-029 Wincmd.ini
-030 Usercmd.ini
-031 Totalcmd.inc
-032 Keyboard.txt
+029 wincmd.ini
+030 usercmd.ini
+031 TOTALCMD.INC
+032 KEYBOARD.TXT
 033 TC_hotkeys.csv
 034 The directory you specified for %s doesn't exist
 035 %s doesn't exits in the specified directory
@@ -43,9 +46,12 @@
 039 Specify the directory containing %s
 040 Choose the programme to restart Total Commander
 041 You haven't made any changes. Are you sure you want to do this?
-042 One or more of your settings files doesn't seem to exist. Please use Settings -> File Locations from the menu to check them.
+042 One or more of your settings files doesn't appear to exist. Please use Settings -> File Locations from the menu to check them.
 # New keyboard mapping table header
 043 Modifier(s)
+044 VI_hotkeys.csv
+# more messages
+045 This keycombo already exists, do you want to replace it?
 
 # key names
 100 Insert

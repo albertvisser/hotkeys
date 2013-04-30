@@ -12,10 +12,13 @@
 007 Ctrl
 008 Alt
 009 Shift
+013 Win (meta)
 #  buttons
 010 Aanpassen
 011 Verwijderen
 012 Afsluiten
+# title indicator
+017 (aangepast)
 # screen text
 018 Key:
 019 Map key to:
@@ -32,8 +35,8 @@
 028 Geef aan waar de volgende files zich bevinden:
 029 Wincmd.ini
 030 Usercmd.ini
-031 Totalcmd.inc
-032 Keyboard.txt
+031 TOTALCMD.INC
+032 KEYBOARD.TXT
 033 TC_hotkeys.csv
 034 Opgegeven directory voor %s bestaat niet
 035 %s zit niet in de daarvoor opgegeven directory
@@ -46,6 +49,9 @@
 042 Een of meer bestanden met instellingen lijkt niet te bestaan. Gebruik Instellingen -> Bestandslocaties in het menu om ze te controleren.
 # New keyboard mapping table header
 043 Modifier(s)
+044 VI_hotkeys.csv
+# more messages
+045 Deze toetsencombinatie is al gedefinieerd, wil je hem vervangen?
 
 # key names
 100 Insert

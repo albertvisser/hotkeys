@@ -11,4 +11,5 @@ syntax: glob
 pylint*
 KEYBOARD.TXT
 TOTALCMD.INC
+tckey_config.py
 *zip
