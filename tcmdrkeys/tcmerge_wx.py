@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 import sys,os
 import wx
 from tccm_mixin import TCCMMixin

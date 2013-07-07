@@ -1,4 +1,6 @@
-# -*- coding: latin-1 -*-
+# -*- coding: utf-8 -*-
+
+from __future__ import print_function
 import os
 ## import datetime
 from xml.etree import ElementTree as ET
@@ -237,11 +239,11 @@ def savekeys(pad, data):
         hotkey = " + ".join((ky, mod)) if mod != '' else ky
         cl.keydict[hotkey] = (srt, desc, cmd)
     ## for x,y in cl.keydict.items():
-        ## print x,y
+        ## print(x,y)
     cl.write()
 
 class TckSettings(object):
-    def __init__(self,fn):
+    def __init__(self, fn):
         self.fn = fn
         self.namen = ['TC_PAD','UC_PAD','CI_PAD','KB_PAD','HK_PAD','LANG','RESTART']
         self.paden = ['','','','','']
@@ -275,10 +277,9 @@ class TckSettings(object):
         argnamen = ("tcpad","ucpad","cipad","ktpad","hkpad")
         arg_found = False
         for i,x in enumerate(argnamen):
-            print i,x
             if item == x:
                 item = self.namen[i]
-                print item,i
+                print(item,i)
                 self.paden[i] = value
                 arg_found = True
                 break
@@ -380,9 +381,12 @@ class TCKeys(object):
                 cm = ""
                 defkeys[key] = oms
                 if key == "Backspace":
-                    del defkeys["Back"]
+                    ## try:
+                        del defkeys["Back"]
+                    ## except KeyError:
+                        ## pass
             self.keydict[key] = ("S", oms, cm)
-        print
+        print()
         self.defkeys = defkeys
         ## f = open("defkeys.txt","w")
         ## for x in self.defkeys:
@@ -412,11 +416,11 @@ class TCKeys(object):
         """
         shortcuts, shortcutswin = [], []
         for key, item in self.keydict.items():
-            print key, item
+            print(key, item)
             if item[0] != 'U':
                 continue
             test = [x for x in reversed(key.split())]
-            print test
+            print(test)
             if len(test) == 1:
                 shortcuts.append('{}={}\n'.format(test, item[2]))
             elif 'W' in test[0]:

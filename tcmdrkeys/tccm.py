@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from tcmerge_wx import Main
 
 class TCMerge(Main):

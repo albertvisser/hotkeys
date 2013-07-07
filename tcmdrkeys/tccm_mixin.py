@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 class TCCMMixin(object):
     """Gui-onafhankelijke code voor TCMerge
 
