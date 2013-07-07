@@ -14,9 +14,9 @@
 009 Shift
 013 Win (meta)
 #  buttons
-010 Change keydef
-011 Remove
-012 Exit
+010 &Change keydef
+011 &Remove
+012 &Exit
 # title indicator
 017 (modified)
 # screen text

@@ -14,9 +14,9 @@
 009 Shift
 013 Win (meta)
 #  buttons
-010 Aanpassen
-011 Verwijderen
-012 Afsluiten
+010 &Wijzigen
+011 &Verwijderen
+012 &Afsluiten
 # title indicator
 017 (aangepast)
 # screen text
@@ -76,9 +76,9 @@
 
 # menus/options
 200 &Application
-201 (re)&Read command files
-202 &Save command files and restart TC
-203 edit &Usercmd.ini
+201 bestanden (her)&lezen
+202 bestanden op&Slaan en TC herstarten
+203 &Usercmd.ini aanpassen
 209 e&Xit
 210 &Instellingen
 211 &Bestandslocaties
