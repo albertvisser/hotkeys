@@ -11,5 +11,10 @@ syntax: glob
 pylint*
 KEYBOARD.TXT
 TOTALCMD.INC
-tckey_config.py
+*_config.py
 *zip
+doublecmd/*
+opera/*
+scite/*
+system/*
+vim/*
