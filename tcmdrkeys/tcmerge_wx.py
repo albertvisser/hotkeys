@@ -165,10 +165,11 @@ class MainFrame(wx.Frame,TCCMMixin):
                 pad = dlg.GetPath()
                 self.basedir = pad
             dlg.Destroy()
+            print pad, fn
             if not pad or os.path.exists(os.path.join(pad,fn)):
                 break
             dlg = wx.MessageDialog(self,'Dit file staat niet in deze directory',
-                'Helaas',wx.OKCancel)
+                'Helaas',wx.OK|wx.CANCEL)
             h = dlg.ShowModal()
             dlg.Destroy()
             if h == wx.CANCEL:

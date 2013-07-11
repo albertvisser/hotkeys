@@ -32,26 +32,28 @@ class MainFrame(gui.QMainWindow, TCCMMixin):
 
         pnl = gui.QFrame(self)
         cb = gui.QComboBox(pnl)
-        cb.setMinimumWidth(80)
-        ## cb.itemSelected.connect(self.EvtText)
-        ## cb.editTextChanged.connect(self.EvtText)
+        cb.setMinimumWidth(160)
+        cb.currentIndexChanged[str].connect(functools.partial(self.on_choice, cb))
         te = gui.QTextEdit(pnl)
-        te.resize=(200,80)
+        te.setMaximumHeight(80)
         te.setReadOnly(True)
         self.cmb_key = cb
         self.txt_key = te
         cb = gui.QComboBox(pnl)
-        cb.setMinimumWidth(120)
-        ## cb.itemSelected.connect(self.EvtText)
-        ## cb.editTextChanged.connect(self.EvtText)
+        cb.setMinimumWidth(160)
+        cb.currentIndexChanged[str].connect(functools.partial(self.on_choice, cb))
         te = gui.QTextEdit(pnl)
-        te.resize=(200,80)
+        te.setMaximumHeight(80)
         te.setReadOnly(True)
         self.cmb_cmd = cb
         self.txt_cmd = te
 
-        self.btn_link = gui.QPushButton("&Add/Edit Link", pnl)
-        ## self.btn_link.clicked.connect(self.make_link)
+        self.btn_link = gui.QPushButton("&+ Add/Replace Link", pnl)
+        self.btn_link.clicked.connect(self.make_link)
+        ## self.btn_edit = gui.QButton(pnl,-1,"&Modify Link")
+        ## self.btn_edit.Bind(gui.QEVT_BUTTON,self.edit_link)
+        self.btn_delete = gui.QPushButton("&- Discard Link", pnl)
+        self.btn_delete.clicked.connect(self.delete_link)
 
         self.lst_links = gui.QTreeWidget(pnl)
         self.lst_links.resize(460,300)
@@ -62,14 +64,10 @@ class MainFrame(gui.QMainWindow, TCCMMixin):
         for indx, wid in enumerate(widths):
             hdr.resizeSection(indx, wid)
         hdr.setStretchLastSection(True)
-        ## self.lst_links.Bind(gui.QEVT_LIST_ITEM_SELECTED,self.enable_edit)
-        ## self.btn_edit = gui.QButton(pnl,-1,"&Modify Link")
-        ## self.btn_edit.Bind(gui.QEVT_BUTTON,self.edit_link)
-        self.btn_delete = gui.QPushButton("&Discard Link", pnl)
-        ## self.btn_delete.clicked.connect(self.delete_link)
+        self.lst_links.currentItemChanged.connect(self.enable_edit)
 
         self.btn_save = gui.QPushButton("&Save Links", pnl)
-        ## self.btn_save.clicked.connect(self.save_links)
+        self.btn_save.clicked.connect(self.save_links)
         self.btn_quit = gui.QPushButton("&Afsluiten", pnl)
         self.btn_quit.clicked.connect(self.quit)
 
@@ -82,28 +80,35 @@ class MainFrame(gui.QMainWindow, TCCMMixin):
         hbox = gui.QHBoxLayout()
         vbox2 = gui.QVBoxLayout()
         vbox2.addWidget(self.cmb_key)
-        vbox2.addStretch()
+        ## vbox2.addStretch()
         hbox.addLayout(vbox2)
-        hbox.addWidget(self.txt_key)
+        vbox2 = gui.QVBoxLayout()
+        vbox2.addWidget(self.txt_key)
+        ## vbox2.addStretch()
+        hbox.addLayout(vbox2)
         vbox2 = gui.QVBoxLayout()
         vbox2.addWidget(self.cmb_cmd)
-        vbox2.addStretch()
+        ## vbox2.addStretch()
         hbox.addLayout(vbox2)
-        hbox.addWidget(self.txt_cmd)
+        vbox2 = gui.QVBoxLayout()
+        vbox2.addWidget(self.txt_cmd)
+        ## vbox2.addStretch()
+        hbox.addLayout(vbox2)
+        vbox.addLayout(hbox)
+
+        hbox = gui.QHBoxLayout()
+        hbox.addStretch()
+        hbox.addWidget(self.btn_link)
+        hbox.addWidget(self.btn_delete)
+        hbox.addStretch()
         vbox.addLayout(hbox)
 
         hbox = gui.QHBoxLayout()
         vbox2 = gui.QVBoxLayout()
-        vbox2.addWidget(self.btn_link)
-        vbox2.addStretch()
-        hbox.addLayout(vbox2)
-        hbox.addWidget(self.lst_links)
-        vbox2 = gui.QVBoxLayout()
-        ## vbox2.Add(self.btn_edit)
-        vbox2.addWidget(self.btn_delete)
-        vbox2.addStretch()
+        vbox2.addWidget(self.lst_links)
         hbox.addLayout(vbox2)
         vbox.addLayout(hbox)
+
         hbox = gui.QHBoxLayout()
         hbox.addStretch()
         hbox.addWidget(self.btn_save)
@@ -135,16 +140,13 @@ class MainFrame(gui.QMainWindow, TCCMMixin):
             triggered=self.load_links))
         filemenu.addAction(gui.QAction("&Save definitions file ", self,
             triggered=self.save_links))
-        filemenu.addAction(gui.QAction("&Clear definitions and reload datafiles", self,
-            triggered=self.reset))
+        filemenu.addAction(gui.QAction("&Clear definitions and reload datafiles",
+            self, triggered=self.reset))
         filemenu.addAction(gui.QAction("&Exit", self, triggered=self.quit))
 
-    def load_file(self,evt=None,ask=True): # TODO
-        ## print evt.EventObject
-        ## print evt.Id
-        if evt is not None:
-            naam = self.files.keys()[self.menu_open.index(evt.Id)]
-        ## print naam
+    def load_file(self, fileid=None, ask=True):
+        if fileid is not None:
+            naam = self.files.keys()[fileid]
         if ask:
             pad = self.ask_file(naam)
             if not pad:
@@ -162,49 +164,44 @@ class MainFrame(gui.QMainWindow, TCCMMixin):
                 self.files[naam][2](pad)
             self.setup()
 
-    def ask_file(self,naam,ask=True): # TODO
+    def ask_file(self, naam, ask=True):
         """vraag de locatie van het bestand en haal het op
         als alle bestanden bekend zijn de tabellen initialiseren"""
         fn = self.files[naam][0]
         pad = ""
         while True:
-            dlg = gui.QDirDialog(self, "Selecteer de directory met {0} erin".format(fn),
-                defaultPath=self.basedir,
-                style=gui.QDD_DEFAULT_STYLE
-                )
-            if dlg.ShowModal() == gui.QID_OK:
-                pad = dlg.GetPath()
+            pad = str(gui.QFileDialog.getExistingDirectory(self, "Selecteer"
+                " de directory met {0} erin".format(fn), self.basedir))
+            if pad:
                 self.basedir = pad
-            dlg.Destroy()
             if not pad or os.path.exists(os.path.join(pad,fn)):
                 break
-            dlg = gui.QMessageDialog(self,'Dit file staat niet in deze directory',
-                'Helaas',gui.QOKCancel)
-            h = dlg.ShowModal()
-            dlg.Destroy()
+            h = gui.QMessageBox.information(self, 'Helaas',
+                'Dit file staat niet in deze directory',
+                gui.QMessageBox.Ok | gui.QMessageBox.Cancel)
             if h == gui.QCANCEL:
                 break
         return pad
 
-    def load_key(self,pad): # TODO
+    def load_key(self,pad):
         self.keydict = dict(keyboardtext(pad))
-        print self.keydict
-        self.cmb_key.Clear()
-        self.cmb_key.AppendItems(sorted(self.keydict.keys()))
-        self.cmb_key.SetSelection(0)
-        try:
-            self.txt_key.SetValue(self.keydict[self.cmb_key.GetValue()])
-        except KeyError as msg:
-            print msg
+        self.cmb_key.clear()
+        self.cmb_key.addItems(sorted(self.keydict.keys()))
+        self.cmb_key.setCurrentIndex(0)
+        ## try
+        this = self.keydict[str(self.cmb_key.itemText(self.cmb_key.currentIndex()))]
+        ## except KeyError as msg:
+            ## print msg
+        self.txt_key.setText(this)
 
-    def load_cmd(self,pad): # TODO
+    def load_cmd(self,pad):
         self.cmddict, self.omsdict = defaultcommands(pad)
         self.cmds = dict([reversed(x) for x in self.cmddict.items()])
-        self.cmb_cmd.Clear()
-        self.cmb_cmd.AppendItems(sorted(self.omsdict.keys()))
-        self.cmb_cmd.Insert('',0)
-        self.cmb_cmd.SetSelection(0)
-        self.txt_cmd.SetValue('no command available') #self.omsdict[self.cmb_cmd.GetValue()])
+        self.cmb_cmd.clear()
+        self.cmb_cmd.addItems(sorted(self.omsdict.keys()))
+        self.cmb_cmd.insertItems(0, '')
+        self.cmb_cmd.setCurrentIndex(0)
+        self.txt_cmd.setText('no command available') #self.omsdict[self.cmb_cmd.GetValue()])
 
     def load_usr(self,pad):
         self.usrdict, self.uomsdict = usercommands(pad)
@@ -212,55 +209,49 @@ class MainFrame(gui.QMainWindow, TCCMMixin):
     def load_ini(self,pad):
         self.usrkeys = dict(userkeys(pad))
 
-    def setup(self): # TODO
+    def setup(self):
         if not all([y[1] for y in self.files.values()]):
             return
-        self.lst_links.DeleteAllItems()
-        self.btn_link.Enable()
+        self.lst_links.clear()
+        self.btn_link.setEnabled(True)
         self.data = []
 
-    def load_links(self,evt): # TODO
-        pad = ''
-        dlg = gui.QFileDialog(self, message="Select definition file",
-            defaultDir=self.basedir,
-            defaultFile="TC_hotkeys.csv",
-            wildcard="csv files (*.csv)|*.csv",
-            style=gui.QOPEN
-            )
-        if dlg.ShowModal() == gui.QID_OK:
-            pad = dlg.GetPath()
-        dlg.Destroy()
-        if pad:
-            self.lst_links.DeleteAllItems()
-            self.btn_link.Enable()
-            rdr = csv.reader(open(pad,'rb'))
+    def load_links(self,evt):
+        fname = gui.QFileDialog.getOpenFileName(self, "Select definition file",
+            self.basedir, "csv files (*.csv)")
+            ## defaultFile="TC_hotkeys.csv",
+        if fname:
+            self.lst_links.clear()
+            self.btn_link.setEnabled(True)
+            rdr = csv.reader(open(fname,'rb'))
             for row in rdr:
-                ix = self.lst_links.InsertStringItem(sys.maxint,row[0])
-                self.lst_links.SetStringItem(ix,1,row[1])
-                self.lst_links.SetStringItem(ix,2,row[2])
-                self.lst_links.SetStringItem(ix,3,row[3])
-            self.btn_save.Enable()
+                new = gui.QTreeWidgetItem(row)
+                self.lst_links.addTopLevelItem(new)
+                ## ix = self.lst_links.InsertStringItem(sys.maxint,row[0])
+                ## self.lst_links.SetStringItem(ix,1,row[1])
+                ## self.lst_links.SetStringItem(ix,2,row[2])
+                ## self.lst_links.SetStringItem(ix,3,row[3])
+            self.btn_save.setEnabled(True)
 
-    def EvtText(self, evt): # TODO
-        self.ix = -1
-        ## self.btn_edit.Disable()
-        self.btn_delete.Disable()
-        cb = evt.GetEventObject()
+    def on_choice(self, cb, text):
+        text = str(text)
+        ## self.btn_edit.setEnabled(False)
+        self.btn_delete.setEnabled(False)
         if cb == self.cmb_key:
             try:
-                self.txt_key.SetValue(self.keydict[evt.GetString()])
+                self.txt_key.setText(self.keydict[text])
             except KeyError:
                 pass
         elif cb == self.cmb_cmd:
             try:
-                self.txt_cmd.SetValue(self.omsdict[evt.GetString()])
+                self.txt_cmd.setText(self.omsdict[text])
             except KeyError:
-                self.txt_cmd.SetValue('no command available')
-        evt.Skip()
+                self.txt_cmd.setText('no command available')
 
-    def get_entry(self): # TODO
-        gekozen_key = self.cmb_key.GetValue()
-        gekozen_cmd = self.cmb_cmd.GetValue()
+    def get_entry(self):
+        gekozen_key = str(self.cmb_key.currentText())
+        gekozen_cmd = str(self.cmb_cmd.currentText())
+        print(gekozen_key, gekozen_cmd)
         try:
             gekozen_oms = self.omsdict[gekozen_cmd]
         except KeyError:
@@ -271,37 +262,38 @@ class MainFrame(gui.QMainWindow, TCCMMixin):
             gekozen_code = self.cmds[gekozen_cmd]
         return gekozen_key, gekozen_code, gekozen_cmd, gekozen_oms
 
-    def make_link(self,evt): # TODO
+    def make_link(self,evt):
         gekozen_key, gekozen_code, gekozen_cmd, gekozen_oms = self.get_entry()
         # let op: als link al bestaat: vervangen, niet toevoegen
         found = False
-        for ix in range(self.lst_links.ItemCount):
-            if self.lst_links.GetItemText(ix) == gekozen_key:
+        for ix in range(self.lst_links.topLevelItemCount()):
+            item = self.lst_links.topLevelItem(ix)
+            if str(item.text(0)) == gekozen_key:
                 found = True
                 break
         if not found:
-            ix = self.lst_links.InsertStringItem(sys.maxint,gekozen_key)
-        ## self.lst_links.SetStringItem(ix,0,gekozen_key)
-        self.lst_links.SetStringItem(ix,1,gekozen_code)
-        self.lst_links.SetStringItem(ix,2,gekozen_cmd)
-        self.lst_links.SetStringItem(ix,3,gekozen_oms)
-        self.lst_links.EnsureVisible(ix)
-        self.btn_save.Enable()
+            item = gui.QTreeWidgetItem()
+            item.setText(0, gekozen_key)
+            self.lst_links.addTopLevelItem(item)
+        item.setText(1,gekozen_code)
+        item.setText(2,gekozen_cmd)
+        item.setText(3,gekozen_oms)
+        ## self.lst_links.EnsureVisible(ix)
+        self.btn_save.setEnabled(True)
 
-    def enable_edit(self,evt): # TODO
-        ix = evt.m_itemIndex
-        gekozen_key = self.lst_links.GetItemText(ix)
-        gekozen_cmd = self.lst_links.GetItem(ix, 2).m_text
-        self.cmb_key.SetValue(gekozen_key)
-        self.txt_key.SetValue(self.keydict[gekozen_key])
-        self.cmb_cmd.SetValue(gekozen_cmd)
+    def enable_edit(self, item, previtem):
+        gekozen_key = str(item.text(0))
+        gekozen_cmd = str(item.text(2))
+        self.cmb_key.setCurrentIndex(sorted(self.keydict.keys()).index(gekozen_key)) # setEditText(gekozen_key)
+        # let op: het volgende gaat niet werken als menu optie 1 nog niet is uitgevoerd
+        self.txt_key.setText(self.keydict[gekozen_key])
+        self.cmb_cmd.setCurrentIndex(sorted(self.omsdict.keys()).index(gekozen_cmd)) # setEditText(gekozen_cmd)
         try:
-            self.txt_cmd.SetValue(self.omsdict[gekozen_cmd])
+            self.txt_cmd.setText(self.omsdict[gekozen_cmd])
         except KeyError:
-            self.txt_cmd.SetValue('no command available')
+            self.txt_cmd.setText('no command available')
         ## self.btn_edit.Enable()
-        self.btn_delete.Enable()
-        self.ix = ix
+        self.btn_delete.setEnabled(True)
 
     ## def edit_link(self,evt):
         ## gekozen_key, gekozen_code, gekozen_cmd, gekozen_oms = self.get_entry()
@@ -313,35 +305,25 @@ class MainFrame(gui.QMainWindow, TCCMMixin):
         ## self.btn_edit.Disable()
         ## self.btn_delete.Disable()
 
-    def delete_link(self,evt): # TODO
-        dlg = gui.QMessageDialog(self,-1,"Really delete?","Delete entry",
-            style=gui.QYES_NO)
-        if dlg.ShowModal == gui.QYES:
-            self.lst_links.DeleteItem(self.ix)
-            self.ix = -1
+    def delete_link(self, evt):
+        ok = gui.QMessageBox.question(self, "Delete entry", "Really delete?",
+            gui.QMessageBox.Yes | gui.QMessageBox.No,
+            defaultButton = gui.QMessageBox.Yes)
+        if ok == gui.QMessageBox.Yes:
+            item = self.lst_links.currentItem()
+            ix = self.lst_links.indexOfTopLevelItem(item)
+            self.lst_links.takeTopLevelItem(ix)
             ## self.btn_edit.Disable()
-            self.btn_delete.Disable()
-        dlg.Destroy()
+            self.btn_delete.setEnabled(False)
 
-    def save_links(self,evt): # TODO
-        dlg = gui.QFileDialog(self, message="Save definition file",
-            defaultDir=self.basedir,
-            defaultFile="TC_hotkeys.csv",
-            wildcard="csv files (*.csv)|*.csv",
-            style=gui.QSAVE
-            )
-        if dlg.ShowModal() == gui.QID_OK:
-            pad = dlg.GetPath()
-        dlg.Destroy()
-        if pad:
-            wrtr = csv.writer(open(pad,"wb"))
-            for ix in range(self.lst_links.ItemCount):
-                wrtr.writerow((
-                    self.lst_links.GetItemText(ix),
-                    self.lst_links.GetItem(ix,1).GetText(),
-                    self.lst_links.GetItem(ix,2).GetText(),
-                    self.lst_links.GetItem(ix,3).GetText()
-                ))
+    def save_links(self,evt):
+        fname = gui.QFileDialog.getSaveFileName(self, "Save definition file",
+            os.path.join(self.basedir, "TC_hotkeys.csv"), "csv files (*.csv)")
+        if fname:
+            wrtr = csv.writer(open(fname,"wb"))
+            for ix in range(self.lst_links.topLevelItemCount()):
+                item = self.lst_links.topLevelItem(ix)
+                wrtr.writerow([str(item.text(x)) for x in range(4)])
 
     def reset(self,evt):
         self.setup()
