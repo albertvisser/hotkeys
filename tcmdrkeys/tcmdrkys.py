@@ -67,7 +67,13 @@ def keyboardtext(root):
         else:
             if len(ky) > 0:
                 for k in ky:
-                    data.append((keymods2(k), ky_desc))
+                    h = k.rsplit('+',1)
+                    if '/' in h[-1] and not h[-1].endswith('/'):
+                        hlp = h[-1].split('/')
+                        for it in hlp:
+                            data.append((keymods2('+'.join((h[0], it))), ky_desc))
+                    else:
+                        data.append((keymods2(k), ky_desc))
             ky_desc = deel2
             if " or " in deel1:
                 ky = deel1.split(" or ")
@@ -83,7 +89,13 @@ def keyboardtext(root):
             ## print ky,ky_desc
     if len(ky) > 0:
         for k in ky:
-            data.append((keymods2(k), ky_desc))
+            h = k.rsplit('+',1)
+            if '/' in h[-1] and not h[-1].endswith('/'):
+                hlp = h[-1].split('/')
+                for it in hlp:
+                    data.append((keymods2('+'.join((h[0], it))), ky_desc))
+            else:
+                data.append((keymods2(k), ky_desc))
     ## f = open("keyboard_keys.txt","w")
     ## for x,y in data:
         ## f.write("%s:: %s\n" % (x,y))
