@@ -94,11 +94,11 @@ def m_save(self):
         h = show_message(self, '041')
         if h != gui.QMessageBox.Yes:
             return
-    self.savekeys()
-    if self.ini.restart:
+    self.page.savekeys()
+    if self.page.ini.restart:
         h = show_message(self, '026')
         if h == gui.QMessageBox.Yes:
-            os.system(self.ini.restart)
+            os.system(self.page.ini.restart)
     else:
         gui.QMessageBox.information(self, self.captions['000'], self.captions['037'])
 
@@ -108,7 +108,7 @@ def m_user(self):
 
 def m_exit(self):
     """(menu) callback om het programma direct af te sluiten"""
-    self.close()
+    self.exit()
 
 def m_loc(self):
     """(menu) callback voor aanpassen van de bestandslocaties
@@ -186,7 +186,8 @@ class TCPanel(gui.QWidget):
             self.ini.lang = 'english.lng'
         self.readcaptions()
         self.modified = False
-        self.orig = ["", False, False, False, False, ""]
+        self._origdata = ["", False, False, False, False, ""]
+        self._newdata = self._origdata[:]
         self.mag_weg = True
         if args:
             self.fpad = args[0]
@@ -224,7 +225,6 @@ class TCPanel(gui.QWidget):
         for indx, wid in enumerate(widths):
             self.p0hdr.resizeSection(indx, wid)
         self.p0hdr.setStretchLastSection(True)
-        ## self.Bind(gui.QEVT_LIST_ITEM_DESELECTED, self.OnItemDeselected, self.p0list)
 
         box = gui.QFrame(self)
         box.setFrameShape(gui.QFrame.StyledPanel)
@@ -334,11 +334,12 @@ class TCPanel(gui.QWidget):
         self.setWindowTitle(self.captions["000"])
 
     def readcaptions(self):
-        for x in file(os.path.join(HERE, self.ini.lang)):
-            if x[0] == '#' or x.strip() == "":
-                continue
-            key,value = x.strip().split(None,1)
-            self.captions[key] = value
+        with open(os.path.join(HERE, self.ini.lang)) as _in:
+            for x in _in:
+                if x[0] == '#' or x.strip() == "":
+                    continue
+                key,value = x.strip().split(None,1)
+                self.captions[key] = value
 
     def setcaptions(self):
         if self.can_exit:
@@ -355,15 +356,18 @@ class TCPanel(gui.QWidget):
         self.populate_list()
 
     def vuldetails(self, selitem):  # let op: aangepast (gebruik zip)
+        print('vuldetails called')
         if not selitem: # bv. bij p0list.clear()
             return
-        seli = selitem.data(0, core.Qt.UserRole).toPyObject()
+        seli = selitem.data(0, core.Qt.UserRole)
+        if sys.version < '3':
+            seli = seli.toPyObject()
         key, mods, soort, cmd, oms = self.data[seli]
         self.b_save.setEnabled(False)
         self.b_del.setEnabled(False)
         if soort == 'U':
             self.b_del.setEnabled(True)
-        self.orig = [key, False, False, False, False, cmd]
+        self._origdata = [key, False, False, False, False, cmd]
         ix = self.keylist.index(key)
         self.cmb_key.setCurrentIndex(ix)
         self.cb_shift.setChecked(False)
@@ -374,98 +378,46 @@ class TCPanel(gui.QWidget):
         for x, y, z in zip('SCAW',(1, 2, 3, 4), (self.cb_shift, self.cb_ctrl,
                 self.cb_alt, self.cb_win)):
             if x in mods:
-                self.orig[y] = True
+                self._origdata[y] = True
                 z.setChecked(True)
+        self._newdata = self._origdata[:]
         ix = self.commandlist.index(cmd)
         self.cmb_commando.setCurrentIndex(ix)
         self.txt_oms.setText(oms)
 
-    def get_old_and_new(self):
-        oktocontinue, gevonden = True, False
-        origkey = self.orig[0]
-        origmods = ''
-        origmods = ''.join([y for x, y in zip((4, 2, 3, 1),
-            ('WCAS')) if self.orig[x]])
-        origcmd = self.orig[5]
-
-        key = str(self.cmb_key.currentText())
-        if key not in self.keylist:             # ?
-            if key.upper() in self.keylist:
-                key = key.upper()
-                self.cmb_key.setText(key)
-            else:
-                oktocontinue = False
-        mods = ''.join([y for x, y in zip((self.cb_win, self.cb_ctrl, self.cb_alt,
-            self.cb_shift), ('WCAS')) if x.isChecked()])
-        cmd = str(self.cmb_commando.currentText())
-        indx = -1
-        if cmd in self.omsdict.keys():
-            for number, value in self.data.items():
-                if value[0] == key and value[1] == mods:
-                    gevonden = True
-                    indx = number
-                    break
-        else:
-            oktocontinue = False
-        self._origdata = (origkey, origmods, origcmd)
-        self._newdata = (key, mods, cmd, indx)
-        return oktocontinue, gevonden
-
     def aanpassen(self, delete=False): # TODO
-        pos = self.p0list.indexOfTopLevelItem(self.p0list.currentItem())
-        oktocontinue, gevonden = self.get_old_and_new()
-        if not oktocontinue:
-            gui.QMessageBox.information(self, self.captions["000"],
-                self.captions['021'] if delete else self.captions['022'])
-            return
-        origkey, origmods, origcmd = self._origdata
-        key, mods, cmd, indx = self._newdata
-        if gevonden:
-            if key != origkey or mods != origmods:
-                ok = gui.QMessageBox.question(self, self.captions["000"],
-                    self.captions["045"], gui.QMessageBox.Yes |
-                    gui.QMessageBox.No)
-                if ok == gui.QMessageBox.No:
-                    return
-            if delete:
-                if self.data[indx][1] == "S": # can't delete standard key
-                    gui.QMessageBox.information(self, self.captions["000"],
-                        self.captions['024'])
-                    return
-                else:
-                    if self.data[indx][0] in self.defkeys: # restore standard if any
-                        cmd = self.defkeys[self.data[indx][0]]
-                        if cmd in self.omsdict:
-                            oms = self.omsdict[cmd]
-                        else:
-                            oms = cmd
-                            cmd = ""
-                        self.data[indx] = (key, 'S', cmd, oms)
-                    else:
-                        del self.data[indx]
-                        pos -= 1
-            else:
-                self.data[indx] = (key, mods, 'U', cmd, self.omsdict[cmd])
-        else:
-            if delete: # can't delete what's not there
+        print('aanpassen called')
+        item = self.p0list.currentItem()
+        pos = self.p0list.indexOfTopLevelItem(item)
+        if delete:
+            indx = item.data(0, core.Qt.UserRole)
+            if sys.version < '3':
+                indx = int(indx.toPyObject())
+            if self.data[indx][1] == "S": # can't delete standard key
                 gui.QMessageBox.information(self, self.captions["000"],
-                    self.captions['023'])
+                    self.captions['024'])
                 return
             else:
-                newdata = self.data.values()
-                newvalue = (key, mods, 'U', cmd, self.omsdict[cmd])
-                newdata.append(newvalue)
-                newdata.sort()
-                for x, y in enumerate(newdata):
-                    if y == newvalue:
-                        indx = x
-                    self.data[x] = y
-        self.b_save.setEnabled(False)
-        self.b_del.setEnabled(False)
-        self.modified = True
-        self.parent.setWindowTitle(' '.join((self.captions["000"],
-            self.captions['017'])))
-        self.populate_list(pos)    # refresh
+                if self.data[indx][0] in self.defkeys: # restore standard if any
+                    cmd = self.defkeys[self.data[indx][0]]
+                    if cmd in self.omsdict:
+                        oms = self.omsdict[cmd]
+                    else:
+                        oms = cmd
+                        cmd = ""
+                    self.data[indx] = (key, 'S', cmd, oms)
+                else:
+                    del self.data[indx]
+                    ## pos -= 1
+            self.b_save.setEnabled(False)
+            self.b_del.setEnabled(False)
+            self.modified = True
+            self.parent.setWindowTitle(' '.join((self.captions["000"],
+                self.captions['017'])))
+            print('item deleted, pos is', pos)
+            self.populate_list(pos)    # refresh
+        else:
+            self.on_item_selected(item, item) # , from_update=True)
 
     def populate_list(self, pos=0):
         """vullen van de list control
@@ -485,60 +437,80 @@ class TCPanel(gui.QWidget):
             new_item.setText(3, data[3])
             new_item.setText(4, data[4])
             self.p0list.addTopLevelItem(new_item)
+        item = self.p0list.topLevelItem(pos)
         self.p0list.setCurrentItem(self.p0list.topLevelItem(pos))
 
-    def on_item_selected(self, newitem, olditem):
+    def on_item_selected(self, newitem, olditem): # , from_update=False):
         """callback op het selecteren van een item
 
         velden op het hoofdscherm worden bijgewerkt vanuit de selectie"""
-        # eerst even naar het oude item kijken want als daar iets is veranderd
-        # dan moet dat eerst worden geaccepteerd of geweigerd
+        if not newitem: # bv. bij p0list.clear()
+            return
         if self._initializing:
             self.vuldetails(newitem)
             return
-        oktocontinue, gevonden = self.get_old_and_new()
-        print(oktocontinue, gevonden)
-        print(self._origdata)
-        origkey, origmods, origcmd = self._origdata
-        print(self._newdata)
-        key, mods, cmd, indx = self._newdata
-        if not gevonden or cmd != origcmd:
-            h = gui.QMessageBox.question(self,
-                self.captions["000"], self.captions["020"],
-                gui.QMessageBox.Yes | gui.QMessageBox.No)
-            if h == gui.QMessageBox.Yes:
-                ## self.top.aanpassen()
-                pos = self.p0list.indexOfTopLevelItem(self.p0list.currentItem())
+        print('itemselected called', newitem.text(0))
+        if olditem is not None:
+            print('old item was', olditem.text(0))
+        origkey = self._origdata[0]
+        origmods = ''.join([y for x, y in zip((4, 2, 3, 1),
+            ('WCAS')) if self._origdata[x]])
+        origcmd = self._origdata[5]
+        key = self._newdata[0]
+        mods = ''.join([y for x, y in zip((4, 2, 3, 1),
+            ('WCAS')) if self._newdata[x]])
+        cmd = self._newdata[5]
+        cursor_moved = True if newitem != olditem and olditem is not None else False
+        other_item = key != origkey or mods != origmods
+        other_cmd = cmd != origcmd
+        any_change = other_item or other_cmd
+        gevonden = False
+        for number, item in self.data.items():
+            if key == item[0] == key and item[1] == mods:
+                gevonden = True
+                indx = number
+                break
+        print(cursor_moved, other_item, other_cmd, gevonden)
+        doit = False
+        if any_change:
+            if cursor_moved:
+                h = gui.QMessageBox.question(self,
+                    self.captions["000"], self.captions["020"],
+                    gui.QMessageBox.Yes | gui.QMessageBox.No)
+                doit = True if h == gui.QMessageBox.Yes else False
+            elif other_item:
                 if gevonden:
-                    doit = True if cmd != origcmd else False
-                    if key != origkey or mods != origmods:
-                        ok = gui.QMessageBox.question(self,
-                            self.captions["000"], self.captions["045"],
-                            gui.QMessageBox.Yes | gui.QMessageBox.No)
-                        if ok == gui.QMessageBox.Yes:
-                            doit = True
-                        elif ok == gui.QMessageBox.No:
-                            doit = False
-                    if doit:
-                        self.data[indx] = (key, mods, 'U', cmd, self.omsdict[cmd])
-                        self.modified = True
-                    # na dit blijft deze in de question box hangen als je yes antwoordt
+                    ok = gui.QMessageBox.question(self,
+                        self.captions["000"], self.captions["045"],
+                        gui.QMessageBox.Yes | gui.QMessageBox.No)
+                    doit = True if ok == gui.QMessageBox.Yes else False
                 else:
-                    newdata = self.data.values()
-                    newvalue = (key, mods, 'U', cmd, self.omsdict[cmd])
-                    newdata.append(newvalue)
-                    newdata.sort()
-                    for x, y in enumerate(newdata):
-                        if y == newvalue:
-                            indx = x
-                        self.data[x] = y
-                    self.modified = True
-                if self.modified:
-                    self.populate_list(pos)    # refresh
-                    newitem = self.p0list.topLevelItem(pos)
+                    doit = True
+            else:
+                doit = True
+        if doit:
+            item = self.p0list.currentItem()
+            pos = self.p0list.indexOfTopLevelItem(item)
+            if gevonden:
+                self.data[indx] = (key, mods, 'U', cmd, self.omsdict[cmd])
+            else:
+                newdata = self.data.values()
+                newvalue = (key, mods, 'U', cmd, self.omsdict[cmd])
+                newdata.append(newvalue)
+                newdata.sort()
+                for x, y in enumerate(newdata):
+                    if y == newvalue:
+                        indx = x
+                    self.data[x] = y
+            self.modified = True
+            self._origdata = [key, False, False, False, False, cmd]
+            for mod, indx in zip(('WCAS'),(4, 2, 3, 1)):
+                self._origdata[indx] = mod in mods
+            self.populate_list(pos)    # refresh
+            newitem = self.p0list.topLevelItem(pos)
         self.vuldetails(newitem)
 
-    def keyprint(self, evt): # TODO
+    def keyprint(self, evt):
         pass
 
     def on_combobox(self, cb, text):
@@ -547,38 +519,47 @@ class TCPanel(gui.QWidget):
         zorgt ervoor dat de buttons ge(de)activeerd worden
         """
         text = str(text)
+        print('on combobox:', text)
+        print(self._origdata)
         self.defchanged = False
         if cb == self.cmb_key:
-            if text != self.orig[0]:
+            if text != self._origdata[0]:
+                self._newdata[0] = text
                 self.defchanged = True
                 self.b_save.setEnabled(True)
-            elif self.cmb_commando.currentText() == self.orig[5]:
+            elif str(self.cmb_commando.currentText()) == self._origdata[5]:
                 self.b_save.setEnabled(False)
         elif cb == self.cmb_commando:
-            if text != self.orig[5]:
+            if text != self._origdata[5]:
+                self._newdata[5] = text
                 self.defchanged = True
                 try:
                     self.txt_oms.setText(self.omsdict[text])
                 except KeyError:
                     self.txt_oms.setText('(Geen omschrijving beschikbaar)')
                 self.b_save.setEnabled(True)
-            elif self.cmb_key.currentText() == self.orig[0]:
+            elif str(self.cmb_key.currentText()) == self._origdata[0]:
                 self.b_save.setEnabled(False)
+        print(self._origdata)
+        print(self._newdata)
 
     def on_checkbox(self, cb, state):
         state = bool(state)
-        if (cb == self.cb_shift and state is not self.orig[1]) or (
-            cb == self.cb_ctrl and state is not self.orig[2]) or (
-            cb == self.cb_alt and state is not self.orig[3]) or (
-            cb == self.cb_win and state is not self.orig[4]):
+        for win, indx in zip((self.cb_shift, self.cb_ctrl, self.cb_alt, self.cb_win),
+                range(1,5)):
+            if cb == win and state != self._origdata[indx]:
+                self._newdata[indx] = state
                 self.defchanged = True
                 self.b_save.setEnabled(True)
         else:
-            states = [self.cb_shift.isChecked(), self.cb_ctrl.isChecked(),
-                self.cb_alt.isChecked(), self.cb_win.isChecked()]
-            if states == self.orig[1:5]:
+            states = [bool(self.cb_shift.isChecked()), bool(self.cb_ctrl.isChecked()),
+                bool(self.cb_alt.isChecked()), bool(self.cb_win.isChecked())]
+            if states == self._origdata[1:5]:
                 self.defchanged = False
                 self.b_save.setEnabled(False)
+        print('on checkbox:', indx, state)
+        print(self._origdata)
+        print(self._newdata)
 
     def on_update(self):
         self.aanpassen()
@@ -624,7 +605,7 @@ class FilesDialog(gui.QDialog):
 
     voor het instellen van de bestandslocaties
     """
-    def __init__(self, parent, title, locations, captions): # TODO
+    def __init__(self, parent, title, locations, captions):
         self.parent = parent
         self.locations = locations
         self.captions = captions
@@ -770,7 +751,7 @@ class MainWindow(gui.QMainWindow):
                 return
         self.close()
 
-    def afdrukken(self): # TODO
+    def afdrukken(self): # TODO (niet geactiveerd?)
         self.css = ""
         if self.css != "":
             self.css = "".join(("<style>",self.css,"</style>"))

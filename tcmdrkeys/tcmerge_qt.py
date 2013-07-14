@@ -2,7 +2,6 @@
 import sys,os
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
-import wx
 import functools
 from tccm_mixin import TCCMMixin
 from tcmdrkys import keyboardtext, defaultcommands, usercommands, userkeys
@@ -23,7 +22,7 @@ class MainFrame(gui.QMainWindow, TCCMMixin):
         self.basedir = os.getcwd()
         gui.QMainWindow.__init__(self,parent)
         self.setWindowTitle("TCCM")
-        self.resize(650,486)
+        self.resize(700,486)
         ## home = os.path.split(__file__)[0]
         ## self.apoicon = gui.QIcon(os.path.join(home,"apropos.ico"),gui.QBITMAP_TYPE_ICO)
         ## self.SetIcon(self.apoicon)
@@ -56,8 +55,8 @@ class MainFrame(gui.QMainWindow, TCCMMixin):
         self.btn_delete.clicked.connect(self.delete_link)
 
         self.lst_links = gui.QTreeWidget(pnl)
-        self.lst_links.resize(460,300)
-        widths = (70, 60, 100, 200)
+        self.lst_links.resize(660,300)
+        widths = (100, 60, 180, 300)
         self.lst_links.setHeaderLabels(("Key", "Number", "Command", "Description"))
         hdr = self.lst_links.header()
         hdr.setClickable(True)
@@ -223,7 +222,7 @@ class MainFrame(gui.QMainWindow, TCCMMixin):
         if fname:
             self.lst_links.clear()
             self.btn_link.setEnabled(True)
-            rdr = csv.reader(open(fname,'rb'))
+            rdr = csv.reader(open(fname,'r'))
             for row in rdr:
                 new = gui.QTreeWidgetItem(row)
                 self.lst_links.addTopLevelItem(new)

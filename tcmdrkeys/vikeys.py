@@ -12,7 +12,7 @@ def readkeys(pad):
     """
     data = {}
     try:
-        rdr = csv.reader(open(os.path.join(pad,"VI_hotkeys.csv"),'rb'))
+        rdr = csv.reader(open(os.path.join(pad,"VI_hotkeys.csv"), 'r'))
     except IOError:
         rdr = []
     key = 0

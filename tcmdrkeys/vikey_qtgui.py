@@ -4,12 +4,6 @@ from __future__ import print_function
 import sys, os
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
-import wx
-import wx.html as html
-import wx.lib.mixins.listctrl  as  listmix
-import wx.lib.filebrowsebutton as filebrowse
-import wx.gizmos   as  gizmos
-import images
 import vikeys
 ## import datetime
 

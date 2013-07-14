@@ -110,8 +110,8 @@ def defaultcommands(root):
     """
     omsdict = {'': "no command available"}
     cmdict = {'': ''}
-    try:
-        for x in file(os.path.join(root,'TOTALCMD.INC')):
+    with open(os.path.join(root,'TOTALCMD.INC')) as _in:
+        for x in _in:
             h = x.strip()
             if h == '' or h[0] == '[' or h[0] == ';':
                 continue
@@ -120,8 +120,6 @@ def defaultcommands(root):
             if int(cm_num) > 0:
                 cmdict[cm_num] = cm_naam
                 omsdict[cm_naam] = cm_oms # c[1] is omschrijving
-    except IOError:
-        pass
     return cmdict, omsdict
 
 def usercommands(root, cmdict=None, omsdict=None):
@@ -134,8 +132,8 @@ def usercommands(root, cmdict=None, omsdict=None):
     if omsdict is None:
         omsdict = {}
     s0 = ""
-    try:
-        for x in file(os.path.join(root,"usercmd.ini")):
+    with open(os.path.join(root,"usercmd.ini")) as _in:
+        for x in _in:
             if x.startswith("["):
                 if s0 != "":
                     omsdict[s0] = c1
@@ -146,8 +144,6 @@ def usercommands(root, cmdict=None, omsdict=None):
             elif x.startswith("menu"):
                 c1 = x.strip().split("=")[1]
         omsdict[s0] = c1
-    except IOError:
-        pass
     ## print "na lezen usercmd.ini",datetime.datetime.today()
     ## f = open("cmdict.txt","w")
     ## for x in cmdict:
@@ -186,7 +182,7 @@ def defaultkeys(root):
     ## #~     f.write("%s:: %s\n" % (x,y))
     ## #~ f.close()
     try:
-        rdr = csv.reader(open(os.path.join(root,"TC_hotkeys.csv"),'rb'))
+        rdr = csv.reader(open(os.path.join(root,"TC_hotkeys.csv"), 'r'))
     except IOError:
         rdr = []
     for row in rdr:
@@ -263,20 +259,21 @@ class TckSettings(object):
         self.restart = ''
         if not os.path.exists(self.fn):
             return
-        for x in file(self.fn):
-            if x.strip() == "" or x.startswith('#'):
-                continue
-            naam,waarde = x.strip().split('=')
-            try:
-                ix = self.namen.index(naam)
-            except ValueError:
-                ix = -1
-            if 0 <= ix <= 4:
-                self.paden[ix] = waarde
-            elif ix == 5:
-                self.lang = waarde
-            elif ix == 6:
-                self.restart = waarde
+        with open(self.fn) as _in:
+            for x in _in:
+                if x.strip() == "" or x.startswith('#'):
+                    continue
+                naam,waarde = x.strip().split('=')
+                try:
+                    ix = self.namen.index(naam)
+                except ValueError:
+                    ix = -1
+                if 0 <= ix <= 4:
+                    self.paden[ix] = waarde
+                elif ix == 5:
+                    self.lang = waarde
+                elif ix == 6:
+                    self.restart = waarde
         self.tcpad, self.ucpad, self.cipad, self.ktpad, self.hkpad = self.paden
         ## for x in reversed(self.paden):
             ## if x == '':
