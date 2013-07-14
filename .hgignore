@@ -5,9 +5,11 @@ syntax: glob
 *~
 *pyc
 *log
+*log.*
 *txt
 *csv
 *ini
+*ini.*
 pylint*
 KEYBOARD.TXT
 TOTALCMD.INC
@@ -18,3 +20,4 @@ opera/*
 scite/*
 system/*
 vim/*
+*orig

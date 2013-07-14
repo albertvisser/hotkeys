@@ -1,16 +1,13 @@
 # -*- coding: UTF-8 -*-
 
 from __future__ import print_function
-import sys, os
+import sys
+import os
+import string
 import functools
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
-import wx
-import wx.lib.filebrowsebutton as filebrowse
-import wx.gizmos   as  gizmos
-import images
 import tcmdrkys
-import string
 ## import datetime
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -44,7 +41,7 @@ if WIN and __file__ != "tckey_gui.py":
                 else:
                     f_out.write(line)
 
-#--- dit zit ook in hotkeys_shared.py
+#--- dit zit ook in hotkeys.py
 # constanten voor  captions en dergelijke 9correspondeert met nummers in language files)
 C_KEY, C_MOD, C_SRT, C_CMD, C_OMS = '001', '043', '002', '003', '004'
 C_DFLT, C_RDEF = '005', '006'
@@ -61,14 +58,15 @@ NOT_IMPLEMENTED = '404'
 #----
 
 #--- deze functies zitten ook in hotkeys_qt.py
-def show_message(self, message_id, caption_id='000'):
+def show_message(self, message_id, caption_id='000'): #TODO
     """toon de boodschap geïdentificeerd door <message_id> in een dialoog
     met als titel aangegeven door <caption_id> en retourneer het antwoord
     na sluiten van de dialoog
     """
-    ok = gui.QMessageBox.information(self, self.captions[message_id],
-        self.captions[caption_id])
-    return ok
+    ok = gui.QMessageBox.question(self, self.captions[caption_id],
+        self.captions[message_id], gui.QMessageBox.Yes |
+        gui.QMessageBox.No | gui.QMessageBox.Cancel)
+    return ok # ahum deze staat zo geen ok of cancel toe
 
 def m_read(self):
     """(menu) callback voor het lezen van de hotkeys
@@ -76,11 +74,15 @@ def m_read(self):
     vraagt eerst of het ok is om de hotkeys (opnieuw) te lezen
     zet de gelezen keys daarna ook in de gui
     """
-    if not self.modified:
+    doit = True
+    if not self.page.modified:
+        doit = False
         h = show_message(self, '041')
-        if h == gui.QMessageBox.Ok:
-            self.readkeys()
-            self.page.populate_list()
+        if h == gui.QMessageBox.Yes:
+            doit = True
+    if doit:
+        self.page.readkeys()
+        self.page.populate_list()
 
 def m_save(self):
     """(menu) callback voor het terugschrijven van de hotkeys
@@ -88,18 +90,17 @@ def m_save(self):
     vraagt eerst of het ok is om de hotkeys weg te schrijven
     vraagt daarna eventueel of de betreffende applicatie geherstart moet worden
     """
-    if not self.modified:
+    if not self.page.modified:
         h = show_message(self, '041')
-        if h != gui.QMessageBox.Ok:
+        if h != gui.QMessageBox.Yes:
             return
     self.savekeys()
     if self.ini.restart:
         h = show_message(self, '026')
-        if h == gui.QMessageBox.Ok:
+        if h == gui.QMessageBox.Yes:
             os.system(self.ini.restart)
     else:
-        ## gui.QMessageBox.information(self, self.captions['037'], self.captions['000'])
-        h = show_message(self, '037')
+        gui.QMessageBox.information(self, self.captions['000'], self.captions['037'])
 
 def m_user(self):
     """(menu) callback voor een nog niet geïmplementeerde actie"""
@@ -109,7 +110,7 @@ def m_exit(self):
     """(menu) callback om het programma direct af te sluiten"""
     self.close()
 
-def m_loc(self): # TODO?
+def m_loc(self):
     """(menu) callback voor aanpassen van de bestandslocaties
 
     vraagt bij wijzigingen eerst of ze moeten worden opgeslagen
@@ -118,7 +119,7 @@ def m_loc(self): # TODO?
     """
     if self.page.modified:
         h = show_message(self, '025')
-        if h == gui.QMessageBox.Ok:
+        if h == gui.QMessageBox.Yes:
             self.page.savekeys()
         elif h == gui.QMessageBox.Cancel:
             return
@@ -130,7 +131,6 @@ def m_loc(self): # TODO?
     captions = [self.captions[x] for x in (
         '028','029','030','031','032','033','039','038','040'
         )]
-    ## captions = ['Define file locations for:', 'TC','UC','CI','KT','HK']
     ok = FilesDialog(self, self.captions["000"], paths, captions).exec_()
     if ok == gui.QDialog.Accepted:
         paden, restarter = self.paden[:-1], self.paden[-1]
@@ -154,7 +154,7 @@ def m_about(self):
     """(menu) callback voor het tonen van de "about" dialoog
     """
     info = gui.QMessageBox.about(self,  self.captions['000'],
-        "\n\n".join((VRS, AUTH)))
+        "\n\n".join((TTL, 'version ' + VRS, AUTH)))
 
 # dispatch table for  menu callbacks
 MENU_FUNC = {
@@ -175,20 +175,16 @@ class TCPanel(gui.QWidget):
     """
     def __init__(self, parent, args=None, can_exit=False): # , top):
 
+        self.parent = parent
+        self._goback = False
+        self._initializing = True
         self.can_exit = can_exit
         self.captions = {}
         self.data = []
         self.ini = tcmdrkys.TckSettings(INI)
         if self.ini.paden[0] == '':
             self.ini.lang = 'english.lng'
-            ## win = gui.QWidget()
-            ## gui.QMessageBox.information(win, 'TC_Hotkeys',
-                ## 'Geen settings file ({}) in deze directory'.format(INI))
-            ## win.close()
-            ## return
         self.readcaptions()
-        ## print "start",datetime.datetime.today()
-        ## self.parent = parent
         self.modified = False
         self.orig = ["", False, False, False, False, ""]
         self.mag_weg = True
@@ -202,14 +198,12 @@ class TCPanel(gui.QWidget):
         else:
             self.fpad  = ""
         self.dirname,self.filename = os.path.split(self.fpad)
-        #~ print self.dirname,self.filename
         self.newfile = self.newitem = False
         self.oldsort = -1
         self.idlist = self.actlist = self.alist = []
         self.readkeys()
 
         gui.QWidget.__init__(self, parent)
-        self.parent = parent
         ## self.top = top
 
         titles, widths = [], []
@@ -224,38 +218,34 @@ class TCPanel(gui.QWidget):
         self.p0list.setSortingEnabled(True)
         self.p0list.setHeaderLabels(titles)
         self.p0list.setAlternatingRowColors(True)
+        self.p0list.currentItemChanged.connect(self.on_item_selected) # 2 params
         self.p0hdr = self.p0list.header()
         self.p0hdr.setClickable(True)
         for indx, wid in enumerate(widths):
             self.p0hdr.resizeSection(indx, wid)
         self.p0hdr.setStretchLastSection(True)
-        self.populate_list()
-        ## self.Bind(gui.QEVT_LIST_ITEM_SELECTED, self.OnItemSelected, self.p0list)
         ## self.Bind(gui.QEVT_LIST_ITEM_DESELECTED, self.OnItemDeselected, self.p0list)
-        ## self.Bind(gui.QEVT_LIST_ITEM_ACTIVATED, self.OnItemActivated, self.p0list)
-        ## self.Bind(gui.QEVT_LIST_COL_CLICK, self.OnColClick, self.p0list)
-        ## self.p0list.Bind(gui.QEVT_LEFT_DCLICK, self.OnDoubleClick)
-        ## self.p0list.Bind(gui.QEVT_KEY_DOWN, self.OnKeyPress)
 
         box = gui.QFrame(self)
         box.setFrameShape(gui.QFrame.StyledPanel)
-        ## box.setLineWidth(1)
         box.setMaximumHeight(90)
         self.txt_key = gui.QLabel(self.captions[C_KTXT] + " ", box)
         self.keylist = [x for x in string.ascii_uppercase] + \
-            [x for x in string.digits] + ["F" + str(i) for i in range(1,13)] + \
-            [self.captions[str(x)] for x in xrange(100,118)]
+            [x for x in string.digits] + [x for x in string.punctuation] + \
+            ["F" + str(i) for i in range(1,13)] + \
+            [self.captions[str(x)] for x in range(100,121)]
+        for item in self.data.values():
+            if item[0] not in self.keylist:
+                print(item)
         cb = gui.QComboBox(box)
         cb.addItems(self.keylist)
-        ## self.Bind(gui.QEVT_COMBOBOX, self.EvtComboBox, cb)
-        ## self.Bind(gui.QEVT_TEXT, self.EvtText, cb)
-        ## self.Bind(gui.QEVT_TEXT_ENTER, self.EvtTextEnter, cb)
+        cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox, cb))
         self.cmb_key = cb
 
         for x in (M_CTRL, M_ALT, M_SHFT, M_WIN):
             cb = gui.QCheckBox(self.captions[x].join(("+","  ")), box) #, (65, 60), (150, 20), gui.QNO_BORDER)
             cb.setChecked(False)
-            ## self.Bind(gui.QEVT_CHECKBOX, self.EvtCheckBox, cb)
+            cb.stateChanged.connect(functools.partial(self.on_checkbox, cb))
             if x == M_CTRL:
                 self.cb_ctrl = cb
             elif x == M_ALT:
@@ -266,31 +256,29 @@ class TCPanel(gui.QWidget):
                 self.cb_win = cb
 
         self.txt_cmd = gui.QLabel(self.captions[C_CTXT] + " ", box)
-        commandlist = [x for x in self.omsdict.keys()]
-        commandlist.sort()
+        self.commandlist = [x for x in self.omsdict.keys()]
+        self.commandlist.sort()
         cb = gui.QComboBox(self)
-        cb.addItems(commandlist)
-        ## self.Bind(gui.QEVT_COMBOBOX, self.EvtComboBox, cb)
-        ## self.Bind(gui.QEVT_TEXT, self.EvtText, cb)
-        ## self.Bind(gui.QEVT_TEXT_ENTER, self.EvtTextEnter, cb)
+        cb.addItems(self.commandlist)
+        cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox, cb))
         self.cmb_commando = cb
 
         self.b_save = gui.QPushButton(self.captions[C_SAVE], box) ##, (120, 45))
         self.b_save.setEnabled(False)
-        self.b_save.clicked.connect(self.on_click)
+        self.b_save.clicked.connect(self.on_update)
         self.b_del = gui.QPushButton(self.captions[C_DEL], box) #, size= (50,-1)) ##, (120, 45))
         self.b_del.setEnabled(False)
-        self.b_del.clicked.connect(self.on_click)
+        self.b_del.clicked.connect(self.on_delete)
 
         self.txt_oms = gui.QTextEdit(box)
-        ## self.txt_oms.resize=(125, 36)
         self.txt_oms.setMaximumHeight(40)
         self.txt_oms.setReadOnly(True)
+
+        self.populate_list()
 
         if can_exit:
             self.b_exit = gui.QPushButton(self.captions[C_EXIT], self)
             self.b_exit.clicked.connect(self.parent.exit)
-            ## self.Bind(gui.QEVT_KEY_DOWN, self.OnKeyPress)
 
     # --- schermen opbouwen: layout -----------------------------------------------------------------------------------------
         sizer0 = gui.QVBoxLayout()
@@ -334,6 +322,7 @@ class TCPanel(gui.QWidget):
             sizer2.addStretch()
             sizer0.addLayout(sizer2)
         self.setLayout(sizer0)
+        self._initializing = False
 
     def readkeys(self):
         self.cmdict, self.omsdict, self.defkeys, self.data = tcmdrkys.readkeys(
@@ -351,7 +340,7 @@ class TCPanel(gui.QWidget):
             key,value = x.strip().split(None,1)
             self.captions[key] = value
 
-    def setcaptions(self): # TODO
+    def setcaptions(self):
         if self.can_exit:
             self.parent.setcaptions()
         self.cb_win.setText(self.captions[M_WIN].join(("+", "  ")))
@@ -365,102 +354,103 @@ class TCPanel(gui.QWidget):
         self.txt_cmd.setText(self.captions[C_CTXT])
         self.populate_list()
 
-    def vuldetails(self,seli): # TODO
+    def vuldetails(self, selitem):  # let op: aangepast (gebruik zip)
+        if not selitem: # bv. bij p0list.clear()
+            return
+        seli = selitem.data(0, core.Qt.UserRole).toPyObject()
         key, mods, soort, cmd, oms = self.data[seli]
-        ## print "details vullen met",key,soort,cmd,oms
-        self.bSave.Enable(False)
+        self.b_save.setEnabled(False)
+        self.b_del.setEnabled(False)
         if soort == 'U':
-            self.bDel.Enable(True)
-        self.orig =  [key, False, False, False, False, cmd]
-        self.cbShift.SetValue(False)
-        self.cbCtrl.SetValue(False)
-        self.cbAlt.SetValue(False)
-        self.cbWin.SetValue(False)
-        self.cmbKey.SetValue(key)
-        if 'S' in mods:
-        ## for mod in mods:
-            ## if mod == "S":
-                self.orig[1] = True
-                self.cbShift.SetValue(True)
-        if 'C' in mods:
-            ## elif mod == "C":
-                self.orig[2] = True
-                self.cbCtrl.SetValue(True)
-        if 'A' in mods:
-            ## elif mod == "A":
-                self.orig[3] = True
-                self.cbAlt.SetValue(True)
-        if 'W' in mods:
-            ## elif mod == "W":
-                self.orig[4] = True
-                self.cbWin.SetValue(True)
-        self.cmbCommando.SetValue(cmd)
-        self.txtOms.SetValue(oms)
+            self.b_del.setEnabled(True)
+        self.orig = [key, False, False, False, False, cmd]
+        ix = self.keylist.index(key)
+        self.cmb_key.setCurrentIndex(ix)
+        self.cb_shift.setChecked(False)
+        self.cb_ctrl.setChecked(False)
+        self.cb_alt.setChecked(False)
+        self.cb_win.setChecked(False)
+        self.cmb_key.setEditText(key)
+        for x, y, z in zip('SCAW',(1, 2, 3, 4), (self.cb_shift, self.cb_ctrl,
+                self.cb_alt, self.cb_win)):
+            if x in mods:
+                self.orig[y] = True
+                z.setChecked(True)
+        ix = self.commandlist.index(cmd)
+        self.cmb_commando.setCurrentIndex(ix)
+        self.txt_oms.setText(oms)
 
-    def aanpassen(self, delete=False): # TODO
-        oktocontinue = True
+    def get_old_and_new(self):
+        oktocontinue, gevonden = True, False
         origkey = self.orig[0]
-        key = self.cmbKey.GetValue()
-        if key not in self.keylist:
+        origmods = ''
+        origmods = ''.join([y for x, y in zip((4, 2, 3, 1),
+            ('WCAS')) if self.orig[x]])
+        origcmd = self.orig[5]
+
+        key = str(self.cmb_key.currentText())
+        if key not in self.keylist:             # ?
             if key.upper() in self.keylist:
                 key = key.upper()
-                self.cmbKey.SetValue(key)
+                self.cmb_key.setText(key)
             else:
                 oktocontinue = False
-        origmods = ''
-        if self.orig[4]:
-            origmods += 'W'
-        if self.orig[2]:
-            origmods += 'C'
-        if self.orig[3]:
-            origmods += 'A'
-        if self.orig[1]:
-            origmods += 'S'
-        mods = ""
-        if self.cbWin.GetValue():
-            mods += "W"
-        if self.cbCtrl.GetValue():
-            mods += "C"
-        if self.cbAlt.GetValue():
-            mods += "A"
-        if self.cbShift.GetValue():
-            mods += "S"
-        ## if mods != "":
-            ## key = " + ".join((key,mods))
-        origcmd = self.orig[5]
-        cmd = self.cmbCommando.GetValue()
-        if cmd not in self.omsdict.keys():
+        mods = ''.join([y for x, y in zip((self.cb_win, self.cb_ctrl, self.cb_alt,
+            self.cb_shift), ('WCAS')) if x.isChecked()])
+        cmd = str(self.cmb_commando.currentText())
+        indx = -1
+        if cmd in self.omsdict.keys():
+            for number, value in self.data.items():
+                if value[0] == key and value[1] == mods:
+                    gevonden = True
+                    indx = number
+                    break
+        else:
             oktocontinue = False
+        self._origdata = (origkey, origmods, origcmd)
+        self._newdata = (key, mods, cmd, indx)
+        return oktocontinue, gevonden
+
+    def aanpassen(self, delete=False): # TODO
+        pos = self.p0list.indexOfTopLevelItem(self.p0list.currentItem())
+        oktocontinue, gevonden = self.get_old_and_new()
         if not oktocontinue:
-            h = self.captions['021'] if delete else self.captions['022']
-            dlg = gui.QMessageDialog(self, h, self.captions["000"],
-                gui.QOK | gui.QICON_INFORMATION
-                )
-            h = dlg.ShowModal()
-            dlg.Destroy()
+            gui.QMessageBox.information(self, self.captions["000"],
+                self.captions['021'] if delete else self.captions['022'])
             return
-        gevonden = False
-        print(origkey, ';', origmods, ';', key, ';', mods)
-        for number, value in self.data.iteritems():
-            ## print number, value
-            if value[0] == key and value[1] == mods:
-                gevonden = True
-                indx = number
-                break
+        origkey, origmods, origcmd = self._origdata
+        key, mods, cmd, indx = self._newdata
         if gevonden:
             if key != origkey or mods != origmods:
-                dlg = gui.QMessageDialog(self, self.captions["045"],
-                    self.captions["000"],
-                    gui.QYES_NO | gui.QNO_DEFAULT |  gui.QICON_INFORMATION
-                    )
-                h = dlg.ShowModal()
-                dlg.Destroy()
-                if h == gui.QID_NO:
-                    oktocontinue = False
-        if not delete:
-            if gevonden:
-                if oktocontinue:
-                    self.data[indx] = (key, mods, 'U', cmd, self.omsdict[cmd])
+                ok = gui.QMessageBox.question(self, self.captions["000"],
+                    self.captions["045"], gui.QMessageBox.Yes |
+                    gui.QMessageBox.No)
+                if ok == gui.QMessageBox.No:
+                    return
+            if delete:
+                if self.data[indx][1] == "S": # can't delete standard key
+                    gui.QMessageBox.information(self, self.captions["000"],
+                        self.captions['024'])
+                    return
+                else:
+                    if self.data[indx][0] in self.defkeys: # restore standard if any
+                        cmd = self.defkeys[self.data[indx][0]]
+                        if cmd in self.omsdict:
+                            oms = self.omsdict[cmd]
+                        else:
+                            oms = cmd
+                            cmd = ""
+                        self.data[indx] = (key, 'S', cmd, oms)
+                    else:
+                        del self.data[indx]
+                        pos -= 1
+            else:
+                self.data[indx] = (key, mods, 'U', cmd, self.omsdict[cmd])
+        else:
+            if delete: # can't delete what's not there
+                gui.QMessageBox.information(self, self.captions["000"],
+                    self.captions['023'])
+                return
             else:
                 newdata = self.data.values()
                 newvalue = (key, mods, 'U', cmd, self.omsdict[cmd])
@@ -470,135 +460,14 @@ class TCPanel(gui.QWidget):
                     if y == newvalue:
                         indx = x
                     self.data[x] = y
-        else:
-            if not gevonden:
-                dlg = gui.QMessageDialog(self, self.captions['023'],
-                    self.captions["000"],
-                    gui.QOK | gui.QICON_INFORMATION
-                    )
-                h = dlg.ShowModal()
-                dlg.Destroy()
-                oktocontinue = False
-            elif self.data[indx][1] == "S":
-                dlg = gui.QMessageDialog(self, self.captions['024'],
-                    self.captions["000"],
-                    gui.QOK | gui.QICON_INFORMATION
-                    )
-                h = dlg.ShowModal()
-                dlg.Destroy()
-                oktocontinue = False
-            else:
-                # kijk of er een standaard definitie bij de toets hoort, zo ja deze terugzetten
-                if self.data[indx][0] in self.defkeys:
-                    cmd = self.defkeys[self.data[indx][0]]
-                    if cmd in self.omsdict:
-                        oms = self.omsdict[cmd]
-                    else:
-                        oms = cmd
-                        cmd = ""
-                    self.data[indx] = (key, 'S', cmd, oms)
-                else:
-                    del self.data[indx]
-                    indx -= 1
-        if oktocontinue:
-            self.page.PopulateList()
-            self.modified = True
-            self.SetTitle(self.captions["000"] + ' ' + self.captions['017'])
-            self.bSave.Enable(False)
-            self.bDel.Enable(False)
-            self.page.p0list.Select(indx)
+        self.b_save.setEnabled(False)
+        self.b_del.setEnabled(False)
+        self.modified = True
+        self.parent.setWindowTitle(' '.join((self.captions["000"],
+            self.captions['017'])))
+        self.populate_list(pos)    # refresh
 
-    def onKeyPress(self, evt): # TODO - dit mag met actions
-        """callback bij gebruik van een toets(encombinatie)
-        """
-        keycode = evt.GetKeyCode()
-        togo = keycode - 48
-        if evt.GetModifiers() == gui.QMOD_ALT: # evt.AltDown()
-            if keycode == gui.QWXK_LEFT or keycode == gui.QWXK_NUMPAD_LEFT: #  keycode == 314
-                pass
-            elif keycode == gui.QWXK_RIGHT or keycode == gui.QWXK_NUMPAD_RIGHT: #  keycode == 316
-                pass
-            ## elif togo >= 0 and togo <= self.parent.pages: # Alt-0 t/m Alt-6
-                ## pass
-            elif keycode == 83: # Alt-S
-                pass
-            elif keycode == 70: # Alt-F
-                pass
-            elif keycode == 71: # Alt-G
-                pass
-        elif evt.GetModifiers() == gui.QMOD_CONTROL: # evt.ControlDown()
-            if keycode == 81: # Ctrl-Q
-                pass
-            elif keycode == 80: # Ctrl-P
-                self.keyprint(evt)
-            elif keycode == 79: # Ctrl-O
-                pass
-            elif keycode == 78: # Ctrl-N
-                pass
-            elif keycode == 70: # Ctrl-H
-                pass
-            elif keycode == 90: # Ctrl-Z
-                pass
-        elif keycode == gui.QWXK_RETURN or keycode == gui.QWXK_NUMPAD_ENTER:# 13 or 372: # Enter
-            pass
-        #~ else:
-            #~ evt.Skip()
-        evt.Skip()
-
-    def on_text_event(self,evt): # TODO
-        """callback op het wijzigen van de tekst
-
-        zorgt ervoor dat de buttons ge(de)activeerd worden
-        """
-        #~ print "self.init is", self.init
-        if not self.init:
-            #~ print "ok, enabling buttons"
-            self.enableButtons()
-    ## def EvtText(self,evt): # TODO
-        self.defchanged = False
-        cb = evt.GetEventObject()
-        ## print "EvtText on",cb
-        h = evt.GetString()
-        if cb == self.cmbKey:
-            ## print "h:",h
-            j = self.cmbCommando.GetValue()
-            ## print "j:",j
-            if h.strip() == "" or j.strip() == "":
-                self.bSave.Enable(False)
-                self.bDel.Enable(False)
-            elif h != self.orig[0]:
-                self.defchanged = True
-                self.bSave.Enable(True)
-                self.bDel.Enable(True)
-        elif cb == self.cmbCommando:
-            j = self.cmbKey.GetValue()
-            ## print "h:",h
-            ## print "j:",j
-            if h.strip() == "" or j.strip() == "":
-                self.bSave.Enable(False)
-                self.bDel.Enable(False)
-            elif h != self.orig[5]:
-                self.defchanged = True
-                try:
-                    self.txtOms.SetValue(self.omsdict[h])
-                except KeyError:
-                    print("Key bestaat niet in omsdict:",h)
-                    return
-                self.bSave.Enable(True)
-                self.bDel.Enable(True)
-
-    ## def EvtTextEnter(self,evt): # TODO
-        ## cb = evt.GetEventObject()
-        ## print "EvtTextEnter on",cb
-
-    def on_combobox_event(self,evt): # TODO
-        """callback op het gebruik van een combobox
-
-        zorgt ervoor dat de buttons ge(de)activeerd worden
-        """
-        self.enable_buttons()
-
-    def populate_list(self): # TODO
+    def populate_list(self, pos=0):
         """vullen van de list control
         """
         self.p0list.clear()
@@ -616,107 +485,108 @@ class TCPanel(gui.QWidget):
             new_item.setText(3, data[3])
             new_item.setText(4, data[4])
             self.p0list.addTopLevelItem(new_item)
+        self.p0list.setCurrentItem(self.p0list.topLevelItem(pos))
 
-    def after_sort(self): # TODO
-        """ na het sorteren moeten de regels weer om en om gekleurd worden"""
-        kleur = False
-        for key in range(len(self.data.items)):
-            if kleur:
-                #~ self.p0list.SetItemBackgroundColour(key,gui.QSystemSettings.GetColour(gui.QSYS_COLOUR_MENU))
-            #~ else:
-                self.p0list.SetItemBackgroundColour(key,gui.QSystemSettings.GetColour(gui.QSYS_COLOUR_INFOBK))
-            kleur = not kleur
-
-    def on_item_selected(self, event): # TODO
+    def on_item_selected(self, newitem, olditem):
         """callback op het selecteren van een item
 
         velden op het hoofdscherm worden bijgewerkt vanuit de selectie"""
-        seli = self.p0list.GetItemData(event.m_itemIndex)
-        ## print "Itemselected",seli,self.top.data[seli]
-        self.top.vuldetails(seli)
-        event.Skip()
+        # eerst even naar het oude item kijken want als daar iets is veranderd
+        # dan moet dat eerst worden geaccepteerd of geweigerd
+        if self._initializing:
+            self.vuldetails(newitem)
+            return
+        oktocontinue, gevonden = self.get_old_and_new()
+        print(oktocontinue, gevonden)
+        print(self._origdata)
+        origkey, origmods, origcmd = self._origdata
+        print(self._newdata)
+        key, mods, cmd, indx = self._newdata
+        if not gevonden or cmd != origcmd:
+            h = gui.QMessageBox.question(self,
+                self.captions["000"], self.captions["020"],
+                gui.QMessageBox.Yes | gui.QMessageBox.No)
+            if h == gui.QMessageBox.Yes:
+                ## self.top.aanpassen()
+                pos = self.p0list.indexOfTopLevelItem(self.p0list.currentItem())
+                if gevonden:
+                    doit = True if cmd != origcmd else False
+                    if key != origkey or mods != origmods:
+                        ok = gui.QMessageBox.question(self,
+                            self.captions["000"], self.captions["045"],
+                            gui.QMessageBox.Yes | gui.QMessageBox.No)
+                        if ok == gui.QMessageBox.Yes:
+                            doit = True
+                        elif ok == gui.QMessageBox.No:
+                            doit = False
+                    if doit:
+                        self.data[indx] = (key, mods, 'U', cmd, self.omsdict[cmd])
+                        self.modified = True
+                    # na dit blijft deze in de question box hangen als je yes antwoordt
+                else:
+                    newdata = self.data.values()
+                    newvalue = (key, mods, 'U', cmd, self.omsdict[cmd])
+                    newdata.append(newvalue)
+                    newdata.sort()
+                    for x, y in enumerate(newdata):
+                        if y == newvalue:
+                            indx = x
+                        self.data[x] = y
+                    self.modified = True
+                if self.modified:
+                    self.populate_list(pos)    # refresh
+                    newitem = self.p0list.topLevelItem(pos)
+        self.vuldetails(newitem)
 
-    def on_item_deselected(self, event): # TODO
-        """callback op het niet meer geselecteerd zijn van een item
+    def keyprint(self, evt): # TODO
+        pass
 
-        er wordt gevraagd of de key definitie moet worden bijgewerkt"""
-        seli = self.p0list.GetItemData(event.m_itemIndex)
-        ## print "ItemDeselected",seli,self.top.data[seli]
-        if self.top.defchanged:
-            self.top.defchanged = False
-            dlg = gui.QMessageDialog(self,
-                self.top.captions["020"],
-                self.top.captions["000"],
-                gui.QYES_NO | gui.QNO_DEFAULT | gui.QICON_INFORMATION
-                )
-            h = dlg.ShowModal()
-            dlg.Destroy()
-            if h == gui.QID_YES:
-                ## print "OK gekozen"
-                self.top.aanpassen()
+    def on_combobox(self, cb, text):
+        """callback op het gebruik van een combobox
 
-    def on_item_activated(self, event): # TODO
-        """callback op het activeren van een item (onderdeel van het selecteren)
+        zorgt ervoor dat de buttons ge(de)activeerd worden
         """
-        self.currentItem = event.m_itemIndex
-
-    def on_column_click(self, event): # TODO
-        """callback op het klikken op een kolomtitel
-        """
-        ## print "OnColClick: %d\n" % event.GetColumn()
-        ## self.parent.sorter = self.GetColumnSorter()
-        event.Skip()
-
-    def on_doubleclick(self, event): # TODO
-        """callback op dubbelklikken op een kolomtitel
-        """
-        pass
-        # self.log.WriteText("OnDoubleClick item %s\n" % self.p0list.GetItemText(self.currentItem))
-        event.Skip()
-
-
-    def keyprint(self,evt): # TODO
-        pass
-
-    def on_checkbox_event(self,evt): # TODO
-        cb = evt.GetEventObject()
-        if cb == self.cbShift:
-            if cb.GetValue() != self.orig[1]:
+        text = str(text)
+        self.defchanged = False
+        if cb == self.cmb_key:
+            if text != self.orig[0]:
                 self.defchanged = True
-                self.bSave.Enable(True)
-                self.bDel.Enable(True)
-        elif cb == self.cbCtrl:
-            if cb.GetValue() != self.orig[2]:
+                self.b_save.setEnabled(True)
+            elif self.cmb_commando.currentText() == self.orig[5]:
+                self.b_save.setEnabled(False)
+        elif cb == self.cmb_commando:
+            if text != self.orig[5]:
                 self.defchanged = True
-                self.bSave.Enable(True)
-                self.bDel.Enable(True)
-        elif cb == self.cbAlt:
-            if cb.GetValue() != self.orig[3]:
+                try:
+                    self.txt_oms.setText(self.omsdict[text])
+                except KeyError:
+                    self.txt_oms.setText('(Geen omschrijving beschikbaar)')
+                self.b_save.setEnabled(True)
+            elif self.cmb_key.currentText() == self.orig[0]:
+                self.b_save.setEnabled(False)
+
+    def on_checkbox(self, cb, state):
+        state = bool(state)
+        if (cb == self.cb_shift and state is not self.orig[1]) or (
+            cb == self.cb_ctrl and state is not self.orig[2]) or (
+            cb == self.cb_alt and state is not self.orig[3]) or (
+            cb == self.cb_win and state is not self.orig[4]):
                 self.defchanged = True
-                self.bSave.Enable(True)
-                self.bDel.Enable(True)
-        elif cb == self.cbWin:
-            if cb.GetValue() != self.orig[4]:
-                self.defchanged = True
-                self.bSave.Enable(True)
-                self.bDel.Enable(True)
+                self.b_save.setEnabled(True)
+        else:
+            states = [self.cb_shift.isChecked(), self.cb_ctrl.isChecked(),
+                self.cb_alt.isChecked(), self.cb_win.isChecked()]
+            if states == self.orig[1:5]:
+                self.defchanged = False
+                self.b_save.setEnabled(False)
 
-    def on_click(self,evt): # TODO
-        b = evt.GetEventObject()
-        key = self.cmbKey.GetValue()
-        cmd = self.cmbCommando.GetValue()
-        if b == self.bSave:
-            ## print "keydef opslaan gekozen",key,cmd
-            self.aanpassen()
-        elif b == self.bDel:
-            ## print "keydef verwijderen gekozen",key,cmd
-            self.aanpassen(delete=True)
+    def on_update(self):
+        self.aanpassen()
+        self.p0list.setFocus()
 
-    def OnSetFocus(self,evt): # TODO
-        pass
-
-    def OnKillFocus(self,evt): # TODO
-        pass
+    def on_delete(self):
+        self.aanpassen(delete=True)
+        self.p0list.setFocus()
 
 
 class FileBrowseButton(gui.QWidget):
@@ -732,7 +602,6 @@ class FileBrowseButton(gui.QWidget):
         box.addStretch()
         self.input = gui.QLineEdit(self)
         self.input.setMinimumWidth(200)
-        ## inp.setText(strt)
         box.addWidget(self.input)
         self.button = gui.QPushButton('Select', self, clicked=self.browse)
         box.addWidget(self.button)
@@ -759,7 +628,6 @@ class FilesDialog(gui.QDialog):
         self.parent = parent
         self.locations = locations
         self.captions = captions
-        ## print locations
         gui.QDialog.__init__(self, parent)
         self.resize=(350, 200)
 
@@ -770,8 +638,6 @@ class FilesDialog(gui.QDialog):
         sizer.addWidget(label)
 
         buttons = []
-        ## callbacks = (self.bTCCallback,self.bUCCallback,
-            ## self.bCICallback,self.bKTCallback,self.bHKCallback)
         rstrcap2 = captions.pop()
         rstrcap = captions.pop()
         dircap = captions.pop()
@@ -784,8 +650,6 @@ class FilesDialog(gui.QDialog):
             else:
                 dir = locations[0]
                 strt = ""
-            ## dir = os.path.split(dir)[0]
-            ## print i,dir
 
             fbb = FileBrowseButton(self, getdirectory=True)
             fbb.label.setText(x)
@@ -805,25 +669,12 @@ class FilesDialog(gui.QDialog):
         self.bRST.caption = rstrcap2
         sizer.addWidget(self.bRST)
 
-        ## line = gui.QStaticLine(self, -1, size=(20,-1), style=gui.QLI_HORIZONTAL)
-        ## sizer.Add(line, 0, gui.QGROW|gui.QALIGN_CENTER_VERTICAL|gui.QRIGHT|gui.QTOP, 5)
-
         button_box = gui.QDialogButtonBox(gui.QDialogButtonBox.Ok |
             gui.QDialogButtonBox.Cancel)
         button_box.accepted.connect(self.accept)
-        ## button_box.rejected.connect(button_box.reject)
+        button_box.rejected.connect(self.reject)
         sizer.addWidget(button_box)
         self.setLayout(sizer)
-        ## btnsizer = gui.QStdDialogButtonSizer()
-        ## btn = gui.QButton(self, gui.QID_OK)
-        ## btn.SetDefault()
-        ## btnsizer.AddButton(btn)
-        ## btn = gui.QButton(self, gui.QID_CANCEL)
-        ## btnsizer.AddButton(btn)
-        ## btnsizer.Realize()
-        ## sizer.Add(btnsizer, 0, gui.QALIGN_CENTER|gui.QALL, 2)
-        ## self.SetSizer(sizer)
-        ## sizer.Fit(self)
 
     def accept(self):
         paden = [
@@ -851,23 +702,6 @@ class FilesDialog(gui.QDialog):
             return
         self.parent.paden = paden
         return gui.QDialog.Accepted
-
-    ## def bTCCallback(self, evt):
-        ## print "It's the FileBrowseButton for wincmd.ini"
-        ## # het zou mooi wezen als deze waarde bij wijzigen default gemaakt wordt voor de andere
-        ## # maar ik denk niet dat dat kan zonder ze weg te gooien en opnieuw te maken
-
-    ## def bUCCallback(self, evt):
-        ## print "It's the FileBrowseButton for usercmd.ini", evt.GetString()
-
-    ## def bCICallback(self, evt):
-        ## print "It's the FileBrowseButton for totalcmd.inc", evt.GetString()
-
-    ## def bKTCallback(self, evt):
-        ## print "It's the FileBrowseButton for keyboard.txt", evt.GetString()
-
-    ## def bHKCallback(self, evt):
-        ## print "It's the FileBrowseButton for hotkeys.hky", evt.GetString()
 
 class MainWindow(gui.QMainWindow):
     """Hoofdscherm van de applicatie"""
@@ -902,7 +736,6 @@ class MainWindow(gui.QMainWindow):
                     act.triggered.connect(functools.partial(self.on_menu, sel))
                     menu.addAction(act)
 
-        ## print "na layouten scherm",datetime.datetime.today()
         self.show()
         if len(self.page.data) == 0:
             dlg = gui.QMessageBox.information(self, self.captions["000"],
@@ -921,23 +754,19 @@ class MainWindow(gui.QMainWindow):
         self.setWindowTitle(title)
         for indx, menu in enumerate(self.menuitems):
             menu.setTitle(self.captions[C_MENU[indx][0]])
-            ## hulp = [x for x in C_MENU[indx][1] if x != -1]
-            ## print(hulp)
             for indx2, action in enumerate(menu.actions()):
-                ## action.setText(self.captions[hulp[indx2]])
                 hulp = C_MENU[indx][1][indx2]
                 if hulp != -1:
                     action.setText(self.captions[hulp])
 
-    def exit(self,e=None): # TODO
+    def exit(self,e=None):
         if self.page.modified:
-            ok = gui.QMessageDialog.information(self, self.captions["000"],
-                self.captions['025'],
-                gui.QYES_NO | gui.QCANCEL | gui.QNO_DEFAULT | gui.QICON_INFORMATION
-                )
-            if h == gui.QID_YES:
+            ok = gui.QMessageBox.question(self, self.captions["000"],
+                self.captions['025'], gui.QMessageBox.Yes | gui.QMessageBox.No |
+                gui.QMessageBox.Cancel)
+            if ok == gui.QMessageBox.Yes:
                 self.page.savekeys()
-            elif h == gui.QID_CANCEL:
+            elif ok == gui.QMessageBox.Cancel:
                 return
         self.close()
 
@@ -949,30 +778,11 @@ class MainWindow(gui.QMainWindow):
         self.text.append("</body></html>")
         self.printer.Print("".join(self.text),self.hdr)
         return
-        # de moelijke manier
-        data = gui.QPrintDialogData()
-        data.EnableSelection(False)
-        data.EnablePrintToFile(True)
-        data.EnablePageNumbers(False)
-        data.SetAllPages(True)
-        dlg = gui.QPrintDialog(self, data)
-        if dlg.ShowModal() == gui.QID_OK:
-            pdd = dlg.GetPrintDialogData()
-            prt = wxPrinter(pdd)
-            pda = Prtdata(self.textcanvas)
-            if not prt.Print(self,prtdata,False):
-                MessageBox("Unable to print the document.")
-            prt.Destroy()
-        dlg.Destroy()
 
 def main(args=None):
     app = gui.QApplication(sys.argv)
-    #redirect=True, filename="tckey.log")
     frame = MainWindow(args)
     sys.exit(app.exec_())
 
 if __name__ == '__main__':
-    ## h = Tcksettings()
-    ## h.set('paden',['ergens',])
-    ## print h.__dict__
     main(sys.argv[1:])
