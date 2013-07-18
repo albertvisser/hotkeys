@@ -243,7 +243,7 @@ def savekeys(pad, data):
     """schrijft de listbox data terug via een tckeys object
     """
     cl = TCKeys(pad)
-    for ky, mod, srt, cmd, desc in data.itervalues():
+    for ky, mod, srt, cmd, desc in data.values():
         hotkey = " + ".join((ky, mod)) if mod != '' else ky
         cl.keydict[hotkey] = (srt, desc, cmd)
     ## for x,y in cl.keydict.items():
@@ -288,7 +288,7 @@ class TckSettings(object):
         for i,x in enumerate(argnamen):
             if item == x:
                 item = self.namen[i]
-                print(item,i)
+                print(item, i)
                 self.paden[i] = value
                 arg_found = True
                 break
@@ -431,7 +431,7 @@ class TCKeys(object):
             test = [x for x in reversed(key.split())]
             print(test)
             if len(test) == 1:
-                shortcuts.append('{}={}\n'.format(test, item[2]))
+                shortcuts.append('{}={}\n'.format(test[0], item[2]))
             elif 'W' in test[0]:
                 if 'W+' in test[0]:
                     test[0] = test[0].replace('W+', '')
