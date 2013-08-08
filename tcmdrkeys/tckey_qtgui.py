@@ -9,14 +9,8 @@ import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 import tcmdrkys
 ## import datetime
-
-HERE = os.path.abspath(os.path.dirname(__file__))
-TTL = "A hotkey editor"
-VRS = "1.1.x"
-AUTH = "(C) 2008 Albert Visser"
 INI = "tckey_config.py"
-WIN = True if sys.platform == "win32" else False
-LIN = True if sys.platform == 'linux2' else False
+from hotkeys_shared import * # constants
 
 # voorziening voor starten op usb-stick onder Windows (drive letters in config aanpassen)
 if WIN and __file__ != "tckey_gui.py":
@@ -41,32 +35,17 @@ if WIN and __file__ != "tckey_gui.py":
                 else:
                     f_out.write(line)
 
-#--- dit zit ook in hotkeys.py
-# constanten voor  captions en dergelijke 9correspondeert met nummers in language files)
-C_KEY, C_MOD, C_SRT, C_CMD, C_OMS = '001', '043', '002', '003', '004'
-C_DFLT, C_RDEF = '005', '006'
-M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
-C_SAVE, C_DEL, C_EXIT, C_KTXT, C_CTXT ='010', '011', '012', '018', '019'
-M_APP, M_READ, M_SAVE, M_USER, M_EXIT = '200', '201', '202', '203', '209'
-M_SETT, M_LOC, M_LANG, M_HELP, M_ABOUT = '210', '211', '212', '290', '299'
-C_MENU = (
-    (M_APP,(M_READ, M_SAVE, M_USER, -1 , M_EXIT)),
-    (M_SETT,(M_LOC,M_LANG)),
-    (M_HELP,(M_ABOUT,))
-    )
-NOT_IMPLEMENTED = '404'
-#----
 
-#--- deze functies zitten ook in hotkeys_qt.py
-def show_message(self, message_id, caption_id='000'): #TODO
-    """toon de boodschap geïdentificeerd door <message_id> in een dialoog
-    met als titel aangegeven door <caption_id> en retourneer het antwoord
-    na sluiten van de dialoog
-    """
-    ok = gui.QMessageBox.question(self, self.captions[caption_id],
-        self.captions[message_id], gui.QMessageBox.Yes |
-        gui.QMessageBox.No | gui.QMessageBox.Cancel)
-    return ok # ahum deze staat zo geen ok of cancel toe
+## #--- deze functie zit ook in hotkeys_qt.py
+## def show_message(self, message_id, caption_id='000'): #TODO
+    ## """toon de boodschap geïdentificeerd door <message_id> in een dialoog
+    ## met als titel aangegeven door <caption_id> en retourneer het antwoord
+    ## na sluiten van de dialoog
+    ## """
+    ## ok = gui.QMessageBox.question(self, self.captions[caption_id],
+        ## self.captions[message_id], gui.QMessageBox.Yes |
+        ## gui.QMessageBox.No | gui.QMessageBox.Cancel)
+    ## return ok
 
 def m_read(self):
     """(menu) callback voor het lezen van de hotkeys
@@ -334,6 +313,7 @@ class TCPanel(gui.QWidget):
         self.setWindowTitle(self.captions["000"])
 
     def readcaptions(self):
+        ## self.captions = self.page.captions
         with open(os.path.join(HERE, self.ini.lang)) as _in:
             for x in _in:
                 if x[0] == '#' or x.strip() == "":
@@ -519,8 +499,8 @@ class TCPanel(gui.QWidget):
         zorgt ervoor dat de buttons ge(de)activeerd worden
         """
         text = str(text)
-        print('on combobox:', text)
-        print(self._origdata)
+        ## print('on combobox:', text)
+        ## print(self._origdata)
         self.defchanged = False
         if cb == self.cmb_key:
             if text != self._origdata[0]:
@@ -540,8 +520,8 @@ class TCPanel(gui.QWidget):
                 self.b_save.setEnabled(True)
             elif str(self.cmb_key.currentText()) == self._origdata[0]:
                 self.b_save.setEnabled(False)
-        print(self._origdata)
-        print(self._newdata)
+        ## print(self._origdata)
+        ## print(self._newdata)
 
     def on_checkbox(self, cb, state):
         state = bool(state)
@@ -557,9 +537,9 @@ class TCPanel(gui.QWidget):
             if states == self._origdata[1:5]:
                 self.defchanged = False
                 self.b_save.setEnabled(False)
-        print('on checkbox:', indx, state)
-        print(self._origdata)
-        print(self._newdata)
+        ## print('on checkbox:', indx, state)
+        ## print(self._origdata)
+        ## print(self._newdata)
 
     def on_update(self):
         self.aanpassen()

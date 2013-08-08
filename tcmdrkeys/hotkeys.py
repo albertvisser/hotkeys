@@ -189,7 +189,7 @@ class MainWindow(wx.Frame):
         self.sb = self.CreateStatusBar() # A Statusbar in the bottom of the window
         self.readcaptions('english.lng')
         self.menuBar = wx.MenuBar()
-        for title, items in hks.C_MENU:
+        for title, items in hks.VI_MENU:
             menu = wx.Menu()
             for sel in items:
                 if sel == -1:

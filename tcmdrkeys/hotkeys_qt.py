@@ -146,7 +146,7 @@ def m_about(self):
     """(menu) callback voor het tonen van de "about" dialoog
     """
     info = gui.QMessageBox.about(self, self.captions['000'],
-        "\n\n".join((hks.VRS, hks.AUTH)))
+        "{}\nversion {}\n{}\n{}".format(hks.TTL, hks.VRS, hks.AUTH, hks.XTRA))
 
 # dispatch table for  menu callbacks
 MENU_FUNC = {
@@ -180,7 +180,7 @@ class ChoiceBook(gui.QFrame): #Widget):
                 win = TCPanel(self.pnl)
             else:
                 win = gui.QFrame(self.pnl)
-                st = gui.QLabel(txt, win)
+                st = gui.QLabel('Sorry, no interface yet for ' + txt, win)
             self.pnl.addWidget(win)
         vbox = gui.QVBoxLayout()
         hbox = gui.QVBoxLayout()
@@ -190,9 +190,15 @@ class ChoiceBook(gui.QFrame): #Widget):
         hbox.addWidget(self.pnl)
         vbox.addLayout(hbox)
         self.setLayout(vbox)
+        self.on_page_changed(0)
 
     def on_page_changed(self, indx):
         self.pnl.setCurrentIndex(indx)
+        if self.pnl.currentIndex() == 1:
+            menus = hks.TC_MENU
+        else:
+            menus = hks.VI_MENU
+        self.parent().setup_menu(menus)
 
 class MainWindow(gui.QMainWindow):
     """Hoofdscherm van de applicatie"""
@@ -206,18 +212,10 @@ class MainWindow(gui.QMainWindow):
         self.sb.showMessage('Welcome to HotKeys!')
         self.readcaptions('english.lng')
         self.menu_bar = self.menuBar()
-        for title, items in hks.C_MENU:
-            menu = self.menu_bar.addMenu(self.captions[title])
-            for sel in items:
-                if sel == -1:
-                    menu.addSeparator()
-                else:
-                    act = gui.QAction(self.captions[sel], self)
-                    act.triggered.connect(functools.partial(self.on_menu, sel))
-                    menu.addAction(act)
 
         self.book = ChoiceBook(self) # , size= (600, 700))
         self.setCentralWidget(self.book)
+        ## self.setup_menu()
         self.show()
 
     def readcaptions(self, lang):
@@ -228,6 +226,18 @@ class MainWindow(gui.QMainWindow):
                     continue
                 key, value = x.strip().split(None,1)
                 self.captions[key] = value
+
+    def setup_menu(self, menus):
+        self.menu_bar.clear()
+        for title, items in menus:
+            menu = self.menu_bar.addMenu(self.captions[title])
+            for sel in items:
+                if sel == -1:
+                    menu.addSeparator()
+                else:
+                    act = gui.QAction(self.captions[sel], self)
+                    act.triggered.connect(functools.partial(self.on_menu, sel))
+                    menu.addAction(act)
 
     def on_menu(self, actionid):
         text = MENU_FUNC[actionid](self)

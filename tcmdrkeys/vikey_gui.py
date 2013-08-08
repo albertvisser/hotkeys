@@ -10,14 +10,9 @@ import images
 import vikeys
 ## import datetime
 
-HERE = os.path.abspath(os.path.dirname(__file__))
-TTL = "A hotkey editor"
-VRS = "1.1.x"
-AUTH = "(C) 2008 Albert Visser"
+from hotkeys_shared import * # constants
+C_MENU = VI_MENU
 INI = "vikey_config.py"
-WIN = True if sys.platform == "win32" else False
-LIN = True if sys.platform == 'linux2' else False
-C_KEY, C_MOD, C_SRT, C_CMD, C_OMS = '001', '043', '002', '003', '004'
 
 class MyListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
     """base class voor de listcontrol

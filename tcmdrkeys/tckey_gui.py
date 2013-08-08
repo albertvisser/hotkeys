@@ -11,13 +11,9 @@ import tcmdrkys
 import string
 ## import datetime
 
-HERE = os.path.abspath(os.path.dirname(__file__))
-TTL = "A hotkey editor"
-VRS = "1.1.x"
-AUTH = "(C) 2008 Albert Visser"
+from hotkeys_shared import * # constants
+C_MENU = TC_MENU
 INI = "tckey_config.py"
-WIN = True if sys.platform == "win32" else False
-LIN = True if sys.platform == 'linux2' else False
 
 # voorziening voor starten op usb-stick onder Windows (drive letters in config aanpassen)
 if WIN and __file__ != "tckey_gui.py":
@@ -42,19 +38,6 @@ if WIN and __file__ != "tckey_gui.py":
                 else:
                     f_out.write(line)
 
-# constanten voor  captions en dergelijke 9correspondeert met nummers in language files)
-C_KEY, C_MOD, C_SRT, C_CMD, C_OMS = '001', '043', '002', '003', '004'
-C_DFLT, C_RDEF = '005', '006'
-M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
-C_SAVE, C_DEL, C_EXIT, C_KTXT, C_CTXT ='010', '011', '012', '018', '019'
-M_APP, M_READ, M_SAVE, M_USER, M_EXIT = '200', '201', '202', '203', '209'
-M_SETT, M_LOC, M_LANG, M_HELP, M_ABOUT = '210', '211', '212', '290', '299'
-C_MENU = (
-    (M_APP,(M_READ, M_SAVE, M_USER, -1 , M_EXIT)),
-    (M_SETT,(M_LOC,M_LANG)),
-    (M_HELP,(M_ABOUT,))
-    )
-NOT_IMPLEMENTED = '404'
 
 def show_message(self, message_id, caption_id='000'):
     """toon de boodschap geïdentificeerd door <message_id> in een dialoog

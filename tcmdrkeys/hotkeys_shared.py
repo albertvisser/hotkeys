@@ -5,9 +5,12 @@ import sys
 HERE = os.path.abspath(os.path.dirname(__file__))
 TTL = "A hotkey viewer/editor"
 VRS = "1.1.x"
-AUTH = "(C) 2008 Albert Visser"
-## INI = "vikey_config.py"
+AUTH = "(C) 2008-2013 Albert Visser"
+XTRA = '''originally built for Total Commander,
+extended for use within
+all  your favourite applications'''
 WIN = True if sys.platform == "win32" else False
+## LIN = True if sys.platform == 'linux2' else False
 LIN = True if os.name == 'posix' else False
 # voorziening voor starten op usb-stick onder Windows (drive letters in config aanpassen)
 ## if WIN and __file__ != "tckey_gui.py":
@@ -39,9 +42,14 @@ M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
 C_SAVE, C_DEL, C_EXIT, C_KTXT, C_CTXT ='010', '011', '012', '018', '019'
 M_APP, M_READ, M_SAVE, M_USER, M_EXIT = '200', '201', '202', '203', '209'
 M_SETT, M_LOC, M_LANG, M_HELP, M_ABOUT = '210', '211', '212', '290', '299'
-C_MENU = (
-    (M_APP,(M_READ, M_SAVE, -1 , M_EXIT)),
+TC_MENU = (
+    (M_APP,(M_READ, M_SAVE, M_USER, -1 , M_EXIT)),
     (M_SETT,(M_LOC,M_LANG)),
+    (M_HELP,(M_ABOUT,))
+    )
+VI_MENU = (
+    (M_APP,(M_EXIT,)),
+    ## (M_SETT,(M_LOC,M_LANG)),
     (M_HELP,(M_ABOUT,))
     )
 NOT_IMPLEMENTED = '404'
