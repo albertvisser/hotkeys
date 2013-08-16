@@ -52,6 +52,10 @@
 044 VI_hotkeys.csv
 # more messages
 045 This keycombo already exists, do you want to replace it?
+046 Code
+047 Context
+048 Platform
+049 Feature
 
 # key names
 100 Insert

@@ -250,7 +250,7 @@ def savekeys(pad, data):
         ## print(x,y)
     cl.write()
 
-class TckSettings(object):
+class Settings(object):
     def __init__(self, fn):
         self.fn = fn
         self.namen = ['TC_PAD','UC_PAD','CI_PAD','KB_PAD','HK_PAD','LANG','RESTART']
@@ -395,7 +395,6 @@ class TCKeys(object):
                     ## except KeyError:
                         ## pass
             self.keydict[key] = ("S", oms, cm)
-        print()
         self.defkeys = defkeys
         ## f = open("defkeys.txt","w")
         ## for x in self.defkeys:

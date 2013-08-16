@@ -28,7 +28,7 @@ def savekeys(pad):
     """
     pass
 
-class VIKSettings(object):
+class Settings(object):
     """bevat de settings uit het aangegeven bestand
 
     self.pad = waar het csv bestand staat

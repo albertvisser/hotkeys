@@ -3,7 +3,7 @@ import sys,os
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 import functools
-from tccm_mixin import TCCMMixin
+from tcmerge_mixin import TCCMMixin
 from tcmdrkys import keyboardtext, defaultcommands, usercommands, userkeys
 import csv
 

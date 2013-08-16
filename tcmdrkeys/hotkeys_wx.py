@@ -1,8 +1,4 @@
 # -*- coding: UTF-8 -*-
-import os
-import  wx
-import hotkeys_shared as hks
-import vikey_gui
 """hotkeys.py
 
     main gui (choicebook)
@@ -14,6 +10,11 @@ import vikey_gui
         taalkeuze: op dit niveau
         paden: op applicatie niveau
 """
+import os
+import  wx
+import hotkeys_shared as hks
+import vikey_gui
+
 def show_message(self, message_id, caption_id='000'):
     """toon de boodschap geïdentificeerd door <message_id> in een dialoog
     met als titel aangegeven door <caption_id> en retourneer het antwoord

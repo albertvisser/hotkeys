@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 import sys,os
 import wx
-from tccm_mixin import TCCMMixin
+from tcmerge_mixin import TCCMMixin
 from tcmdrkys import keyboardtext, defaultcommands, usercommands, userkeys
 import csv
 
