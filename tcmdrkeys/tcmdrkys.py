@@ -253,7 +253,7 @@ def savekeys(pad, data):
 class Settings(object):
     def __init__(self, fn):
         self.fn = fn
-        self.namen = ['TC_PAD','UC_PAD','CI_PAD','KB_PAD','HK_PAD','LANG','RESTART']
+        self.namen = ['TC_PAD', 'UC_PAD', 'CI_PAD', 'KB_PAD', 'HK_PAD', 'RESTART']
         self.paden = ['','','','','']
         self.lang = ''
         self.restart = ''
@@ -270,8 +270,6 @@ class Settings(object):
                     ix = -1
                 if 0 <= ix <= 4:
                     self.paden[ix] = waarde
-                elif ix == 5:
-                    self.lang = waarde
                 elif ix == 6:
                     self.restart = waarde
         self.tcpad, self.ucpad, self.cipad, self.ktpad, self.hkpad = self.paden
@@ -305,8 +303,6 @@ class Settings(object):
                     if i <= 4:
                         self.paden[i] = value
                     elif i == 5:
-                        self.lang = value
-                    elif i == 6:
                         self.restart = value
                     arg_found = True
                     break
@@ -322,8 +318,6 @@ class Settings(object):
                     for ix, naam in enumerate(self.namen):
                         if test == naam:
                             if ix == 5:
-                                y = self.lang
-                            elif ix == 6:
                                 y = self.restart
                             else:
                                 y = self.paden[ix]

@@ -60,8 +60,6 @@ class Settings(object):
                     self.user = waarde
                 elif naam == self.namen[2]:
                     self.csv = waarde
-                elif naam == self.namen[3]:
-                    self.lang = waarde
 
     def write(self):
         fn_o = self.fnaam + '.bak'
@@ -77,9 +75,11 @@ class Settings(object):
                     f_out.write(line)
                     continue
                 if naam == self.namen[0]:
-                    f_out.write(line.replace(waarde, self.pad))
+                    f_out.write(line.replace(waarde, self.std))
                 elif naam == self.namen[1]:
-                    f_out.write(line.replace(waarde, self.lang))
+                    f_out.write(line.replace(waarde, self.user))
+                elif naam == self.namen[2]:
+                    f_out.write(line.replace(waarde, self.csv))
                 else:
                     f_out.write(line)
 

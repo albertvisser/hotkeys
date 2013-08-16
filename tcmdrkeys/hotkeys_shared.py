@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 import os
+import shutil
 import sys
 import functools
 import PyQt4.QtGui as gui
@@ -81,11 +82,22 @@ def m_lang(self):
 
     past de settings aan en leest het geselecteerde language file
     """
+    # bepaal welke language files er beschikbaar zijn
     choices = [x for x in os.listdir(HERE) if os.path.splitext(x)[1] == ".lng"]
-    indx = choices.index(self.page.ini.lang) if self.page.ini.lang in choices else 0
+    # bepaal welke er momenteel geactiveerd is
+    oldlang = self.ini['lang']
+    indx = choices.index(oldlang) if oldlang in choices else 0
     lang, ok = gui.QInputDialog.getItem(self, self.captions["027"],
         self.captions["000"], choices, current=indx, editable=False)
     if ok:
+        inifile = self.ini['filename']
+        shutil.copyfile(inifile, inifile + '.bak')
+        with open(inifile + '.bak') as _in, open(inifile, 'w') as _out:
+            for line in _in:
+                if line.startswith('LANG'):
+                    line = line.replace(oldlang, lang)
+                _out.write(line)
+        self.ini['lang'] = lang
         self.readcaptions(lang)
         self.setcaptions()
 
@@ -241,7 +253,14 @@ class MainWindow(gui.QMainWindow):
         #~ self.SetMinSize((476, 560))
 
         self.menu_bar = self.menuBar()
-        self.readcaptions('english.lng')
+        self.ini = {'filename': '~/tcmdrkeys/tcmdrkeys/hotkey_config.py'}
+        with open(self.ini['filename']) as _in:
+            for line in _in:
+                if line.startswith('LANG'):
+                    self.ini['lang'] = line.strip().split('=')[1]
+        if 'lang' not in self.ini:
+            self.ini['lang'] = 'english.lng'
+        self.readcaptions(self.ini['lang']) # set up defaults
 
         try:
             menus = kwargs['menus']

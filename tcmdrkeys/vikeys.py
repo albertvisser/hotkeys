@@ -32,14 +32,13 @@ class Settings(object):
     """bevat de settings uit het aangegeven bestand
 
     self.pad = waar het csv bestand staat
-    self.lang = taalkeuze
     de gegevens worden hier gezamenlijk weggeschreven dus niet voor elke
     wijziging apart
     """
     def __init__(self, fnaam):
         self.fnaam = fnaam
-        self.namen = ['VI_PAD', 'LANG']
-        self.pad = self.lang = ''
+        self.namen = ['VI_PAD']
+        self.pad = ''
         if not os.path.exists(self.fnaam):
             return
         with open(self.fnaam) as f_in:
@@ -52,10 +51,6 @@ class Settings(object):
                     continue
                 if naam == self.namen[0]:
                     self.pad = waarde
-                elif naam == self.namen[1]:
-                    self.lang = waarde
-                else:
-                    continue
 
     def write(self):
         fn_o = self.fnaam + '.bak'
@@ -72,8 +67,6 @@ class Settings(object):
                     continue
                 if naam == self.namen[0]:
                     f_out.write(line.replace(waarde, self.pad))
-                elif naam == self.namen[1]:
-                    f_out.write(line.replace(waarde, self.lang))
                 else:
                     f_out.write(line)
 

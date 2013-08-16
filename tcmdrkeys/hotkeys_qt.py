@@ -89,7 +89,14 @@ class MainFrame(MainWindow):
         self.sb.showMessage('Welcome to HotKeys!')
 
         self.menu_bar = self.menuBar()
-        self.readcaptions('english.lng') # set up defaults
+        self.ini = {'filename': '~/tcmdrkeys/tcmdrkeys/hotkey_config.py'}
+        with open(self.ini['filename']) as _in:
+            for line in _in:
+                if line.startswith('LANG'):
+                    self.ini['lang'] = line.strip().split('=')[1]
+        if 'lang' not in self.ini:
+            self.ini['lang'] = 'english.lng'
+        self.readcaptions(self.ini['lang']) # set up defaults
         pnl = gui.QWidget(self)
         self.book = ChoiceBook(pnl) # , size= (600, 700))
         sizer_v = gui.QVBoxLayout()
