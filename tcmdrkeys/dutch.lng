@@ -16,7 +16,7 @@
 #  buttons
 010 &Wijzigen
 011 &Verwijderen
-012 &Afsluiten
+012 E&xit
 # title indicator
 017 (aangepast)
 # screen text
@@ -52,6 +52,10 @@
 044 VI_hotkeys.csv
 # more messages
 045 Deze toetsencombinatie is al gedefinieerd, wil je hem vervangen?
+046 Code
+047 Context
+048 Platform
+049 Feature
 
 # key names
 100 Insert
