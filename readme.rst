@@ -18,7 +18,7 @@ version with a nag screen I quit using it altogether.
 But it came with a file where all the key combinations were listed, based upon
 various readme and settings files and I could use that to base my own version on.
 
-As a side project, to be independent of that file I wrote a program to do that
+As a side project, to be independent of that file, I wrote a program to do that
 collection and matching myself. So it's basically a two-step progress: use the
 collection utility (I named it tcmerge.py) to combine the readme and settings files
 into a csv file, and use the editing utilty (tckeys.py) to view and change the keys
@@ -37,18 +37,13 @@ be incorporated into the multi-tool version too.
 
 In the mean time I've gathered specs so I can to do this for other applications.
 Like for Opera, I know there are a lot but I lack the overview (their interface
-is kind of chaotic to) and that's just what this tool is meant to bring me:
+is kind of chaotic too) and that's just what this tool is meant to bring me:
 an overview in the way that works for me.
 
+And since then, I've made vesions for SciTE and Opera and in the process restructured
+the whole thing so I need to write as little code as possible for adding a new tool
+to the collection.
 
-
- ---
-
- Het nut om in elk geval een Hotkey Popup variant (alleen tonen, niet wijzigen)
- van deze applicatie te maken is niet zozeer het tonen van wat er is
- (dat kun je met een help file ook) maar om het on the fly
- op een andere manier te ordenen, bv, snel switchen van gesorteerd op soort
- functionaliteit naar op toetscombinatie
-
-Het leek me nuttig om een variant te maken waarmee ik dit ook voor andere tools kon
-en
+The purpose of having a tool like this s not just to show the shortcuts (help files
+and menus do that too) but to be able to change the order in which they are
+displayed, so that I can sort on purpose or context instead of just on base key.
