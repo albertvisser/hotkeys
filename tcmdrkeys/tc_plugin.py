@@ -105,7 +105,7 @@ class MyPanel(HotkeyPanel):
 
         self._keys = keys
         coldata = (
-            (C_KEY, 70, 0, False),
+            (C_KEY, 100, 0, False),
             (C_MOD, 90, 1, False),
             (C_SRT, 80, 2, True),
             (C_CMD, 160, 3, False),
@@ -113,7 +113,6 @@ class MyPanel(HotkeyPanel):
             )
         HotkeyPanel.__init__(self, parent, coldata, ini="tckey_config.py",
             title='TC Hotkeys') #, menus=, funcs=)
-
 
     def add_extra_fields(self):
         """fields showing details for selected keydef, to make editing possible
@@ -123,12 +122,18 @@ class MyPanel(HotkeyPanel):
         box.setMaximumHeight(90)
         self.txt_key = gui.QLabel(self.captions[C_KTXT] + " ", box)
         self.keylist = [x for x in string.ascii_uppercase] + \
-            [x for x in string.digits] + [x for x in string.punctuation] + \
-            ["F" + str(i) for i in range(1,13)] + \
-            [self.captions[str(x)] for x in range(100,121)]
-        for item in self.data.values():
-            if item[0] not in self.keylist:
-                print(item)
+            [x for x in string.digits] + ["F" + str(i) for i in range(1,13)] + \
+            [self.captions[str(x)] for x in range(100,121)] + \
+            ['PAUSE', 'OEM_.', 'OEM_,', 'OEM_+', 'OEM_-', 'OEM_</>', 'OEM_US`~',
+            'OEM_US[{', 'OEM_US]}', 'OEM_US\\|', 'OEM_US;:', "OEM_US'" + '"',
+            'OEM_US/?', 'OEM_FR!']
+        not_found = []
+        for key, value in self.data.items():
+            if value[0] not in self.keylist:
+                print(value)
+                not_found.append(key)
+        for key in not_found:
+            del self.data[key]
         cb = gui.QComboBox(box)
         cb.addItems(self.keylist)
         cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox, cb))
@@ -209,7 +214,7 @@ class MyPanel(HotkeyPanel):
         self.txt_key.setText(self.captions[C_KTXT])
         self.txt_cmd.setText(self.captions[C_CTXT])
 
-    def on_item_selected(self, olditem, newitem):
+    def on_item_selected(self, newitem, olditem): # olditem, newitem):
         """callback on selection of an item
 
         velden op het hoofdscherm worden bijgewerkt vanuit de selectie"""
@@ -263,7 +268,7 @@ class MyPanel(HotkeyPanel):
             if gevonden:
                 self.data[indx] = (key, mods, 'U', cmd, self.omsdict[cmd])
             else:
-                newdata = self.data.values()
+                newdata = [x for x in self.data.values()]
                 newvalue = (key, mods, 'U', cmd, self.omsdict[cmd])
                 newdata.append(newvalue)
                 newdata.sort()

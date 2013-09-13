@@ -37,6 +37,8 @@ def keymods2(x):
             mods += h[0][0]
         h = h[1].split("+",1)
     keyc = h[0].replace(" ","").capitalize() + extra
+    if keyc == '\\':
+        keyc = 'OEM_US\\|'
     if mods != "":
         keyc = ' + '.join((keyc,mods))
     return keyc
@@ -67,7 +69,8 @@ def keyboardtext(root):
         else:
             if len(ky) > 0:
                 for k in ky:
-                    h = k.rsplit('+',1)
+                    h = k.rsplit('+', 1)
+                    ## print(h)
                     if '/' in h[-1] and not h[-1].endswith('/'):
                         hlp = h[-1].split('/')
                         for it in hlp:
@@ -199,6 +202,9 @@ def userkeys(root):
         for x in f_in:
             x = x.rstrip()
             y = x.split("=")
+            for h in ('+', '-', '/', '*'):
+                if y[0].endswith(h):
+                    y[0] = y[0][:-1] + 'NUM' + y[0][-1]
             if in_user:
                 if x.startswith("["):
                     in_user = False
@@ -378,6 +384,7 @@ class TCKeys(object):
             defkeys[x] = self.cmdict[y].strip()
         self.keydict = {}
         for key, oms in keyboardtext(self.ktloc):
+            ## print(key, oms)
             if key in defkeys:
                 cm = defkeys[key]
             else:
