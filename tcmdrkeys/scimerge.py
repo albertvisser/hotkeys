@@ -4,7 +4,7 @@ import os
 import csv
 import shutil
 from bs4 import BeautifulSoup
-from scikeys import SciKSettings
+from scikeys import Settings
 
 def main():
     ini = SciKSettings('/home/albert/tcmdrkeys/tcmdrkeys/scikey_config.py')
