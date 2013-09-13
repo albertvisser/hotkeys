@@ -22,12 +22,13 @@ from .tc_plugin import MyPanel as TCPanel
 from .vi_plugin import MyPanel as VIPanel
 from .scite_plugin import MyPanel as SciTEPanel
 from .opera_plugin import MyPanel as OperaPanel
+from .doublecmd_plugin import MyPanel as DCPanel
 from .generic_plugin import MyPanel as EmptyPanel
 PLUGINS = [
     ("VI", VIPanel),
     ("Total Commander", TCPanel),
     ("SciTE", SciTEPanel),
-    ("Double Commander", None),
+    ("Double Commander", DCPanel),
     ("Opera", OperaPanel)
     ]
 
@@ -89,7 +90,7 @@ class MainFrame(MainWindow):
         self.sb.showMessage('Welcome to HotKeys!')
 
         self.menu_bar = self.menuBar()
-        self.ini = {'filename': '~/tcmdrkeys/tcmdrkeys/hotkey_config.py'}
+        self.ini = {'filename': CONF}
         with open(self.ini['filename']) as _in:
             for line in _in:
                 if line.startswith('LANG'):

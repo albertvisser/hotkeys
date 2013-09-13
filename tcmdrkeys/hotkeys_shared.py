@@ -8,6 +8,11 @@ import functools
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 HERE = os.path.abspath(os.path.dirname(__file__))
+## try:
+    ## HOME = os.environ('HOME')
+## except KeyError:
+    ## HOME = os.environ('USERPROFILE') # Windows
+CONF = os.path.join(HERE, 'hotkey_config.py')
 TTL = "A hotkey viewer/editor"
 VRS = "1.1.x"
 AUTH = "(C) 2008-2013 Albert Visser"
@@ -145,7 +150,8 @@ class HotkeyPanel(gui.QFrame):
         if self.column_info:
             self.p0list = gui.QTreeWidget(self)
             self.p0list.setSortingEnabled(True)
-            self.p0list.setHeaderLabels([self.captions[col[0]] for col in self.column_info])
+            self.p0list.setHeaderLabels([self.captions[col[0]] for col in
+                self.column_info])
             self.p0list.setAlternatingRowColors(True)
             self.p0list.currentItemChanged.connect(self.on_item_selected)
             self.p0hdr = self.p0list.header()
@@ -224,7 +230,7 @@ class HotkeyPanel(gui.QFrame):
 
     def exit(self):
         if self.modified:
-            ok = show_message('025')
+            ok = show_message(self, '025')
             if ok == gui.QMessageBox.Yes:
                 self.page.savekeys()
             elif ok == gui.QMessageBox.Cancel:
@@ -253,7 +259,7 @@ class MainWindow(gui.QMainWindow):
         #~ self.SetMinSize((476, 560))
 
         self.menu_bar = self.menuBar()
-        self.ini = {'filename': '~/tcmdrkeys/tcmdrkeys/hotkey_config.py'}
+        self.ini = {'filename': CONF}
         with open(self.ini['filename']) as _in:
             for line in _in:
                 if line.startswith('LANG'):
