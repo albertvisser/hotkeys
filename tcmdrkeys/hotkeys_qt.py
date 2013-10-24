@@ -23,13 +23,15 @@ from .vi_plugin import MyPanel as VIPanel
 from .scite_plugin import MyPanel as SciTEPanel
 from .opera_plugin import MyPanel as OperaPanel
 from .doublecmd_plugin import MyPanel as DCPanel
+from .abap_plugin import MyPanel as ABPanel
 from .generic_plugin import MyPanel as EmptyPanel
 PLUGINS = [
     ("VI", VIPanel),
     ("Total Commander", TCPanel),
     ("SciTE", SciTEPanel),
     ("Double Commander", DCPanel),
-    ("Opera", OperaPanel)
+    ("Opera", OperaPanel),
+    ("ABAP", ABPanel),
     ]
 
 class ChoiceBook(gui.QFrame): #Widget):
