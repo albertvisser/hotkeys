@@ -17,22 +17,10 @@ import functools
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 from .hotkeys_shared import * # constants
-from .tc_plugin import TC_MENU, TC_MENU_FUNC
-from .tc_plugin import MyPanel as TCPanel
-from .vi_plugin import MyPanel as VIPanel
-from .scite_plugin import MyPanel as SciTEPanel
-from .opera_plugin import MyPanel as OperaPanel
-from .doublecmd_plugin import MyPanel as DCPanel
-from .abap_plugin import MyPanel as ABPanel
-from .generic_plugin import MyPanel as EmptyPanel
-PLUGINS = [
-    ("VI", VIPanel),
-    ("Total Commander", TCPanel),
-    ("SciTE", SciTEPanel),
-    ("Double Commander", DCPanel),
-    ("Opera", OperaPanel),
-    ("ABAP", ABPanel),
-    ]
+import tcmdrkeys.hotkeys_plugins
+
+PLUGINS = tcmdrkeys.hotkeys_plugins.PLUGINS
+MENUS = tcmdrkeys.hotkeys_plugins.MENUS
 
 class ChoiceBook(gui.QFrame): #Widget):
     """ Als QTabwidget, maar met selector in plaats van tabs
@@ -70,9 +58,8 @@ class ChoiceBook(gui.QFrame): #Widget):
                 # ook nog de vorige tekst in de combobox selecteren?
                 return
         self.pnl.setCurrentIndex(indx)
-        if indx == 1:
-            menus, funcs = TC_MENU, TC_MENU_FUNC
-        else:
+        menus, funcs = MENUS.get(PLUGINS[indx], (None, None))
+        if not menus:
             menus, funcs = DFLT_MENU, DFLT_MENU_FUNC
         self.parent.setup_menu(menus, funcs)
         self.parent.page = self.pnl.currentWidget()
