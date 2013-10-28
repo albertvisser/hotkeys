@@ -32,21 +32,43 @@ class ChoiceBook(gui.QFrame): #Widget):
         self.sel = gui.QComboBox(self)
         self.sel.addItems([txt[0] for txt in PLUGINS]) #pagetexts)
         self.sel.currentIndexChanged.connect(self.on_page_changed)
+        self.find = gui.QComboBox(self)
+        self.find.setMinimumContentsLength(20)
+        self.find.setEditable(True)
+        self.find.editTextChanged.connect(self.on_text_changed)
+        self.b_next = gui.QPushButton('Find &Next')
+        self.b_next.clicked.connect(self.find_next)
+        self.b_next.setEnabled(False)
+        self.b_prev = gui.QPushButton('Find &Prev')
+        self.b_prev.clicked.connect(self.find_prev)
+        self.b_prev.setEnabled(False)
         self.pnl = gui.QStackedWidget(self)
         self.captions = self.parent.captions
         for txt, win in PLUGINS:
             if win is None:
-                self.pnl.addWidget(EmptyPanel(self.pnl, 'Nog geen plugin voor ' + txt))
+                self.pnl.addWidget(EmptyPanel(self.pnl,
+                    'Nog geen plugin voor ' + txt))
             else:
                 self.pnl.addWidget(win(self.pnl))
+        box = gui.QVBoxLayout()
         vbox = gui.QVBoxLayout()
-        hbox = gui.QVBoxLayout()
+        hbox = gui.QHBoxLayout()
+        hbox.addSpacing(10)
+        hbox.addWidget(gui.QLabel('Selecteer tool:', self))
         hbox.addWidget(self.sel)
+        hbox.addStretch()
+        hbox.addWidget(gui.QLabel('Zoek tekst in omschrijving:', self))
+        hbox.addWidget(self.find)
+        hbox.addWidget(self.b_next)
+        hbox.addWidget(self.b_prev)
+        ## hbox.addStretch()
+        hbox.addSpacing(10)
         vbox.addLayout(hbox)
+        box.addLayout(vbox)
         hbox = gui.QVBoxLayout()
         hbox.addWidget(self.pnl)
-        vbox.addLayout(hbox)
-        self.setLayout(vbox)
+        box.addLayout(hbox)
+        self.setLayout(box)
 
     def on_page_changed(self, indx):
         page = self.pnl.currentWidget() ## self.parent().page
@@ -63,6 +85,38 @@ class ChoiceBook(gui.QFrame): #Widget):
             menus, funcs = DFLT_MENU, DFLT_MENU_FUNC
         self.parent.setup_menu(menus, funcs)
         self.parent.page = self.pnl.currentWidget()
+        self.find.setEditText('')
+
+    def on_text_changed(self, text):
+        ## if self.find.count() == 0:
+            ## self.find.addItem(text)
+        ## elif self.text.startswith(self.find.itemText(0)):
+            ## self.find.setItemText(0, text)
+        ## self.parent.sb.showMessage(text)
+        page = self.parent.page # self.pnl.currentWidget()
+        col = page.p0list.columnCount() - 1
+        self.items_found = page.p0list.findItems(text, core.Qt.MatchContains, col)
+        if self.items_found:
+            page.p0list.setCurrentItem(self.items_found[0])
+            self.founditem = 0
+            self.b_next.setEnabled(True)
+        else:
+            self.parent.sb.showMessage(text + ' not found')
+
+    def find_next(self):
+        self.b_prev.setEnabled(True)
+        if self.founditem == len(self.items_found):
+            self.parent.sb.showMessage('No next item')
+        else:
+            self.founditem += 1
+            self.parent.page.p0list.setCurrentItem(self.items_found[self.founditem])
+
+    def find_prev(self):
+        if self.founditem == 0:
+            self.parent.sb.showMessage('No previous item')
+        else:
+            self.founditem -= 1
+            self.parent.page.p0list.setCurrentItem(self.items_found[self.founditem])
 
 
 class MainFrame(MainWindow):

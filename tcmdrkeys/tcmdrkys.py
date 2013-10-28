@@ -425,11 +425,11 @@ class TCKeys(object):
         """
         shortcuts, shortcutswin = [], []
         for key, item in self.keydict.items():
-            print(key, item)
+            ## print(key, item)
             if item[0] != 'U':
                 continue
             test = [x for x in reversed(key.split())]
-            print(test)
+            ## print(test)
             if len(test) == 1:
                 shortcuts.append('{}={}\n'.format(test[0], item[2]))
             elif 'W' in test[0]:

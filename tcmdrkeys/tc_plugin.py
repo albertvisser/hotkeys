@@ -130,7 +130,7 @@ class MyPanel(HotkeyPanel):
         not_found = []
         for key, value in self.data.items():
             if value[0] not in self.keylist:
-                print(value)
+                ## print(value)
                 not_found.append(key)
         for key in not_found:
             del self.data[key]

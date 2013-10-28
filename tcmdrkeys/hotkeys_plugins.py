@@ -19,7 +19,10 @@ PLUGINS = [
     ]
 
 # dict containing additional menus, if any
-MENUS = {}
-for key, _ in PLUGINS:
-    MENUS[key] = ((), {})
-MENUS["Total Commander"] = (TC_MENU, TC_MENU_FUNC)
+## MENUS = {}
+## for key, _ in PLUGINS:
+    ## MENUS[key] = ((), {})
+## MENUS["Total Commander"] = (TC_MENU, TC_MENU_FUNC)
+MENUS = {
+    "Total Commander": (TC_MENU, TC_MENU_FUNC)
+    }
