@@ -36,10 +36,10 @@ class ChoiceBook(gui.QFrame): #Widget):
         self.find.setMinimumContentsLength(20)
         self.find.setEditable(True)
         self.find.editTextChanged.connect(self.on_text_changed)
-        self.b_next = gui.QPushButton('Find &Next')
+        self.b_next = gui.QPushButton(self.parent.captions["014"])
         self.b_next.clicked.connect(self.find_next)
         self.b_next.setEnabled(False)
-        self.b_prev = gui.QPushButton('Find &Prev')
+        self.b_prev = gui.QPushButton(self.parent.captions["015"])
         self.b_prev.clicked.connect(self.find_prev)
         self.b_prev.setEnabled(False)
         self.pnl = gui.QStackedWidget(self)
@@ -47,17 +47,17 @@ class ChoiceBook(gui.QFrame): #Widget):
         for txt, win in PLUGINS:
             if win is None:
                 self.pnl.addWidget(EmptyPanel(self.pnl,
-                    'Nog geen plugin voor ' + txt))
+                    self.parent.captions["052"].format(txt)))
             else:
                 self.pnl.addWidget(win(self.pnl))
         box = gui.QVBoxLayout()
         vbox = gui.QVBoxLayout()
         hbox = gui.QHBoxLayout()
         hbox.addSpacing(10)
-        hbox.addWidget(gui.QLabel('Selecteer tool:', self))
+        hbox.addWidget(gui.QLabel(self.parent.captions["050"], self))
         hbox.addWidget(self.sel)
         hbox.addStretch()
-        hbox.addWidget(gui.QLabel('Zoek tekst in omschrijving:', self))
+        hbox.addWidget(gui.QLabel(self.parent.captions["051"], self))
         hbox.addWidget(self.find)
         hbox.addWidget(self.b_next)
         hbox.addWidget(self.b_prev)
@@ -72,7 +72,7 @@ class ChoiceBook(gui.QFrame): #Widget):
 
     def on_page_changed(self, indx):
         page = self.pnl.currentWidget() ## self.parent().page
-        self.parent.sb.showMessage('View/edit {} keyboard shortcuts'.format(
+        self.parent.sb.showMessage(self.parent.captions["053"].format(
             self.sel.currentText()))
         if page.modified:
             ok = page.exit()
@@ -101,19 +101,20 @@ class ChoiceBook(gui.QFrame): #Widget):
             self.founditem = 0
             self.b_next.setEnabled(True)
         else:
-            self.parent.sb.showMessage(text + ' not found')
+            self.parent.sb.showMessage(self.parent.captions["054"].format(
+                text))
 
     def find_next(self):
         self.b_prev.setEnabled(True)
         if self.founditem == len(self.items_found):
-            self.parent.sb.showMessage('No next item')
+            self.parent.sb.showMessage(self.parent.captions["055"])
         else:
             self.founditem += 1
             self.parent.page.p0list.setCurrentItem(self.items_found[self.founditem])
 
     def find_prev(self):
         if self.founditem == 0:
-            self.parent.sb.showMessage('No previous item')
+            self.parent.sb.showMessage(self.parent.captions["056"])
         else:
             self.founditem -= 1
             self.parent.page.p0list.setCurrentItem(self.items_found[self.founditem])
@@ -130,7 +131,6 @@ class MainFrame(MainWindow):
         self.setWindowTitle("tcmdrkeys")
         self.resize(wid, hig)
         self.sb = self.statusBar()
-        self.sb.showMessage('Welcome to HotKeys!')
 
         self.menu_bar = self.menuBar()
         self.ini = {'filename': CONF}
@@ -141,6 +141,7 @@ class MainFrame(MainWindow):
         if 'lang' not in self.ini:
             self.ini['lang'] = 'english.lng'
         self.readcaptions(self.ini['lang']) # set up defaults
+        self.sb.showMessage('Welcome to {}!'.format(self.captions["000"]))
         pnl = gui.QWidget(self)
         self.book = ChoiceBook(pnl) # , size= (600, 700))
         sizer_v = gui.QVBoxLayout()

@@ -1,30 +1,47 @@
 # application title
 000 All-in-one hotkeys
-# Keyboard mapping table headers
+
+# Keyboard mapping kolom titels
 001 Toets
 002 Soort
 003 Commando
 004 Omschrijving
+043 Modifier(s)
+046 Code
+047 Context
+048 Platform
+049 Feature
+
 # soorten definities
 005 Standaard
 006 Aangepast
+
 # modifier namen
 007 Ctrl
 008 Alt
 009 Shift
 013 Win (meta)
+
 #  buttons
 010 &Wijzigen
 011 &Verwijderen
 012 E&xit
+014 Zoek Vo&lgende
+015 Zoek Vo&rige
+
 # title indicator
 017 (aangepast)
+
 # screen text
-018 Key:
-019 Map key to:
+018 Toets:
+019 Stel toets in op:
+050 Selecteer tool:
+051 Zoek tekst in omschrijving:
+
 # save dialog
 020 Eerder gekozen definitie is gewijzigd - nu opslaan?
-# messages
+
+# boodschappen
 021 Kan niet verwijderen - Toets en/of commando niet gekozen of niet correct
 022 Kan niet opslaan - Toets en/of commando niet gekozen of niet correct
 023 Kan niet verwijderen - toetsdefinitie niet gevonden
@@ -33,11 +50,6 @@
 026 Total Commander restarten?
 027 Kies een taalbestand
 028 Geef aan waar de volgende files zich bevinden:
-029 Wincmd.ini
-030 Usercmd.ini
-031 TOTALCMD.INC
-032 KEYBOARD.TXT
-033 TC_hotkeys.csv
 034 Opgegeven directory voor %s bestaat niet
 035 %s zit niet in de daarvoor opgegeven directory
 036 Opgegeven restart programma bestaat niet
@@ -47,15 +59,20 @@
 040 Kies het programma om Total Commander te herstarten
 041 Je hebt niks gewijzigd. Weet je zeker dat je dit wilt doen?
 042 Een of meer bestanden met instellingen lijkt niet te bestaan. Gebruik Instellingen -> Bestandslocaties in het menu om ze te controleren.
-# New keyboard mapping table header
-043 Modifier(s)
-044 VI_hotkeys.csv
-# more messages
 045 Deze toetsencombinatie is al gedefinieerd, wil je hem vervangen?
-046 Code
-047 Context
-048 Platform
-049 Feature
+052 Nog geen plugin voor {}
+053 {} keyboard shortcuts bekijken/aanpassen
+054 {} niet gevonden
+055 Geen volgend item
+056 Geen vorig item
+
+# bestandsnamen
+029 Wincmd.ini
+030 Usercmd.ini
+031 TOTALCMD.INC
+032 KEYBOARD.TXT
+033 TC_hotkeys.csv
+044 VI_hotkeys.csv
 
 # key names
 100 Insert

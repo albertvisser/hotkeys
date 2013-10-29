@@ -1,29 +1,46 @@
 # application title
 000 All-in-one hotkeys
+
 # Keyboard mapping table headers
 001 Key
 002 Type
 003 Command
 004 Description
-# soortden definities
+043 Modifier(s)
+046 Code
+047 Context
+048 Platform
+049 Feature
+
+# soorten definities
 005 Default
 006 (Re)defined
+
 # modifier names
 007 Ctrl
 008 Alt
 009 Shift
 013 Win (meta)
+
 #  buttons
 010 &Change keydef
 011 &Remove
 012 E&xit
+014 Find &Next
+015 Find &Prev
+
 # title indicator
 017 (modified)
+
 # screen text
 018 Key:
 019 Map key to:
+050 Select tool:
+051 Find tekst in description:
+
 # save dialog
 020 Previously selected definition was changed - save now?
+
 # messages
 021 Cannot delete - No or incorrect key and/or command selected
 022 Cannot save - No or incorrect key and/or command selected
@@ -33,11 +50,6 @@
 026 Restart Total Commander now?
 027 Choose a language file
 028 Enter/choose the paths to the following files:
-029 wincmd.ini
-030 usercmd.ini
-031 TOTALCMD.INC
-032 KEYBOARD.TXT
-033 TC_hotkeys.csv
 034 The directory you specified for %s doesn't exist
 035 %s doesn't exits in the specified directory
 036 Specified restart programme doesn't exist
@@ -47,15 +59,20 @@
 040 Choose the programme to restart Total Commander
 041 You haven't made any changes. Are you sure you want to do this?
 042 One or more of your settings files doesn't appear to exist. Please use Settings -> File Locations from the menu to check them.
-# New keyboard mapping table header
-043 Modifier(s)
-044 VI_hotkeys.csv
-# more messages
 045 This keycombo already exists, do you want to replace it?
-046 Code
-047 Context
-048 Platform
-049 Feature
+052 No plugin for {} yet
+053 View/edit {} keyboard shortcuts
+054 {} not found
+055 No next item
+056 No previous item
+
+# file names
+029 wincmd.ini
+030 usercmd.ini
+031 TOTALCMD.INC
+032 KEYBOARD.TXT
+033 TC_hotkeys.csv
+044 VI_hotkeys.csv
 
 # key names
 100 Insert
