@@ -1,9 +1,8 @@
-Hotkey Popup
-============
+Hotkeys
+=======
 
-...is probably a better name than Tcmdrkeys as this collection is momentarily
-called. It's named after a file manager for Windows that is one of the few programs
-I found worth buying a license for.
+formerly called Tcmdrkeys was named after a file manager for Windows that is
+one of the few programs I found worth buying a license for.
 
 Originally I started this because I didn't like both the way you can view the
 shortcut keys in TC and the way you can change them very much.
@@ -35,15 +34,18 @@ version and then as part of a multi-tool version, as a way to find out how to do
 this. And then I was able to convert the Total Commander version so that it could
 be incorporated into the multi-tool version too.
 
-In the mean time I've gathered specs so I can to do this for other applications.
-Like for Opera, I know there are a lot but I lack the overview (their interface
-is kind of chaotic too) and that's just what this tool is meant to bring me:
+In the mean time I gathered specs so I could to do this for other applications.
+For instance my favourite web browser Opera also has got load of shortcuts all over
+the place but I lack the overview (their interface seems kind of chaotic too)
+and that's just what this tool is meant to bring me:
 an overview in the way that works for me.
 
-And since then, I've made vesions for SciTE and Opera and in the process restructured
-the whole thing so I need to write as little code as possible for adding a new tool
-to the collection.
+And since then, I've made versions for SciTE, Opera, Double Commander (my TC
+replacement on Linux) and in the process restructured the whole thing
+so I need to write as little code as possible for adding a new tool
+to the collection. I'm also in the process of writing an add-on to generate new
+plugins.
 
-The purpose of having a tool like this s not just to show the shortcuts (help files
+The purpose of having a tool like this is not just to show the shortcuts (help files
 and menus do that too) but to be able to change the order in which they are
 displayed, so that I can sort on purpose or context instead of just on base key.

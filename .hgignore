@@ -15,9 +15,11 @@ KEYBOARD.TXT
 TOTALCMD.INC
 *_config.py
 *zip
+tc/*
 doublecmd/*
 opera/*
 scite/*
 system/*
 vim/*
+abap/*
 *orig
