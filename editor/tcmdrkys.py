@@ -391,10 +391,10 @@ class TCKeys(object):
                 cm = ""
                 defkeys[key] = oms
                 if key == "Backspace":
-                    ## try:
+                    try:
                         del defkeys["Back"]
-                    ## except KeyError:
-                        ## pass
+                    except KeyError:
+                        pass
             self.keydict[key] = ("S", oms, cm)
         self.defkeys = defkeys
         ## f = open("defkeys.txt","w")

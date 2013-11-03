@@ -17,6 +17,10 @@ de extra starters mogen wel weg eigenlijk.
 
 niet onder version control, wel nodig:
 
+abkey_config.py
+    settings voor de abap editor plugin
+dckey_config.py
+    settings voor de double commander plugin
 opkey_config.py
     settings voor de opera plugin
 scikey_config.py
@@ -25,10 +29,11 @@ tckey_config.py
     settings voor de TC plugin
 vikey_config.py
     settings voor de vi plugin
+voorlopig is het gebouwd op dat deze files in deze directory zitten
 
 
-files in package directory
---------------------------
+files in package directory (editor)
+-----------------------------------
 
 __init__.py
     (lege) package indicator
@@ -36,26 +41,27 @@ dutch.lng
     taalbestand met Nederlandse teksten
 english.lng
     taalbestand met Engelse teksten
-
 images.py
     programma om in de wx versies gebruikte images te genereren
-tcmerge.py
-    starter voor TC Command Merger
-    importeerde tcmerge_wx.py, nu tcmerge_qt.py
-tcmerge_mixin.py
-    GUI-onafhankelijke code voor TCMerge
-    moet daar nog uit afgesplitst worden
-tckey_gui.py
-    main GUI code voor TC Hotkeys editor, wxPython versie
-    gebruikt wx
-    importeert images, tcmdrkys
-tcmdrkys.py
-    data manipulatie routines voor TC Hotkeys Editor
-    gebruikt xml.etree, csv
-tcmerge_wx.py
-    Main GUI code voor TC Command Merger, wxPython versie
-    gebruikt wx, csv
-    importeert tccm_mixin, tcmdrkys
+
+abap_plugin.py
+    new (qt) version of the plugin
+abkey_config.py
+    contains file names/locations for settings
+abapkeys.py
+    I/O module for the settings
+
+create_plugin.py
+    probeersel voor het genereren van de basiscode voor een nieuwe plugin
+
+doublecmd_plugin.py
+    new (qt) version of the plugin
+dckey_config.py
+    contains file names/locations for settings
+dckeys.py
+    I/O module for the settings
+dcmerge.py
+    program for building the keydef csv
 
 hotkeys_qt.py
     qt version of the app
@@ -65,6 +71,9 @@ hotkeys_wx.py
     original wx version of the app
 hotkey_config.py
     settings for the app (language)
+hotkeys_plugins.py
+    plugin configuration (which ones, which imports to do)
+
 
 opera_plugin.py
     new (qt) version of the plugin
@@ -90,16 +99,26 @@ tckey_wxgui.py
     older (wx) version of the plugin
 tcmdrkys.py
     I/O module for the settings
+    data manipulatie routines voor TC Hotkeys Editor
+    gebruikt xml.etree, csv
 tcmerge_mixin.py
-    gui-independent code for tcmerge
+    GUI-onafhankelijke code voor TCMerge
+    moet daar nog uit afgesplitst worden
 tcmerge.py
-    startup module for tcmerge_xx.py
+    starter voor TC Command Merger
+    importeerde tcmerge_wx.py, nu tcmerge_qt.py
 tcmerge_qt.py
     program for building the keydef csv qt version
 tcmerge_wx.py
     program for building the keydef csv wx version
+    Main GUI code voor TC Command Merger, wxPython versie
+    gebruikt wx, csv
+    importeert tccm_mixin, tcmdrkys
 tc_plugin.py
     new (qt) version of the plugin
+    main GUI code voor TC Hotkeys editor, wxPython versie
+    gebruikt wx
+    importeert images, tcmdrkys
 
 vikey_config.py
     contains file names/locations for settings

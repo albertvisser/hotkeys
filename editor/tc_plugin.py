@@ -10,7 +10,7 @@ import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 
 from .hotkeys_shared import * # constants
-from tcmdrkeys import tcmdrkys as keys
+from editor import tcmdrkys as keys
 
 # alleen de TC-specifieke menufuncties, de rest wordt uit hotkeys_shared geïmporteerd
 def m_read(self):

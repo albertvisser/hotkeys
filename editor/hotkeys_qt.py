@@ -17,10 +17,10 @@ import functools
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 from .hotkeys_shared import * # constants
-import tcmdrkeys.hotkeys_plugins
+import editor.hotkeys_plugins
 
-PLUGINS = tcmdrkeys.hotkeys_plugins.PLUGINS
-MENUS = tcmdrkeys.hotkeys_plugins.MENUS
+PLUGINS = editor.hotkeys_plugins.PLUGINS
+MENUS = editor.hotkeys_plugins.MENUS
 
 class ChoiceBook(gui.QFrame): #Widget):
     """ Als QTabwidget, maar met selector in plaats van tabs

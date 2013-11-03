@@ -9,7 +9,7 @@ import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 
 from .hotkeys_shared import * # constants
-from tcmdrkeys import opkeys as keys
+from editor import opkeys as keys
 
 
 class MyPanel(HotkeyPanel):
