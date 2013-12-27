@@ -203,6 +203,7 @@ class HotkeyPanel(gui.QFrame):
         if self.modified:
             title += ' ' + self.captions["017"]
         self.setWindowTitle(title)
+
         # in de TC versie worden hier van de overige widgets de captions ingesteld
         self.captions_extra_fields()
         self.populate_list()
@@ -347,6 +348,10 @@ class MainWindow(gui.QMainWindow):
                 hulp = self._menus[indx][1][indx2]
                 if hulp != -1:
                     action.setText(self.captions[hulp])
+        self.book.b_next.setText(self.captions['014'])
+        self.book.b_prev.setText(self.captions['015'])
+        self.book.sel_text.setText(self.captions['050'])
+        self.book.find_text.setText(self.captions['051'])
         self.b_exit.setText(self.captions[C_EXIT])
         self.page.setcaptions()
 
