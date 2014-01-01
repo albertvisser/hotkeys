@@ -169,6 +169,7 @@ class HotkeyPanel(gui.QFrame):
 
         self.setLayout(self._sizer)
         self._initializing = False
+        self.filtertext = ''
 
     def add_extra_fields(self):
         "define other widgets to be used in the panel"

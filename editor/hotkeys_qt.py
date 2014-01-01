@@ -42,6 +42,9 @@ class ChoiceBook(gui.QFrame): #Widget):
         self.b_prev = gui.QPushButton(self.parent.captions["015"])
         self.b_prev.clicked.connect(self.find_prev)
         self.b_prev.setEnabled(False)
+        self.b_filter = gui.QPushButton('&Filter')
+        self.b_filter.clicked.connect(self.filter)
+        self.b_filter.setEnabled(False)
         self.pnl = gui.QStackedWidget(self)
         self.captions = self.parent.captions
         for txt, win in PLUGINS:
@@ -61,6 +64,7 @@ class ChoiceBook(gui.QFrame): #Widget):
         self.find_text = gui.QLabel(self.parent.captions["051"], self)
         hbox.addWidget(self.find_text)
         hbox.addWidget(self.find)
+        hbox.addWidget(self.b_filter)
         hbox.addWidget(self.b_next)
         hbox.addWidget(self.b_prev)
         ## hbox.addStretch()
@@ -87,40 +91,80 @@ class ChoiceBook(gui.QFrame): #Widget):
             menus, funcs = DFLT_MENU, DFLT_MENU_FUNC
         self.parent.setup_menu(menus, funcs)
         self.parent.page = self.pnl.currentWidget()
-        self.find.setEditText('')
+        if self.parent.page.filtertext:
+            self.find.setEditText(self.parent.page.filtertext)
+            self.b_filter.setText('&Filter off')
+            self.b_filter.setEnabled(True)
+        else:
+            self.find.setEditText('')
+            self.find.setEnabled(True)
+            self.b_next.setEnabled(False)
+            self.b_prev.setEnabled(False)
+            self.b_filter.setEnabled(False)
 
     def on_text_changed(self, text):
-        ## if self.find.count() == 0:
-            ## self.find.addItem(text)
-        ## elif self.text.startswith(self.find.itemText(0)):
-            ## self.find.setItemText(0, text)
-        ## self.parent.sb.showMessage(text)
         page = self.parent.page # self.pnl.currentWidget()
         col = page.p0list.columnCount() - 1
         self.items_found = page.p0list.findItems(text, core.Qt.MatchContains, col)
+        self.b_next.setEnabled(False)
+        self.b_prev.setEnabled(False)
+        self.b_filter.setText('&Filter')
+        self.b_filter.setEnabled(False)
         if self.items_found:
             page.p0list.setCurrentItem(self.items_found[0])
             self.founditem = 0
-            self.b_next.setEnabled(True)
+            if len(self.items_found) < len(self.parent.page.data.items()):
+                self.b_next.setEnabled(True)
+                self.b_filter.setEnabled(True)
+            self.parent.sb.showMessage('{} items found'.format(len(self.items_found))
         else:
             self.parent.sb.showMessage(self.parent.captions["054"].format(
                 text))
 
     def find_next(self):
         self.b_prev.setEnabled(True)
-        if self.founditem == len(self.items_found):
-            self.parent.sb.showMessage(self.parent.captions["055"])
-        else:
+        if self.founditem < len(self.items_found) -1:
             self.founditem += 1
             self.parent.page.p0list.setCurrentItem(self.items_found[self.founditem])
+        else:
+            self.parent.sb.showMessage(self.parent.captions["055"])
+            self.b_next.setEnabled(False)
 
     def find_prev(self):
+        self.b_next.setEnabled(True)
         if self.founditem == 0:
             self.parent.sb.showMessage(self.parent.captions["056"])
+            self.b_prev.setEnabled(False)
         else:
             self.founditem -= 1
             self.parent.page.p0list.setCurrentItem(self.items_found[self.founditem])
 
+    def filter(self):
+        if not self.items_found:
+            return
+        state = str(self.b_filter.text())
+        text = str(self.find.currentText())
+        if state == '&Filter':
+            state = '&Filter off'
+            self.parent.page.filtertext = text
+            self.parent.page.olddata = self.parent.page.data
+            self.parent.page.olditems = self.items_found
+            self.parent.page.data = {ix: item for ix, item in enumerate(
+                self.parent.page.data.values()) if text.upper() in item[-1].upper()}
+            self.b_next.setEnabled(False)
+            self.b_prev.setEnabled(False)
+            self.find.setEnabled(False)
+        else:
+            state = '&Filter'
+            self.parent.page.filtertext = ''
+            self.parent.page.data = self.parent.page.olddata
+            self.b_next.setEnabled(True)
+            self.b_prev.setEnabled(True)
+            self.find.setEnabled(True)
+        self.parent.page.populate_list()
+        self.b_filter.setText(state)
+        if self.parent.page.data == self.parent.page.olddata:
+            self.items_found = self.parent.page.olditems
 
 class MainFrame(MainWindow):
     """Hoofdscherm van de applicatie"""
