@@ -77,6 +77,7 @@ class ChoiceBook(gui.QFrame): #Widget):
         self.setLayout(box)
 
     def on_page_changed(self, indx):
+        ## print('page has changed to', indx)
         page = self.pnl.currentWidget() ## self.parent().page
         self.parent.sb.showMessage(self.parent.captions["053"].format(
             self.sel.currentText()))
@@ -86,7 +87,12 @@ class ChoiceBook(gui.QFrame): #Widget):
                 # ook nog de vorige tekst in de combobox selecteren?
                 return
         self.pnl.setCurrentIndex(indx)
-        menus, funcs = MENUS.get(PLUGINS[indx], (None, None))
+        ## for x in MENUS.keys():
+            ## print(x, PLUGINS[indx])
+        ## if PLUGINS[indx] in MENUS:
+            ## print(MENUS[PLUGINS[indx]])
+        menus, funcs = MENUS.get(PLUGINS[indx][0], (None, None))
+        ## print(PLUGINS[indx], menus)
         if not menus:
             menus, funcs = DFLT_MENU, DFLT_MENU_FUNC
         self.parent.setup_menu(menus, funcs)
@@ -116,7 +122,7 @@ class ChoiceBook(gui.QFrame): #Widget):
             if len(self.items_found) < len(self.parent.page.data.items()):
                 self.b_next.setEnabled(True)
                 self.b_filter.setEnabled(True)
-            self.parent.sb.showMessage('{} items found'.format(len(self.items_found))
+            self.parent.sb.showMessage('{} items found'.format(len(self.items_found)))
         else:
             self.parent.sb.showMessage(self.parent.captions["054"].format(
                 text))
@@ -206,6 +212,10 @@ class MainFrame(MainWindow):
         self.setCentralWidget(pnl)
         self.page = self.book.pnl.currentWidget()
         self.book.on_page_changed(0)
+        self.book.b_next.setText(self.captions['014'])
+        self.book.b_prev.setText(self.captions['015'])
+        self.book.sel_text.setText(self.captions['050'])
+        self.book.find_text.setText(self.captions['051'])
         self.setcaptions()
         self.show()
 

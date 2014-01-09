@@ -26,12 +26,3 @@ class MyPanel(HotkeyPanel):
             )
         HotkeyPanel.__init__(self, parent, coldata, ini="scikey_config.py",
             title="SciTE keys")
-
-
-def main(args=None):
-    app = gui.QApplication(sys.argv)
-    frame = MainWindow()
-    sys.exit(app.exec_())
-
-if __name__ == '__main__':
-    main()

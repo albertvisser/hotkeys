@@ -36,12 +36,3 @@ class MyPanel(HotkeyPanel):
 
     ## def savekeys(self):
         ## pass
-
-
-def main(args=None):
-    app = gui.QApplication(sys.argv)
-    frame = MainWindow()
-    sys.exit(app.exec_())
-
-if __name__ == '__main__':
-    main()

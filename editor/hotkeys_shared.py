@@ -281,7 +281,11 @@ class MainWindow(gui.QMainWindow):
         self.setup_menu(menus, funcs)
 
         pnl = gui.QWidget(self)
-        self.page = MyPanel(pnl, args)
+        try:
+            self.page = kwargs['panel'](pnl)
+        except KeyError:
+            from generic_plugin import MyPanel
+            self.page = MyPanel(pnl)
         sizer_v = gui.QVBoxLayout()
         sizer_h = gui.QHBoxLayout()
         sizer_h.addWidget(self.page)
@@ -303,6 +307,7 @@ class MainWindow(gui.QMainWindow):
                 self.captions["042"])
 
     def setup_menu(self, menus, funcs):
+        print("setting up menu")
         self.menu_bar.clear()
         self._menus = menus
         self._menuitems = []
@@ -349,10 +354,6 @@ class MainWindow(gui.QMainWindow):
                 hulp = self._menus[indx][1][indx2]
                 if hulp != -1:
                     action.setText(self.captions[hulp])
-        self.book.b_next.setText(self.captions['014'])
-        self.book.b_prev.setText(self.captions['015'])
-        self.book.sel_text.setText(self.captions['050'])
-        self.book.find_text.setText(self.captions['051'])
         self.b_exit.setText(self.captions[C_EXIT])
         self.page.setcaptions()
 

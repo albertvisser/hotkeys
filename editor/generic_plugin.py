@@ -13,7 +13,7 @@ from .hotkeys_shared import * # constants
 
 class MyPanel(HotkeyPanel):
 
-    def __init__(self, parent, txt=""):
+    def __init__(self, parent, txt="default"):
 
         coldata = ()
         self._txt = txt
@@ -31,12 +31,3 @@ class MyPanel(HotkeyPanel):
 
     def savekeys(self):
         pass
-
-
-def main(args=None):
-    app = gui.QApplication(sys.argv)
-    frame = MainWindow()
-    sys.exit(app.exec_())
-
-if __name__ == '__main__':
-    main()

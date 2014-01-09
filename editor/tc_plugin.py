@@ -90,7 +90,6 @@ TC_MENU_FUNC = {
     M_ABOUT: m_about,
 }
 
-
 class MyPanel(HotkeyPanel):
 
     def __init__(self, parent):
@@ -223,9 +222,9 @@ class MyPanel(HotkeyPanel):
         if self._initializing:
             self.vuldetails(newitem)
             return
-        print('itemselected called', newitem.text(0))
-        if olditem is not None:
-            print('old item was', olditem.text(0))
+        ## print('itemselected called', newitem.text(0))
+        ## if olditem is not None:
+            ## print('old item was', olditem.text(0))
         origkey = self._origdata[0]
         origmods = ''.join([y for x, y in zip((4, 2, 3, 1),
             ('WCAS')) if self._origdata[x]])
@@ -244,7 +243,7 @@ class MyPanel(HotkeyPanel):
                 gevonden = True
                 indx = number
                 break
-        print(cursor_moved, other_item, other_cmd, gevonden)
+        ## print(cursor_moved, other_item, other_cmd, gevonden)
         doit = False
         if any_change:
             if cursor_moved:
@@ -411,10 +410,3 @@ class MyPanel(HotkeyPanel):
         self.p0list.setFocus()
 
 
-def main():
-    app = gui.QApplication(sys.argv)
-    frame = MainWindow(menus=TC_MENU, funcs=TC_MENU_FUNC)
-    sys.exit(app.exec_())
-
-if __name__ == '__main__':
-    main()

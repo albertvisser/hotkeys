@@ -33,12 +33,3 @@ class MyPanel(HotkeyPanel):
 
     def savekeys(self):
         HotkeyPanel.savekeys(pad=self.ini.csv)
-
-
-def main(args=None):
-    app = gui.QApplication(sys.argv)
-    frame = MainWindow()
-    sys.exit(app.exec_())
-
-if __name__ == '__main__':
-    main()
