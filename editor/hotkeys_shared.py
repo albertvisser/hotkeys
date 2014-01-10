@@ -326,7 +326,7 @@ class MainWindow(gui.QMainWindow):
     def on_menu(self, actionid):
         text = self._menu_func[actionid](self)
         if text:
-            gui.QMessageBox.information(self, text, self.captions["000"])
+            gui.QMessageBox.information(self, self.captions["000"], text)
 
     def exit(self,e=None):
         if not self.page.exit():
