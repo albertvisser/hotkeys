@@ -409,4 +409,118 @@ class MyPanel(HotkeyPanel):
         self.aanpassen(delete=True)
         self.p0list.setFocus()
 
+# helemaal vergeten de FilesDialog te implementeren! Dat is die met die 5 of 6 filebrowsebuttons
+# o nee hij is bij he herstructureren van de code verdwenen
+class FileBrowseButton(gui.QWidget):
+    def __init__(self, parent, getdirectory=False):
+        self.startdir = self.caption = ''
+        self.getdir = getdirectory
+        gui.QWidget.__init__(self, parent)
+        vbox = gui.QVBoxLayout()
+        box = gui.QHBoxLayout()
+        self.label = gui.QLabel('Enter a {}:'.format('directory' if self.getdir
+            else 'file'), self)
+        box.addWidget(self.label)
+        box.addStretch()
+        self.input = gui.QLineEdit(self)
+        self.input.setMinimumWidth(200)
+        box.addWidget(self.input)
+        self.button = gui.QPushButton('Select', self, clicked=self.browse)
+        box.addWidget(self.button)
+        vbox.addLayout(box)
+        self.setLayout(vbox)
 
+    def browse(self):
+        caption = self.caption or 'Browse {}'.format('directories' if self.getdir
+            else 'files')
+        startdir = str(self.input.text()) or os.getcwd()
+        if self.getdir:
+            path = gui.QFileDialog.getExistingDirectory(self, caption, startdir)
+        else:
+            path = gui.QFileDialog.getOpenFileName(self, caption, startdir)
+        if path:
+            self.input.setText(path)
+
+class FilesDialog(gui.QDialog):
+    """dialoog met meerdere FileBrowseButtons
+
+    voor het instellen van de bestandslocaties
+    """
+    def __init__(self, parent, title, locations, captions):
+        self.parent = parent
+        self.locations = locations
+        self.captions = captions
+        gui.QDialog.__init__(self, parent)
+        self.resize=(350, 200)
+
+        sizer = gui.QVBoxLayout()
+
+        text = captions.pop(0)
+        label = gui.QLabel(text, self)
+        sizer.addWidget(label)
+
+        buttons = []
+        rstrcap2 = captions.pop()
+        rstrcap = captions.pop()
+        dircap = captions.pop()
+
+        rstrloc = locations.pop()
+        for i, x in enumerate(captions):
+            if i < len(locations):
+                dir = locations[i]
+                strt = dir
+            else:
+                dir = locations[0]
+                strt = ""
+
+            fbb = FileBrowseButton(self, getdirectory=True)
+            fbb.label.setText(x)
+            fbb.caption = dircap % x
+            fbb.input.setText(strt)
+            sizer.addWidget(fbb)
+            buttons.append(fbb)
+        self.bTC,self.bUC,self.bCI,self.bKT,self.bHK = buttons
+
+        if rstrloc:
+            dir, naam = os.path.split(rstrloc)
+        else:
+            dir, naam = locations[0],''
+        self.bRST = FileBrowseButton(self)
+        self.bRST.label.setText(rstrcap)
+        self.bRST.input.setText(naam)
+        self.bRST.caption = rstrcap2
+        sizer.addWidget(self.bRST)
+
+        button_box = gui.QDialogButtonBox(gui.QDialogButtonBox.Ok |
+            gui.QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        sizer.addWidget(button_box)
+        self.setLayout(sizer)
+
+    def accept(self):
+        paden = [
+            str(self.bTC.input.text()),
+            str(self.bUC.input.text()),
+            str(self.bCI.input.text()),
+            str(self.bKT.input.text()),
+            str(self.bHK.input.text()),
+            str(self.bRST.input.text())
+            ]
+        fout = ''
+        for i, pad in enumerate(paden):
+            if pad != "":
+                if i == 5:
+                    if not os.path.exists(pad):
+                        fout = self.parent.captions['036'] % naam
+                else:
+                    naam = self.captions[i]
+                    if naam == 'Hotkeys.hky':
+                        naam = 'tc default hotkeys.ohky'
+                    if not os.path.exists(os.path.join(pad,naam)):
+                        fout = self.parent.captions['035'] % naam
+        if fout:
+            gui.MessageBox.information(self, self.parent.captions["000"], fout)
+            return
+        self.parent.paden = paden
+        return gui.QDialog.Accepted
