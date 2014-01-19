@@ -13,10 +13,10 @@ from .hotkeys_shared import * # constants
 
 class MyPanel(HotkeyPanel):
 
-    def __init__(self, parent, txt="default"):
+    def __init__(self, parent):
 
         coldata = ()
-        self._txt = txt
+        self._txt = "default"
         HotkeyPanel.__init__(self, parent, coldata, ini="",
             title="default_title")
 

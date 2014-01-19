@@ -1,5 +1,7 @@
 # -*- coding: UTF-8 -*-
-
+"""
+This module contains code that can be shared among all the plugins
+"""
 from __future__ import print_function
 import os
 import shutil
@@ -23,8 +25,10 @@ WIN = True if sys.platform == "win32" else False
 ## LIN = True if sys.platform == 'linux2' else False
 LIN = True if os.name == 'posix' else False
 
-# voorziening voor starten op usb-stick onder Windows (drive letters in config aanpassen)
 def check_driveletter():
+    """voorziening voor starten op usb-stick onder Windows
+    (drive letters in config aanpassen)
+    """
     drive = os.path.splitdrive(os.getcwd())[0] + "\\"
     with open(INI) as f_in:
         lines = f_in.readlines()
@@ -125,6 +129,8 @@ class HotkeyPanel(gui.QFrame):
     definieert feitelijk een "custom widget"
     coldata is een list of tuple van 4-tuples die achtereenvolgens aangeven
     de kolomtitel, de breedte, de index op self.data en of het een soort aangeeft
+    verwacht dat de subclass van te voren een attribuut gedefinieerd heeft:
+    _keys: de module om de settings te lezen
     """
     def __init__(self, parent, coldata, **kwargs):
 
@@ -239,10 +245,19 @@ class HotkeyPanel(gui.QFrame):
                 return False
         return True
 
-# base class for panel viewers
+
 class MainWindow(gui.QMainWindow):
-    """Hoofdscherm van de applicatie"""
+    """Hoofdscherm van de applicatie
+    is ook te gebruiken voor een scherm om eenplugin afzonderlijk te testen
+    """
     def __init__(self, args=None, **kwargs):
+        """
+        d.m.v. kwargs kunnen de volgende parameters worden doorgegeven:
+        title - de schermtitel
+        menus - extra menus
+        funcs - bijbehorende extra callbacks
+        panel - een class voor de te tonen list interface
+        """
 
         wid = 800 if LIN else 688
         hig = 594

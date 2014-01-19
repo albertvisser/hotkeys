@@ -22,6 +22,10 @@ import editor.hotkeys_plugins
 PLUGINS = editor.hotkeys_plugins.PLUGINS
 MENUS = editor.hotkeys_plugins.MENUS
 
+# kan ik een extra menuoptie maken voor het definieren van alle csv locaties ?
+# de truc om dat mee te doen zit in de init van MainWindow die ik hier herimplementeer
+# kan ik zoiets hierin kopi"eren?
+
 class ChoiceBook(gui.QFrame): #Widget):
     """ Als QTabwidget, maar met selector in plaats van tabs
     """
@@ -180,7 +184,7 @@ class MainFrame(MainWindow):
         hig = 594
         gui.QMainWindow.__init__(self)
         self.title = 'Hotkeys'
-        self.setWindowTitle("tcmdrkeys")
+        self.setWindowTitle(self.title)
         self.resize(wid, hig)
         self.sb = self.statusBar()
 

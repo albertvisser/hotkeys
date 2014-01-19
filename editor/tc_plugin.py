@@ -409,8 +409,6 @@ class MyPanel(HotkeyPanel):
         self.aanpassen(delete=True)
         self.p0list.setFocus()
 
-# helemaal vergeten de FilesDialog te implementeren! Dat is die met die 5 of 6 filebrowsebuttons
-# o nee hij is bij he herstructureren van de code verdwenen
 class FileBrowseButton(gui.QWidget):
     def __init__(self, parent, getdirectory=False):
         self.startdir = self.caption = ''
