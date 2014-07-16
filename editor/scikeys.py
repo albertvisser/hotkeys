@@ -4,22 +4,39 @@ from __future__ import print_function
 import os
 import csv
 import shutil
+from bs4 import BeautifulSoup
 
-def readkeys(pad):
-    """lees het csv bestand op het aangegeven pad en geeft de inhoud terug
+def writecsv():
+    ini = SciKSettings('/home/albert/tcmdrkeys/tcmdrkeys/scikey_config.py')
+    csvfile = os.path.join(ini.pad, 'SciTE_hotkeys.csv')
+    shutil.copyfile(csvfile, csvfile + '.backup')
 
-    retourneert dictionary van nummers met (voorlopig) 3-tuples
-    """
-    data = {}
-    try:
-        rdr = csv.reader(open(os.path.join(pad, "SciTE_hotkeys.csv"), 'r'))
-    except IOError:
-        rdr = []
-    key = 0
-    for row in rdr:
-        key += 1
-        data[key] = ([x.strip() for x in row])
-    return data
+    with open(os.path.join(ini.pad, 'CommandValues.html')) as doc:
+
+        soup = BeautifulSoup(doc)
+
+
+    with open(csvfile, 'w') as _out:
+
+        writer = csv.writer(_out)
+
+        menus, internals, others = soup.find_all('table')
+        for row in menus.find_all('tr'):
+            command, text, shortcut = [tag.string for tag in row.find_all('td')]
+            writer.writerow((shortcut, 'S', '', command, text))
+
+        for row in internals.find_all('tr'):
+            command, text, description = [tag.string for tag in row.find_all('td')]
+            writer.writerow(('', 'S', command, text, description))
+
+        for row in others.find_all('tr'):
+            description, shortcut = [tag.string for tag in row.find_all('td')]
+            parts = shortcut.lower().split('+')
+            if parts[-1] == '':
+                parts[-2] += '+'
+                parts.pop()
+            shortcut = ' '.join(reversed(parts))
+            writer.writerow((shortcut, 'S', '', '', description))
 
 def savekeys(pad):
     """schrijf de gegevens terug

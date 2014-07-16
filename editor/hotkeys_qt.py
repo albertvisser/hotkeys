@@ -13,28 +13,499 @@
 from __future__ import print_function
 import os
 import sys
+import csv
 import functools
+import importlib
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
-from .hotkeys_shared import * # constants
-import editor.hotkeys_plugins
 
-PLUGINS = editor.hotkeys_plugins.PLUGINS
-MENUS = editor.hotkeys_plugins.MENUS
+HERE = os.path.abspath(os.path.dirname(__file__))
+## try:
+    ## HOME = os.environ('HOME')
+## except KeyError:
+    ## HOME = os.environ('USERPROFILE') # Windows
+CONF = os.path.join(HERE, 'hotkey_config.py') # don't import, can be modified in runtime
+TTL = "A hotkey viewer/editor"
+VRS = "1.1.x"
+AUTH = "(C) 2008-2014 Albert Visser"
+XTRA = '''\
+originally built for Total Commander,
+extended for use with
+all your favourite applications'''
+WIN = True if sys.platform == "win32" else False
+## LIN = True if sys.platform == 'linux2' else False
+LIN = True if os.name == 'posix' else False
 
-# kan ik een extra menuoptie maken voor het definieren van alle csv locaties ?
-# de truc om dat mee te doen zit in de init van MainWindow die ik hier herimplementeer
-# kan ik zoiets hierin kopi"eren?
+# constanten voor  captions en dergelijke (correspondeert met nummers in language files)
+# *** toegesneden op TC verplaatsen naar TC plugin? ***
+C_KEY, C_MOD, C_SRT, C_CMD, C_OMS = '001', '043', '002', '003', '004'
+C_DFLT, C_RDEF = '005', '006'
+M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
+C_SAVE, C_DEL, C_EXIT, C_KTXT, C_CTXT ='010', '011', '012', '018', '019'
+M_APP, M_READ, M_SAVE, M_USER, M_EXIT = '200', '201', '202', '203', '209'
+M_SETT, M_LOC, M_LANG, M_HELP, M_ABOUT = '210', '211', '212', '290', '299'
+NOT_IMPLEMENTED = '404'
+
+# default menu structure
+DFLT_MENU = (
+    (M_APP, (M_READ, M_SAVE, M_USER, -1, M_EXIT,)),
+    (M_SETT, (M_LOC, M_LANG,)),
+    (M_HELP, (M_ABOUT,))
+    )
+
+# shared (menu) functions
+def show_message(self, message_id, caption_id='000'):
+    """toon de boodschap geïdentificeerd door <message_id> in een dialoog
+    met als titel aangegeven door <caption_id> en retourneer het antwoord
+    na sluiten van de dialoog
+    """
+    ok = gui.QMessageBox.question(self, self.captions[caption_id],
+        self.captions[message_id], gui.QMessageBox.Yes |
+        gui.QMessageBox.No | gui.QMessageBox.Cancel)
+    return ok
+
+def m_read(self):
+    """(menu) callback voor het lezen van de hotkeys
+
+    vraagt eerst of het ok is om de hotkeys (opnieuw) te lezen
+    zet de gelezen keys daarna ook in de gui
+    """
+    return
+    # TODO: zorgen dat het lezen (alleen) voor het huidige getoonde tool  gebeurt
+    # 1. bepaal welk tool geselecteerd is
+    # 2. bepaal welke csv hier bij hoort
+    # 3. herlees de keydefs m.b.v. readcsv() - settings worden niet herlezen of herschreven
+    # alternatie: bepaal welk panel voorstaat en roep diens readkeys methode aan
+    # -- oh dat is wat hier gebeurt (facepalm)
+    doit = True
+    if not self.page.modified:
+        doit = False
+        h = show_message(self, '041')
+        if h == gui.QMessageBox.Yes:
+            doit = True
+    if doit:
+        self.page.readkeys()
+        self.page.populate_list()
+
+def m_save(self):
+    """(menu) callback voor het terugschrijven van de hotkeys
+
+    vraagt eerst of het ok is om de hotkeys weg te schrijven
+    vraagt daarna eventueel of de betreffende applicatie geherstart moet worden
+    """
+    return
+    # TODO: zorgen dat het lezen (alleen) voor het huidige getoonde tool  gebeurt
+    #             en dat menu optie alleen beschikbaar is voor waar terugschrijven mogelijk is
+    if not self.page.modified:
+        h = show_message(self, '041')
+        if h != gui.QMessageBox.Yes:
+            return
+    self.page.savekeys()
+    if self.page.ini.restart:
+        h = show_message(self, '026')
+        if h == gui.QMessageBox.Yes:
+            os.system(self.page.ini.restart)
+    else:
+        gui.QMessageBox.information(self, self.captions['000'], self.captions['037'])
+
+def m_loc(self):
+    """(menu) callback voor aanpassen van de bestandslocaties
+
+    vraagt bij wijzigingen eerst of ze moeten worden opgeslagen
+    toont dialoog met bestandslocaties en controleert de gemaakte wijzigingen
+    (met name of de opgegeven paden kloppen)
+    """
+    # TODO: deze routine wijzigen zodat je hier de gebruikte plugins kunt definiëren met hun csv's
+    # self.ini["plugins"] bevat de lijst met tools en csv locaties
+    ok = FilesDialog(self).exec_()
+    ## if ok == gui.QDialog.Accepted:
+        ## paden, restarter = self.paden[:-1], self.paden[-1]
+        ## self.page.ini.set("paden", paden)
+
+def m_user(self):
+    """(menu) callback voor een nog niet geïmplementeerde actie"""
+    return self.captions[NOT_IMPLEMENTED]
+
+def m_lang(self):
+    """(menu) callback voor taalkeuze
+
+    past de settings aan en leest het geselecteerde language file
+    """
+    # bepaal welke language files er beschikbaar zijn
+    choices = [x for x in os.listdir(HERE) if os.path.splitext(x)[1] == ".lng"]
+    # bepaal welke er momenteel geactiveerd is
+    oldlang = self.ini['lang']
+    indx = choices.index(oldlang) if oldlang in choices else 0
+    lang, ok = gui.QInputDialog.getItem(self, self.captions["027"],
+        self.captions["000"], choices, current=indx, editable=False)
+    if ok:
+        inifile = self.ini['filename']
+        shutil.copyfile(inifile, inifile + '.bak')
+        with open(inifile + '.bak') as _in, open(inifile, 'w') as _out:
+            for line in _in:
+                if line.startswith('LANG'):
+                    line = line.replace(oldlang, lang)
+                _out.write(line)
+        self.ini['lang'] = lang
+        self.readcaptions(lang)
+        self.setcaptions()
+
+def m_about(self):
+    """(menu) callback voor het tonen van de "about" dialoog
+    """
+    info = gui.QMessageBox.about(self,  self.captions['000'],
+        "{}\nversion {}\n{}\n{}".format(TTL, VRS, AUTH, XTRA))
+
+def m_exit(self):
+    """(menu) callback om het programma direct af te sluiten"""
+    self.exit()
+
+# dispatch table for  menu callbacks
+DFLT_MENU_FUNC = {
+    M_READ: m_read,
+    M_SAVE: m_save,
+    M_USER: m_user,
+    M_LOC: m_loc,
+    M_LANG: m_lang,
+    M_EXIT: m_exit,
+    M_ABOUT: m_about,
+}
+
+MENUS = {}
+# list containing the plugins themselves
+# -- moved to top-level config file - to be adapted by menu callback (m_loc)
+
+def readcsv(pad):
+    """lees het csv bestand op het aangegeven pad en geeft de inhoud terug
+
+    retourneert dictionary van nummers met (voorlopig) 4-tuples
+    """
+    data = {}
+    with open(pad, 'r') as _in:
+        rdr = csv.reader(_in)
+        key = 0
+        coldata = []
+        settings = {}
+        for row in rdr:
+            rowtype, rowdata = row[0], row[1:]
+            if rowtype == 'Setting':
+                name, value, oms = rowdata
+                settings[name] = (value, oms)
+            elif rowtype == 'Title':
+                for item in rowdata:
+                    coldata_item = ['', '', '', '', '']
+                    coldata_item[1] = item
+                    coldata.append(coldata_item)
+            elif rowtype == 'Width':
+                for ix, item in enumerate(rowdata):
+                    coldata[ix][2] = int(item)
+            elif rowtype == 'Seq':
+                for ix, item in enumerate(rowdata):
+                    coldata[ix][0] = int(item)
+                    coldata[ix][3] = ix
+            elif rowtype == 'is_type':
+                for ix, item in enumerate(rowdata):
+                    coldata[ix][4] = bool(int(item))
+                coldata.sort()
+                coldata = [x[1:] for x in coldata]
+            elif rowtype == 'Keydef':
+                key += 1
+                data[key] = ([x.strip() for x in rowdata])
+    return settings, coldata, data
+
+class FileBrowseButton(gui.QWidget):
+    def __init__(self, parent, text=""):
+        self.startdir = ''
+        if text:
+            self.startdir = os.path.dirname(text)
+        gui.QWidget.__init__(self, parent)
+        vbox = gui.QVBoxLayout()
+        box = gui.QHBoxLayout()
+        self.input = gui.QLineEdit(text, self)
+        self.input.setMinimumWidth(200)
+        box.addWidget(self.input)
+        self.button = gui.QPushButton('Select', self, clicked=self.browse)
+        box.addWidget(self.button)
+        vbox.addLayout(box)
+        self.setLayout(vbox)
+
+    def browse(self):
+        startdir = str(self.input.text()) or os.getcwd()
+        path = gui.QFileDialog.getOpenFileName(self, 'Browse files', startdir)
+        if path:
+            self.input.setText(path)
+
+class FilesDialog(gui.QDialog):
+    """dialoog met meerdere FileBrowseButtons
+
+    voor het instellen van de bestandslocaties
+    """
+    def __init__(self, parent): #, title, locations, captions):
+        self.parent = parent
+        gui.QDialog.__init__(self, parent)
+        self.resize(680, 400)
+
+        self.sizer = gui.QVBoxLayout()
+        self.sizer.addStretch()
+        text = """\
+        Met deze dialoog kun je bepalen voor welke tools keyboarddefinities getoond worden
+        en waar deze staan (in de vorm van csv bestanden)
+        """
+        hsizer = gui.QHBoxLayout()
+        label = gui.QLabel(text, self)
+        hsizer.addWidget(label)
+        self.sizer.addLayout(hsizer)
+
+        self.gsizer = gui.QGridLayout()
+        rownum = colnum = 0
+        self.gsizer.addWidget(gui.QLabel('Programma', self),
+            rownum, colnum, alignment = core.Qt.AlignHCenter | core.Qt.AlignVCenter)
+        colnum += 1
+        self.gsizer.addWidget(gui.QLabel('Locatie van het CSV-bestand', self),
+            rownum, colnum, alignment = core.Qt.AlignHCenter | core.Qt.AlignVCenter)
+
+        self.rownum = rownum
+        self.checks = []
+        self.paths = []
+        for name, path in self.parent.ini["plugins"]:
+            self.add_row(name, path)
+        self.sizer.addLayout(self.gsizer)
+
+        buttonbox = gui.QDialogButtonBox()
+        btn = buttonbox.addButton('&Add Program', gui.QDialogButtonBox.ActionRole)
+        btn.clicked.connect(self.add_program)
+        btn = buttonbox.addButton('&Remove Checked Programs',
+            gui.QDialogButtonBox.ActionRole)
+        btn.clicked.connect(self.remove_program)
+        btn = buttonbox.addButton(gui.QDialogButtonBox.Ok)
+        btn = buttonbox.addButton(gui.QDialogButtonBox.Cancel)
+        buttonbox.accepted.connect(self.accept)
+        buttonbox.rejected.connect(self.reject)
+        hsizer = gui.QHBoxLayout()
+        hsizer.addStretch()
+        hsizer.addWidget(buttonbox)
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+        self.sizer.addStretch()
+        self.setLayout(self.sizer)
+
+    def add_row(self, name, path):
+        self.rownum += 1
+        colnum = 0
+        check = gui.QCheckBox(name, self)
+        self.gsizer.addWidget(check, self.rownum, colnum)
+        self.checks.append(check)
+        colnum += 1
+        browse = FileBrowseButton(self, text=path)
+        self.gsizer.addWidget(browse, self.rownum, colnum)
+        self.paths.append((name, browse))
+
+    def delete_row(self, rownum):
+        print(rownum)
+
+    def add_program(self):
+        """nieuwe rij aanmaken in self.gsizer"""
+        newtool, ok = gui.QInputDialog.getText(self, "Hallo!",
+            "geef een naam op voor het nieuwe programma")
+        if ok:
+            self.add_row(newtool, '')
+            self.update()
+
+    def remove_program(self):
+        """alle aangevinkt items verwijderen uit self.gsizer"""
+        test = [x.isChecked() for x in self.checks]
+        checked = [x for x, y in enumerate(test) if y]
+        print(test, checked)
+        if any(test):
+            ok = gui.QMessageBox.question(self, 'Hallo!',
+                "Wil je de aangekruiste programma's echt verwijderen?",
+                gui.QMessageBox.Yes | gui.QMessageBox.No)
+            if gui.QMessageBox.Yes:
+                for row in reversed(checked):
+                    self.delete_row(row)
+
+    def accept(self):
+        self.parent.ini["plugins"] = [(name, path) for name, path in self.paths]
+        return gui.QDialog.Accepted
+
+class HotkeyPanel(gui.QFrame):
+    """base class voor het gedeelte van het hoofdscherm met de listcontrol erin
+
+    definieert feitelijk een "custom widget"
+    coldata is een list of tuple van 4-tuples die achtereenvolgens aangeven
+    de kolomtitel, de breedte, de index op self.data en of het een soort aangeeft
+    verwacht dat de subclass van te voren een attribuut gedefinieerd heeft:
+    _keys: de module om de settings te lezen
+    """
+    def __init__(self, parent, pad):
+
+        self.pad = pad
+        # switch om het gedrag van bepaalde routines tijdens initialisatie te beïnvloeden
+        self._initializing = True
+
+        gui.QFrame.__init__(self, parent)
+        self.parent = parent # .parent()
+        self.captions = self.parent.captions
+        self.settings, self.column_info, self.data = readcsv(self.pad)
+        self.p0list = gui.QTreeWidget(self)
+        modulename = "editor." + self.settings["PluginName"][0]
+        self._keys = importlib.import_module(modulename)
+        self.title = self.settings["PanelName"][0]
+        ## if _ini:
+            ## self.ini = self._keys.Settings(_ini) # 1 pad + language instelling
+        ## self.readkeys()
+        self.modified = False
+
+        # gelegenheid voor extra initialisaties en het opbouwen van de rest van de GUI
+        # het vullen van veldwaarden hierin gebeurt als gevolg van het vullen
+        # van de eerste rij in de listbox, daarom moet deze het laatst
+        self.add_extra_attributes()
+        self.add_extra_fields()
+
+        self._sizer = gui.QVBoxLayout()
+        if self.column_info:
+            self.p0list.setSortingEnabled(True)
+            self.p0list.setHeaderLabels([self.captions[col[0]] for col in
+                self.column_info])
+            self.p0list.setAlternatingRowColors(True)
+            self.p0list.currentItemChanged.connect(self.on_item_selected)
+            self.p0hdr = self.p0list.header()
+            self.p0hdr.setClickable(True)
+            for indx, col in enumerate(self.column_info):
+                self.p0hdr.resizeSection(indx, col[1])
+            self.p0hdr.setStretchLastSection(True)
+            self.populate_list()
+            sizer1 = gui.QHBoxLayout()
+            sizer1.addWidget(self.p0list)
+            self._sizer.addLayout(sizer1)
+
+        # indien van toepassing (TC versie): toevoegen van de rest van de GUI aan de layout
+        self.layout_extra_fields()
+
+        self.setLayout(self._sizer)
+        self._initializing = False
+        self.filtertext = ''
+
+    def add_extra_attributes(self):
+        try:
+            self._keys.MyPanel.add_extra_attributes(self)
+        except AttributeError:
+            pass
+
+    def add_extra_fields(self):
+        """define other widgets to be used in the panel
+        needed for showing details subpanel
+        """
+        # te definieren in de module die als self._keys geïmporteerd wordt
+        try:
+            self._keys.MyPanel.add_extra_fields(self)
+        except AttributeError:
+            pass
+
+    def layout_extra_fields(self):
+        """add extra widgets to self._sizer
+        needed for showing details subpanel
+        """
+        # te definieren in de module die als self._keys geïmporteerd wordt
+        try:
+            self._keys.MyPanel.layout_extra_fields(self)
+        except AttributeError:
+            pass
+
+    def captions_extra_fields(self):
+        """refresh captions for extra widgets
+        needed for showing details subpanel
+        """
+        # te definieren in de module die als self._keys geïmporteerd wordt
+        try:
+            self._keys.MyPanel.captions_extra_fields(self)
+        except AttributeError:
+            pass
+
+    def on_item_selected(self, olditem, newitem):
+        "callback for list selection, needed for copying details to subpanel"
+        try:
+            self._keys.MyPanel.on_item_selected(self, olditem, newitem)
+        except AttributeError:
+            pass
+
+    def vuldetails(self, selitem):
+        try:
+            self._keys.MyPanel.vuldetails(self, selitem)
+        except AttributeError:
+            pass
+        # (re)implemented by TC, needed for copying details  to subpanel
+        # --> define these in the "keys" file?
+
+    def aanpassen(self, delete=False):
+        pass
+        # (re)implemented by TC, needed for updating and copying details  from subpanel
+        # --> define these in the "keys" file?
+
+    def readkeys(self):
+        "(re)read the data for the keydef list"
+        self.data = readcsv(self.pad)[2]
+        # a real reread like in TC_plugin is more complicated, but this should really be done
+        # in a separate unit like TCMerge - or in some way built in here
+
+    def savekeys(self, pad=None):
+        "save modified keydef back"
+        if not pad:
+            pad = self.pad
+        self._keys.savekeys(pad, self.data)
+        self.modified = False
+        self.setWindowTitle(self.captions["000"])
+
+    def setcaptions(self):
+        title = self.captions["000"]
+        if self.modified:
+            title += ' ' + self.captions["017"]
+        self.setWindowTitle(title)
+
+        # in de TC versie worden hier van de overige widgets de captions ingesteld
+        self.captions_extra_fields()
+        self.populate_list()
+
+    def populate_list(self, pos=0):
+        """vullen van de list control
+        """
+        self.p0list.clear()
+        items = self.data.items()
+        if items is None or len(items) == 0:
+            return
+
+        for key, data in items:
+            new_item = gui.QTreeWidgetItem()
+            new_item.setData(0, core.Qt.UserRole, key) # data[0])
+            for indx, col in enumerate(self.column_info):
+                from_indx, is_soort = col[2], col[3]
+                value = data[from_indx]
+                if is_soort:
+                    value = C_DFLT if value == 'S' else C_RDEF
+                    value = self.captions[value]
+                new_item.setText(indx, value)
+            self.p0list.addTopLevelItem(new_item)
+            self.p0list.setCurrentItem(self.p0list.topLevelItem(pos))
+
+    def exit(self):
+        if self.modified:
+            ok = show_message(self, '025')
+            if ok == gui.QMessageBox.Yes:
+                self.page.savekeys()
+            elif ok == gui.QMessageBox.Cancel:
+                return False
+        return True
 
 class ChoiceBook(gui.QFrame): #Widget):
     """ Als QTabwidget, maar met selector in plaats van tabs
     """
-    def __init__(self, parent):
+    def __init__(self, parent, plugins):
         ## gui.QWidget.__init__(self, parent)
+        self.plugins = plugins
         self.parent = parent.parent()
         gui.QFrame.__init__(self, parent)
         self.sel = gui.QComboBox(self)
-        self.sel.addItems([txt[0] for txt in PLUGINS]) #pagetexts)
+        self.sel.addItems([txt[0] for txt in self.plugins]) #pagetexts)
         self.sel.currentIndexChanged.connect(self.on_page_changed)
         self.find = gui.QComboBox(self)
         self.find.setMinimumContentsLength(20)
@@ -51,12 +522,14 @@ class ChoiceBook(gui.QFrame): #Widget):
         self.b_filter.setEnabled(False)
         self.pnl = gui.QStackedWidget(self)
         self.captions = self.parent.captions
-        for txt, win in PLUGINS:
+        for txt, loc in self.plugins:
+            print('building widget for', txt)
+            win = HotkeyPanel(self, loc)
             if win is None:
                 self.pnl.addWidget(EmptyPanel(self.pnl,
                     self.parent.captions["052"].format(txt)))
             else:
-                self.pnl.addWidget(win(self.pnl))
+                self.pnl.addWidget(win)
         box = gui.QVBoxLayout()
         vbox = gui.QVBoxLayout()
         hbox = gui.QHBoxLayout()
@@ -95,7 +568,7 @@ class ChoiceBook(gui.QFrame): #Widget):
             ## print(x, PLUGINS[indx])
         ## if PLUGINS[indx] in MENUS:
             ## print(MENUS[PLUGINS[indx]])
-        menus, funcs = MENUS.get(PLUGINS[indx][0], (None, None))
+        menus, funcs = MENUS.get(self.plugins[indx][0], (None, None))
         ## print(PLUGINS[indx], menus)
         if not menus:
             menus, funcs = DFLT_MENU, DFLT_MENU_FUNC
@@ -176,8 +649,9 @@ class ChoiceBook(gui.QFrame): #Widget):
         if self.parent.page.data == self.parent.page.olddata:
             self.items_found = self.parent.page.olditems
 
-class MainFrame(MainWindow):
-    """Hoofdscherm van de applicatie"""
+class MainFrame(gui.QMainWindow):
+    """Hoofdscherm van de applicatie
+    """
     def __init__(self, args):
 
         wid = 860 if LIN else 688
@@ -189,17 +663,31 @@ class MainFrame(MainWindow):
         self.sb = self.statusBar()
 
         self.menu_bar = self.menuBar()
-        self.ini = {'filename': CONF}
+        self.ini = {'filename': CONF, 'plugins': []}
         with open(self.ini['filename']) as _in:
+            read_plugins = False
             for line in _in:
-                if line.startswith('LANG'):
+                if read_plugins:
+                    if line.strip() == ']':
+                        read_plugins = False
+                    elif line.strip().startswith('#'):
+                        continue
+                    else:
+                        name, value = line.split(', ',1)
+                        _, name = name.split('(')
+                        value, _ = value.split(')')
+                        self.ini['plugins'].append((name.strip('"'),
+                            value.strip('"')))
+                if line.startswith('PLUGINS'):
+                    read_plugins = True
+                elif line.startswith('LANG'):
                     self.ini['lang'] = line.strip().split('=')[1]
         if 'lang' not in self.ini:
             self.ini['lang'] = 'english.lng'
         self.readcaptions(self.ini['lang']) # set up defaults
         self.sb.showMessage('Welcome to {}!'.format(self.captions["000"]))
         pnl = gui.QWidget(self)
-        self.book = ChoiceBook(pnl) # , size= (600, 700))
+        self.book = ChoiceBook(pnl, self.ini['plugins']) # , size= (600, 700))
         sizer_v = gui.QVBoxLayout()
         sizer_h = gui.QHBoxLayout()
         sizer_h.addWidget(self.book)
@@ -223,6 +711,58 @@ class MainFrame(MainWindow):
         self.setcaptions()
         self.show()
 
+    def setup_menu(self, menus, funcs):
+        print("setting up menu")
+        self.menu_bar.clear()
+        self._menus = menus
+        self._menuitems = []
+        for title, items in menus:
+            menu = self.menu_bar.addMenu(self.captions[title])
+            for sel in items:
+                if sel == -1:
+                    menu.addSeparator()
+                else:
+                    act = gui.QAction(self.captions[sel], self)
+                    act.triggered.connect(functools.partial(self.on_menu, sel))
+                    if sel == M_EXIT:
+                        act.setShortcut('Ctrl+Q')
+                    menu.addAction(act)
+            self._menuitems.append(menu)
+        self._menu_func = funcs
+
+    def on_menu(self, actionid):
+        text = self._menu_func[actionid](self)
+        if text:
+            gui.QMessageBox.information(self, self.captions["000"], text)
+
+    def exit(self,e=None):
+        if not self.page.exit():
+            return
+        self.close()
+
+    def readcaptions(self, lang):
+        self.captions = {}
+        with open(os.path.join(HERE, lang)) as f_in:
+            for x in f_in:
+                if x[0] == '#' or x.strip() == "":
+                    continue
+                key, value = x.strip().split(None,1)
+                self.captions[key] = value
+        self.captions['000'] = self.title
+
+    def setcaptions(self):
+        title = self.captions["000"]
+        if self.page.modified:
+            title += ' ' + self.captions["017"]
+        self.setWindowTitle(title)
+        for indx, menu in enumerate(self._menuitems):
+            menu.setTitle(self.captions[self._menus[indx][0]])
+            for indx2, action in enumerate(menu.actions()):
+                hulp = self._menus[indx][1][indx2]
+                if hulp != -1:
+                    action.setText(self.captions[hulp])
+        self.b_exit.setText(self.captions[C_EXIT])
+        self.page.setcaptions()
 
 def main(args=None):
     app = gui.QApplication(sys.argv)
