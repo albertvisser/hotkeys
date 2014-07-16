@@ -18,11 +18,12 @@ class MyPanel(HotkeyPanel):
 
         self._keys = keys
         coldata = (
-            (C_KEY, 120, 0, False),
-            (C_SRT, 120, 1, True),
-            ('047', 70, 2, False),
-            (C_CMD, 160, 3, False),
-            (C_OMS, 292, 4, False)
+            (C_KEY, 100, 0, False),
+            (C_MOD, 90, 1, False),
+            (C_SRT, 120, 2, True),
+            ('047', 70, 3, False),
+            (C_CMD, 160, 4, False),
+            (C_OMS, 292, 5, False)
             )
         HotkeyPanel.__init__(self, parent, coldata, ini="dckey_config.py",
             title="Double Commander keys")
