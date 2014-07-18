@@ -14,6 +14,7 @@ import PyQt4.QtCore as core
 
 C_SAVE, C_DEL, C_KTXT, C_CTXT ='010', '011', '018', '019'
 M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
+PATHS = ('TC_PAD', 'UC_PAD', 'CI_PAD', 'KB_PAD', 'HK_PAD')
 
 def keymods(x):
     """hulp bij omzetten wincmd.ini definitie in standaard definitie
@@ -543,8 +544,7 @@ class MyPanel(gui.QFrame):
         self.newfile = self.newitem = False
         self.oldsort = -1
         self.idlist = self.actlist = self.alist = []
-        paden = [self.settings[x][0] for x in ('TC_PAD', 'UC_PAD', 'CI_PAD', 'KB_PAD',
-            'HK_PAD')]
+        paden = [self.settings[x][0] for x in PATHS]
         self.cmdict, self.omsdict, self.defkeys, _ = readkeys(paden)
 
     def add_extra_fields(self):
@@ -604,8 +604,8 @@ class MyPanel(gui.QFrame):
         self.txt_oms.setMaximumHeight(40)
         self.txt_oms.setReadOnly(True)
 
-    def layout_extra_fields(self):
-        """add the extra fileds to the layout
+    def layout_extra_fields(self, sizer):
+        """add the extra fields to the layout
         """
         bsizer = gui.QVBoxLayout()
         sizer1 = gui.QHBoxLayout()
@@ -633,7 +633,7 @@ class MyPanel(gui.QFrame):
         sizer1.addWidget(self.txt_oms)
         bsizer.addLayout(sizer1)
         self._box.setLayout(bsizer)
-        self._sizer.addWidget(self._box)
+        sizer.addWidget(self._box)
 
     def captions_extra_fields(self):
         """to be called on changing the language
@@ -653,7 +653,7 @@ class MyPanel(gui.QFrame):
         velden op het hoofdscherm worden bijgewerkt vanuit de selectie"""
         if not newitem: # bv. bij p0list.clear()
             return
-        if self._initializing:
+        if self.initializing:
             self.vuldetails(newitem)
             return
         ## print('itemselected called', newitem.text(0))

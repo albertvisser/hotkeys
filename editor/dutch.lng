@@ -63,7 +63,7 @@
 034 Opgegeven directory voor %s bestaat niet
 035 %s zit niet in de daarvoor opgegeven directory
 036 Opgegeven restart programma bestaat niet
-037 De nieuwe definities werken pas als Total Commander opnieuw gestart wordt
+037 De nieuwe definities werken mogelijk pas als het andere programma opnieuw gestart wordt
 038 Restart TC
 039 Kies de directory waar %s in zit
 040 Kies het programma om Total Commander te herstarten

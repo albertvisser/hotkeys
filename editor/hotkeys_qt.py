@@ -332,6 +332,27 @@ class FilesDialog(gui.QDialog):
         self.parent.ini["plugins"] = [(name, path) for name, path in self.paths]
         return gui.QDialog.Accepted
 
+class DummyPanel(gui.QFrame):
+
+    def __init__(self):
+        gui.QFrame.__init__(self)
+        self.initializing = False
+
+    def add_extra_attributes(self):
+        pass
+
+    def add_extra_fields(self):
+        pass
+
+    def layout_extra_fields(self, sizer):
+        pass
+
+    def captions_extra_fields(self):
+        pass
+
+    def vuldetails(self, value):
+        pass
+
 class HotkeyPanel(gui.QFrame):
     """base class voor het gedeelte van het hoofdscherm met de listcontrol erin
 
@@ -354,9 +375,14 @@ class HotkeyPanel(gui.QFrame):
         self.p0list = gui.QTreeWidget(self)
         modulename = "editor." + self.settings["PluginName"][0]
         self._keys = importlib.import_module(modulename)
+        try:
+            self._panel = self._keys.MyPanel()
+        except AttributeError:
+            self._panel = DummyPanel()
         self.title = self.settings["PanelName"][0]
-        ## if _ini:
-            ## self.ini = self._keys.Settings(_ini) # 1 pad + language instelling
+        self._panel.settings = self.settings
+        self._panel.captions = self.captions
+        self._panel.data = self.data
         ## self.readkeys()
         self.modified = False
 
@@ -384,58 +410,46 @@ class HotkeyPanel(gui.QFrame):
             self._sizer.addLayout(sizer1)
 
         # indien van toepassing (TC versie): toevoegen van de rest van de GUI aan de layout
-        self.layout_extra_fields()
+        self.layout_extra_fields(self._sizer)
 
         self.setLayout(self._sizer)
         self._initializing = False
         self.filtertext = ''
 
     def add_extra_attributes(self):
-        try:
-            self._keys.MyPanel.add_extra_attributes(self)
-        except AttributeError:
-            pass
+        self._panel.add_extra_attributes()
 
     def add_extra_fields(self):
         """define other widgets to be used in the panel
         needed for showing details subpanel
         """
         # te definieren in de module die als self._keys geïmporteerd wordt
-        try:
-            self._keys.MyPanel.add_extra_fields(self)
-        except AttributeError:
-            pass
+        self._panel.add_extra_fields()
 
-    def layout_extra_fields(self):
+    def layout_extra_fields(self, sizer):
         """add extra widgets to self._sizer
         needed for showing details subpanel
         """
         # te definieren in de module die als self._keys geïmporteerd wordt
-        try:
-            self._keys.MyPanel.layout_extra_fields(self)
-        except AttributeError:
-            pass
+        self._panel.layout_extra_fields(sizer)
 
     def captions_extra_fields(self):
         """refresh captions for extra widgets
         needed for showing details subpanel
         """
         # te definieren in de module die als self._keys geïmporteerd wordt
-        try:
-            self._keys.MyPanel.captions_extra_fields(self)
-        except AttributeError:
-            pass
+        self._panel.captions_extra_fields()
 
     def on_item_selected(self, olditem, newitem):
         "callback for list selection, needed for copying details to subpanel"
         try:
-            self._keys.MyPanel.on_item_selected(self, olditem, newitem)
+            self._panel.on_item_selected(olditem, newitem)
         except AttributeError:
             pass
 
     def vuldetails(self, selitem):
         try:
-            self._keys.MyPanel.vuldetails(self, selitem)
+            self._panel.vuldetails(self, selitem)
         except AttributeError:
             pass
         # (re)implemented by TC, needed for copying details  to subpanel
@@ -448,6 +462,7 @@ class HotkeyPanel(gui.QFrame):
 
     def readkeys(self):
         "(re)read the data for the keydef list"
+        print('reading keys')
         self.data = readcsv(self.pad)[2]
         # a real reread like in TC_plugin is more complicated, but this should really be done
         # in a separate unit like TCMerge - or in some way built in here
@@ -473,11 +488,13 @@ class HotkeyPanel(gui.QFrame):
     def populate_list(self, pos=0):
         """vullen van de list control
         """
+        print('populating list')
         self.p0list.clear()
         items = self.data.items()
         if items is None or len(items) == 0:
             return
 
+        self._panel.initializing = True
         for key, data in items:
             new_item = gui.QTreeWidgetItem()
             new_item.setData(0, core.Qt.UserRole, key) # data[0])
@@ -490,6 +507,7 @@ class HotkeyPanel(gui.QFrame):
                 new_item.setText(indx, value)
             self.p0list.addTopLevelItem(new_item)
             self.p0list.setCurrentItem(self.p0list.topLevelItem(pos))
+        self._panel.initializing = False
 
     def exit(self):
         if self.modified:
@@ -526,13 +544,13 @@ class ChoiceBook(gui.QFrame): #Widget):
         self.filter_on = False
         self.pnl = gui.QStackedWidget(self)
         for txt, loc in self.plugins:
-            self.sel.addItem(txt)
             win = HotkeyPanel(self, loc)
             if win is None:
                 self.pnl.addWidget(EmptyPanel(self.pnl,
-                    self.parent.captions["052"].format(win.settings['PanelName']))) # txt)))
+                    self.parent.captions["052"].format(txt)))
             else:
                 self.pnl.addWidget(win)
+            self.sel.addItem(txt)
         box = gui.QVBoxLayout()
         vbox = gui.QVBoxLayout()
         hbox = gui.QHBoxLayout()
@@ -738,7 +756,7 @@ class MainFrame(gui.QMainWindow):
                 else:
                     act = gui.QAction(self.captions[sel], self)
                     act.triggered.connect(functools.partial(self.on_menu, sel))
-                    if sel in (M_READ, M_SAVE):
+                    if sel == M_SAVE: # in (M_READ, M_SAVE):
                         act.setEnabled(bool(int(self.page.settings['RedefineKeys'][0])))
                     elif sel == M_RBLD:
                         act.setEnabled(bool(int(self.page.settings['RebuildCSV'][0])))

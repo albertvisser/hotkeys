@@ -62,8 +62,8 @@
 028 Enter/choose the paths to the following files:
 034 The directory you specified for %s doesn't exist
 035 %s doesn't exits in the specified directory
-036 Specified restart programme doesn't exist
-037 You need to restart Total Commander for the changes to take effect
+036 Specified restart program doesn't exist
+037 You may need to restart the other program for the changes to take effect
 038 Restart TC
 039 Specify the directory containing %s
 040 Choose the programme to restart Total Commander
