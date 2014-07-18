@@ -43,13 +43,13 @@ C_KEY, C_MOD, C_SRT, C_CMD, C_OMS = '001', '043', '002', '003', '004'
 C_DFLT, C_RDEF = '005', '006'
 M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
 C_SAVE, C_DEL, C_EXIT, C_KTXT, C_CTXT ='010', '011', '012', '018', '019'
-M_APP, M_READ, M_SAVE, M_USER, M_EXIT = '200', '201', '202', '203', '209'
+M_APP, M_READ, M_SAVE, M_RBLD, M_EXIT = '200', '201', '202', '203', '209'
 M_SETT, M_LOC, M_LANG, M_HELP, M_ABOUT = '210', '211', '212', '290', '299'
 NOT_IMPLEMENTED = '404'
 
 # default menu structure
 DFLT_MENU = (
-    (M_APP, (M_READ, M_SAVE, -1, M_EXIT,)),
+    (M_APP, (M_READ, M_RBLD, M_SAVE, -1, M_EXIT,)),
     (M_SETT, (M_LOC, M_LANG,)),
     (M_HELP, (M_ABOUT,))
     )
@@ -71,7 +71,6 @@ def m_read(self):
     vraagt eerst of het ok is om de hotkeys (opnieuw) te lezen
     zet de gelezen keys daarna ook in de gui
     """
-    return
     # TODO: zorgen dat het lezen (alleen) voor het huidige getoonde tool  gebeurt
     # 1. bepaal welk tool geselecteerd is
     # 2. bepaal welke csv hier bij hoort
@@ -94,7 +93,6 @@ def m_save(self):
     vraagt eerst of het ok is om de hotkeys weg te schrijven
     vraagt daarna eventueel of de betreffende applicatie geherstart moet worden
     """
-    return
     # TODO: zorgen dat het lezen (alleen) voor het huidige getoonde tool  gebeurt
     #             en dat menu optie alleen beschikbaar is voor waar terugschrijven mogelijk is
     if not self.page.modified:
@@ -102,12 +100,12 @@ def m_save(self):
         if h != gui.QMessageBox.Yes:
             return
     self.page.savekeys()
-    if self.page.ini.restart:
-        h = show_message(self, '026')
-        if h == gui.QMessageBox.Yes:
-            os.system(self.page.ini.restart)
-    else:
-        gui.QMessageBox.information(self, self.captions['000'], self.captions['037'])
+    ## if self.page.ini.restart:
+        ## h = show_message(self, '026')
+        ## if h == gui.QMessageBox.Yes:
+            ## os.system(self.page.ini.restart)
+    ## else:
+    gui.QMessageBox.information(self, self.captions['000'], self.captions['037'])
 
 def m_loc(self):
     """(menu) callback voor aanpassen van de bestandslocaties
@@ -126,6 +124,9 @@ def m_loc(self):
 def m_user(self):
     """(menu) callback voor een nog niet geïmplementeerde actie"""
     return self.captions[NOT_IMPLEMENTED]
+
+def m_rebuild(self):
+    print('rebuild option chosen')
 
 def m_lang(self):
     """(menu) callback voor taalkeuze
@@ -165,7 +166,7 @@ def m_exit(self):
 DFLT_MENU_FUNC = {
     M_READ: m_read,
     M_SAVE: m_save,
-    M_USER: m_user,
+    M_RBLD: m_rebuild,
     M_LOC: m_loc,
     M_LANG: m_lang,
     M_EXIT: m_exit,
@@ -508,7 +509,6 @@ class ChoiceBook(gui.QFrame): #Widget):
         self.parent = parent.parent()
         gui.QFrame.__init__(self, parent)
         self.sel = gui.QComboBox(self)
-        self.sel.addItems([txt[0] for txt in self.plugins]) #pagetexts)
         self.sel.currentIndexChanged.connect(self.on_page_changed)
         self.find = gui.QComboBox(self)
         self.find.setMinimumContentsLength(20)
@@ -526,10 +526,11 @@ class ChoiceBook(gui.QFrame): #Widget):
         self.filter_on = False
         self.pnl = gui.QStackedWidget(self)
         for txt, loc in self.plugins:
+            self.sel.addItem(txt)
             win = HotkeyPanel(self, loc)
             if win is None:
                 self.pnl.addWidget(EmptyPanel(self.pnl,
-                    self.parent.captions["052"].format(txt)))
+                    self.parent.captions["052"].format(win.settings['PanelName']))) # txt)))
             else:
                 self.pnl.addWidget(win)
         box = gui.QVBoxLayout()
@@ -568,6 +569,8 @@ class ChoiceBook(gui.QFrame): #Widget):
     def on_page_changed(self, indx):
         ## print('page has changed to', indx)
         page = self.pnl.currentWidget() ## self.parent().page
+        if page is None:
+            return
         self.parent.sb.showMessage(self.parent.captions["053"].format(
             self.sel.currentText()))
         if page.modified:
@@ -584,8 +587,8 @@ class ChoiceBook(gui.QFrame): #Widget):
         ## print(PLUGINS[indx], menus)
         if not menus:
             menus, funcs = DFLT_MENU, DFLT_MENU_FUNC
-        self.parent.setup_menu(menus, funcs)
         self.parent.page = self.pnl.currentWidget()
+        self.parent.setup_menu(menus, funcs)
         if self.parent.page.filtertext:
             self.find.setEditText(self.parent.page.filtertext)
             self.b_filter.setText(self.parent.captions["066"])
@@ -735,7 +738,11 @@ class MainFrame(gui.QMainWindow):
                 else:
                     act = gui.QAction(self.captions[sel], self)
                     act.triggered.connect(functools.partial(self.on_menu, sel))
-                    if sel == M_EXIT:
+                    if sel in (M_READ, M_SAVE):
+                        act.setEnabled(bool(int(self.page.settings['RedefineKeys'][0])))
+                    elif sel == M_RBLD:
+                        act.setEnabled(bool(int(self.page.settings['RebuildCSV'][0])))
+                    elif sel == M_EXIT:
                         act.setShortcut('Ctrl+Q')
                     menu.addAction(act)
             self._menuitems.append(menu)
