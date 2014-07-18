@@ -14,6 +14,7 @@ from __future__ import print_function
 import os
 import sys
 import csv
+import shutil
 import functools
 import importlib
 import PyQt4.QtGui as gui
@@ -48,7 +49,7 @@ NOT_IMPLEMENTED = '404'
 
 # default menu structure
 DFLT_MENU = (
-    (M_APP, (M_READ, M_SAVE, M_USER, -1, M_EXIT,)),
+    (M_APP, (M_READ, M_SAVE, -1, M_EXIT,)),
     (M_SETT, (M_LOC, M_LANG,)),
     (M_HELP, (M_ABOUT,))
     )
@@ -154,7 +155,7 @@ def m_about(self):
     """(menu) callback voor het tonen van de "about" dialoog
     """
     info = gui.QMessageBox.about(self,  self.captions['000'],
-        "{}\nversion {}\n{}\n{}".format(TTL, VRS, AUTH, XTRA))
+        self.captions['057'].format(TTL, VRS, AUTH, XTRA))
 
 def m_exit(self):
     """(menu) callback om het programma direct af te sluiten"""
@@ -224,14 +225,16 @@ class FileBrowseButton(gui.QWidget):
         self.input = gui.QLineEdit(text, self)
         self.input.setMinimumWidth(200)
         box.addWidget(self.input)
-        self.button = gui.QPushButton('Select', self, clicked=self.browse)
+        self.button = gui.QPushButton(self.parent().parent.captions['058'], self,
+            clicked=self.browse)
         box.addWidget(self.button)
         vbox.addLayout(box)
         self.setLayout(vbox)
 
     def browse(self):
         startdir = str(self.input.text()) or os.getcwd()
-        path = gui.QFileDialog.getOpenFileName(self, 'Browse files', startdir)
+        path = gui.QFileDialog.getOpenFileName(self,
+            self.parent.parent().captions['059'], startdir)
         if path:
             self.input.setText(path)
 
@@ -247,22 +250,21 @@ class FilesDialog(gui.QDialog):
 
         self.sizer = gui.QVBoxLayout()
         self.sizer.addStretch()
-        text = """\
-        Met deze dialoog kun je bepalen voor welke tools keyboarddefinities getoond worden
-        en waar deze staan (in de vorm van csv bestanden)
-        """
+        text = '\n'.join((self.parent.captions['069'], self.parent.captions['070']))
         hsizer = gui.QHBoxLayout()
         label = gui.QLabel(text, self)
+        hsizer.addStretch()
         hsizer.addWidget(label)
+        hsizer.addStretch()
         self.sizer.addLayout(hsizer)
 
         self.gsizer = gui.QGridLayout()
         rownum = colnum = 0
-        self.gsizer.addWidget(gui.QLabel('Programma', self),
+        self.gsizer.addWidget(gui.QLabel(self.parent.captions['060'], self),
             rownum, colnum, alignment = core.Qt.AlignHCenter | core.Qt.AlignVCenter)
         colnum += 1
-        self.gsizer.addWidget(gui.QLabel('Locatie van het CSV-bestand', self),
-            rownum, colnum, alignment = core.Qt.AlignHCenter | core.Qt.AlignVCenter)
+        self.gsizer.addWidget(gui.QLabel(self.parent.captions['061'], self),
+            rownum, colnum, alignment = core.Qt.AlignVCenter)
 
         self.rownum = rownum
         self.checks = []
@@ -272,9 +274,10 @@ class FilesDialog(gui.QDialog):
         self.sizer.addLayout(self.gsizer)
 
         buttonbox = gui.QDialogButtonBox()
-        btn = buttonbox.addButton('&Add Program', gui.QDialogButtonBox.ActionRole)
+        btn = buttonbox.addButton(self.parent.captions['062'],
+            gui.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.add_program)
-        btn = buttonbox.addButton('&Remove Checked Programs',
+        btn = buttonbox.addButton(self.parent.captions['063'],
             gui.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.remove_program)
         btn = buttonbox.addButton(gui.QDialogButtonBox.Ok)
@@ -305,8 +308,8 @@ class FilesDialog(gui.QDialog):
 
     def add_program(self):
         """nieuwe rij aanmaken in self.gsizer"""
-        newtool, ok = gui.QInputDialog.getText(self, "Hallo!",
-            "geef een naam op voor het nieuwe programma")
+        newtool, ok = gui.QInputDialog.getText(self, self.parent.title,
+            self.parent.captions['064'])
         if ok:
             self.add_row(newtool, '')
             self.update()
@@ -317,8 +320,8 @@ class FilesDialog(gui.QDialog):
         checked = [x for x, y in enumerate(test) if y]
         print(test, checked)
         if any(test):
-            ok = gui.QMessageBox.question(self, 'Hallo!',
-                "Wil je de aangekruiste programma's echt verwijderen?",
+            ok = gui.QMessageBox.question(self, self.parent.title,
+                self.parent.captions['065'],
                 gui.QMessageBox.Yes | gui.QMessageBox.No)
             if gui.QMessageBox.Yes:
                 for row in reversed(checked):
@@ -345,7 +348,7 @@ class HotkeyPanel(gui.QFrame):
 
         gui.QFrame.__init__(self, parent)
         self.parent = parent # .parent()
-        self.captions = self.parent.captions
+        self.captions = self.parent.parent.captions
         self.settings, self.column_info, self.data = readcsv(self.pad)
         self.p0list = gui.QTreeWidget(self)
         modulename = "editor." + self.settings["PluginName"][0]
@@ -517,13 +520,12 @@ class ChoiceBook(gui.QFrame): #Widget):
         self.b_prev = gui.QPushButton(self.parent.captions["015"])
         self.b_prev.clicked.connect(self.find_prev)
         self.b_prev.setEnabled(False)
-        self.b_filter = gui.QPushButton('&Filter')
+        self.b_filter = gui.QPushButton(self.parent.captions["068"])
         self.b_filter.clicked.connect(self.filter)
         self.b_filter.setEnabled(False)
+        self.filter_on = False
         self.pnl = gui.QStackedWidget(self)
-        self.captions = self.parent.captions
         for txt, loc in self.plugins:
-            print('building widget for', txt)
             win = HotkeyPanel(self, loc)
             if win is None:
                 self.pnl.addWidget(EmptyPanel(self.pnl,
@@ -553,6 +555,16 @@ class ChoiceBook(gui.QFrame): #Widget):
         box.addLayout(hbox)
         self.setLayout(box)
 
+    def setcaptions(self):
+        self.b_next.setText(self.parent.captions['014'])
+        self.b_prev.setText(self.parent.captions['015'])
+        self.sel_text.setText(self.parent.captions['050'])
+        self.find_text.setText(self.parent.captions['051'])
+        if self.filter_on:
+            self.b_filter.setText(self.parent.captions["066"])
+        else:
+            self.b_filter.setText(self.parent.captions["068"])
+
     def on_page_changed(self, indx):
         ## print('page has changed to', indx)
         page = self.pnl.currentWidget() ## self.parent().page
@@ -576,7 +588,7 @@ class ChoiceBook(gui.QFrame): #Widget):
         self.parent.page = self.pnl.currentWidget()
         if self.parent.page.filtertext:
             self.find.setEditText(self.parent.page.filtertext)
-            self.b_filter.setText('&Filter off')
+            self.b_filter.setText(self.parent.captions["066"])
             self.b_filter.setEnabled(True)
         else:
             self.find.setEditText('')
@@ -599,7 +611,8 @@ class ChoiceBook(gui.QFrame): #Widget):
             if len(self.items_found) < len(self.parent.page.data.items()):
                 self.b_next.setEnabled(True)
                 self.b_filter.setEnabled(True)
-            self.parent.sb.showMessage('{} items found'.format(len(self.items_found)))
+            self.parent.sb.showMessage(self.parent.captions["067"].format(
+                len(self.items_found)))
         else:
             self.parent.sb.showMessage(self.parent.captions["054"].format(
                 text))
@@ -627,8 +640,9 @@ class ChoiceBook(gui.QFrame): #Widget):
             return
         state = str(self.b_filter.text())
         text = str(self.find.currentText())
-        if state == '&Filter':
-            state = '&Filter off'
+        if state == self.parent.captions['068']: # self.filter_on == False
+            state = self.parent.captions['066']
+            self.filter_on = True
             self.parent.page.filtertext = text
             self.parent.page.olddata = self.parent.page.data
             self.parent.page.olditems = self.items_found
@@ -637,8 +651,9 @@ class ChoiceBook(gui.QFrame): #Widget):
             self.b_next.setEnabled(False)
             self.b_prev.setEnabled(False)
             self.find.setEnabled(False)
-        else:
-            state = '&Filter'
+        else:       # self.filter_on == False
+            state = self.parent.captions['068']
+            self.filter_on = False
             self.parent.page.filtertext = ''
             self.parent.page.data = self.parent.page.olddata
             self.b_next.setEnabled(True)
@@ -704,15 +719,11 @@ class MainFrame(gui.QMainWindow):
         self.setCentralWidget(pnl)
         self.page = self.book.pnl.currentWidget()
         self.book.on_page_changed(0)
-        self.book.b_next.setText(self.captions['014'])
-        self.book.b_prev.setText(self.captions['015'])
-        self.book.sel_text.setText(self.captions['050'])
-        self.book.find_text.setText(self.captions['051'])
+        self.book.setcaptions()
         self.setcaptions()
         self.show()
 
     def setup_menu(self, menus, funcs):
-        print("setting up menu")
         self.menu_bar.clear()
         self._menus = menus
         self._menuitems = []
@@ -762,6 +773,7 @@ class MainFrame(gui.QMainWindow):
                 if hulp != -1:
                     action.setText(self.captions[hulp])
         self.b_exit.setText(self.captions[C_EXIT])
+        self.book.setcaptions()
         self.page.setcaptions()
 
 def main(args=None):

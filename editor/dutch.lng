@@ -28,6 +28,11 @@
 012 E&xit
 014 Zoek Vo&lgende
 015 Zoek Vo&rige
+058 Zoek op
+062 Voeg programma &toe
+063 &Verwijder aangegeven programma('s)
+066 &Filter uit
+068 &Filter aan
 
 # title indicator
 017 (aangepast)
@@ -37,6 +42,11 @@
 019 Stel toets in op:
 050 Selecteer tool:
 051 Zoek tekst in omschrijving:
+059 Bestanden zoeken
+060 Programma
+061 Locatie van het CSV-bestand
+069 Met deze dialoog kun je bepalen voor welke tools keyboarddefinities getoond worden
+070 en waar deze staan (in de vorm van csv bestanden)
 
 # save dialog
 020 Eerder gekozen definitie is gewijzigd - nu opslaan?
@@ -65,6 +75,10 @@
 054 {} niet gevonden
 055 Geen volgend item
 056 Geen vorig item
+057 {}\nversie {}\n{}\n{}
+064 Geef een naam op voor het nieuwe programma
+065 Wil je de aangekruiste programma's echt verwijderen?
+067 {} items gevonden
 
 # bestandsnamen
 029 Wincmd.ini
@@ -99,9 +113,9 @@
 
 # menus/options
 200 &Application
-201 bestanden (her)&lezen
-202 bestanden op&Slaan en TC herstarten
-203 &Usercmd.ini aanpassen
+201 definities (her)&lezen (voor huidige tool)
+202 definities op&Slaan (voor huidige tool)
+203 definities &bestand opnieuw opbouwen (voor huidige tool)
 209 e&Xit
 210 &Instellingen
 211 &Bestandslocaties

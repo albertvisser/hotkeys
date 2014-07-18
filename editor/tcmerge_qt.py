@@ -3,14 +3,14 @@ import sys,os
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 import functools
-from tcmerge_mixin import TCCMMixin
 from tcmdrkys import keyboardtext, defaultcommands, usercommands, userkeys
 import csv
 
 # verbinden van een toets aan een "dummy" mogelijk maken zodat de key in het bestand zit
 # ook al is er geen commando voor
 
-class MainFrame(gui.QMainWindow, TCCMMixin):
+class MainFrame(gui.QMainWindow):
+
     def __init__(self, parent=None):
         """Opbouwen van het scherm"""
         self.files = {

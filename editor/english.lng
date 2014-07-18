@@ -28,6 +28,11 @@
 012 E&xit
 014 Find &Next
 015 Find &Prev
+058 Browse
+062 &Add Program
+063 &Remove Checked Programs
+066 &Filter off
+068 &Filter
 
 # title indicator
 017 (modified)
@@ -37,6 +42,11 @@
 019 Map key to:
 050 Select tool:
 051 Find tekst in description:
+059 Browse files
+060 Program
+061 Location of the CSV-file
+069 Using this dialog you can determine for which programs keyboard definitions will be shown
+070 and where these are located (in the form of csv files)
 
 # save dialog
 020 Previously selected definition was changed - save now?
@@ -65,6 +75,10 @@
 054 {} not found
 055 No next item
 056 No previous item
+057 {}\nversion {}\n{}\n{}
+064 Enter a naam for the new program
+065 Are you sure you want to remove the checked programs?
+067 {} items found
 
 # file names
 029 wincmd.ini
@@ -99,9 +113,9 @@
 
 # menus/options
 200 &Application
-201 (re)&Read command files
-202 &Save command files and restart TC
-203 edit &Usercmd.ini
+201 (re)&Read definitions (for current tool)
+202 &Save definitions (for current tool)
+203 Re&build definitions file (for current tool)
 209 e&Xit
 210 &Settings
 211 &File locations
