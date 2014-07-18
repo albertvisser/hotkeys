@@ -26,13 +26,8 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 ## except KeyError:
     ## HOME = os.environ('USERPROFILE') # Windows
 CONF = os.path.join(HERE, 'hotkey_config.py') # don't import, can be modified in runtime
-TTL = "A hotkey viewer/editor"
-VRS = "1.1.x"
+VRS = "2.1.x"
 AUTH = "(C) 2008-2014 Albert Visser"
-XTRA = '''\
-originally built for Total Commander,
-extended for use with
-all your favourite applications'''
 WIN = True if sys.platform == "win32" else False
 ## LIN = True if sys.platform == 'linux2' else False
 LIN = True if os.name == 'posix' else False
@@ -46,13 +41,6 @@ C_SAVE, C_DEL, C_EXIT, C_KTXT, C_CTXT ='010', '011', '012', '018', '019'
 M_APP, M_READ, M_SAVE, M_RBLD, M_EXIT = '200', '201', '202', '203', '209'
 M_SETT, M_LOC, M_LANG, M_HELP, M_ABOUT = '210', '211', '212', '290', '299'
 NOT_IMPLEMENTED = '404'
-
-# default menu structure
-DFLT_MENU = (
-    (M_APP, (M_READ, M_RBLD, M_SAVE, -1, M_EXIT,)),
-    (M_SETT, (M_LOC, M_LANG,)),
-    (M_HELP, (M_ABOUT,))
-    )
 
 # shared (menu) functions
 def show_message(self, message_id, caption_id='000'):
@@ -155,27 +143,32 @@ def m_lang(self):
 def m_about(self):
     """(menu) callback voor het tonen van de "about" dialoog
     """
-    info = gui.QMessageBox.about(self,  self.captions['000'],
-        self.captions['057'].format(TTL, VRS, AUTH, XTRA))
+    text = '\n'.join(self.captions['057'].format(self.captions['071'],
+        VRS, AUTH, self.captions['072']).split(' / '))
+    info = gui.QMessageBox.information(self,  self.captions['000'], text)
 
 def m_exit(self):
     """(menu) callback om het programma direct af te sluiten"""
     self.exit()
 
 # dispatch table for  menu callbacks
-DFLT_MENU_FUNC = {
-    M_READ: m_read,
-    M_SAVE: m_save,
-    M_RBLD: m_rebuild,
-    M_LOC: m_loc,
-    M_LANG: m_lang,
-    M_EXIT: m_exit,
-    M_ABOUT: m_about,
-}
 
-MENUS = {}
-# list containing the plugins themselves
-# -- moved to top-level config file - to be adapted by menu callback (m_loc)
+# menu structure
+MENU_DATA = (
+    (M_APP, (
+        (M_READ, (m_read, 'Ctrl+R')),
+        (M_RBLD, (m_rebuild, 'Ctrl+B')),
+        (M_SAVE, (m_save, 'Ctrl+S')),
+        -1,
+        (M_EXIT, (m_exit, 'Ctrl+Q')),
+        )),
+    (M_SETT, (
+        (M_LOC, (m_loc, 'Ctrl+F')),
+        (M_LANG, (m_lang, 'Ctrl+L')),
+        )),
+    (M_HELP, (
+        (M_ABOUT, (m_about, 'Ctrl+H')),
+        )))
 
 def readcsv(pad):
     """lees het csv bestand op het aangegeven pad en geeft de inhoud terug
@@ -597,16 +590,8 @@ class ChoiceBook(gui.QFrame): #Widget):
                 # ook nog de vorige tekst in de combobox selecteren?
                 return
         self.pnl.setCurrentIndex(indx)
-        ## for x in MENUS.keys():
-            ## print(x, PLUGINS[indx])
-        ## if PLUGINS[indx] in MENUS:
-            ## print(MENUS[PLUGINS[indx]])
-        menus, funcs = MENUS.get(self.plugins[indx][0], (None, None))
-        ## print(PLUGINS[indx], menus)
-        if not menus:
-            menus, funcs = DFLT_MENU, DFLT_MENU_FUNC
         self.parent.page = self.pnl.currentWidget()
-        self.parent.setup_menu(menus, funcs)
+        self.parent.setup_menu(MENU_DATA)
         if self.parent.page.filtertext:
             self.find.setEditText(self.parent.page.filtertext)
             self.b_filter.setText(self.parent.captions["066"])
@@ -744,32 +729,37 @@ class MainFrame(gui.QMainWindow):
         self.setcaptions()
         self.show()
 
-    def setup_menu(self, menus, funcs):
+    def setup_menu(self, menu_data):
         self.menu_bar.clear()
-        self._menus = menus
+        self._menus = menu_data
         self._menuitems = []
-        for title, items in menus:
+        for title, items in menu_data:
             menu = self.menu_bar.addMenu(self.captions[title])
+            menuitem = ((menu, title), [])
             for sel in items:
                 if sel == -1:
                     menu.addSeparator()
+                    continue
                 else:
+                    sel, values = sel
+                    callback, shortcut = values
                     act = gui.QAction(self.captions[sel], self)
-                    act.triggered.connect(functools.partial(self.on_menu, sel))
+                    ## act.triggered.connect(functools.partial(self.on_menu, sel))
+                    act.triggered.connect(functools.partial(callback, self))
+                    act.setShortcut(shortcut)
                     if sel == M_SAVE: # in (M_READ, M_SAVE):
                         act.setEnabled(bool(int(self.page.settings['RedefineKeys'][0])))
                     elif sel == M_RBLD:
                         act.setEnabled(bool(int(self.page.settings['RebuildCSV'][0])))
-                    elif sel == M_EXIT:
-                        act.setShortcut('Ctrl+Q')
                     menu.addAction(act)
-            self._menuitems.append(menu)
-        self._menu_func = funcs
+                    menuitem[1].append((act, sel))
+            self._menuitems.append(menuitem)
+        ## self._menu_func = funcs
 
-    def on_menu(self, actionid):
-        text = self._menu_func[actionid](self)
-        if text:
-            gui.QMessageBox.information(self, self.captions["000"], text)
+    ## def on_menu(self, actionid):
+        ## text = self._menu_func[actionid](self)
+        ## if text:
+            ## gui.QMessageBox.information(self, self.captions["000"], text)
 
     def exit(self,e=None):
         if not self.page.exit():
@@ -791,12 +781,10 @@ class MainFrame(gui.QMainWindow):
         if self.page.modified:
             title += ' ' + self.captions["017"]
         self.setWindowTitle(title)
-        for indx, menu in enumerate(self._menuitems):
-            menu.setTitle(self.captions[self._menus[indx][0]])
-            for indx2, action in enumerate(menu.actions()):
-                hulp = self._menus[indx][1][indx2]
-                if hulp != -1:
-                    action.setText(self.captions[hulp])
+        for menu, items in self._menuitems:
+            menu[0].setTitle(self.captions[menu[1]])
+            for action in items:
+                action[0].setText(self.captions[action[1]])
         self.b_exit.setText(self.captions[C_EXIT])
         self.book.setcaptions()
         self.page.setcaptions()

@@ -47,6 +47,8 @@
 061 Locatie van het CSV-bestand
 069 Met deze dialoog kun je bepalen voor welke tools keyboarddefinities getoond worden
 070 en waar deze staan (in de vorm van csv bestanden)
+071 Een hotkey viewer/editor
+072 oorspronkelijk gebouwd voor Total Commander, / uitgebreid om te gebruiken / bij al je favoriete tools
 
 # save dialog
 020 Eerder gekozen definitie is gewijzigd - nu opslaan?
@@ -75,7 +77,7 @@
 054 {} niet gevonden
 055 Geen volgend item
 056 Geen vorig item
-057 {}\nversie {}\n{}\n{}
+057 {} / versie {} / {} / {}
 064 Geef een naam op voor het nieuwe programma
 065 Wil je de aangekruiste programma's echt verwijderen?
 067 {} items gevonden
