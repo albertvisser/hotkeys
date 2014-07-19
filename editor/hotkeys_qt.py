@@ -15,6 +15,7 @@ import os
 import sys
 import csv
 import shutil
+import collections
 import functools
 import importlib
 import PyQt4.QtGui as gui
@@ -151,7 +152,6 @@ def m_exit(self):
     """(menu) callback om het programma direct af te sluiten"""
     self.exit()
 
-# dispatch table for  menu callbacks
 
 # menu structure
 MENU_DATA = (
@@ -175,12 +175,12 @@ def readcsv(pad):
 
     retourneert dictionary van nummers met (voorlopig) 4-tuples
     """
-    data = {}
+    data = collections.OrderedDict() # {}
+    coldata = []
+    settings = collections.OrderedDict() # {}
     with open(pad, 'r') as _in:
         rdr = csv.reader(_in)
         key = 0
-        coldata = []
-        settings = {}
         for row in rdr:
             rowtype, rowdata = row[0], row[1:]
             if rowtype == 'Setting':
@@ -208,7 +208,27 @@ def readcsv(pad):
                 data[key] = ([x.strip() for x in rowdata])
     return settings, coldata, data
 
+def writecsv(pad, settings, coldata, data):
+    ## os.remove(_outback)
+    shutil.copyfile(pad, pad + '~')
+    with open(pad, "w") as _out:
+        wrt = csv.writer(_out)
+        for name, value in settings.items():
+            rowdata = 'Setting', name, value[0], value[1]
+            wrt.writerow(rowdata)
+        for ix, row in enumerate([['Title'], ['Width'], ['Seq']]):
+            row += [x[ix] for x in coldata]
+            wrt.writerow(row)
+        wrt.writerow(['is_type'] + [int(x[3]) for x in coldata])
+        for keydef in data.values():
+            row = ['Keydef'] + [x for x in keydef]
+            wrt.writerow(row)
+
 class FileBrowseButton(gui.QWidget):
+    """Combination widget showing a text field and a button
+    making it possible to either manually enter a filename or select
+    one using a FileDialog
+    """
     def __init__(self, parent, text=""):
         self.startdir = ''
         if text:
@@ -309,7 +329,7 @@ class FilesDialog(gui.QDialog):
             self.update()
 
     def remove_program(self):
-        """alle aangevinkt items verwijderen uit self.gsizer"""
+        """alle aangevinkte items verwijderen uit self.gsizer"""
         test = [x.isChecked() for x in self.checks]
         checked = [x for x, y in enumerate(test) if y]
         print(test, checked)
@@ -326,24 +346,56 @@ class FilesDialog(gui.QDialog):
         return gui.QDialog.Accepted
 
 class DummyPanel(gui.QFrame):
-
-    def __init__(self):
+    """
+    Reimplement this class when a block of fields is needed in the screen
+    to show details about the selected key and make it possible to change
+    its definition
+    """
+    def __init__(self, parent):
         gui.QFrame.__init__(self)
+        self.parent = parent
         self.initializing = False
 
     def add_extra_attributes(self):
+        """
+        Define extra instance attributes if needed
+        """
         pass
 
     def add_extra_fields(self):
+        """define other widgets to be used in the panel
+        needed for showing details subpanel
+        """
         pass
 
     def layout_extra_fields(self, sizer):
+        """add extra widgets to self._sizer
+        needed for showing details subpanel
+        """
         pass
 
     def captions_extra_fields(self):
+        """refresh captions for extra widgets
+        needed for showing details subpanel
+        """
         pass
 
     def vuldetails(self, value):
+        """
+        copy details of the selected key definition to the subpanel
+        """
+        pass
+
+    def on_item_selected(self, olditem, newitem):
+        """callback for list selection
+        needed for copying details to subpanel
+        """
+        pass
+
+    def aanpassen(self, delete=False):
+        """
+        copying details to the list after updating the subpanel
+        """
         pass
 
 class HotkeyPanel(gui.QFrame):
@@ -369,21 +421,18 @@ class HotkeyPanel(gui.QFrame):
         modulename = "editor." + self.settings["PluginName"][0]
         self._keys = importlib.import_module(modulename)
         try:
-            self._panel = self._keys.MyPanel()
+            self._panel = self._keys.MyPanel(self)
         except AttributeError:
-            self._panel = DummyPanel()
+            self._panel = DummyPanel(self)
         self.title = self.settings["PanelName"][0]
-        self._panel.settings = self.settings
-        self._panel.captions = self.captions
-        self._panel.data = self.data
         ## self.readkeys()
         self.modified = False
 
         # gelegenheid voor extra initialisaties en het opbouwen van de rest van de GUI
         # het vullen van veldwaarden hierin gebeurt als gevolg van het vullen
         # van de eerste rij in de listbox, daarom moet deze het laatst
-        self.add_extra_attributes()
-        self.add_extra_fields()
+        self._panel.add_extra_attributes()
+        self._panel.add_extra_fields()
 
         self._sizer = gui.QVBoxLayout()
         if self.column_info:
@@ -391,7 +440,7 @@ class HotkeyPanel(gui.QFrame):
             self.p0list.setHeaderLabels([self.captions[col[0]] for col in
                 self.column_info])
             self.p0list.setAlternatingRowColors(True)
-            self.p0list.currentItemChanged.connect(self.on_item_selected)
+            self.p0list.currentItemChanged.connect(self._panel.on_item_selected)
             self.p0hdr = self.p0list.header()
             self.p0hdr.setClickable(True)
             for indx, col in enumerate(self.column_info):
@@ -403,68 +452,22 @@ class HotkeyPanel(gui.QFrame):
             self._sizer.addLayout(sizer1)
 
         # indien van toepassing (TC versie): toevoegen van de rest van de GUI aan de layout
-        self.layout_extra_fields(self._sizer)
+        self._panel.layout_extra_fields(self._sizer)
 
         self.setLayout(self._sizer)
         self._initializing = False
         self.filtertext = ''
 
-    def add_extra_attributes(self):
-        self._panel.add_extra_attributes()
-
-    def add_extra_fields(self):
-        """define other widgets to be used in the panel
-        needed for showing details subpanel
-        """
-        # te definieren in de module die als self._keys geïmporteerd wordt
-        self._panel.add_extra_fields()
-
-    def layout_extra_fields(self, sizer):
-        """add extra widgets to self._sizer
-        needed for showing details subpanel
-        """
-        # te definieren in de module die als self._keys geïmporteerd wordt
-        self._panel.layout_extra_fields(sizer)
-
-    def captions_extra_fields(self):
-        """refresh captions for extra widgets
-        needed for showing details subpanel
-        """
-        # te definieren in de module die als self._keys geïmporteerd wordt
-        self._panel.captions_extra_fields()
-
-    def on_item_selected(self, olditem, newitem):
-        "callback for list selection, needed for copying details to subpanel"
-        try:
-            self._panel.on_item_selected(olditem, newitem)
-        except AttributeError:
-            pass
-
-    def vuldetails(self, selitem):
-        try:
-            self._panel.vuldetails(self, selitem)
-        except AttributeError:
-            pass
-        # (re)implemented by TC, needed for copying details  to subpanel
-        # --> define these in the "keys" file?
-
-    def aanpassen(self, delete=False):
-        pass
-        # (re)implemented by TC, needed for updating and copying details  from subpanel
-        # --> define these in the "keys" file?
-
     def readkeys(self):
         "(re)read the data for the keydef list"
-        print('reading keys')
         self.data = readcsv(self.pad)[2]
-        # a real reread like in TC_plugin is more complicated, but this should really be done
-        # in a separate unit like TCMerge - or in some way built in here
 
     def savekeys(self, pad=None):
         "save modified keydef back"
         if not pad:
             pad = self.pad
-        self._keys.savekeys(pad, self.data)
+        self._keys.savekeys(self.settings, self.data)
+        writecsv(self.pad, self.settings, self.column_info, self.data)
         self.modified = False
         self.setWindowTitle(self.captions["000"])
 
@@ -475,13 +478,12 @@ class HotkeyPanel(gui.QFrame):
         self.setWindowTitle(title)
 
         # in de TC versie worden hier van de overige widgets de captions ingesteld
-        self.captions_extra_fields()
+        self._panel.captions_extra_fields()
         self.populate_list()
 
     def populate_list(self, pos=0):
         """vullen van de list control
         """
-        print('populating list')
         self.p0list.clear()
         items = self.data.items()
         if items is None or len(items) == 0:
