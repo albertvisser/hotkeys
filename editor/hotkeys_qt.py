@@ -105,10 +105,69 @@ def m_loc(self):
     """
     # TODO: deze routine wijzigen zodat je hier de gebruikte plugins kunt definiëren met hun csv's
     # self.ini["plugins"] bevat de lijst met tools en csv locaties
+    current_programs = [x for x, y in self.ini["plugins"]]
+    current_paths = [y for x, y in self.ini["plugins"]]
     ok = FilesDialog(self).exec_()
-    ## if ok == gui.QDialog.Accepted:
-        ## paden, restarter = self.paden[:-1], self.paden[-1]
-        ## self.page.ini.set("paden", paden)
+    if ok == gui.QDialog.Accepted:
+        inifile = self.ini['filename']
+        shutil.copyfile(inifile, inifile + '.bak')
+        data = []
+        dontread = False
+        with open(inifile + '.bak') as _in:
+            for line in _in:
+                if dontread:
+                    if line.strip() == ']':
+                        data.append(line)
+                        dontread = False
+                else:
+                    data.append(line)
+                    if 'PLUGINS' in line:
+                        dontread = True
+                        for name, path in self.ini["plugins"]:
+                            data.append('    ("{}", "{}"),\n'.format(name, path))
+        with open(inifile, 'w') as _out:
+            for line in data:
+                _out.write(line)
+        # need to also update the choicebook (remove the unused panels
+        # and create the new ones)
+        # need to also do it if the path for an existing item is changed
+        new_programs = [x for x, y in self.ini["plugins"]]
+        new_paths = [y for x, y in self.ini["plugins"]]
+        ## # remove panels belonging to programs that were deleted from the list
+        ## for indx, program in current_items:
+            ## if program not in new_programs:
+                ## self.book.sel.removeItem(indx)
+                ## win = self.book.pnl.widget(indx)
+                ## self.book.pnl.removeWidget(win)
+                ## win.close()
+        # clear the selector and the stackedwidget while pairing up programs and windows
+        # that need to be kept or replaced
+        hlpdict = {}
+        self.book.sel.clear()
+        current_items = reversed([(x, y) for x, y in enumerate(current_programs)])
+        for indx, program in current_items: # we need to do this in reverse
+            win = self.book.pnl.widget(indx)
+            self.book.pnl.removeWidget(win)
+            if program in new_programs:
+                hlpdict[program] = win # keep the widget
+            else:
+                win.close() # lose the widget
+        # add new ones, modify existing or leave them alone
+        for indx, program in enumerate(new_programs):
+            if program in current_programs:
+                #compare the new and the existing path
+                old_loc = current_paths[current_programs.index(program)]
+                new_loc = new_paths[new_programs.index(program)]
+                if new_loc == old_loc:  # unchanged
+                    win = hlpdict[program]
+                else: # take data from different location
+                    win = HotkeyPanel(self.book, new_loc) or EmptyPanel(
+                        self.book.pnl, self.captions["052"].format(program))
+            else: # new entry
+                win = HotkeyPanel(self.book, new_paths[indx]) or EmptyPanel(
+                        self.book.pnl, self.captions["052"].format(program))
+            self.book.sel.addItem(program)
+            self.book.pnl.addWidget(win)
 
 def m_user(self):
     """(menu) callback voor een nog niet geïmplementeerde actie"""
@@ -137,9 +196,6 @@ def m_lang(self):
                 if line.startswith('LANG'):
                     line = line.replace(oldlang, lang)
                 _out.write(line)
-        self.ini['lang'] = lang
-        self.readcaptions(lang)
-        self.setcaptions()
 
 def m_about(self):
     """(menu) callback voor het tonen van de "about" dialoog
@@ -178,34 +234,40 @@ def readcsv(pad):
     data = collections.OrderedDict() # {}
     coldata = []
     settings = collections.OrderedDict() # {}
-    with open(pad, 'r') as _in:
-        rdr = csv.reader(_in)
-        key = 0
-        for row in rdr:
-            rowtype, rowdata = row[0], row[1:]
-            if rowtype == 'Setting':
-                name, value, oms = rowdata
-                settings[name] = (value, oms)
-            elif rowtype == 'Title':
-                for item in rowdata:
-                    coldata_item = ['', '', '', '', '']
-                    coldata_item[1] = item
-                    coldata.append(coldata_item)
-            elif rowtype == 'Width':
-                for ix, item in enumerate(rowdata):
-                    coldata[ix][2] = int(item)
-            elif rowtype == 'Seq':
-                for ix, item in enumerate(rowdata):
-                    coldata[ix][0] = int(item)
-                    coldata[ix][3] = ix
-            elif rowtype == 'is_type':
-                for ix, item in enumerate(rowdata):
-                    coldata[ix][4] = bool(int(item))
-                coldata.sort()
-                coldata = [x[1:] for x in coldata]
-            elif rowtype == 'Keydef':
-                key += 1
-                data[key] = ([x.strip() for x in rowdata])
+    try:
+        with open(pad, 'r') as _in:
+            rdr = csv.reader(_in)
+            key = 0
+            first = True
+            for row in rdr:
+                rowtype, rowdata = row[0], row[1:]
+                if rowtype == 'Setting':
+                    name, value, oms = rowdata
+                    settings[name] = (value, oms)
+                elif rowtype == 'Title':
+                    for item in rowdata:
+                        coldata_item = ['', '', '', '', '']
+                        coldata_item[1] = item
+                        coldata.append(coldata_item)
+                elif rowtype == 'Width':
+                    for ix, item in enumerate(rowdata):
+                        coldata[ix][2] = int(item)
+                elif rowtype == 'Seq':
+                    for ix, item in enumerate(rowdata):
+                        coldata[ix][0] = int(item)
+                        coldata[ix][3] = ix
+                elif rowtype == 'is_type':
+                    for ix, item in enumerate(rowdata):
+                        coldata[ix][4] = bool(int(item))
+                    coldata.sort()
+                    coldata = [x[1:] for x in coldata]
+                elif rowtype == 'Keydef':
+                    key += 1
+                    data[key] = ([x.strip() for x in rowdata])
+                else:
+                    raise ValueError
+    except (FileNotFoundError, IndexError, ValueError):
+        pass
     return settings, coldata, data
 
 def writecsv(pad, settings, coldata, data):
@@ -224,22 +286,24 @@ def writecsv(pad, settings, coldata, data):
             row = ['Keydef'] + [x for x in keydef]
             wrt.writerow(row)
 
-class FileBrowseButton(gui.QWidget):
+class FileBrowseButton(gui.QFrame):
     """Combination widget showing a text field and a button
     making it possible to either manually enter a filename or select
     one using a FileDialog
     """
     def __init__(self, parent, text=""):
+        self.parent = parent
         self.startdir = ''
         if text:
             self.startdir = os.path.dirname(text)
-        gui.QWidget.__init__(self, parent)
+        gui.QFrame.__init__(self, parent)
+        self.setFrameStyle(gui.QFrame.Panel | gui.QFrame.Raised);
         vbox = gui.QVBoxLayout()
         box = gui.QHBoxLayout()
         self.input = gui.QLineEdit(text, self)
         self.input.setMinimumWidth(200)
         box.addWidget(self.input)
-        self.button = gui.QPushButton(self.parent().parent.captions['058'], self,
+        self.button = gui.QPushButton(self.parent.parent.captions['058'], self,
             clicked=self.browse)
         box.addWidget(self.button)
         vbox.addLayout(box)
@@ -248,7 +312,7 @@ class FileBrowseButton(gui.QWidget):
     def browse(self):
         startdir = str(self.input.text()) or os.getcwd()
         path = gui.QFileDialog.getOpenFileName(self,
-            self.parent.parent().captions['059'], startdir)
+            self.parent.parent.captions['059'], startdir)
         if path:
             self.input.setText(path)
 
@@ -272,6 +336,11 @@ class FilesDialog(gui.QDialog):
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
 
+        pnl = gui.QFrame(self)
+        self.scrl = gui.QScrollArea(self)
+        self.scrl.setWidget(pnl)
+        self.scrl.setWidgetResizable(True)
+        self.bar = self.scrl.verticalScrollBar()
         self.gsizer = gui.QGridLayout()
         rownum = colnum = 0
         self.gsizer.addWidget(gui.QLabel(self.parent.captions['060'], self),
@@ -279,13 +348,17 @@ class FilesDialog(gui.QDialog):
         colnum += 1
         self.gsizer.addWidget(gui.QLabel(self.parent.captions['061'], self),
             rownum, colnum, alignment = core.Qt.AlignVCenter)
-
         self.rownum = rownum
         self.checks = []
         self.paths = []
         for name, path in self.parent.ini["plugins"]:
             self.add_row(name, path)
-        self.sizer.addLayout(self.gsizer)
+        box = gui.QVBoxLayout()
+        box.addLayout(self.gsizer)
+        box.addStretch()
+        pnl.setLayout(box)
+        ## self.sizer.addWidget(pnl)
+        self.sizer.addWidget(self.scrl)
 
         buttonbox = gui.QDialogButtonBox()
         btn = buttonbox.addButton(self.parent.captions['062'],
@@ -293,7 +366,7 @@ class FilesDialog(gui.QDialog):
         btn.clicked.connect(self.add_program)
         btn = buttonbox.addButton(self.parent.captions['063'],
             gui.QDialogButtonBox.ActionRole)
-        btn.clicked.connect(self.remove_program)
+        btn.clicked.connect(self.remove_programs)
         btn = buttonbox.addButton(gui.QDialogButtonBox.Ok)
         btn = buttonbox.addButton(gui.QDialogButtonBox.Cancel)
         buttonbox.accepted.connect(self.accept)
@@ -306,7 +379,8 @@ class FilesDialog(gui.QDialog):
         self.sizer.addStretch()
         self.setLayout(self.sizer)
 
-    def add_row(self, name, path):
+    def add_row(self, name, path=''):
+        ## print(self.bar.maximum())
         self.rownum += 1
         colnum = 0
         check = gui.QCheckBox(name, self)
@@ -316,19 +390,33 @@ class FilesDialog(gui.QDialog):
         browse = FileBrowseButton(self, text=path)
         self.gsizer.addWidget(browse, self.rownum, colnum)
         self.paths.append((name, browse))
+        ## pnl = self.scrl.widget()
+        ## pnl.update()
+        ## self.scrl.ensureVisible(pnl.height(), pnl.width(), 0, 0)
+        ## self.scrl.ensureWidgetVisible(check)
+        ## self.scrl.update()
+        ## print(self.bar.maximum())
+        ## self.bar.setValue(self.bar.maximum() + self.bar.pageStep())
 
     def delete_row(self, rownum):
-        print(rownum)
+        check = self.checks[rownum]
+        _, win = self.paths[rownum]
+        self.gsizer.removeWidget(check)
+        check.close() # destroy()
+        self.gsizer.removeWidget(win)
+        win.close() # destroy()
+        self.checks.pop(rownum)
+        self.paths.pop(rownum)
 
     def add_program(self):
         """nieuwe rij aanmaken in self.gsizer"""
         newtool, ok = gui.QInputDialog.getText(self, self.parent.title,
             self.parent.captions['064'])
         if ok:
-            self.add_row(newtool, '')
-            self.update()
+            self.add_row(newtool)
+            ## self.update()
 
-    def remove_program(self):
+    def remove_programs(self):
         """alle aangevinkte items verwijderen uit self.gsizer"""
         test = [x.isChecked() for x in self.checks]
         checked = [x for x, y in enumerate(test) if y]
@@ -340,10 +428,18 @@ class FilesDialog(gui.QDialog):
             if gui.QMessageBox.Yes:
                 for row in reversed(checked):
                     self.delete_row(row)
+                ## self.update()
 
     def accept(self):
-        self.parent.ini["plugins"] = [(name, path) for name, path in self.paths]
-        return gui.QDialog.Accepted
+        newpaths = []
+        for name, path in self.paths:
+            ## if not os.path.exists(path.input.text()):
+                ## gui.QMessageBox.information(self, self.parent.title,
+                    ## 'Please enter a valid path name for "{}"'.format(name))
+                ## return
+            newpaths.append((name, path.input.text()))
+        self.parent.ini["plugins"] = newpaths
+        gui.QDialog.accept(self)
 
 class DummyPanel(gui.QFrame):
     """
@@ -412,11 +508,15 @@ class HotkeyPanel(gui.QFrame):
         self.pad = pad
         # switch om het gedrag van bepaalde routines tijdens initialisatie te beïnvloeden
         self._initializing = True
+        self.modified = False
 
         gui.QFrame.__init__(self, parent)
         self.parent = parent # .parent()
         self.captions = self.parent.parent.captions
         self.settings, self.column_info, self.data = readcsv(self.pad)
+        if not self.settings or not self.column_info:
+            gui.QLabel('No data for this program', self)
+            return
         self.p0list = gui.QTreeWidget(self)
         modulename = "editor." + self.settings["PluginName"][0]
         self._keys = importlib.import_module(modulename)
@@ -426,7 +526,6 @@ class HotkeyPanel(gui.QFrame):
             self._panel = DummyPanel(self)
         self.title = self.settings["PanelName"][0]
         ## self.readkeys()
-        self.modified = False
 
         # gelegenheid voor extra initialisaties en het opbouwen van de rest van de GUI
         # het vullen van veldwaarden hierin gebeurt als gevolg van het vullen
@@ -513,6 +612,27 @@ class HotkeyPanel(gui.QFrame):
                 return False
         return True
 
+class EmptyPanel(HotkeyPanel):
+
+    def __init__(self, parent):
+
+        coldata = ()
+        self._txt = "default"
+        HotkeyPanel.__init__(self, parent, coldata, ini="",
+            title="default_title")
+
+    def add_extra_fields(self):
+        self.txt = gui.QLabel(self._txt, self)
+
+    def layout_extra_fields(self):
+        self._sizer.addWidget(self.txt)
+
+    def readkeys(self):
+        self.data = {}
+
+    def savekeys(self):
+        pass
+
 class ChoiceBook(gui.QFrame): #Widget):
     """ Als QTabwidget, maar met selector in plaats van tabs
     """
@@ -593,6 +713,9 @@ class ChoiceBook(gui.QFrame): #Widget):
                 return
         self.pnl.setCurrentIndex(indx)
         self.parent.page = self.pnl.currentWidget()
+        if not all((self.parent.page.settings, self.parent.page.column_info,
+                self.parent.page.data)):
+            return
         self.parent.setup_menu(MENU_DATA)
         if self.parent.page.filtertext:
             self.find.setEditText(self.parent.page.filtertext)
