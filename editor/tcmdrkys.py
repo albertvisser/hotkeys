@@ -254,93 +254,19 @@ def readkeys(data):
         data[ix] = (ky, mod, srt, cmd, desc)
     return cl.cmdict, cl.omsdict, cl.defkeys, data
 
-def savekeys(pad, data):
+def savekeys(settings, data):
     """schrijft de listbox data terug via een tckeys object
     """
-    cl = TCKeys(pad)
-    for ky, mod, srt, cmd, desc in data.values():
+    paden = [settings[x][0] for x in ('TC_PAD', 'UC_PAD', 'CI_PAD', 'KB_PAD',
+        'HK_PAD')]
+    cl = TCKeys(*paden)
+    for val in data.values():
+        ky, mod, srt, cmd, desc = val
         hotkey = " + ".join((ky, mod)) if mod != '' else ky
         cl.keydict[hotkey] = (srt, desc, cmd)
     ## for x,y in cl.keydict.items():
         ## print(x,y)
     cl.write()
-
-class Settings(object):
-    def __init__(self, fn):
-        self.fn = fn
-        self.namen = ['TC_PAD', 'UC_PAD', 'CI_PAD', 'KB_PAD', 'HK_PAD', 'RESTART']
-        self.paden = ['','','','','']
-        self.lang = ''
-        self.restart = ''
-        if not os.path.exists(self.fn):
-            return
-        with open(self.fn) as _in:
-            for x in _in:
-                if x.strip() == "" or x.startswith('#'):
-                    continue
-                naam,waarde = x.strip().split('=')
-                try:
-                    ix = self.namen.index(naam)
-                except ValueError:
-                    ix = -1
-                if 0 <= ix <= 4:
-                    self.paden[ix] = waarde
-                elif ix == 6:
-                    self.restart = waarde
-        self.tcpad, self.ucpad, self.cipad, self.ktpad, self.hkpad = self.paden
-        ## for x in reversed(self.paden):
-            ## if x == '':
-                ## self.paden.pop()
-            ## else:
-                ## break
-
-    def set(self, item, value):
-        items = []
-        argnamen = ("tcpad","ucpad","cipad","ktpad","hkpad")
-        arg_found = False
-        for i,x in enumerate(argnamen):
-            if item == x:
-                item = self.namen[i]
-                print(item, i)
-                self.paden[i] = value
-                arg_found = True
-                break
-        if not arg_found and item == "paden":
-            if isinstance(value, list) and len(value) == 6:
-                self.paden = value[:-1]
-                self.restart = value[-1]
-                arg_found = True
-            else:
-                raise ValueError("Tcksettings needs list with 6 'paden'")
-        if not arg_found:
-            for i, x in enumerate(self.namen):
-                if item.upper() == x:
-                    if i <= 4:
-                        self.paden[i] = value
-                    elif i == 5:
-                        self.restart = value
-                    arg_found = True
-                    break
-        if not arg_found:
-            raise ValueError("Tcksettings object doesn't know about '%s'" % item)
-        new = self.fn
-        old = new + ".bak"
-        shutil.copyfile(new, old)
-        with open(old) as ini, open(new, "w") as f:
-            for x in ini:
-                if "=" in x:
-                    test = x.split('=')[0]
-                    for ix, naam in enumerate(self.namen):
-                        if test == naam:
-                            if ix == 5:
-                                y = self.restart
-                            else:
-                                y = self.paden[ix]
-                            f.write("{}={}\n".format(self.namen[ix], y))
-                            break
-                else:
-                    f.write(x)
-        self.tcpad, self.ucpad, self.cipad, self.ktpad, self.hkpad = self.paden
 
 class TCKeys(object):
     """stel gegevens samen vanuit de diverse bestanden
@@ -353,7 +279,7 @@ class TCKeys(object):
         try:
             self.tcloc = tc_dir[0] # plaats van wincmd.ini
         except IndexError:
-            self.tcloc = "C:\totalcmd" # default
+            self.tcloc = "C:/totalcmd" # default
         try:
             self.ucloc = tc_dir[1] # plaats van usercmd.ini
         except IndexError:
@@ -484,8 +410,11 @@ def on_combobox(self, cb, text):
 
     zorgt ervoor dat de buttons ge(de)activeerd worden
     """
-    text = str(text)
-    ## print('on combobox:', text)
+    text = str(text) # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan de
+                     # callback soms fout?
+    hlp = cb.currentText()
+    if text != hlp:
+        text = hlp
     ## print(self._origdata)
     self.defchanged = False
     if cb == self.cmb_key:
@@ -529,13 +458,18 @@ def on_checkbox(self, cb, state):
 
 def on_update(self):
     self.aanpassen()
-    self.p0list.setFocus()
+    self.parent.p0list.setFocus()
 
 def on_delete(self):
     self.aanpassen(delete=True)
-    self.p0list.setFocus()
+    self.parent.p0list.setFocus()
 
 class MyPanel(gui.QFrame):
+
+    def __init__(self, parent):
+        gui.QFrame.__init__(self)
+        self.parent = parent
+        self.initializing = False
 
     def add_extra_attributes(self):
         self._origdata = ["", False, False, False, False, ""]
@@ -544,7 +478,7 @@ class MyPanel(gui.QFrame):
         self.newfile = self.newitem = False
         self.oldsort = -1
         self.idlist = self.actlist = self.alist = []
-        paden = [self.settings[x][0] for x in PATHS]
+        paden = [self.parent.settings[x][0] for x in PATHS]
         self.cmdict, self.omsdict, self.defkeys, _ = readkeys(paden)
 
     def add_extra_fields(self):
@@ -553,27 +487,31 @@ class MyPanel(gui.QFrame):
         self._box = box = gui.QFrame(self)
         box.setFrameShape(gui.QFrame.StyledPanel)
         box.setMaximumHeight(90)
-        self.txt_key = gui.QLabel(self.captions[C_KTXT] + " ", box)
+        self.txt_key = gui.QLabel(self.parent.captions[C_KTXT] + " ", box)
         self.keylist = [x for x in string.ascii_uppercase] + \
             [x for x in string.digits] + ["F" + str(i) for i in range(1,13)] + \
-            [self.captions[str(x)] for x in range(100,121)] + \
-            ['PAUSE', 'OEM_.', 'OEM_,', 'OEM_+', 'OEM_-', 'OEM_</>', 'OEM_US`~',
-            'OEM_US[{', 'OEM_US]}', 'OEM_US\\|', 'OEM_US;:', "OEM_US'" + '"',
-            'OEM_US/?', 'OEM_FR!']
+            [self.parent.captions[str(x)] for x in range(100,121)] + \
+            ['Pause', 'Period', 'Comma', 'Plus', 'Minus', 'Smaller/Greater',
+            'Backtick/Tilde', 'Brackets open', 'Brackets close', 'Backslash/Pipe',
+            'Semicolon/colon', 'Apostrophe/Quote', 'Slash/Questionmark', 'OEM_FR!']
+            ## ['PAUSE', 'OEM_.', 'OEM_,', 'OEM_+', 'OEM_-', 'OEM_</>', 'OEM_US`~',
+            ## 'OEM_US[{', 'OEM_US]}', 'OEM_US\\|', 'OEM_US;:', "OEM_US'" + '"',
+            ## 'OEM_US/?', 'OEM_FR!']
         not_found = []
-        for key, value in self.data.items():
+        for key, value in self.parent.data.items():
             if value[0] not in self.keylist:
                 ## print(value)
                 not_found.append(key)
         for key in not_found:
-            del self.data[key]
+            del self.parent.data[key]
         cb = gui.QComboBox(box)
         cb.addItems(self.keylist)
-        cb.currentIndexChanged[str].connect(functools.partial(on_combobox, self, cb, str))
+        cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
+            self, cb, str))
         self.cmb_key = cb
 
         for x in (M_CTRL, M_ALT, M_SHFT, M_WIN):
-            cb = gui.QCheckBox(self.captions[x].join(("+","  ")), box) #, (65, 60), (150, 20), gui.QNO_BORDER)
+            cb = gui.QCheckBox(self.parent.captions[x].join(("+","  ")), box) #, (65, 60), (150, 20), gui.QNO_BORDER)
             cb.setChecked(False)
             cb.stateChanged.connect(functools.partial(on_checkbox, self, cb))
             if x == M_CTRL:
@@ -585,18 +523,19 @@ class MyPanel(gui.QFrame):
             elif x == M_WIN:
                 self.cb_win = cb
 
-        self.txt_cmd = gui.QLabel(self.captions[C_CTXT] + " ", box)
+        self.txt_cmd = gui.QLabel(self.parent.captions[C_CTXT] + " ", box)
         self.commandlist = [x for x in self.omsdict.keys()]
         self.commandlist.sort()
         cb = gui.QComboBox(self)
         cb.addItems(self.commandlist)
-        cb.currentIndexChanged[str].connect(functools.partial(on_combobox, self, cb, str))
+        cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
+            self, cb, str))
         self.cmb_commando = cb
 
-        self.b_save = gui.QPushButton(self.captions[C_SAVE], box) ##, (120, 45))
+        self.b_save = gui.QPushButton(self.parent.captions[C_SAVE], box) ##, (120, 45))
         self.b_save.setEnabled(False)
         self.b_save.clicked.connect(functools.partial(on_update, self))
-        self.b_del = gui.QPushButton(self.captions[C_DEL], box) #, size= (50,-1)) ##, (120, 45))
+        self.b_del = gui.QPushButton(self.parent.captions[C_DEL], box) #, size= (50,-1)) ##, (120, 45))
         self.b_del.setEnabled(False)
         self.b_del.clicked.connect(functools.partial(on_delete, self))
 
@@ -638,14 +577,14 @@ class MyPanel(gui.QFrame):
     def captions_extra_fields(self):
         """to be called on changing the language
         """
-        self.cb_win.setText(self.captions[M_WIN].join(("+", "  ")))
-        self.cb_ctrl.setText(self.captions[M_CTRL].join(("+", "  ")))
-        self.cb_alt.setText(self.captions[M_ALT].join(("+", "  ")))
-        self.cb_shift.setText(self.captions[M_SHFT].join(("+", "  ")))
-        self.b_save.setText(self.captions[C_SAVE])
-        self.b_del.setText(self.captions[C_DEL])
-        self.txt_key.setText(self.captions[C_KTXT])
-        self.txt_cmd.setText(self.captions[C_CTXT])
+        self.cb_win.setText(self.parent.captions[M_WIN].join(("+", "  ")))
+        self.cb_ctrl.setText(self.parent.captions[M_CTRL].join(("+", "  ")))
+        self.cb_alt.setText(self.parent.captions[M_ALT].join(("+", "  ")))
+        self.cb_shift.setText(self.parent.captions[M_SHFT].join(("+", "  ")))
+        self.b_save.setText(self.parent.captions[C_SAVE])
+        self.b_del.setText(self.parent.captions[C_DEL])
+        self.txt_key.setText(self.parent.captions[C_KTXT])
+        self.txt_cmd.setText(self.parent.captions[C_CTXT])
 
     def on_item_selected(self, newitem, olditem): # olditem, newitem):
         """callback on selection of an item
@@ -659,6 +598,7 @@ class MyPanel(gui.QFrame):
         ## print('itemselected called', newitem.text(0))
         ## if olditem is not None:
             ## print('old item was', olditem.text(0))
+        ## print('In itemselected:', self._origdata, self._newdata)
         origkey = self._origdata[0]
         origmods = ''.join([y for x, y in zip((4, 2, 3, 1),
             ('WCAS')) if self._origdata[x]])
@@ -672,49 +612,49 @@ class MyPanel(gui.QFrame):
         other_cmd = cmd != origcmd
         any_change = other_item or other_cmd
         gevonden = False
-        for number, item in self.data.items():
+        for number, item in self.parent.data.items():
             if key == item[0] == key and item[1] == mods:
                 gevonden = True
                 indx = number
                 break
         ## print(cursor_moved, other_item, other_cmd, gevonden)
-        doit = False
+        make_change = False
         if any_change:
             if cursor_moved:
                 h = gui.QMessageBox.question(self,
-                    self.captions["000"], self.captions["020"],
+                    self.parent.captions["000"], self.parent.captions["020"],
                     gui.QMessageBox.Yes | gui.QMessageBox.No)
-                doit = True if h == gui.QMessageBox.Yes else False
+                make_change = True if h == gui.QMessageBox.Yes else False
             elif other_item:
                 if gevonden:
                     ok = gui.QMessageBox.question(self,
-                        self.captions["000"], self.captions["045"],
+                        self.parent.captions["000"], self.parent.captions["045"],
                         gui.QMessageBox.Yes | gui.QMessageBox.No)
-                    doit = True if ok == gui.QMessageBox.Yes else False
+                    make_change = True if ok == gui.QMessageBox.Yes else False
                 else:
-                    doit = True
+                    make_change = True
             else:
-                doit = True
-        if doit:
-            item = self.p0list.currentItem()
-            pos = self.p0list.indexOfTopLevelItem(item)
+                make_change = True
+        if make_change:
+            item = self.parent.p0list.currentItem()
+            pos = self.parent.p0list.indexOfTopLevelItem(item)
             if gevonden:
-                self.data[indx] = (key, mods, 'U', cmd, self.omsdict[cmd])
+                self.parent.data[indx] = (key, mods, 'U', cmd, self.omsdict[cmd])
             else:
-                newdata = [x for x in self.data.values()]
+                newdata = [x for x in self.parent.data.values()]
                 newvalue = (key, mods, 'U', cmd, self.omsdict[cmd])
                 newdata.append(newvalue)
                 newdata.sort()
                 for x, y in enumerate(newdata):
                     if y == newvalue:
                         indx = x
-                    self.data[x] = y
-            self.modified = True
+                    self.parent.data[x] = y
+            self.parent.modified = True
             self._origdata = [key, False, False, False, False, cmd]
             for mod, indx in zip(('WCAS'),(4, 2, 3, 1)):
                 self._origdata[indx] = mod in mods
-            self.populate_list(pos)    # refresh
-            newitem = self.p0list.topLevelItem(pos)
+            self.parent.populate_list(pos)    # refresh
+            newitem = self.parent.p0list.topLevelItem(pos)
         self.vuldetails(newitem)
 
     def vuldetails(self, selitem):  # let op: aangepast (gebruik zip)
@@ -723,8 +663,8 @@ class MyPanel(gui.QFrame):
         seli = selitem.data(0, core.Qt.UserRole)
         if sys.version < '3':
             seli = seli.toPyObject()
-        ## print(self.data[seli])
-        key, mods, soort, cmd, oms = self.data[seli]
+        ## print(self.parent.data[seli])
+        key, mods, soort, cmd, oms = self.parent.data[seli]
         self.b_save.setEnabled(False)
         self.b_del.setEnabled(False)
         if soort == 'U':
@@ -746,38 +686,39 @@ class MyPanel(gui.QFrame):
         ix = self.commandlist.index(cmd)
         self.cmb_commando.setCurrentIndex(ix)
         self.txt_oms.setText(oms)
+        ## print('Na vuldetails:', self._origdata, self._newdata)
 
     def aanpassen(self, delete=False): # TODO
         print('aanpassen called')
-        item = self.p0list.currentItem()
-        pos = self.p0list.indexOfTopLevelItem(item)
+        item = self.parent.p0list.currentItem()
+        pos = self.parent.p0list.indexOfTopLevelItem(item)
         if delete:
             indx = item.data(0, core.Qt.UserRole)
             if sys.version < '3':
                 indx = int(indx.toPyObject())
-            if self.data[indx][1] == "S": # can't delete standard key
-                gui.QMessageBox.information(self, self.captions["000"],
-                    self.captions['024'])
+            if self.parent.data[indx][1] == "S": # can't delete standard key
+                gui.QMessageBox.information(self, self.parent.captions["000"],
+                    self.parent.captions['024'])
                 return
             else:
-                if self.data[indx][0] in self.defkeys: # restore standard if any
-                    cmd = self.defkeys[self.data[indx][0]]
+                if self.parent.data[indx][0] in self.defkeys: # restore standard if any
+                    cmd = self.defkeys[self.parent.data[indx][0]]
                     if cmd in self.omsdict:
                         oms = self.omsdict[cmd]
                     else:
                         oms = cmd
                         cmd = ""
-                    self.data[indx] = (key, 'S', cmd, oms)
+                    self.parent.data[indx] = (key, 'S', cmd, oms)
                 else:
-                    del self.data[indx]
+                    del self.parent.data[indx]
                     ## pos -= 1
             self.b_save.setEnabled(False)
             self.b_del.setEnabled(False)
-            self.modified = True
-            self.parent.setWindowTitle(' '.join((self.captions["000"],
-                self.captions['017'])))
+            self.parent.modified = True
+            self.parent.setWindowTitle(' '.join((self.parent.captions["000"],
+                self.parent.captions['017'])))
             print('item deleted, pos is', pos)
-            self.populate_list(pos)    # refresh
+            self.parent.populate_list(pos)    # refresh
         else:
             self.on_item_selected(item, item) # , from_update=True)
 
