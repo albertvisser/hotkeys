@@ -109,6 +109,8 @@ def m_loc(self):
     current_paths = [y for x, y in self.ini["plugins"]]
     ok = FilesDialog(self).exec_()
     if ok == gui.QDialog.Accepted:
+
+        # modify the settings file
         inifile = self.ini['filename']
         shutil.copyfile(inifile, inifile + '.bak')
         data = []
@@ -128,18 +130,8 @@ def m_loc(self):
         with open(inifile, 'w') as _out:
             for line in data:
                 _out.write(line)
-        # need to also update the choicebook (remove the unused panels
-        # and create the new ones)
-        # need to also do it if the path for an existing item is changed
-        new_programs = [x for x, y in self.ini["plugins"]]
-        new_paths = [y for x, y in self.ini["plugins"]]
-        ## # remove panels belonging to programs that were deleted from the list
-        ## for indx, program in current_items:
-            ## if program not in new_programs:
-                ## self.book.sel.removeItem(indx)
-                ## win = self.book.pnl.widget(indx)
-                ## self.book.pnl.removeWidget(win)
-                ## win.close()
+
+        # update the screen(s)
         # clear the selector and the stackedwidget while pairing up programs and windows
         # that need to be kept or replaced
         hlpdict = {}
@@ -433,10 +425,6 @@ class FilesDialog(gui.QDialog):
     def accept(self):
         newpaths = []
         for name, path in self.paths:
-            ## if not os.path.exists(path.input.text()):
-                ## gui.QMessageBox.information(self, self.parent.title,
-                    ## 'Please enter a valid path name for "{}"'.format(name))
-                ## return
             newpaths.append((name, path.input.text()))
         self.parent.ini["plugins"] = newpaths
         gui.QDialog.accept(self)
