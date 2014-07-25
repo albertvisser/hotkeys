@@ -26,7 +26,7 @@ HERE = os.path.abspath(os.path.dirname(__file__))
     ## HOME = os.environ('HOME')
 ## except KeyError:
     ## HOME = os.environ('USERPROFILE') # Windows
-CONF = os.path.join(HERE, 'hotkey_config.py') # don't import, can be modified in runtime
+CONF = os.path.join(HERE, 'hotkey_config.py') # don't import, can be modified at runtime
 VRS = "2.1.x"
 AUTH = "(C) 2008-2014 Albert Visser"
 WIN = True if sys.platform == "win32" else False
@@ -137,6 +137,8 @@ def m_loc(self):
         hlpdict = {}
         self.book.sel.clear()
         current_items = reversed([(x, y) for x, y in enumerate(current_programs)])
+        new_programs = [x for x, y in self.ini["plugins"]]
+        new_paths = [y for x, y in self.ini["plugins"]]
         for indx, program in current_items: # we need to do this in reverse
             win = self.book.pnl.widget(indx)
             self.book.pnl.removeWidget(win)
@@ -156,7 +158,7 @@ def m_loc(self):
                     win = HotkeyPanel(self.book, new_loc) or EmptyPanel(
                         self.book.pnl, self.captions["052"].format(program))
             else: # new entry
-                win = HotkeyPanel(self.book, new_paths[indx]) or EmptyPanel(
+                 win = HotkeyPanel(self.book, new_paths[indx]) or EmptyPanel(
                         self.book.pnl, self.captions["052"].format(program))
             self.book.sel.addItem(program)
             self.book.pnl.addWidget(win)
@@ -188,6 +190,9 @@ def m_lang(self):
                 if line.startswith('LANG'):
                     line = line.replace(oldlang, lang)
                 _out.write(line)
+        self.ini['lang'] = lang
+        self.readcaptions(lang)
+        self.setcaptions()
 
 def m_about(self):
     """(menu) callback voor het tonen van de "about" dialoog
@@ -218,6 +223,33 @@ MENU_DATA = (
         (M_ABOUT, (m_about, 'Ctrl+H')),
         )))
 
+def initcsv(loc, data):
+    """Initialize csv file
+
+    save some basic settttings to a csv file together with some sample data
+    """
+    with open(loc, "w") as _out:
+        wrt = csv.writer(_out)
+        for indx, stuff in enumerate([
+            ('PluginName', "Naam van het file met toolspecifieke code"),
+            ('PanelName', "Naam van het toolpanel in de selector"),
+            ('RebuildCSV', "1 = possible to rebuild this file from the tools' "
+                "settings; else 0"),
+            ('RedefineKeys', "1 = possible to change keydefs and save them back;"
+                " else 0"),
+            ]):
+                setting, desc = stuff
+                wrt.writerow(["Setting", setting, data[indx], desc])
+        for sample_data in [
+            ('Title', '001', '043', '004', "Title of the column in the display"
+                "; refers to keys in the language file"),
+            ('Width', 120, 90, 292, "Column width"),
+            ('Seq', 0, 1, 2, "Column sequence number"),
+            ('is_type', 0, 0, 0, "1 = Column indicates if keydef is original "
+                "or (re)defined; else 0"),
+            ]:
+                wrt.writerow(sample_data)
+
 def readcsv(pad):
     """lees het csv bestand op het aangegeven pad en geeft de inhoud terug
 
@@ -237,19 +269,19 @@ def readcsv(pad):
                     name, value, oms = rowdata
                     settings[name] = (value, oms)
                 elif rowtype == 'Title':
-                    for item in rowdata:
+                    for item in rowdata[:-1]:
                         coldata_item = ['', '', '', '', '']
                         coldata_item[1] = item
                         coldata.append(coldata_item)
                 elif rowtype == 'Width':
-                    for ix, item in enumerate(rowdata):
+                    for ix, item in enumerate(rowdata[:-1]):
                         coldata[ix][2] = int(item)
                 elif rowtype == 'Seq':
-                    for ix, item in enumerate(rowdata):
+                    for ix, item in enumerate(rowdata[:-1]):
                         coldata[ix][0] = int(item)
                         coldata[ix][3] = ix
                 elif rowtype == 'is_type':
-                    for ix, item in enumerate(rowdata):
+                    for ix, item in enumerate(rowdata[:-1]):
                         coldata[ix][4] = bool(int(item))
                     coldata.sort()
                     coldata = [x[1:] for x in coldata]
@@ -283,8 +315,10 @@ class FileBrowseButton(gui.QFrame):
     making it possible to either manually enter a filename or select
     one using a FileDialog
     """
-    def __init__(self, parent, text=""):
-        self.parent = parent
+    def __init__(self, parent, text="", level_down=False):
+        self.parent = parent.parent
+        if level_down:
+            self.parent = self.parent.parent
         self.startdir = ''
         if text:
             self.startdir = os.path.dirname(text)
@@ -295,8 +329,8 @@ class FileBrowseButton(gui.QFrame):
         self.input = gui.QLineEdit(text, self)
         self.input.setMinimumWidth(200)
         box.addWidget(self.input)
-        self.button = gui.QPushButton(self.parent.parent.captions['058'], self,
-            clicked=self.browse)
+        caption = self.parent.captions['058']
+        self.button = gui.QPushButton(caption, self, clicked=self.browse)
         box.addWidget(self.button)
         vbox.addLayout(box)
         self.setLayout(vbox)
@@ -304,9 +338,88 @@ class FileBrowseButton(gui.QFrame):
     def browse(self):
         startdir = str(self.input.text()) or os.getcwd()
         path = gui.QFileDialog.getOpenFileName(self,
-            self.parent.parent.captions['059'], startdir)
+            self.parent.captions['059'], startdir)
         if path:
             self.input.setText(path)
+
+class SetupDialog(gui.QDialog):
+    """dialoog voor het opzetten van een csv bestand
+
+    geeft de mogelijkheid om alvast wat instellingen vast te leggen en zorgt er
+    tevens voor dat het correcte formaat gebruikt wordt
+    """
+    def __init__(self, parent, name):
+        self.parent = parent
+        gui.QDialog.__init__(self)
+
+        grid = gui.QGridLayout()
+
+        self.setWindowTitle('Initieel opzetten CSV bestand')
+        ## text = gui.QLabel('Initieel opzetten CSV bestand', self)
+        ## hbox = gui.QHBoxLayout()
+        ## hbox.addStretch()
+        ## hbox.addWidget(text)
+        ## hbox.addStretch()
+        ## grid.addLayout(hbox, 0, 1, 1, 5)
+
+        text = gui.QLabel('Naam van de module met de toolspecifieke code', self)
+        self.t_program = gui.QLineEdit(name.lower() + '_keys', self)
+        grid.addWidget(text, 1, 0, 1, 3)
+        grid.addWidget(self.t_program, 1, 3) #, 1, 1)
+        text = gui.QLabel('Naam voor de titel van het toolpanel', self)
+        self.t_title = gui.QLineEdit(name + ' hotkeys', self)
+        grid.addWidget(text, 2, 0, 1, 3)
+        grid.addWidget(self.t_title, 2, 3) #, 1, 1)
+        self.c_rebuild = gui.QCheckBox("Make it possible to rebuild this file "
+            "from the tool's settings", self)
+        grid.addWidget(self.c_rebuild, 3, 1, 1, 3)
+        self.c_redef = gui.QCheckBox("Make it possible to redefine the keydefs "
+            "and save them back", self)
+        grid.addWidget(self.c_redef, 4, 1, 1, 3)
+        ## grid.addSpacer(5, 0, 1, 3)
+        text = gui.QLabel('Waar zullen we dit bestand opslaan?', self)
+        grid.addWidget(text, 5, 0, 1, 2)
+        self.t_loc = FileBrowseButton(self, text = name + "_hotkeys.csv",
+            level_down=True)
+        grid.addWidget(self.t_loc, 5, 2, 1, 3)
+
+        buttonbox = gui.QDialogButtonBox()
+        btn = buttonbox.addButton(gui.QDialogButtonBox.Ok)
+        btn = buttonbox.addButton(gui.QDialogButtonBox.Cancel)
+        buttonbox.accepted.connect(self.accept)
+        buttonbox.rejected.connect(self.reject)
+
+        box = gui.QVBoxLayout()
+        box.addStretch()
+        hbox = gui.QHBoxLayout()
+        hbox.addStretch()
+        hbox.addLayout(grid)
+        hbox.addStretch()
+        box.addLayout(hbox)
+        hbox = gui.QHBoxLayout()
+        hbox.addStretch()
+        hbox.addWidget(buttonbox)
+        hbox.addStretch()
+        box.addLayout(hbox)
+        box.addStretch()
+        self.setLayout(box)
+
+    def accept(self):
+        """
+        set self.parent.loc to the chosen filename
+        write the settings to this file along with some sample data
+        """
+        loc = self.t_loc.input.text()
+        if loc == "":
+            gui.QMessageBox.information(self, self.parent.title, "Sorry, can't"
+                " continue without a name - please enter one or cancel")
+            return
+        self.parent.loc = loc
+        self.parent.data = [self.t_program.text(), self.t_title.text(),
+            int(self.c_rebuild.isChecked()), int(self.c_redef.isChecked())]
+        # ik moet ervoor zorgen dat ik AL de gegevens die ik hier doorgeef bewaar
+        # bij het accoorderen van de files dialoog en niet eerder
+        gui.QDialog.accept(self)
 
 class FilesDialog(gui.QDialog):
     """dialoog met meerdere FileBrowseButtons
@@ -343,6 +456,8 @@ class FilesDialog(gui.QDialog):
         self.rownum = rownum
         self.checks = []
         self.paths = []
+        self.data = [] #
+        self.pathdata = {}
         for name, path in self.parent.ini["plugins"]:
             self.add_row(name, path)
         box = gui.QVBoxLayout()
@@ -382,6 +497,8 @@ class FilesDialog(gui.QDialog):
         browse = FileBrowseButton(self, text=path)
         self.gsizer.addWidget(browse, self.rownum, colnum)
         self.paths.append((name, browse))
+        if self.data:
+            self.pathdata[name] = self.data
         ## pnl = self.scrl.widget()
         ## pnl.update()
         ## self.scrl.ensureVisible(pnl.height(), pnl.width(), 0, 0)
@@ -402,10 +519,21 @@ class FilesDialog(gui.QDialog):
 
     def add_program(self):
         """nieuwe rij aanmaken in self.gsizer"""
+        self.data = []
         newtool, ok = gui.QInputDialog.getText(self, self.parent.title,
             self.parent.captions['064'])
         if ok:
-            self.add_row(newtool)
+            if newtool == "":
+                gui.QMessageBox.information(self, self.parent.title, "Sorry, can't"
+                    " continue without a name")
+                return
+            ok = gui.QMessageBox.question(self, self.parent.title, "Initialize new "
+                "csv file for this application?",
+                gui.QMessageBox.Yes | gui.QMessageBox.No, gui.QMessageBox.Yes)
+            self.loc = ""
+            if ok == gui.QMessageBox.Yes:
+                ok = SetupDialog(self, newtool).exec_()
+            self.add_row(newtool, path=self.loc)
             ## self.update()
 
     def remove_programs(self):
@@ -425,7 +553,13 @@ class FilesDialog(gui.QDialog):
     def accept(self):
         newpaths = []
         for name, path in self.paths:
-            newpaths.append((name, path.input.text()))
+            loc = path.input.text()
+            newpaths.append((name, loc))
+            if name in self.pathdata:
+                data = self.pathdata[name]
+                with open(os.path.join('editor', data[0] + '.py'), 'w') as _out:
+                    _out.write('# -*- coding: UTF-8 -*-\n')
+                initcsv(loc, data)
         self.parent.ini["plugins"] = newpaths
         gui.QDialog.accept(self)
 
@@ -838,7 +972,6 @@ class MainFrame(gui.QMainWindow):
         self.setCentralWidget(pnl)
         self.page = self.book.pnl.currentWidget()
         self.book.on_page_changed(0)
-        self.book.setcaptions()
         self.setcaptions()
         self.show()
 
