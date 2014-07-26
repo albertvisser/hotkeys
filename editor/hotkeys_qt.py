@@ -21,20 +21,16 @@ import importlib
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 
+## from hotkeys.hotkeys_constants import * # this is deliberate <-- doesn't work
 HERE = os.path.abspath(os.path.dirname(__file__))
-## try:
-    ## HOME = os.environ('HOME')
-## except KeyError:
-    ## HOME = os.environ('USERPROFILE') # Windows
 CONF = os.path.join(HERE, 'hotkey_config.py') # don't import, can be modified at runtime
 VRS = "2.1.x"
 AUTH = "(C) 2008-2014 Albert Visser"
 WIN = True if sys.platform == "win32" else False
-## LIN = True if sys.platform == 'linux2' else False
+# LIN = True if sys.platform == 'linux2' else False
 LIN = True if os.name == 'posix' else False
 
 # constanten voor  captions en dergelijke (correspondeert met nummers in language files)
-# *** toegesneden op TC verplaatsen naar TC plugin? ***
 C_KEY, C_MOD, C_SRT, C_CMD, C_OMS = '001', '043', '002', '003', '004'
 C_DFLT, C_RDEF = '005', '006'
 M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
@@ -43,7 +39,129 @@ M_APP, M_READ, M_SAVE, M_RBLD, M_EXIT = '200', '201', '202', '203', '209'
 M_SETT, M_LOC, M_LANG, M_HELP, M_ABOUT = '210', '211', '212', '290', '299'
 NOT_IMPLEMENTED = '404'
 
+csv_linetypes = ['Setting', 'Title', 'Width', 'Seq', 'is_type', 'Keydef']
+csv_settingtype, csv_keydeftype = csv_linetypes[0], csv_linetypes[-1]
+csv_titletype, csv_widthtype, csv_seqnumtype, csv_istypetype = csv_linetypes[1:-1]
+csv_settingnames = ['PluginName', 'PanelName', 'RebuildCSV', 'RedefineKeys']
+csv_oms = dict(zip(csv_settingnames + csv_linetypes[1: -1], (
+    'Naam van de module met toolspecifieke code (zonder .py)',
+    'Naam van het toolpanel in de selector',
+    "1 = possible to rebuild this file from the tools' settings; else 0",
+    '1 = possible to change keydefs and save them back; else 0',
+    'Title of the column in the display; refers to keys in the language file',
+    'Column width',
+    'Column sequence number',
+    '1 = Column indicates if keydef is original or (re)defined; else 0')))
+csv_sample_data = []
+for indx, data in enumerate((
+        [C_KEY, C_MOD, C_OMS],
+        [120, 90, 292],
+        [0, 1, 2],
+        [0, 0, 0],)):
+    name = csv_linetypes[indx + 1]
+    oms = csv_oms[name]
+    data.insert(0, name)
+    data.append(oms)
+    csv_sample_data.append(data)
+
+# csv related functions
+
+def initcsv(loc, data):
+    """Initialize csv file
+
+    save some basic settttings to a csv file together with some sample data
+    """
+    with open(loc, "w") as _out:
+        wrt = csv.writer(_out)
+        for indx, sett in enumerate(csv_settingnames):
+            wrt.writerow([csv_linetypes[0], sett, data[indx], csv_oms[sett]])
+        for row in csv_sample_data:
+            wrt.writerow(row)
+
+def readcsv(pad):
+    """lees het csv bestand op het aangegeven pad en geeft de inhoud terug
+
+    retourneert dictionary van nummers met (voorlopig) 4-tuples
+    """
+    data = collections.OrderedDict() # {}
+    coldata = []
+    settings = collections.OrderedDict() # {}
+    try:
+        with open(pad, 'r') as _in:
+            rdr = csv.reader(_in)
+            key = 0
+            first = True
+            for row in rdr:
+                rowtype, rowdata = row[0], row[1:]
+                if rowtype == csv_settingtype:
+                    name, value, oms = rowdata
+                    settings[name] = (value, oms)
+                elif rowtype == csv_titletype:
+                    for item in rowdata[:-1]:
+                        coldata_item = ['', '', '', '', '']
+                        coldata_item[1] = item
+                        coldata.append(coldata_item)
+                elif rowtype == csv_widthtype:
+                    for ix, item in enumerate(rowdata[:-1]):
+                        coldata[ix][2] = int(item)
+                elif rowtype == csv_seqnumtype:
+                    for ix, item in enumerate(rowdata[:-1]):
+                        coldata[ix][0] = int(item)
+                        coldata[ix][3] = ix
+                elif rowtype == csv_istypetype:
+                    for ix, item in enumerate(rowdata[:-1]):
+                        coldata[ix][4] = bool(int(item))
+                    coldata.sort()
+                    coldata = [x[1:] for x in coldata]
+                elif rowtype == csv_keydeftype:
+                    key += 1
+                    data[key] = ([x.strip() for x in rowdata])
+                else:
+                    raise ValueError
+    except (FileNotFoundError, IndexError, ValueError):
+        pass
+    return settings, coldata, data
+
+def writecsv(pad, settings, coldata, data):
+    ## os.remove(_outback)
+    shutil.copyfile(pad, pad + '~')
+    with open(pad, "w") as _out:
+        wrt = csv.writer(_out)
+        for name, value in settings.items():
+            rowdata = csv_settingtype, name, value[0], value[1]
+            wrt.writerow(rowdata)
+        for ix, row in enumerate([[csv_titletype], [csv_widthtype],
+                [csv_seqnumtype]]):
+            row += [x[ix] for x in coldata]
+            wrt.writerow(row)
+        wrt.writerow([csv_istypetype] + [int(x[3]) for x in coldata])
+        for keydef in data.values():
+            row = [csv_keydeftype] + [x for x in keydef]
+            wrt.writerow(row)
+
+def quick_check(filename):
+    """quick and dirty function for checking a csv file outside of the application
+
+    replicates some things that are done in building the list with keydefs
+    so we can catch errors in advance
+    """
+    _, column_info, data = readcsv(filename)
+    items = data.items()
+    if items is None or len(items) == 0:
+        print('No keydefs found in this file')
+        return
+    for key, data in items:
+        try:
+            for indx, col in enumerate(column_info):
+                from_indx, is_soort = col[2], col[3]
+                value = data[from_indx]
+        except Exception as e:
+            print(key, data)
+            raise
+    print('{}: No errors found'.format(filename))
+
 # shared (menu) functions
+
 def show_message(self, message_id, caption_id='000'):
     """toon de boodschap geïdentificeerd door <message_id> in een dialoog
     met als titel aangegeven door <caption_id> en retourneer het antwoord
@@ -205,110 +323,7 @@ def m_exit(self):
     """(menu) callback om het programma direct af te sluiten"""
     self.exit()
 
-
-# menu structure
-MENU_DATA = (
-    (M_APP, (
-        (M_READ, (m_read, 'Ctrl+R')),
-        (M_RBLD, (m_rebuild, 'Ctrl+B')),
-        (M_SAVE, (m_save, 'Ctrl+S')),
-        -1,
-        (M_EXIT, (m_exit, 'Ctrl+Q')),
-        )),
-    (M_SETT, (
-        (M_LOC, (m_loc, 'Ctrl+F')),
-        (M_LANG, (m_lang, 'Ctrl+L')),
-        )),
-    (M_HELP, (
-        (M_ABOUT, (m_about, 'Ctrl+H')),
-        )))
-
-def initcsv(loc, data):
-    """Initialize csv file
-
-    save some basic settttings to a csv file together with some sample data
-    """
-    with open(loc, "w") as _out:
-        wrt = csv.writer(_out)
-        for indx, stuff in enumerate([
-            ('PluginName', "Naam van het file met toolspecifieke code"),
-            ('PanelName', "Naam van het toolpanel in de selector"),
-            ('RebuildCSV', "1 = possible to rebuild this file from the tools' "
-                "settings; else 0"),
-            ('RedefineKeys', "1 = possible to change keydefs and save them back;"
-                " else 0"),
-            ]):
-                setting, desc = stuff
-                wrt.writerow(["Setting", setting, data[indx], desc])
-        for sample_data in [
-            ('Title', '001', '043', '004', "Title of the column in the display"
-                "; refers to keys in the language file"),
-            ('Width', 120, 90, 292, "Column width"),
-            ('Seq', 0, 1, 2, "Column sequence number"),
-            ('is_type', 0, 0, 0, "1 = Column indicates if keydef is original "
-                "or (re)defined; else 0"),
-            ]:
-                wrt.writerow(sample_data)
-
-def readcsv(pad):
-    """lees het csv bestand op het aangegeven pad en geeft de inhoud terug
-
-    retourneert dictionary van nummers met (voorlopig) 4-tuples
-    """
-    data = collections.OrderedDict() # {}
-    coldata = []
-    settings = collections.OrderedDict() # {}
-    try:
-        with open(pad, 'r') as _in:
-            rdr = csv.reader(_in)
-            key = 0
-            first = True
-            for row in rdr:
-                rowtype, rowdata = row[0], row[1:]
-                if rowtype == 'Setting':
-                    name, value, oms = rowdata
-                    settings[name] = (value, oms)
-                elif rowtype == 'Title':
-                    for item in rowdata[:-1]:
-                        coldata_item = ['', '', '', '', '']
-                        coldata_item[1] = item
-                        coldata.append(coldata_item)
-                elif rowtype == 'Width':
-                    for ix, item in enumerate(rowdata[:-1]):
-                        coldata[ix][2] = int(item)
-                elif rowtype == 'Seq':
-                    for ix, item in enumerate(rowdata[:-1]):
-                        coldata[ix][0] = int(item)
-                        coldata[ix][3] = ix
-                elif rowtype == 'is_type':
-                    for ix, item in enumerate(rowdata[:-1]):
-                        coldata[ix][4] = bool(int(item))
-                    coldata.sort()
-                    coldata = [x[1:] for x in coldata]
-                elif rowtype == 'Keydef':
-                    key += 1
-                    data[key] = ([x.strip() for x in rowdata])
-                else:
-                    raise ValueError
-    except (FileNotFoundError, IndexError, ValueError):
-        pass
-    return settings, coldata, data
-
-def writecsv(pad, settings, coldata, data):
-    ## os.remove(_outback)
-    shutil.copyfile(pad, pad + '~')
-    with open(pad, "w") as _out:
-        wrt = csv.writer(_out)
-        for name, value in settings.items():
-            rowdata = 'Setting', name, value[0], value[1]
-            wrt.writerow(rowdata)
-        for ix, row in enumerate([['Title'], ['Width'], ['Seq']]):
-            row += [x[ix] for x in coldata]
-            wrt.writerow(row)
-        wrt.writerow(['is_type'] + [int(x[3]) for x in coldata])
-        for keydef in data.values():
-            row = ['Keydef'] + [x for x in keydef]
-            wrt.writerow(row)
+# application classes (screens and subscreens)
 
 class FileBrowseButton(gui.QFrame):
     """Combination widget showing a text field and a button
@@ -838,7 +853,7 @@ class ChoiceBook(gui.QFrame): #Widget):
         if not all((self.parent.page.settings, self.parent.page.column_info,
                 self.parent.page.data)):
             return
-        self.parent.setup_menu(MENU_DATA)
+        self.parent.setup_menu()
         if self.parent.page.filtertext:
             self.find.setEditText(self.parent.page.filtertext)
             self.b_filter.setText(self.parent.captions["066"])
@@ -975,11 +990,25 @@ class MainFrame(gui.QMainWindow):
         self.setcaptions()
         self.show()
 
-    def setup_menu(self, menu_data):
+    def setup_menu(self):
         self.menu_bar.clear()
-        self._menus = menu_data
+        self._menus = (
+            (M_APP, (
+                (M_READ, (m_read, 'Ctrl+R')),
+                (M_RBLD, (m_rebuild, 'Ctrl+B')),
+                (M_SAVE, (m_save, 'Ctrl+S')),
+                -1,
+                (M_EXIT, (m_exit, 'Ctrl+Q')),
+                )),
+            (M_SETT, (
+                (M_LOC, (m_loc, 'Ctrl+F')),
+                (M_LANG, (m_lang, 'Ctrl+L')),
+                )),
+            (M_HELP, (
+                (M_ABOUT, (m_about, 'Ctrl+H')),
+                )))
         self._menuitems = []
-        for title, items in menu_data:
+        for title, items in self._menus:
             menu = self.menu_bar.addMenu(self.captions[title])
             menuitem = ((menu, title), [])
             for sel in items:
@@ -1043,4 +1072,5 @@ def main(args=None):
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
+    print(name)
     main(sys.argv[1:])
