@@ -12,7 +12,7 @@
 """
 import os
 import  wx
-import hotkeys_shared as hks
+import hotkeys_constants as hkc
 import vikey_gui
 
 def show_message(self, message_id, caption_id='000'):
@@ -48,7 +48,7 @@ def m_save(self):
     vraagt eerst of het ok is om de hotkeys weg te schrijven
     vraagt daarna eventueel of de betreffende applicatie geherstart moet worden
     """
-    wx.MessageBox('Opslaan gekozen', self.captions['000']) #hks.NOT_IMPLEMENTED)
+    wx.MessageBox('Opslaan gekozen', self.captions['000']) #hkc.NOT_IMPLEMENTED)
     return
     if not self.modified:
         h = show_message(self, '041')
@@ -65,7 +65,7 @@ def m_save(self):
 
 def m_user(self):
     """(menu) callback voor een nog niet geïmplementeerde actie"""
-    return self.captions[hks.NOT_IMPLEMENTED]
+    return self.captions[hkc.NOT_IMPLEMENTED]
 
 def m_exit(self):
     """(menu) callback om het programma direct af te sluiten"""
@@ -78,7 +78,7 @@ def m_loc(self):
     toont dialoog met bestandslocaties en controleert de gemaakte wijzigingen
     (met name of de opgegeven paden kloppen)
     """
-    wx.MessageBox('paden gekozen', self.captions['000']) #hks.NOT_IMPLEMENTED)
+    wx.MessageBox('paden gekozen', self.captions['000']) #hkc.NOT_IMPLEMENTED)
     return
     if self.modified:
         h = show_message(self, '025')
@@ -127,7 +127,7 @@ def m_lang(self):
 
     past de settings aan en leest het geselecteerde language file
     """
-    y = [x for x in os.listdir(hks.HERE) if os.path.splitext(x)[1] == ".lng"]
+    y = [x for x in os.listdir(hkc.HERE) if os.path.splitext(x)[1] == ".lng"]
     dlg = wx.SingleChoiceDialog(
         self,self.captions["027"],self.captions["000"],
         y,
@@ -152,9 +152,9 @@ def m_about(self):
     """
     info = wx.AboutDialogInfo()
     info.Name = self.captions['000']
-    info.Version = hks.VRS
-    info.Copyright = hks.AUTH
-    ## info.Description = hks.TTL, 350, wx.ClientDC(self)
+    info.Version = hkc.VRS
+    info.Copyright = hkc.AUTH
+    ## info.Description = hkc.TTL, 350, wx.ClientDC(self)
     ## info.WebSite = ("http://en.wikipedia.org/wiki/Hello_world", "Hello World home page")
     ## info.Developers = [ "Joe Programmer",
                         ## "Jane Coder",
@@ -164,13 +164,13 @@ def m_about(self):
 
 # dispatch table for  menu callbacks
 MENU_FUNC = {
-    hks.M_READ: m_read,
-    hks.M_SAVE: m_save,
-    hks.M_USER: m_user,
-    hks.M_EXIT: m_exit,
-    hks.M_LOC: m_loc,
-    hks.M_LANG: m_lang,
-    hks.M_ABOUT: m_about,
+    hkc.M_READ: m_read,
+    hkc.M_SAVE: m_save,
+    hkc.M_USER: m_user,
+    hkc.M_EXIT: m_exit,
+    hkc.M_LOC: m_loc,
+    hkc.M_LANG: m_lang,
+    hkc.M_ABOUT: m_about,
     }
 
 #----------------------------------------------------------------------------
@@ -180,7 +180,7 @@ pagetexts = [ "VI", "Total Commander", "Double Commander", "To", "Select", "Page
 class MainWindow(wx.Frame):
     """Hoofdscherm van de applicatie"""
     def __init__(self,parent,id,args):
-        wid = 860 if hks.LIN else 688
+        wid = 860 if hkc.LIN else 688
         hig = 594
         wx.Frame.__init__(self,parent,wx.ID_ANY, "tcmdrkeys",size = (wid, hig),
                             style=wx.DEFAULT_FRAME_STYLE
@@ -190,7 +190,11 @@ class MainWindow(wx.Frame):
         self.sb = self.CreateStatusBar() # A Statusbar in the bottom of the window
         self.readcaptions('english.lng')
         self.menuBar = wx.MenuBar()
-        for title, items in hks.VI_MENU:
+        for title, items in (
+                (hkc.M_APP, (hkc.M_EXIT,)),
+                (hkc.M_SETT, (hkc.M_LANG,)),
+                (hkc.M_HELP, (hkc.M_ABOUT,))
+                ):
             menu = wx.Menu()
             for sel in items:
                 if sel == -1:
@@ -227,7 +231,7 @@ class MainWindow(wx.Frame):
 
     def readcaptions(self, lang):
         self.captions = {}
-        with open(os.path.join(hks.HERE, lang)) as f_in:
+        with open(os.path.join(hkc.HERE, lang)) as f_in:
             for x in f_in:
                 if x[0] == '#' or x.strip() == "":
                     continue
