@@ -47,7 +47,7 @@ def get_keydefs(doc, soort, keydefs=None):
     return keydefs
 
 def writecsv():
-    ini = OpKSettings('/home/albert/tcmdrkeys/tcmdrkeys/opkey_config.py')
+    ini = Settings('/home/albert/tcmdrkeys/tcmdrkeys/opkey_config.py')
     ## ini_pad = '/home/albert/tcmdrkeys/opera'
     ## stdfile = os.path.join(ini.std)
     ## userfile = os.path.join(ini.user)
