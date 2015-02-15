@@ -147,7 +147,8 @@ def readcsv(pad):
 
 def writecsv(pad, settings, coldata, data):
     ## os.remove(_outback)
-    shutil.copyfile(pad, pad + '~')
+    if os.path.exists(pad):
+        shutil.copyfile(pad, pad + '~')
     with open(pad, "w") as _out:
         wrt = csv.writer(_out)
         for name, value in settings.items():
@@ -794,7 +795,6 @@ class ChoiceBook(gui.QFrame): #Widget):
             self.b_filter.setText(self.parent.captions["068"])
 
     def on_page_changed(self, indx):
-        ## print('page has changed to', indx)
         page = self.pnl.currentWidget() ## self.parent().page
         if page is None:
             return
@@ -1002,5 +1002,4 @@ def main(args=None):
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
-    print(name)
     main(sys.argv[1:])
