@@ -8,7 +8,7 @@
         in de routines wordt uitgevraagd wat te doen bij welke applicatie
     voor wat betreft de instellingen:
         taalkeuze: op dit niveau
-        paden: op applicatie niveau
+        paden: op applicatie niveau (in betreffende csv file)
 """
 from __future__ import print_function
 import os
@@ -106,43 +106,41 @@ def readcsv(pad):
 
     retourneert dictionary van nummers met (voorlopig) 4-tuples
     """
-    data = collections.OrderedDict() # {}
+    data = collections.OrderedDict()
     coldata = []
-    settings = collections.OrderedDict() # {}
-    try:
-        with open(pad, 'r') as _in:
-            rdr = csv.reader(_in)
-            key = 0
-            first = True
-            for row in rdr:
-                rowtype, rowdata = row[0], row[1:]
-                if rowtype == hkc.csv_settingtype:
-                    name, value, oms = rowdata
-                    settings[name] = (value, oms)
-                elif rowtype == hkc.csv_titletype:
-                    for item in rowdata[:-1]:
-                        coldata_item = ['', '', '', '', '']
-                        coldata_item[1] = item
-                        coldata.append(coldata_item)
-                elif rowtype == hkc.csv_widthtype:
-                    for ix, item in enumerate(rowdata[:-1]):
-                        coldata[ix][2] = int(item)
-                elif rowtype == hkc.csv_seqnumtype:
-                    for ix, item in enumerate(rowdata[:-1]):
-                        coldata[ix][0] = int(item)
-                        coldata[ix][3] = ix
-                elif rowtype == hkc.csv_istypetype:
-                    for ix, item in enumerate(rowdata[:-1]):
-                        coldata[ix][4] = bool(int(item))
-                    coldata.sort()
-                    coldata = [x[1:] for x in coldata]
-                elif rowtype == hkc.csv_keydeftype:
-                    key += 1
-                    data[key] = ([x.strip() for x in rowdata])
-                else:
-                    raise ValueError
-    except (FileNotFoundError, IndexError, ValueError):
-        pass
+    settings = collections.OrderedDict()
+    with open(pad, 'r') as _in:
+        rdr = csv.reader(_in)
+        key = 0
+        first = True
+        for row in rdr:
+            rowtype, rowdata = row[0], row[1:]
+            if rowtype == hkc.csv_settingtype:
+                name, value, oms = rowdata
+                settings[name] = (value, oms)
+            elif rowtype == hkc.csv_titletype:
+                for item in rowdata[:-1]:
+                    coldata_item = ['', '', '', '', '']
+                    coldata_item[1] = item
+                    coldata.append(coldata_item)
+            elif rowtype == hkc.csv_widthtype:
+                for ix, item in enumerate(rowdata[:-1]):
+                    coldata[ix][2] = int(item)
+            elif rowtype == hkc.csv_seqnumtype:
+                for ix, item in enumerate(rowdata[:-1]):
+                    coldata[ix][0] = int(item)
+                    coldata[ix][3] = ix
+            elif rowtype == hkc.csv_istypetype:
+                for ix, item in enumerate(rowdata[:-1]):
+                    coldata[ix][4] = bool(int(item))
+                coldata.sort()
+                coldata = [x[1:] for x in coldata]
+            elif rowtype == hkc.csv_keydeftype:
+                key += 1
+                data[key] = ([x.strip() for x in rowdata])
+            else:
+                raise NotImplementedError("Unknown setting type '{}' in csv "
+                    "file". format(rowtype))
     return settings, coldata, data
 
 def writecsv(pad, settings, coldata, data):
