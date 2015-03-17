@@ -185,14 +185,17 @@ def quick_check(filename):
 
 # shared (menu) functions
 
-def show_message(self, message_id, caption_id='000'):
+def show_message(self, message_id='', text='', caption_id='000'):
     """toon de boodschap geïdentificeerd door <message_id> in een dialoog
     met als titel aangegeven door <caption_id> en retourneer het antwoord
     na sluiten van de dialoog
     """
-    ok = gui.QMessageBox.question(self, self.captions[caption_id],
-        self.captions[message_id], gui.QMessageBox.Yes |
-        gui.QMessageBox.No | gui.QMessageBox.Cancel)
+    if message_id:
+        text = self.captions[message_id]
+    if not text:
+        text = 'No message to show'
+    ok = gui.QMessageBox.question(self, self.captions[caption_id], text,
+        gui.QMessageBox.Yes | gui.QMessageBox.No | gui.QMessageBox.Cancel)
     return ok
 
 def m_read(self):
@@ -275,7 +278,7 @@ def m_user(self):
     return self.captions[NOT_IMPLEMENTED]
 
 def m_rebuild(self):
-    print("rebuild option chosen, doesn't work yet")
+    show_message(self, text="Rebuild option chosen, doesn't work yet")
 
 def m_lang(self):
     """(menu) callback voor taalkeuze
