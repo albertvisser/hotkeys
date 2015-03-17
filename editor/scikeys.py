@@ -44,7 +44,6 @@ def nicefy_source(data):
         mods += 'S'
     return key, mods
 
-
 def read_commands(path):
     """read names/ids of menu commands and internal commands from Commandvalues.html
 
@@ -137,231 +136,250 @@ def read_source_win(fname=''):
     menu_keys = []
     return menu_keys
 
-
-class Properties:
-    """read currently defined shortcuts from a given .properties file
-
-    self.data finally contains a list of tuples: shortcut, context, command
+class PropertiesFile():
+    """# read properties and remember them
+    so they can instantly substituted when needed
     """
-    def __init__(self):
-        self._user_shortcuts = []
-        self._number_commands = collections.defaultdict(list)
-        self._number_shortcuts = collections.defaultdict(list)
-        self.data = []
+    def __init__(self, fnaam):
+        self._default_platform = "all"
+        self.properties = collections.defaultdict(dict)
+        self._var_start, self._var_end = '$(', ')'
+        self._continue_assignment = False
+        self._platform = self._default_platform
+        self._fnaam = fnaam
+        self._acceptable_combinations = (
+            ('PLAT_WIN', 'PLAT_WIN_GTK'),
+            ('PLAT_GTK', 'PLAT_WIN_GTK'),
+            ('PLAT_GTK', 'PLAT_UNIX'),
+            ('PLAT_MAC', 'PLAT_UNIX'),
+            )
 
-    def expand_variables(self, path):
-        """variable substitution
+    def _determine_platform(self, line):
+        skip_line = False
+        # reset platform on unindent
+        if self._platform != self._default_platform and line.lstrip() == line:
+            self._platform = self._default_platform
+        # set platform if used
+        if line.startswith('if'):
+            _, condition = line.split(None, 1)
+            if condition.startswith('PLAT_'):
+                self._platform = condition
+            skip_line = True
+        return line, skip_line
+
+    def _determine_continuation(self, line, result):
+        """first, identify if line is to be continued
+        if so, strip off continuation char and set switch
+        otherwise clear switch
+        finally, add line to result
         """
+        line = line.lstrip()
+        if line.endswith('\\'):
+            line = line.rstrip('\\')
+            self._continue_assignment = True
+        else:
+            self._continue_assignment = False
+        result += line
+        return result
+
+    def read_props(self):
         try:
-            with open(path) as _in:
-                buffer = _in.readlines()
+            with open(self._fnaam) as _in:
+                self._data = _in.read()
         except UnicodeDecodeError:
-            with open(path, encoding='iso-8859-1') as _in:
-                buffer = _in.readlines()
-
-        # first pass: read which symbols are defined (check for $(...))
-        symbol_uses = collections.defaultdict(list)
-        lookfor_first, lookfor_next = '$(', ')'
-        for index, line in enumerate(buffer):
-            line = line.strip()
-            if not line or line.startswith('#'):
+            with open(self._fnaam, encoding='latin-1') as _in:
+                self._data = _in.read()
+        prop = ''
+        result = ''
+        for line in self._data.split('\n'):
+            line = line.rstrip()
+            test = line.lstrip()
+            if not test or test.startswith('#'):
                 continue
-            test = line.split(lookfor_first, 1)
-            while len(test) > 1:
-                test2 = test[1].split(lookfor_next, 1)
-                if len(test2) < 2:
-                    continue # or is this an error?
-                symbol_uses[test2[0]].append(index)
-                test = test2[1].split(lookfor_first, 1)
-
-        # second pass: read the definitions
-        self.symbol_defs = collections.defaultdict(list)
-        in_definition = ''
-        for index, line in enumerate(buffer):
-            line = line.strip()
-            if not line or line.startswith('#'):
+            line, skip = self._determine_platform(line)
+            if skip:
                 continue
+            result = self._determine_continuation(line, result)
+            if self._continue_assignment:
+                continue
+            line = result
+            result = ''
+            # break down definition
+            try:
+                prop, value = line.split('=', 1)
+            except ValueError:
+                # ignore non-assignments
+                print('Not an assignment: {}'.format(line))
+            # add definition to dictionary
+            if not self._var_start in value:
+                self.properties[prop][self._platform] = value
+                continue
+            test = self._do_substitutions(prop, value)
+            if test != [[]]:
+                for name, platform, definition in test:
+                    self.properties[name][platform] = definition
 
-            if in_definition:   # definition over multiple lines
-                definition.append(line)
-                if not line.endswith('\\'): # statement continues
-                    self.symbol_defs[in_definition].append((defined_at, definition))
-                    in_definition = ''
+    def get_keydef_props(self):
+        self.data = [] # platgeslagen versie van self.properties
+        number_commands = collections.defaultdict(list)
+        number_shortcuts = collections.defaultdict(list)
 
-            for symbol in symbol_uses:
-                if symbol in line and not symbol.join((lookfor_first,
-                        lookfor_next)) in line:         # on first line of definition
-                    test = line.split(symbol, 1)        # get the rest of the line
-                    test2 = test[1].split('=', 1)       # get the value
-                    if len(test2) > 1:
-                        defined_at, definition = index, [test2[1],]
-                        if definition[0].endswith('\\'):     # first part of multiline definition
-                            in_definition = symbol
-                        else:
-                            self.symbol_defs[symbol].append((defined_at, definition))
+        for platform, data in self.properties['user.shortcuts'].items():
+            test = data.split('|')
+            for x in range(0, len(test)-1, 2):
+                self.data.append((test[x], '*', platform, test[x + 1]))
 
-        # variable substitution in the symbols themselves
-        # for now doing this once should be enough
-        for key, value in self.symbol_defs.items():
-            ## print(key, value)
-            new_value = []
-            for lineno, data in value:
-                newdata = []
-                for item in data:
-                    if lookfor_first not in item:
-                        newdata.append(item)
-                        continue
-                    item_n = item.split(lookfor_first)
-                    newdata.append(item_n[0])
-                    for part in item_n[1:]:
-                        test = part.split(lookfor_next, 1)
-                        if len(test) < 2:
-                            newdata[-1] += part
-                            continue
-                        # use first substitution
-                        to_substitute = self.symbol_defs[test[0]][0][1]
-                        newdata[-1] += to_substitute[0]
-                        if len(to_substitute) > 1:
-                            newdata += to_substitute[1:]
-                        newdata[-1] += test[1]
-                new_value.append((lineno, newdata))
-                ## new_value.append((lineno, newdata_n))
-            self.symbol_defs[key] = new_value
-            ## print(key, new_value)
+        for platform, data in self.properties['menu.language'].items():
+            test = data.split('|')
+            for x in range(0, len(test)-1, 3):
+                if test[x + 2]:
+                    test[x] = test[x].replace('&', '')
+                    self.data.append((test[x + 2], '*', platform,
+                        'Show as {} (*.{})'.format(test[x], test[x + 1])))
 
-        # third pass: substitute and write to temp file
-        # if they can't be expanded, they're defined in other properties files - nothing to do about that
-        _temp = 'temp.properties'
-        with open(_temp, 'w') as _out:
-            for indx, line in enumerate(buffer):
-                line = line.rstrip()
-                if lookfor_first not in line:
-                    print(line, file=_out)
-                    continue
-                # regel opsplitsen op start van te vervangen variabele
-                line_n = line.split(lookfor_first)
-                newline_n = [line_n[0]] # nieuwe regel = eerste deel
-                for item in line_n[1:]:
-                    # regeldeel opsplitsen op eind van te vervangen variabele
-                    test = item.split(lookfor_next, 1)
-                    if len(test) < 2:
-                        newline_n[-1] += '$(' + item
-                        continue
-                    if self.symbol_defs[test[0]]:   #  vervanging aanwezig
-                        substitution = self.symbol_defs[test[0]][0][1]
-                        newline_n[-1] += substitution[0]
-                        if len(substitution) > 1:
-                            newline_n += substitution[1:] # rekening houden met...
-                    else:
-                        newline_n[-1] += '$(' + test[0] + ')'
-                    newline_n[-1] += test[1]
-                newline = '\n'.join(newline_n)         #  ...vervanging over meer regels
-                print(newline, file=_out)
-
-        return _temp
-
-
-    def read_data_from_file(self, path):
-        """collect interesting data from the expanded file
-        """
-        gather_user_shortcuts = in_language_menu = False
-        _temp = self.expand_variables(path)
-        with open(_temp) as doc:
-            for line in doc:
-                line = line.strip()
-                if not line or line.startswith('#'):
-                    continue
-                if line.startswith('user.shortcuts'):
-                    gather_user_shortcuts = True
-                elif line.startswith('command.'):
-                    test = line.split('.')
-                    if (test[1].isdigit() or test[1] == 'help'
-                            ) and test[2] != 'subsystem':
-                        self._number_commands[test[1]].append('.'.join(test[2:]))
+        namedkeys = {'help': 'F1', 'compile': 'Ctrl+F7', 'build': 'F7',
+                'clean': 'Shift+F7', 'go': 'F5', 'print': 'Ctrl+P'}
+        for name, value in self.properties.items():
+            if name.startswith('command'):
+                test = name.split('.', 3)
+                if test[1].isdigit() or test[1] in namedkeys:
+                    if test[2] in ('subsystem', 'needs'): continue
+                    context = name.split('.', 2)[-1]
+                else:
+                    if test[1] != 'shortcut': continue
+                    context = test[3]
+                for platform, data in value.items():
+                    if test[1] in namedkeys:
+                        self.data.append((namedkeys[test[1]], context, platform,
+                            data))
                     elif test[1] == 'shortcut':
-                        self._number_shortcuts[test[2]].append('.'.join(test[3:]))
-                elif line.startswith('menu.language'):
-                    in_language_menu = True
-                if gather_user_shortcuts:
-                    if line.startswith('user.shortcuts'):
-                        line = line.split('user.shortcuts=', 1)[1]
-                    test = line.lstrip('\\')
-                    if test:
-                        self._user_shortcuts.append(test)
-                    if not line.endswith('\\'):
-                        gather_user_shortcuts = False
-                if in_language_menu:
-                    if line.startswith('menu.language'):
-                        line = line.split('menu.language=', 1)[1]
-                    test = line.lstrip('\\')
-                    if test:
-                        menu_item = test.split('|')
-                        ## print(menu_item)
-                        if menu_item[2]:
-                            self.data.append((menu_item[2], '*',
-                                'Show {} files (*.{})'.format(
-                                    menu_item[0].replace('&', ''), menu_item[1])))
-                    if not line.endswith('\\'):
-                        in_language_menu = False
+                        number_shortcuts['11' + test[2]].append((context, platform,
+                            data))
+                    elif len(test[1]) == 1:
+                        self.data.append((test[1], 'C', context, platform, data))
+                    else:
+                        number_commands['11' + test[1]].append((context, platform,
+                            data))
 
-    def process_file_data(self):
-        """convert the collected data into the result list
-        """
-        combos = collections.defaultdict(list)
+        for ix, item in enumerate(self.data):
+            if len(item) == 4:
+                x, y = nicefy_props(item[0])
+                self.data[ix] = x, y, item[1], item[2], item[3]
+                item = self.data[ix]
+            if item[4] in number_commands:
+                print(item)
+                for defined in number_commands[item[4]]:
+                    print(defined)
+                    if defined[:2] == item[2:4]:
+                        self.data[ix] = item[:4] + (defined[-1],)
+                    else:
+                        self.data.append(item[:2] + defined)
 
-        # add the entries from the "user.shortcuts" property to the intermediary dict
-        for item in self._user_shortcuts:
-            data = item.split('|')
-            if data[1].isdigit() and data[1].startswith('11'):
-                self._number_shortcuts[data[1][2:]].append('*=' + data[0])
-            else:
-                combos[data[0]].append(data[1]) # add empty string to force list
+        for key, value in number_shortcuts.items():
+            if key in number_commands:
+                for defkey in value:
+                    found = False
+                    for defitem in number_commands[key]:
+                        if defkey[:2] == defitem[:2]:
+                            found = True
+                            self.data.append(nicefy_props(defkey[2]) + defitem)
+                            break
+                    if found:
+                        break
 
-        # add the numbered command properties to the intermediary dict
-        for number, command in self._number_commands.items():
-            if len(number) == 1:
-                for detail in command:
-                    combos['Ctrl+' + number] = command
-            elif number == 'help':
-                for item in command:
-                    if item:
-                        context, data = item.split('=', 1)
-                        self.data.append(('F1', context, data))
-            else:
-                # look up key combo in self._number_shortcuts
-                shortcuts = []
-                for item in self._number_shortcuts[number]:
-                    if item:
-                        shortcuts.append(item.split('=', 1))
-                for item in command:
-                    if item:
-                        context, data = item.split('=', 1)
-                        found = False
-                        for test in shortcuts:
-                            if test[0] == context:
-                                self.data.append((test[1], context, data))
-                                found = True
-                        if not found:
-                            for test in shortcuts:
-                                if test[0] == '*':
-                                    self.data.append((test[1], context, data))
 
-        # parse the intermediary dict for syntax-dependent entries
-        for item, value in combos.items():
-            for subitem in value:
-                if subitem: # ignore empty strings
+    def _do_substitutions(self, prop, value):
+        # start variable substitution in prop
+        regel = ""
+        test = prop.split(self._var_start)
+        regel += test[0]
+        for item in test[1:]:
+            # don't substitute if not possible
+            try:
+                varnaam, eind = item.split(self._var_end)
+            except ValueError:
+                regel += self._var_start + item
+                print('no variable found ->', regel)
+                continue
+            if varnaam not in self.properties:
+                regel += self._var_start + item
+                print('no substitution possible for', varnaam, '->', regel)
+                continue
+            # don't care about platform here; just take first value
+            regel += list(self.properties[varnaam].values())[0] + eind
+        prop = regel
+
+        # start variable substitution in value
+        regel = ""
+        test = value.split(self._var_start)
+        returnvalues = []
+        regel += test[0]
+
+        variants = {}
+        for item in test[1:]:
+            # don't substitute if not possible
+            try:
+                varnaam, eind = item.split(self._var_end)
+            except ValueError:
+                regel += self._var_start + item
+                print('no variable found ->', regel)
+                continue
+            # check if setting exists at all
+            if varnaam not in self.properties:
+                regel += self._var_start + item
+                print('no substitution possible for', varnaam, '->', regel)
+                continue
+            # current platform is not defined for this property
+            if variants: # can't work with  regel  anymore
+                for platform, data in variants.items():
                     try:
-                        context, command = subitem.split('=', 1)
-                    except ValueError:
-                        context, command = '*', subitem
-                    self.data.append((item, context, command))
+                        data += self.properties[varnaam][platform] + eind
+                    except KeyError:
+                        print('need to create another variant')
+                    else:
+                        variants[platform] = data
+            elif self._platform == self._default_platform:
+                for platform, data in self._create_variants(varnaam, regel, eind):
+                    variants[platform] = data
+                    ## returnvalues.append((prop, platform, data))
+                continue
+            else:
+                test = self._expand_from_other(varnaam, regel, eind)
+                if test:
+                    regel = test
+                else:
+                    print('property {} substitution failed for platform {}'.format(
+                        prop, self._platform))
+                    regel += self._var_start + item
+        if variants:
+            for platform, data in variants.items():
+                returnvalues.append((prop, platform, data))
+        else:
+            returnvalues.append((prop, self._platform, regel))
+        return returnvalues
 
-        # split up key and modifiers
-        for idx, item in enumerate(self.data):
-            key, mods = nicefy_props(item[0])
-            self.data[idx] = key, mods, item[1], item[2]
+    def _create_variants(self, varnaam, regel, eind):
+        returnvalues = []
+        # create variants for defined substitutions
+        for defined_platform in self.properties[varnaam]:
+            returnvalues.append((defined_platform,
+                regel + self.properties[varnaam][defined_platform] + eind))
+        return returnvalues
 
-def buildcsv(csvfile=''):
+    def _expand_from_other(self, varnaam, regel, eind):
+        found = False
+        for defined_platform, definition in self.properties[varnaam].items():
+            if defined_platform == self._default_platform or (self._platform,
+                    defined_platform) in self._acceptable_combinations:
+                found = True
+                break
+        if found:
+            regel += definition + eind
+        else:
+            regel = ''
+        return regel
+
+def buildcsv(csvfile):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en schrijf ze naar het csv bestand
     """
@@ -397,20 +415,27 @@ def buildcsv(csvfile=''):
 
     keydefs = read_docs(settings['SCI_DOCS'][0]) # non menu keyboard bindings
 
-    globals = Properties()
-    globals.read_data_from_file(settings['SCI_GLBL'][0])
-    globals.process_file_data()
+    globals = PropertiesFile(settings['SCI_GLBL'][0])
+    globals.read_props()
+    globals.get_keydef_props()
     global_keys = globals.data
 
-    user = Properties()
-    user.read_data_from_file(settings['SCI_USER'][0])
-    user.process_file_data()
-    user_keys = user.data
+    user_ = PropertiesFile(settings['SCI_USER'][0])
+    user_.read_props()
+    user_.get_keydef_props()
+    user_keys = user_.data
 
     # now put the above stuff together
-    default_keys = [(x, y, '*', 'S', z) for x, y, z in menu_keys + keydefs]
-    default_keys += [(x, y, z, 'S', q) for x, y, z, q in global_keys]
-    userdef_keys = [(x, y, z, 'U', q) for x, y, z, q in user_keys]
+    # menu_commands - dict: map command naam op omschrijving
+    #   name: oms
+    # command_list: dict: map command nummer op (naam, omschrijving)
+    #   num: (name, oms)
+    # menu_keys: list of (key, modifiers, command)
+    # keydefs: dict: map keycombo op (?, omschrijving)
+    # global_keys, user_keys: list of (key, modifiers, context, platform, omschrijving_of_commando) items
+    default_keys = [(x, y, '*', '*', 'S', z) for x, y, z in menu_keys + keydefs]
+    default_keys += [(x, y, z, q, 'S', r) for x, y, z, q, r in global_keys]
+    userdef_keys = [(x, y, z, q, 'U', r) for x, y, z, q, r in user_keys]
 
     sentinel = (chr(255), '', '', '')
     gen_def = (x for x in sorted(default_keys))
@@ -431,8 +456,8 @@ def buildcsv(csvfile=''):
     user_item = get_next_useritem()
     while def_item or user_item:
         ## print(def_item, user_item)
-        test_def = def_item[:3] if def_item else sentinel
-        test_user = user_item[:3] if user_item else sentinel
+        test_def = def_item[:4] if def_item else sentinel
+        test_user = user_item[:4] if user_item else sentinel
         ## print(test_def, test_user)
         num += 1
         if test_def < test_user:
@@ -446,7 +471,7 @@ def buildcsv(csvfile=''):
         if test_def == test_user:
             def_item = get_next_defitem()
 
-    writecsv(csvfile + '.txt', settings, coldata, shortcuts)
+    writecsv(csvfile, settings, coldata, shortcuts)
 
 def savekeys(pad):
     """schrijf de gegevens terug
