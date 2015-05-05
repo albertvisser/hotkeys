@@ -85,7 +85,7 @@ def update_paths(paths, pathdata):
         if name in pathdata:
             data = pathdata[name]
             with open(os.path.join('editor', data[0] + '.py'), 'w') as _out:
-                _out.write('# -*- coding: UTF-8 -*-\n')
+                _out.write(hkc.plugin_template)
             initcsv(loc, data)
     return newpaths
 
@@ -278,6 +278,7 @@ def m_user(self):
     return self.captions[NOT_IMPLEMENTED]
 
 def m_rebuild(self):
+    # TODO: call the specific plugin's buildcsv function if it exists, otherwise not possible
     show_message(self, text="Rebuild option chosen, doesn't work yet")
 
 def m_lang(self):
@@ -356,7 +357,8 @@ class SetupDialog(gui.QDialog):
 
         grid = gui.QGridLayout()
 
-        text = gui.QLabel('Naam van de module met de toolspecifieke code', self)
+        text = gui.QLabel('Naam van de module met de toolspecifieke code (will also'
+            ' create it)', self)
         self.t_program = gui.QLineEdit(name.lower() + '_keys', self)
         grid.addWidget(text, 1, 0, 1, 3)
         grid.addWidget(self.t_program, 1, 3) #, 1, 1)

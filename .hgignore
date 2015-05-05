@@ -14,12 +14,8 @@ pylint*
 KEYBOARD.TXT
 TOTALCMD.INC
 *_config.py
+*_keys.py
 *zip
-tc/*
-doublecmd/*
-opera/*
-scite/*
-system/*
-vim/*
-abap/*
+data/*
 *orig
+editor/oud/*
