@@ -18,7 +18,6 @@ import os
 import collections
 import xml.etree.ElementTree as et
 import bs4 as bs # import BeautifulSoup
-from editor.hotkeys_qt import read_settings, readcsv, writecsv
 
 def _short_mods(modifier_list):
     result = ''
@@ -156,22 +155,10 @@ def get_cmddict(path):
     return cmddict
 
 
-def buildcsv(csvfile=''):
+def buildcsv(settings):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
-    en schrijf ze naar het csv bestand
+    en geef ze terug voor schrijven naar het csv bestand
     """
-    # the old csv file contains the location(s) for the DC keyboard definitions file(s)
-    # overrideable default to allow for independent testing
-    if not csvfile:
-        plugins = read_settings('editor/hotkey_config.py')[1]
-        for name, value in plugins:
-            if name == 'Double Commander':
-                csvfile = value
-                break
-
-    # read data from the csv file
-    settings, coldata, _ = readcsv(csvfile)
-
     keydata = get_keydefs(settings['DC_PATH'][0])
     # to determine if keys have been redefined
     stdkeys = get_stdkeys(settings['DC_KEYS'][0])
@@ -186,8 +173,7 @@ def buildcsv(csvfile=''):
             templist.append('')
         keydata[key] = tuple(templist)
 
-    # rewrite the csv file
-    writecsv(csvfile, settings, coldata, keydata)
+    return shortcuts
 
 def savekeys(pad):
     """schrijf de gegevens terug

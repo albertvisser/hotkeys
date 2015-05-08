@@ -17,14 +17,10 @@ three csv files per editor mode (currently we have "SAPGUI" and "VS 98 like")
 """
 from __future__ import print_function
 import os
-if __name__ == '__main__':
-    import sys
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import csv
 import shutil
 import xml.etree.ElementTree as ET
-default_path = '%USER%/Application Data/SAP/SAP GUI/ABAP Editor'
-default_file = 'keymap.xml'
+## from editor.hotkeys_qt import read_settings, readcsv, writecsv
+import collections
 
 def savekeys(pad):
     """schrijf de gegevens terug
@@ -106,23 +102,24 @@ def gethotkey(element):
 
     return hotkey
 
-def buildcsv(path=None):
+def buildcsv(settings):
     """
     In het huidige definities bestand zitten twee schema's (editor modes),
     eigenlijk is er maar één actief en dus belangrijk
     """
-    if path is None:
-        path = default_path
     commands = {}
     hotkeys = []
+    shortcuts = collections.OrderedDict()
 
-    with open(os.path.join(path, default_file)) as _in:
+    with open(settings['AB_DEFS']) as _in:
         tree = ET.ElementTree(file=_in)
     root = tree.getroot()
 
+    keynum = 0
     for element in list(root):
 
-        if element.tag in ('HOTKEYSCHEMA', 'HOTKEYSCHEMA.bak'):
+        ## if element.tag in ('HOTKEYSCHEMA', 'HOTKEYSCHEMA.bak'):
+        if element.tag == 'HOTKEYSCHEMA':
 
             # read the defined keys
             for keys in [gethotkey(sub) for sub in list(element)]:
@@ -131,29 +128,23 @@ def buildcsv(path=None):
                     hotkeys.append((value, mods, num))
 
             # build a list of used commands
-            with open(element.attrib["name"] + '_commands.csv', 'w') as _out:
-                for key in sorted(commands.keys()):
-                    cmd, oms = commands[key]
-                    _out.write(';'.join((key, cmd, '"{}"'.format(oms))) + '\n')
+            used_commands_list = []
+            for key in sorted(commands.keys()):
+                cmd, oms = commands[key]
+                used_commands_list.append((key, cmd, oms))
 
             # build a list of keycode - command code combinations
-            with open(element.attrib["name"] + '_hotkeys.csv', 'w') as _out:
-                for hotkey in hotkeys:
-                    if hotkey[0]: # only write if there's a key defined
-                        _out.write(';'.join(hotkey) + '\n')
+            command_codes_list = []
+            for hotkey in hotkeys:
+                command_codes_list.append(hotkey)
 
             # build a list of key definitions with command and description
-            with open(element.attrib["name"] + '_hotkeys_2.csv', 'w') as _out:
-                for hotkey in sorted(hotkeys):
-                    if hotkey[0]: # only write if there's a key defined
-                        value, mods, num = hotkey
-                        cmd, oms = commands[num]
-                        _out.write(';'.join((getkeyname(value), mods, cmd, oms)
-                            ) + '\n')
+            for hotkey in sorted(hotkeys):
+                value, mods, num = hotkey
+                cmd, oms = commands[num]
+                if hotkey[0]: # only write if there's a key defined
+                    keydef = getkeyname(value)
+                    keynum += 1
+                    shortcuts[keynum] = [keydef, mods, cmd, oms]
 
-if __name__ == '__main__':
-    ## import plac; plac.call(buildcsv)
-    from docopt import docopt
-    args = docopt(__doc__)
-    buildcsv(args['<csvfile>'])
-
+    return shortcuts
