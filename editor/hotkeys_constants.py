@@ -10,7 +10,7 @@ HERE = os.path.abspath(os.path.dirname(__file__))
     ## HOME = os.environ('USERPROFILE') # Windows
 CONF = os.path.join(HERE, 'hotkey_config.py') # don't import, can be modified at runtime
 VRS = "2.1.x"
-AUTH = "(C) 2008-2014 Albert Visser"
+AUTH = "(C) 2008-today Albert Visser"
 WIN = True if sys.platform == "win32" else False
 ## LIN = True if sys.platform == 'linux2' else False
 LIN = True if os.name == 'posix' else False
@@ -49,3 +49,24 @@ for indx, data in enumerate((
     data.insert(0, name)
     data.append(oms)
     csv_sample_data.append(data)
+plugin_skeleton = """# -*- coding: UTF-8 -*-\n
+# uncomment these where appropriate
+# import collections
+# import PyQt4.QtGui as gui
+# import PyQt4.QtCore as core
+
+# uncomment this to define a routine to (re)build the csv file from source data
+# def buildcsv(settings):
+#     shortcuts = collections.defaultdict
+#     ...implement some logic here...
+#     return shortcuts
+
+# uncomment this to define a subpanel used for (re)defining hotkeys
+# copy the contents of this class from DummyPanel in hotkeys_qt.py
+# class MyPanel(gui.QFrame):
+#     pass
+
+# uncomment this to define a routine to write back the keydefs to the source data
+# def savekeys(filename):
+#     pass
+"""
