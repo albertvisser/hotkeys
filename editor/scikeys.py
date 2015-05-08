@@ -4,14 +4,10 @@ usage: scikeys.py <csvfile>
 """
 from __future__ import print_function
 import os
-import sys
-if __name__ == '__main__':
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import collections                  # tbv defaultdict
 import xml.etree.ElementTree as et  # for xml parsing
 import bs4 as bs                    # import BeautifulSoup for html parsing
 import tarfile                      # t.b.v. read_source
-from editor.hotkeys_qt import read_settings, readcsv, writecsv
 
 
 def nicefy_props(data):
@@ -379,30 +375,15 @@ class PropertiesFile():
             regel = ''
         return regel
 
-def buildcsv(csvfile):
+def buildcsv(settings):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
-    en schrijf ze naar het csv bestand
+    en geef ze terug voor schrijven naar het csv bestand
     """
-    # the old csv file contains the location(s) for the keyboard definitions file(s)
-    # overrideable default to allow for independent testing
-
     # we're not considering per-directory settings:
     # - Local properties file called "SciTE.properties" which may be present
     #   in the same  directory as the file being edited.
-    # - Directory properties file called "SciTEDirectory.properties" which may be presen
+    # - Directory properties file called "SciTEDirectory.properties" which may be present
     #   in the same or in a parent directory as the file being edited.
-    if not csvfile:
-        filename = os.path.join(os.path.dirname(__file__), 'hotkey_config.py')
-        plugins = read_settings(filename)[1]
-        for name, value in plugins:
-            if name == 'SciTE':
-                csvfile = value
-                break
-
-    # read data from the csv file
-    settings, coldata, _ = readcsv(csvfile)
-    if not settings:
-        return 'Settings could not be determined from', csvfile
 
     menu_commands, command_list = read_commands(settings['SCI_CMDS'][0])
 
@@ -455,23 +436,19 @@ def buildcsv(csvfile):
     def_item = get_next_defitem()
     user_item = get_next_useritem()
     while def_item or user_item:
-        ## print(def_item, user_item)
         test_def = def_item[:4] if def_item else sentinel
         test_user = user_item[:4] if user_item else sentinel
-        ## print(test_def, test_user)
         num += 1
         if test_def < test_user:
-            ## print('default is smaller')
             shortcuts[num] = def_item
             def_item = get_next_defitem()
         else:
-            ## print('default is not smaller')
             shortcuts[num] = user_item
             user_item = get_next_useritem()
         if test_def == test_user:
             def_item = get_next_defitem()
 
-    writecsv(csvfile, settings, coldata, shortcuts)
+    return shortcuts
 
 def savekeys(pad):
     """schrijf de gegevens terug
@@ -479,11 +456,7 @@ def savekeys(pad):
     voorlopig nog niet mogelijk
     aangepaste keys samenstellen tot een user.shortcuts statement en dat
     invoegen in SciTEUser.properties
+    waren er niet nog meer mogelijkheden? Ja: menu.language en command.shortcut
     """
     pass
 
-if __name__ == '__main__':
-    ## import plac; plac.call(buildcsv)
-    from docopt import docopt
-    args = docopt(__doc__)
-    buildcsv(args['<csvfile>'])
