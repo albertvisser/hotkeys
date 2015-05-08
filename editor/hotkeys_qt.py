@@ -44,7 +44,7 @@ def read_settings(filename):
             if line.startswith('PLUGINS'):
                 read_plugins = True
             elif line.startswith('LANG'):
-                lang = line.strip().split('=')[1]
+                lang = line.strip().split('=')[1].strip("'")
     return lang, plugins
 
 def modify_settings(ini):
@@ -78,6 +78,9 @@ def change_language(oldlang, lang, inifile):
             _out.write(line)
 
 def update_paths(paths, pathdata):
+    """read the paths to the csv files from the data returned by the dialog
+    if applicable also write a skeleton plugin file
+    """
     newpaths = []
     for name, path in paths:
         loc = path.input.text()
@@ -85,7 +88,7 @@ def update_paths(paths, pathdata):
         if name in pathdata:
             data = pathdata[name]
             with open(os.path.join('editor', data[0] + '.py'), 'w') as _out:
-                _out.write(hkc.plugin_template)
+                _out.write(hkc.plugin_skeleton)
             initcsv(loc, data)
     return newpaths
 
@@ -138,7 +141,7 @@ def readcsv(pad):
             elif rowtype == hkc.csv_keydeftype:
                 key += 1
                 data[key] = ([x.strip() for x in rowdata])
-            else:
+            elif not rowtype.startswith('#'):
                 raise NotImplementedError("Unknown setting type '{}' in csv "
                     "file". format(rowtype))
     return settings, coldata, data
@@ -278,8 +281,15 @@ def m_user(self):
     return self.captions[NOT_IMPLEMENTED]
 
 def m_rebuild(self):
-    # TODO: call the specific plugin's buildcsv function if it exists, otherwise not possible
-    show_message(self, text="Rebuild option chosen, doesn't work yet")
+
+    csvfile = self.page.pad
+    # read data from the csv file
+    settings, coldata, _ = readcsv(csvfile)
+    if not settings:
+        return 'Settings could not be determined from', csvfile
+
+    shortcuts = self.page._keys.buildcsv(settings)
+    writecsv(csvfile, settings, coldata, shortcuts)
 
 def m_lang(self):
     """(menu) callback voor taalkeuze
