@@ -288,8 +288,9 @@ def m_rebuild(self):
     if not settings:
         return 'Settings could not be determined from', csvfile
 
-    shortcuts = self.page._keys.buildcsv(settings)
-    writecsv(csvfile, settings, coldata, shortcuts)
+    shortcuts = self.page._keys.buildcsv(settings, self)
+    if shortcuts:
+        writecsv(csvfile, settings, coldata, shortcuts)
 
 def m_lang(self):
     """(menu) callback voor taalkeuze

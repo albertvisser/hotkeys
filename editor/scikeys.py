@@ -375,7 +375,7 @@ class PropertiesFile():
             regel = ''
         return regel
 
-def buildcsv(settings):
+def buildcsv(settings, parent=None):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het csv bestand
     """

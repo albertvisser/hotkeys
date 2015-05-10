@@ -3,7 +3,7 @@
 import xml.etree.ElementTree as ET
 import collections
 
-def buildcsv(settings):
+def buildcsv(settings, parent=None):
 
     shortcuts = collections.OrderedDict()
 

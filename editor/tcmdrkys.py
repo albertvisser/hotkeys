@@ -12,7 +12,7 @@ import functools
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 
-C_SAVE, C_DEL, C_KTXT, C_CTXT ='010', '011', '018', '019'
+C_SAVE, C_DEL, C_KTXT, C_CTXT = '010', '011', '018', '019'
 M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
 PATHS = ('TC_PAD', 'UC_PAD', 'CI_PAD', 'KB_PAD', 'HK_PAD')
 
@@ -42,24 +42,67 @@ def keymods2(x):
     mods = ""
     h = x.split("+",1)
     while len(h) > 1:
-        if h[0] in ('SHIFT','ALT','CTRL'):
+        ## if h[0] in ('SHIFT','ALT','CTRL'):
+        if h[0] in ('CTRL', 'ALT','SHIFT'):
             mods += h[0][0]
         h = h[1].split("+",1)
     keyc = h[0].replace(" ","").capitalize() + extra
     if keyc == '\\':
         keyc = 'OEM_US\\|'
-    if mods != "":
-        keyc = ' + '.join((keyc,mods))
-    return keyc
+    ## keyc = ' + '.join((keyc,mods))
+    return keyc, mods
 
-def keyboardtext(root):
-    """definities uit keyboard.txt omzetten in standaard definities
+def defaultcommands(root):
+    """mapping uit totalcmd.inc omzetten in een Python dict
     """
-    data = []
+    cmdict = {'': {"oms": "no command available"}}
+    with open(root) as _in:
+        for x in _in:
+            h = x.strip()
+            if h == '' or h[0] == '[' or h[0] == ';':
+                continue
+            cm_naam, rest = h.split('=',1)
+            cm_num, cm_oms = rest.split(';',1)
+            cmdictitem = {"oms": cm_oms}
+            if int(cm_num) > 0:
+                cmdictitem["number"] = cm_num
+            if " <" in cm_naam:
+                cm_naam, argsitem = cm_naam.split(' <')
+                cmdictitem['args'] = argsitem.split('>')[0]
+            cmdict[cm_naam] = cmdictitem
+    return cmdict
+
+def usercommands(root):
+    """definities uit usercmd.ini omzetten in een Python dict compatible met die
+    voor de standaard commando's
+    """
+    ucmdict = {}
+    em_name, em_value = "", ""
+    with open(root) as _in:
+        for x in _in:
+            if x.startswith("["):
+                if em_name:
+                    ucmdict[em_name] = em_value
+                em_name = x[1:].split("]")[0] # x[1:-1] had ook gekund maar dit is safer
+                em_value = {}
+            elif x.startswith("cmd"):
+                em_value["cmd"] = x.strip().split("=")[1]
+            elif x.startswith("menu"):
+                em_value["oms"] = x.strip().split("=")[1]
+            elif x.startswith("param"):
+                em_value["args"] = x.strip().split("=")[1]
+        ucmdict[em_name] = em_value
+    return ucmdict
+
+def defaultkeys(root):
+    """keydefs lezen uit keyboard.txt - mapping maken van deze op ...
+    vooralsnog alleen omschrijving
+    """
+    data = {}
     i = 0
     ky = []
     join_keys = False
-    with open(os.path.join(root,'KEYBOARD.TXT')) as f_in:
+    with open(root) as f_in:
         temp = f_in.readlines()
     for x in temp[6:]:
         x = x.rstrip()
@@ -83,9 +126,9 @@ def keyboardtext(root):
                     if '/' in h[-1] and not h[-1].endswith('/'):
                         hlp = h[-1].split('/')
                         for it in hlp:
-                            data.append((keymods2('+'.join((h[0], it))), ky_desc))
+                            data[keymods2('+'.join((h[0], it)))] = {"oms": ky_desc}
                     else:
-                        data.append((keymods2(k), ky_desc))
+                        data[keymods2(k)] = {"oms": ky_desc}
             ky_desc = deel2
             if " or " in deel1:
                 ky = deel1.split(" or ")
@@ -98,140 +141,52 @@ def keyboardtext(root):
                 join_keys = True
             else:
                 ky = [deel1,]
-            ## print ky,ky_desc
     if len(ky) > 0:
         for k in ky:
             h = k.rsplit('+',1)
             if '/' in h[-1] and not h[-1].endswith('/'):
                 hlp = h[-1].split('/')
                 for it in hlp:
-                    data.append((keymods2('+'.join((h[0], it))), ky_desc))
+                    data[keymods2('+'.join((h[0], it)))] = {"oms": ky_desc}
             else:
-                data.append((keymods2(k), ky_desc))
-    ## f = open("keyboard_keys.txt","w")
-    ## for x,y in data:
-        ## f.write("%s:: %s\n" % (x,y))
-    ## f.close()
-    return data
-
-def defaultcommands(root):
-    """definities uit totalcmd.inc omzetten in standaard definites
-
-    geeft commandonamen en omschrijvingen terug in dictionaries met commandonummer
-    als sleutel
-    """
-    omsdict = {'': "no command available"}
-    cmdict = {'': ''}
-    with open(os.path.join(root,'TOTALCMD.INC')) as _in:
-        for x in _in:
-            h = x.strip()
-            if h == '' or h[0] == '[' or h[0] == ';':
-                continue
-            cm_naam, rest = h.split('=',1)
-            cm_num, cm_oms = rest.split(';',1)
-            if int(cm_num) > 0:
-                cmdict[cm_num] = cm_naam
-                omsdict[cm_naam] = cm_oms # c[1] is omschrijving
-    return cmdict, omsdict
-
-def usercommands(root, cmdict=None, omsdict=None):
-    """definities uit usercmd.ini omzetten in standaard definities
-
-    vult cmdict en omsdict aan en retourneert ze
-    """
-    if cmdict is None:
-        cmdict = {}
-    if omsdict is None:
-        omsdict = {}
-    s0 = ""
-    with open(os.path.join(root,"usercmd.ini")) as _in:
-        for x in _in:
-            if x.startswith("["):
-                if s0 != "":
-                    omsdict[s0] = c1
-                s0 = x[1:].split("]")[0]
-                c1 = ""
-            elif x.startswith("cmd") and c1 == "":
-                c1 = x.strip().split("=")[1]
-            elif x.startswith("menu"):
-                c1 = x.strip().split("=")[1]
-        omsdict[s0] = c1
-    ## print "na lezen usercmd.ini",datetime.datetime.today()
-    ## f = open("cmdict.txt","w")
-    ## for x in cmdict:
-        ## f.write("%s:: %s\n" % (x,cmdict[x]))
-    ## f.close()
-    ## f = open("omsdict.txt","w")
-    ## for x in omsdict:
-        ## f.write("%s:: %s\n" % (x,omsdict[x]))
-    ## f.close()
-    return cmdict,omsdict
-
-def defaultkeys(root):
-    """definities lezen uit TC_hotkeys.csv (mijn eigen omzetter - in plaats van die
-    die bij Ultra TC Editors meekomt
-    """
-    data = []
-    ## for x in file(os.path.join(root,"tc default hotkeys.hky")):
-        ## if x[0] == ";":
-            ## continue
-        ## elif "=" in x:
-            ## y = x[:-1].split("=")
-            ## #~ print y
-            ## for z in y[1:]:
-                ## #~ print z
-                ## q = z.split(" + ")
-                ## q[-1] = q[-1].replace(" ","")
-                ## if len(q) == 1:
-                    ## key = q[0].capitalize()
-                ## else:
-                    ## key = "".join([w.strip()[0] for w in q[:-1]])
-                    ## key = " + ".join((q[-1].capitalize(),key))
-                ## #~ print datakey
-                ## data.append((key,y[0]))
-    ## #~ f = open("defaultkeys.txt","w")
-    ## #~ for x,y in data:
-    ## #~     f.write("%s:: %s\n" % (x,y))
-    ## #~ f.close()
-    try:
-        rdr = csv.reader(open(os.path.join(root,"TC_hotkeys.csv"), 'r'))
-    except IOError:
-        rdr = []
-    for row in rdr:
-        data.append((row[0], row[1]))
-        ## data = [(row[0],row[1]) for row in rdr]
+                data[keymods2(k)] = {"oms": ky_desc}
     return data
 
 def userkeys(root):
-    """user key definities uit wincmd.ini lezen
+    """user key definities uit wincmd.ini lezen - mapping maken van deze op...
+    vooralsnog alleen commandonaam
     """
-    data = []
+    data = {}
     in_user = in_win = False
-    with open(os.path.join(root,"wincmd.ini")) as f_in:
-        for x in f_in:
-            x = x.rstrip()
-            y = x.split("=")
-            for h in ('+', '-', '/', '*'):
-                if y[0].endswith(h):
-                    y[0] = y[0][:-1] + 'NUM' + y[0][-1]
-            if in_user:
-                if x.startswith("["):
-                    in_user = False
-                else:
-                    data.append(y)
-            elif in_win:
-                if x.startswith("["):
-                    in_win = False
-                else:
-                    if '+' in y[0]:
-                        y[0] = 'W' + y[0]
-                    else:
-                        y[0] = 'W+' + y[0]
-                    data.append(y)
-            elif x.startswith("[Shortcuts]"):
-                in_user = True
-            elif x.startswith("[ShortcutsWin]"):
-                in_win = True
+    ## with open(os.path.join(root,"wincmd.ini")) as f_in:
+    with open(root) as f_in:
+        for line in f_in:
+            line = line.rstrip()
+            linesplit = line.split("=")
+            ## for symbol in ('+', '-', '/', '*'):
+                ## if linesplit[0].endswith(symbol):
+                    ## linesplit[0] = linesplit[0][:-1] + 'NUM' + linesplit[0][-1]
+            if line.startswith("["):
+                in_user = in_win = False
+                if line.startswith("[Shortcuts]"):
+                    in_user = True
+                elif line.startswith("[ShortcutsWin]"):
+                    in_win = True
+            elif in_user or in_win:
+                key, cmd = line.split('=')
+                try:
+                    mods, key = key.split('+')
+                except ValueError:
+                    mods = ''
+                if in_win:
+                    mods += 'W'
+                data[(key, mods)] = {'cm_name': cmd}
+            ## elif in_win:
+                ## key, cmd = line.split('=')
+                    ## if not '+' in key:
+                        ## key = '+' + key
+                    ## key = 'W' + key
+                    ## data[key] = {'cm_name': cmd}
     return data
 
 def readkeys(data):
@@ -312,11 +267,18 @@ class TCKeys(object):
         de gegevens worden omgezet in dictionaries
         die attributen zijn van deze class
         """
-        cmdict, omsdict = defaultcommands(self.ciloc)
-        self.cmdict, self.omsdict = usercommands(self.ucloc, cmdict, omsdict)
+        cmdict = defaultcommands(self.ciloc)
+        with open("cmdict.txt","w") as _out:
+            print(cmdict, file=_out)
+        ucmdict = usercommands(self.ucloc)
+        with open("usercmdict.txt","w") as _out:
+            print(self.ucmdict, file=_out)
+        # deze zijn hier aangevuld met de zaken uit usercommands
         defkeys = {}
         for x, y in defaultkeys(self.hkloc):
             defkeys[x] = self.cmdict[y].strip()
+        # de nummers die ik in y wil hebben zitten in de vierde kolom alleen dan zijn het de
+        # strings m.a.w. dit kan helemaal niet
         self.keydict = {}
         for key, oms in keyboardtext(self.ktloc):
             ## print(key, oms)
@@ -470,6 +432,8 @@ class MyPanel(gui.QFrame):
         gui.QFrame.__init__(self)
         self.parent = parent
         self.initializing = False
+        ## self.csvfile = self.parent.pad
+        ## self.settings = self.parent.settings
 
     def add_extra_attributes(self):
         self._origdata = ["", False, False, False, False, ""]
@@ -478,8 +442,12 @@ class MyPanel(gui.QFrame):
         self.newfile = self.newitem = False
         self.oldsort = -1
         self.idlist = self.actlist = self.alist = []
-        paden = [self.parent.settings[x][0] for x in PATHS]
-        self.cmdict, self.omsdict, self.defkeys, _ = readkeys(paden)
+        paden = [self.parent.settings[x][0] for x in PATHS[:4]] + [self.parent.pad]
+        ## self.cmdict, self.omsdict, self.defkeys, _ = readkeys(paden)
+        self.cmdict = defaultcommands(self.parent.settings['CI_PAD'][0])
+        self.ucmdict = usercommands(self.parent.settings['UC_PAD'][0])
+        self.defkeys = defaultkeys(self.parent.settings['KB_PAD'][0])
+        self.udefkeys = userkeys(self.parent.settings['TC_PAD'][0])
 
     def add_extra_fields(self):
         """fields showing details for selected keydef, to make editing possible
@@ -497,13 +465,6 @@ class MyPanel(gui.QFrame):
             ## ['PAUSE', 'OEM_.', 'OEM_,', 'OEM_+', 'OEM_-', 'OEM_</>', 'OEM_US`~',
             ## 'OEM_US[{', 'OEM_US]}', 'OEM_US\\|', 'OEM_US;:', "OEM_US'" + '"',
             ## 'OEM_US/?', 'OEM_FR!']
-        not_found = []
-        for key, value in self.parent.data.items():
-            if value[0] not in self.keylist:
-                ## print(value)
-                not_found.append(key)
-        for key in not_found:
-            del self.parent.data[key]
         cb = gui.QComboBox(box)
         cb.addItems(self.keylist)
         cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
@@ -524,7 +485,7 @@ class MyPanel(gui.QFrame):
                 self.cb_win = cb
 
         self.txt_cmd = gui.QLabel(self.parent.captions[C_CTXT] + " ", box)
-        self.commandlist = [x for x in self.omsdict.keys()]
+        self.commandlist = list(self.cmdict.keys()) + list(self.ucmdict.keys())
         self.commandlist.sort()
         cb = gui.QComboBox(self)
         cb.addItems(self.commandlist)
@@ -722,63 +683,67 @@ class MyPanel(gui.QFrame):
         else:
             self.on_item_selected(item, item) # , from_update=True)
 
-def buildcsv(settings):
+def buildcsv(settings, parent):
 
-    frm = MainFrame(workwith=settings)
-    shortcuts = frm.shortcuts
-    del frm
+    dlg = TCMergeDialog(parent)
+    dlg.load_files((
+        settings['KB_PAD'][0],
+        settings['CI_PAD'][0],
+        settings['UC_PAD'][0],
+        settings['TC_PAD'][0],
+        parent.page.pad))
+    ok = dlg.exec_()
+    if ok == gui.QDialog.Accepted:
+        shortcuts = parent.tempdata
+    else:
+        shortcuts = []
     return shortcuts
 
-class MainFrame(gui.QMainWindow):
+class TCMergeDialog(gui.QDialog):
+    """Dialoog om een gedocumenteerde toetscombinatie te koppelen aan een commando
 
-    def __init__(self, parent=None, workwith=None):
+    In het ene ini bestand staat namelijk toets + omschrijving en in het andere
+    command + omschrijving en de omschrijvingen hoeven uiteraard niet 100% gelijk
+    te zijn, dus moeten ze handmatig gekoppeld worden. Vandaar de ietwat misleidende
+    naam "links"
+    """
+
+    def __init__(self, parent):
         """Opbouwen van het scherm"""
-        self.files = {
-            'key': ['KEYBOARD.TXT','',self.load_key],
-            'cmd': ['TOTALCMD.INC','',self.load_cmd],
-            'usr': ['usercmd.ini','',self.load_usr],
-            'ini': ['wincmd.ini','',self.load_ini]
-            }
         self.shortcuts = {}
         self.basedir = os.getcwd()
-        gui.QMainWindow.__init__(self,parent)
+        gui.QDialog.__init__(self, parent)
         self.setWindowTitle("TCCM")
         self.resize(700,486)
-        ## home = os.path.split(__file__)[0]
-        ## self.apoicon = gui.QIcon(os.path.join(home,"apropos.ico"),gui.QBITMAP_TYPE_ICO)
-        ## self.SetIcon(self.apoicon)
 
-        self.setup_menu()
-
-        pnl = gui.QFrame(self)
-        cb = gui.QComboBox(pnl)
+        cb = gui.QComboBox(self)
         cb.setMinimumWidth(160)
         cb.currentIndexChanged[str].connect(functools.partial(self.on_choice, cb))
-        te = gui.QTextEdit(pnl)
+        te = gui.QTextEdit(self)
         te.setMaximumHeight(80)
         te.setReadOnly(True)
         self.cmb_key = cb
         self.txt_key = te
-        cb = gui.QComboBox(pnl)
+        cb = gui.QComboBox(self)
         cb.setMinimumWidth(160)
         cb.currentIndexChanged[str].connect(functools.partial(self.on_choice, cb))
-        te = gui.QTextEdit(pnl)
+        te = gui.QTextEdit(self)
         te.setMaximumHeight(80)
         te.setReadOnly(True)
         self.cmb_cmd = cb
         self.txt_cmd = te
 
-        self.btn_link = gui.QPushButton("&+ Add/Replace Link", pnl)
+        self.btn_link = gui.QPushButton("&+ Add/Replace Link", self)
         self.btn_link.clicked.connect(self.make_link)
         ## self.btn_edit = gui.QButton(pnl,-1,"&Modify Link")
         ## self.btn_edit.Bind(gui.QEVT_BUTTON,self.edit_link)
-        self.btn_delete = gui.QPushButton("&- Discard Link", pnl)
+        self.btn_delete = gui.QPushButton("&- Discard Link", self)
         self.btn_delete.clicked.connect(self.delete_link)
 
-        self.lst_links = gui.QTreeWidget(pnl)
+        self.lst_links = gui.QTreeWidget(self)
         self.lst_links.resize(660,300)
         widths = (100, 60, 180, 300)
-        self.lst_links.setHeaderLabels(("Key", "Number", "Command", "Description"))
+        self.lst_links.setHeaderLabels(("Key", "Modifier(s)","Type", "Command", "Description"))
         hdr = self.lst_links.header()
         hdr.setClickable(True)
         for indx, wid in enumerate(widths):
@@ -786,13 +751,12 @@ class MainFrame(gui.QMainWindow):
         hdr.setStretchLastSection(True)
         self.lst_links.currentItemChanged.connect(self.enable_edit)
 
-        self.btn_save = gui.QPushButton("&Save Links", pnl)
-        self.btn_save.clicked.connect(self.save_links)
-        self.btn_quit = gui.QPushButton("&Afsluiten", pnl)
-        self.btn_quit.clicked.connect(self.quit)
+        self.btn_save = gui.QPushButton("&Save Links", self)
+        self.btn_save.clicked.connect(self.accept)
+        self.btn_quit = gui.QPushButton("&Afsluiten", self)
+        self.btn_quit.clicked.connect(self.reject)
 
         self.btn_link.setEnabled(False)
-        ## self.btn_edit.setEnabled(False)
         self.btn_delete.setEnabled(False)
         self.btn_save.setEnabled(False)
 
@@ -835,140 +799,77 @@ class MainFrame(gui.QMainWindow):
         hbox.addWidget(self.btn_quit)
         hbox.addStretch()
         vbox.addLayout(hbox)
-        pnl.setLayout(vbox)
-        self.setCentralWidget(pnl)
-        ## self.Bind(gui.QEVT_CLOSE,self.afsl)
-        self.show()
+        self.setLayout(vbox)
 
-    def setup_menu(self):
-        menu_bar = self.menuBar()
-        filemenu = menu_bar.addMenu("&File")
+    def load_files(self, files):
+        """load definitions from the various input files"""
 
-        submenu = filemenu.addMenu("Open &datafiles")
-        self.menu_open = []
-        for item in [x[0] for x in self.files.values()]:
-            action = gui.QAction("Open &" + item, self)
-            action.setCheckable(True)
-            self.menu_open.append(action)
-            action.triggered.connect(functools.partial(self.load_file,
-                self.menu_open.index(action)))
-            submenu.addAction(action)
-        submenu.addSeparator()
-        submenu.addAction(gui.QAction("&All-in-one", self, triggered=self.load_all))
-
-        filemenu.addAction(gui.QAction("&Open definitions file", self,
-            triggered=self.load_links))
-        filemenu.addAction(gui.QAction("&Save definitions file ", self,
-            triggered=self.save_links))
-        filemenu.addAction(gui.QAction("&Clear definitions and reload datafiles",
-            self, triggered=self.reset))
-        filemenu.addAction(gui.QAction("&Exit", self, triggered=self.quit))
-
-    def load_file(self, fileid=None, ask=True):
-        if fileid is not None:
-            naam = self.files.keys()[fileid]
-        if ask:
-            pad = self.ask_file(naam)
-            if not pad:
-                return
-            self.files[naam][1] = pad
-            self.files[naam][2](pad)
-        self.setup()
-
-    def load_all(self,evt):
-        naam = 'ini'
-        pad = self.ask_file(naam)
-        if pad:
-            for naam in self.files.keys():
-                self.files[naam][1] = pad
-                self.files[naam][2](pad)
-            self.setup()
-
-    def ask_file(self, naam, ask=True):
-        """vraag de locatie van het bestand en haal het op
-        als alle bestanden bekend zijn de tabellen initialiseren"""
-        fn = self.files[naam][0]
-        pad = ""
-        while True:
-            pad = str(gui.QFileDialog.getExistingDirectory(self, "Selecteer"
-                " de directory met {0} erin".format(fn), self.basedir))
-            if pad:
-                self.basedir = pad
-            if not pad or os.path.exists(os.path.join(pad,fn)):
-                break
-            h = gui.QMessageBox.information(self, 'Helaas',
-                'Dit file staat niet in deze directory',
-                gui.QMessageBox.Ok | gui.QMessageBox.Cancel)
-            if h == gui.QCANCEL:
-                break
-        return pad
-
-    def load_key(self,pad):
-        self.keydict = dict(keyboardtext(pad))
+        # keycombinations
+        pad = files[0]
+        # fill list box
+        self.keydict = defaultkeys(pad) # dict(keyboardtext(pad))
         self.cmb_key.clear()
-        self.cmb_key.addItems(sorted(self.keydict.keys()))
+        test = [' '.join(x) for x in sorted(self.keydict.keys())]
+        self.cmb_key.addItems(test)
         self.cmb_key.setCurrentIndex(0)
-        ## try
-        this = self.keydict[str(self.cmb_key.itemText(self.cmb_key.currentIndex()))]
-        ## except KeyError as msg:
-            ## print msg
-        self.txt_key.setText(this)
+        test = tuple(str(self.cmb_key.itemText(self.cmb_key.currentIndex())).split())
+        # set text of first entry
+        this = self.keydict[test]
+        self.txt_key.setText(this["oms"])
 
-    def load_cmd(self,pad):
-        self.cmddict, self.omsdict = defaultcommands(pad)
-        self.cmds = dict([reversed(x) for x in self.cmddict.items()])
+        # commands
+        pad = files[1]
+        # fill list box
+        self.cmddict = defaultcommands(pad)
+        ## self.cmds = dict([reversed(x) for x in self.cmddict.items()])
         self.cmb_cmd.clear()
-        self.cmb_cmd.addItems(sorted(self.omsdict.keys()))
-        self.cmb_cmd.insertItems(0, '')
+        test = sorted(self.cmddict.keys())
+        self.cmb_cmd.addItems(test)
+        ## self.cmb_cmd.insertItems(0, '')
         self.cmb_cmd.setCurrentIndex(0)
-        self.txt_cmd.setText('no command available') #self.omsdict[self.cmb_cmd.GetValue()])
+        ## # set text of first entry
+        ## self.txt_cmd.setText('no command available') #self.omsdict[self.cmb_cmd.GetValue()])
 
-    def load_usr(self,pad):
-        self.usrdict, self.uomsdict = usercommands(pad)
+        ## # user commands (should be added to right list box?)
+        ## self.usrdict, self.uomsdict = usercommands(files[2])
 
-    def load_ini(self,pad):
-        self.usrkeys = dict(userkeys(pad))
+        ## # user defined keys (should be added to left list box?)
+        ## self.usrkeys = dict(userkeys(files[3]))
 
-    def setup(self):
-        if not all([y[1] for y in self.files.values()]):
-            return
-        self.lst_links.clear()
-        self.btn_link.setEnabled(True)
         self.data = []
 
-    def load_links(self,evt):
-        fname = gui.QFileDialog.getOpenFileName(self, "Select definition file",
-            self.basedir, "csv files (*.csv)")
-            ## defaultFile="TC_hotkeys.csv",
-        if fname:
-            self.lst_links.clear()
-            self.btn_link.setEnabled(True)
-            rdr = csv.reader(open(fname,'r'))
-            for row in rdr:
-                if row[0] != 'Keydef':
-                    continue
-                new = gui.QTreeWidgetItem(row[1:])
-                self.lst_links.addTopLevelItem(new)
-                ## ix = self.lst_links.InsertStringItem(sys.maxint,row[0])
-                ## self.lst_links.SetStringItem(ix,1,row[1])
-                ## self.lst_links.SetStringItem(ix,2,row[2])
-                ## self.lst_links.SetStringItem(ix,3,row[3])
-            self.btn_save.setEnabled(True)
+        # keydefs from csv file
+        # nogmaals: je moet hier een ander bestand lezen; ik wil hier alleen de defaults
+        # en het csv file bevat ook de wijzigingen
+        self.lst_links.clear()
+        self.btn_link.setEnabled(True)
+        rdr = csv.reader(open(files[4], 'r'))
+        for row in rdr:
+            if row[0] != 'Keydef':
+                continue
+            new = gui.QTreeWidgetItem(row[1:])
+            self.lst_links.addTopLevelItem(new)
+            ## ix = self.lst_links.InsertStringItem(sys.maxint,row[0])
+            ## self.lst_links.SetStringItem(ix,1,row[1])
+            ## self.lst_links.SetStringItem(ix,2,row[2])
+            ## self.lst_links.SetStringItem(ix,3,row[3])
+        self.btn_save.setEnabled(True)
 
     def on_choice(self, cb, text):
         text = str(text)
         ## self.btn_edit.setEnabled(False)
         self.btn_delete.setEnabled(False)
         if cb == self.cmb_key:
+            test = tuple(text.split())
             try:
-                self.txt_key.setText(self.keydict[text])
+                self.txt_key.setText(self.keydict[test]["oms"])
             except KeyError:
-                pass
+                self.txt_key.setText('no key description available')
         elif cb == self.cmb_cmd:
             try:
-                self.txt_cmd.setText(self.omsdict[text])
+                self.txt_cmd.setText(self.cmddict[text]["oms"])
             except KeyError:
-                self.txt_cmd.setText('no command available')
+                self.txt_cmd.setText('no command description available')
 
     def get_entry(self):
         gekozen_key = str(self.cmb_key.currentText())
@@ -1004,7 +905,7 @@ class MainFrame(gui.QMainWindow):
         self.btn_save.setEnabled(True)
 
     def enable_edit(self, item, previtem):
-        gekozen_key = str(item.text(0))
+        gekozen_key = ' '.join((str(item.text(0)), str(item.text(1))))
         gekozen_cmd = str(item.text(2))
         self.cmb_key.setCurrentIndex(sorted(self.keydict.keys()).index(gekozen_key)) # setEditText(gekozen_key)
         # let op: het volgende gaat niet werken als menu optie 1 nog niet is uitgevoerd
@@ -1038,7 +939,12 @@ class MainFrame(gui.QMainWindow):
             ## self.btn_edit.Disable()
             self.btn_delete.setEnabled(False)
 
-    def save_links(self,evt):
+    def reset_all(self,evt):
+        self.lst_links.clear()
+        self.btn_link.setEnabled(True)
+        self.data = []
+
+    def accept(self):
         # don't save to file; just assign to a global variable
         ## fname = gui.QFileDialog.getSaveFileName(self, "Save definition file",
             ## os.path.join(self.basedir, "TC_hotkeys.csv"), "csv files (*.csv)")
@@ -1047,13 +953,10 @@ class MainFrame(gui.QMainWindow):
             ## for ix in range(self.lst_links.topLevelItemCount()):
                 ## item = self.lst_links.topLevelItem(ix)
                 ## wrtr.writerow([str(item.text(x)) for x in range(4)])
+        shortcuts = {}
         for ix in range(self.lst_links.topLevelItemCount()):
             item = self.lst_links.topLevelItem(ix)
             self.shortcuts[ix] = [str(item.text(x)) for x in range(4)]
-
-    def reset(self,evt):
-        self.setup()
-
-    def quit(self,evt):
-        self.close()
+        self.parent().tempdata = shortcuts
+        gui.QDialog.accept(self)
 
