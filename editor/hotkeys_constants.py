@@ -22,7 +22,8 @@ C_DFLT, C_RDEF = '005', '006'
 M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
 C_SAVE, C_DEL, C_EXIT, C_KTXT, C_CTXT ='010', '011', '012', '018', '019'
 M_APP, M_READ, M_SAVE, M_RBLD, M_EXIT = '200', '201', '202', '203', '209'
-M_SETT, M_LOC, M_LANG, M_HELP, M_ABOUT = '210', '211', '212', '290', '299'
+M_SETT, M_LOC, M_LANG, M_TOOL = '210', '211', '212', '213'
+M_HELP, M_ABOUT = '290', '299'
 NOT_IMPLEMENTED = '404'
 
 csv_linetypes = ['Setting', 'Title', 'Width', 'Seq', 'is_type', 'Keydef']

@@ -33,6 +33,8 @@
 063 &Verwijder aangegeven programma('s)
 066 &Filter uit
 068 &Filter aan
+076 Voeg instelling &toe
+077 &Verwijder aangegeven instelling(en)
 
 # title indicator
 017 (aangepast)
@@ -49,6 +51,9 @@
 070 en waar deze staan (in de vorm van csv bestanden)
 071 Een hotkey viewer/editor
 072 oorspronkelijk gebouwd voor Total Commander, / uitgebreid om te gebruiken / bij al je favoriete tools
+073 Definieer extra instellingen (bijv.. plaats van toetsdefinitie bestanden) voor {}
+074 Naam
+075 Waarde / Beschrijving
 
 # save dialog
 020 Eerder gekozen definitie is gewijzigd - nu opslaan?
@@ -81,6 +86,7 @@
 064 Geef een naam op voor het nieuwe programma
 065 Wil je de aangekruiste programma's echt verwijderen?
 067 {} items gevonden
+068 Wil je de aangekruiste instellingen echt verwijderen?
 
 # bestandsnamen
 029 Wincmd.ini
@@ -122,6 +128,7 @@
 210 &Instellingen
 211 &Bestandslocaties
 212 &Taal
+212 &Programmaspecifiek
 290 &Help
 299 &Over...
 

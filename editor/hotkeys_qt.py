@@ -292,6 +292,25 @@ def m_rebuild(self):
     if shortcuts:
         writecsv(csvfile, settings, coldata, shortcuts)
 
+def m_tool(self):
+    """define tool-specific settings
+
+    TODO: column settings toevoegen
+    """
+    ## text = ""
+    ## if len(self.page.settings) == 4: # minimum  amount
+        ## ok = gui.QMessageBox.question(self, self.title,
+            ## "Use tool-specific settings?",
+            ## gui.QMessageBox.Yes | gui.QMessageBox.No, gui.QMessageBox.No)
+        ## if ok != gui.QMessageBox.Yes:
+            ## return
+    dlg = ExtraSettingsDialog(self).exec_()
+    if dlg == gui.QDialog.Accepted:
+        csvfile = self.page.pad
+        _, coldata, data = readcsv(csvfile)
+        writecsv(csvfile, self.page.settings, coldata, data)
+
+
 def m_lang(self):
     """(menu) callback voor taalkeuze
 
@@ -426,18 +445,144 @@ class SetupDialog(gui.QDialog):
             int(self.c_rebuild.isChecked()), int(self.c_redef.isChecked())]
         gui.QDialog.accept(self)
 
+class ExtraSettingsDialog(gui.QDialog):
+    """dialoog voor invullen tool specifieke instellingen
+    """
+    def __init__(self, parent):
+        self.parent = parent
+        gui.QDialog.__init__(self, parent)
+        ## self.resize(680, 400)
+
+        self.sizer = gui.QVBoxLayout()
+        ## self.sizer.addStretch()
+        text = self.parent.captions['073'].format(
+            self.parent.page.settings["PanelName"][0])
+        hsizer = gui.QHBoxLayout()
+        label = gui.QLabel(text, self)
+        hsizer.addStretch()
+        hsizer.addWidget(label)
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+
+        pnl = gui.QFrame(self)
+        self.scrl = gui.QScrollArea(self)
+        self.scrl.setWidget(pnl)
+        self.scrl.setWidgetResizable(True)
+        self.bar = self.scrl.verticalScrollBar()
+        self.gsizer = gui.QGridLayout()
+        rownum = colnum = 0
+        colnum += 1
+        self.gsizer.addWidget(gui.QLabel(self.parent.captions['074'], self),
+            rownum, colnum, alignment = core.Qt.AlignHCenter | core.Qt.AlignVCenter)
+        colnum += 1
+        self.gsizer.addWidget(gui.QLabel(self.parent.captions['075'], self),
+            rownum, colnum, alignment = core.Qt.AlignVCenter)
+        self.rownum = rownum
+        self.data, self.checks = [], []
+        for name, value in self.parent.page.settings.items():
+            if name not in hkc.csv_settingnames:
+                self.add_row(name, value)
+        box = gui.QVBoxLayout()
+        box.addLayout(self.gsizer)
+        box.addStretch()
+        pnl.setLayout(box)
+        self.sizer.addWidget(self.scrl)
+
+        buttonbox = gui.QDialogButtonBox()
+        # should be: add setting
+        btn = buttonbox.addButton(self.parent.captions['076'],
+            gui.QDialogButtonBox.ActionRole)
+        btn.clicked.connect(self.add_setting)
+        # should be: remove checked settings
+        btn = buttonbox.addButton(self.parent.captions['077'],
+            gui.QDialogButtonBox.ActionRole)
+        btn.clicked.connect(self.remove_settings)
+        btn = buttonbox.addButton(gui.QDialogButtonBox.Ok)
+        btn = buttonbox.addButton(gui.QDialogButtonBox.Cancel)
+        buttonbox.accepted.connect(self.accept)
+        buttonbox.rejected.connect(self.reject)
+        hsizer = gui.QHBoxLayout()
+        hsizer.addStretch()
+        hsizer.addWidget(buttonbox)
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+        ## self.sizer.addStretch()
+        self.setLayout(self.sizer)
+
+    def add_row(self, name='', value=''):
+        if value:
+            value, desc = value
+        else:
+            desc = ''
+        self.rownum += 1
+        colnum = 0
+        check = gui.QCheckBox(self)
+        self.gsizer.addWidget(check, self.rownum, colnum)
+        self.checks.append(check)
+        colnum += 1
+        w_name = gui.QLineEdit(name, self)
+        w_name.setFixedWidth(88)
+        if name:
+            w_name.setReadOnly(True)
+        ## w_name.setMaxLength(50)
+        self.gsizer.addWidget(w_name, self.rownum, colnum)
+        colnum += 1
+        w_value = gui.QLineEdit(value, self)
+        self.gsizer.addWidget(w_value, self.rownum, colnum)
+        self.rownum += 1
+        w_desc = gui.QLineEdit(desc, self)
+        self.gsizer.addWidget(w_desc, self.rownum, colnum)
+        self.data.append((w_name, w_value, w_desc))
+
+    def delete_row(self, rownum):
+        check = self.checks[rownum]
+        w_name, w_value, w_desc = self.data[rownum]
+        for widget in check, w_name, w_value, w_desc:
+            self.gsizer.removeWidget(widget)
+            widget.close() # destroy()
+        self.checks.pop(rownum)
+        self.data.pop(rownum)
+
+    def add_setting(self):
+        """nieuwe rij aanmaken in self.gsizer"""
+        self.add_row()
+
+    def remove_settings(self):
+        """alle aangevinkte items verwijderen uit self.gsizer"""
+        test = [x.isChecked() for x in self.checks]
+        checked = [x for x, y in enumerate(test) if y]
+        if any(test):
+            ok = gui.QMessageBox.question(self, self.parent.title,
+                self.parent.captions['078'],
+                gui.QMessageBox.Yes | gui.QMessageBox.No)
+            if gui.QMessageBox.Yes:
+                for row in reversed(checked):
+                    self.delete_row(row)
+                ## self.update()
+
+    def accept(self):
+        settings = []
+        settingsdict = {}
+        for w_name, w_value, w_desc in self.data:
+            settingsdict[w_name.text()] = (w_value.text(), w_desc.text())
+        for setting in self.parent.page.settings:
+            if setting not in hkc.csv_settingnames:
+                del self.parent.page.settings[setting]
+        self.parent.page.settings.update(settingsdict)
+        gui.QDialog.accept(self)
+
 class FilesDialog(gui.QDialog):
     """dialoog met meerdere FileBrowseButtons
 
     voor het instellen van de bestandslocaties
     """
-    def __init__(self, parent): #, title, locations, captions):
+    def __init__(self, parent):
         self.parent = parent
         gui.QDialog.__init__(self, parent)
         self.resize(680, 400)
 
         self.sizer = gui.QVBoxLayout()
-        self.sizer.addStretch()
+        ## self.sizer.addStretch()
         text = '\n'.join((self.parent.captions['069'], self.parent.captions['070']))
         hsizer = gui.QHBoxLayout()
         label = gui.QLabel(text, self)
@@ -487,7 +632,7 @@ class FilesDialog(gui.QDialog):
         hsizer.addWidget(buttonbox)
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
-        self.sizer.addStretch()
+        ## self.sizer.addStretch()
         self.setLayout(self.sizer)
 
     def add_row(self, name, path=''):
@@ -954,6 +1099,7 @@ class MainFrame(gui.QMainWindow):
                 )),
             (hkc.M_SETT, (
                 (hkc.M_LOC, (m_loc, 'Ctrl+F')),
+                (hkc.M_TOOL, (m_tool, '')),
                 (hkc.M_LANG, (m_lang, 'Ctrl+L')),
                 )),
             (hkc.M_HELP, (

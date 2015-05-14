@@ -33,6 +33,8 @@
 063 &Remove Checked Programs
 066 &Filter off
 068 &Filter
+076 &Add Setting
+077 &Remove Checked Settings
 
 # title indicator
 017 (modified)
@@ -48,7 +50,10 @@
 069 Using this dialog you can determine for which programs keyboard definitions will be shown
 070 and where these are located (in the form of csv files)
 071 A hotkey viewer/editor
-072 originally built for Total Commander, / extended for use with / all your favourite applications''
+072 originally built for Total Commander, / extended for use with / all your favourite applications'
+073 Define extra settings (e.g. location of keyboard config files) for {}
+074 Name
+075 Value / Description
 
 # save dialog
 020 Previously selected definition was changed - save now?
@@ -81,6 +86,7 @@
 064 Enter a naam for the new program
 065 Are you sure you want to remove the checked programs?
 067 {} items found
+078 Are you sure you want to remove the checked settings?
 
 # file names
 029 wincmd.ini
@@ -122,6 +128,7 @@
 210 &Settings
 211 &File locations
 212 &Language
+213 &Tool Specific
 290 &Help
 299 &About
 
