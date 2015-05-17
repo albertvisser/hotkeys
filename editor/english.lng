@@ -35,6 +35,8 @@
 068 &Filter
 076 &Add Setting
 077 &Remove Checked Settings
+084 &Add Column
+085 &Remove Checked Columns
 
 # title indicator
 017 (modified)
@@ -54,6 +56,11 @@
 073 Define extra settings (e.g. location of keyboard config files) for {}
 074 Name
 075 Value / Description
+079 Define column settings for {}
+080 Title
+081 Width
+082 Is "Redefined" Indicator?
+086 Sequence on screen
 
 # save dialog
 020 Previously selected definition was changed - save now?
@@ -87,6 +94,7 @@
 065 Are you sure you want to remove the checked programs?
 067 {} items found
 078 Are you sure you want to remove the checked settings?
+083 Are you sure you want to remove the checked column settings?
 
 # file names
 029 wincmd.ini
@@ -129,6 +137,7 @@
 211 &File locations
 212 &Language
 213 &Tool Specific
+214 &Columns
 290 &Help
 299 &About
 

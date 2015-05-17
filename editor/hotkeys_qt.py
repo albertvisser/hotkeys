@@ -77,6 +77,55 @@ def change_language(oldlang, lang, inifile):
                 line = line.replace(oldlang, lang)
             _out.write(line)
 
+def read_columntitledata(self):
+    """read the current language file and extract the already defined column headers
+    """
+    column_textids = []
+    column_names = []
+    last_textid = ''
+    in_section = False
+
+    with open(os.path.join(hkc.HERE, self.parent.ini["lang"])) as f_in:
+        for line in f_in:
+            line = line.strip()
+            if line == '':
+                continue
+            elif line.startswith('#'):
+                if in_section:
+                    in_section = False
+                elif 'Keyboard mapping' in line:
+                    in_section = True
+                continue
+            test = line.split()
+            if test[0] > last_textid and test[0] < '100':
+                    last_textid = test[0]
+            if in_section:
+                column_textids.append(test[0])
+                column_names.append(test[1])
+    return column_textids, column_names, last_textid
+
+def add_columntitledata(newdata):
+    """add the new column title(s) to all language files
+
+    input is a list of tuples (textid, text)"""
+    ## pass
+    ## # TODO: actually build this function
+    choices = [os.path.join(hkc.HERE, x) for x in os.listdir(hkc.HERE)
+        if os.path.splitext(x)[1] == ".lng"]
+    for choice in choices:
+        choice_o = choice + '~'
+        shutil.copyfile(choice, choice_o)
+        in_section = False
+        with open(choice_o) as f_in, open(choice, 'w') as f_out:
+            for line in f_in:
+                if line.startswith('# Keyboard mapping'):
+                    in_section = True
+                elif in_section and line.strip() == '':
+                    for textid, text in newdata:
+                        f_out.write('{} {}\n'.format(textid, text))
+                    in_section = False
+                f_out.write(line)
+
 def update_paths(paths, pathdata):
     """read the paths to the csv files from the data returned by the dialog
     if applicable also write a skeleton plugin file
@@ -294,22 +343,31 @@ def m_rebuild(self):
 
 def m_tool(self):
     """define tool-specific settings
-
-    TODO: column settings toevoegen
     """
-    ## text = ""
-    ## if len(self.page.settings) == 4: # minimum  amount
-        ## ok = gui.QMessageBox.question(self, self.title,
-            ## "Use tool-specific settings?",
-            ## gui.QMessageBox.Yes | gui.QMessageBox.No, gui.QMessageBox.No)
-        ## if ok != gui.QMessageBox.Yes:
-            ## return
     dlg = ExtraSettingsDialog(self).exec_()
     if dlg == gui.QDialog.Accepted:
         csvfile = self.page.pad
         _, coldata, data = readcsv(csvfile)
         writecsv(csvfile, self.page.settings, coldata, data)
 
+def m_col(self):
+    """define tool-specific settings: column properties
+    """
+    print(self.page.column_info)
+    column_count = len(self.page.column_info)
+    print(column_count)
+    dlg = ColumnSettingsDialog(self).exec_()
+    if dlg == gui.QDialog.Accepted:
+        print('dialog was accepted')
+        print(self.page.column_info)
+        print(column_count)
+        csvfile = self.page.pad
+        settings, _, data = readcsv(csvfile)
+        writecsv(csvfile, settings, self.page.column_info, data)
+        if len(self.page.column_info) > column_count:
+            gui.QMessageBox.information(self, self.captions['000'],
+                "You have now defined more columns for this tool than are in the "
+                "keydefs. Reloading them will result in an error.")
 
 def m_lang(self):
     """(menu) callback voor taalkeuze
@@ -334,7 +392,7 @@ def m_about(self):
     """
     text = '\n'.join(self.captions['057'].format(self.captions['071'],
         hkc.VRS, hkc.AUTH, self.captions['072']).split(' / '))
-    info = gui.QMessageBox.information(self,  self.captions['000'], text)
+    info = gui.QMessageBox.information(self, self.captions['000'], text)
 
 def m_exit(self):
     """(menu) callback om het programma direct af te sluiten"""
@@ -444,6 +502,162 @@ class SetupDialog(gui.QDialog):
         self.parent.data = [self.t_program.text(), self.t_title.text(),
             int(self.c_rebuild.isChecked()), int(self.c_redef.isChecked())]
         gui.QDialog.accept(self)
+
+class ColumnSettingsDialog(gui.QDialog):
+    """dialoog voor invullen tool specifieke instellingen
+    """
+    def __init__(self, parent):
+        self.parent = parent
+        gui.QDialog.__init__(self, parent)
+        ## self.resize(680, 400)
+
+        self.sizer = gui.QVBoxLayout()
+        ## self.sizer.addStretch()
+        text = self.parent.captions['079'].format(
+            self.parent.page.settings["PanelName"][0])
+        hsizer = gui.QHBoxLayout()
+        label = gui.QLabel(text, self)
+        hsizer.addStretch()
+        hsizer.addWidget(label)
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+
+        pnl = gui.QFrame(self)
+        self.scrl = gui.QScrollArea(self)
+        self.scrl.setWidget(pnl)
+        self.scrl.setWidgetResizable(True)
+        self.bar = self.scrl.verticalScrollBar()
+        self.gsizer = gui.QGridLayout()
+        rownum = colnum = 0
+        colnum += 1
+        self.gsizer.addWidget(gui.QLabel(self.parent.captions['080'], self),
+            rownum, colnum, alignment = core.Qt.AlignHCenter | core.Qt.AlignVCenter)
+        colnum += 1
+        self.gsizer.addWidget(gui.QLabel(self.parent.captions['081'], self),
+            rownum, colnum, alignment = core.Qt.AlignVCenter)
+        colnum += 1
+        self.gsizer.addWidget(gui.QLabel(self.parent.captions['082'], self),
+            rownum, colnum, alignment = core.Qt.AlignVCenter)
+        colnum += 1
+        self.gsizer.addWidget(gui.QLabel(self.parent.captions['086'], self),
+            rownum, colnum, alignment = core.Qt.AlignVCenter)
+        self.rownum = rownum
+        self.data, self.checks = [], []
+        self.col_textids, self.col_names, self.last_textid = read_columntitledata(
+            self)
+        for item in self.parent.page.column_info:
+            self.add_row(*item)
+        box = gui.QVBoxLayout()
+        box.addLayout(self.gsizer)
+        box.addStretch()
+        pnl.setLayout(box)
+        self.sizer.addWidget(self.scrl)
+
+        buttonbox = gui.QDialogButtonBox()
+        # should be: add setting
+        btn = buttonbox.addButton(self.parent.captions['084'],
+            gui.QDialogButtonBox.ActionRole)
+        btn.clicked.connect(self.add_column)
+        # should be: remove checked settings
+        btn = buttonbox.addButton(self.parent.captions['085'],
+            gui.QDialogButtonBox.ActionRole)
+        btn.clicked.connect(self.remove_columns)
+        btn = buttonbox.addButton(gui.QDialogButtonBox.Ok)
+        btn = buttonbox.addButton(gui.QDialogButtonBox.Cancel)
+        buttonbox.accepted.connect(self.accept)
+        buttonbox.rejected.connect(self.reject)
+        hsizer = gui.QHBoxLayout()
+        hsizer.addStretch()
+        hsizer.addWidget(buttonbox)
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+        ## self.sizer.addStretch()
+        self.setLayout(self.sizer)
+
+    def exec_(self):
+        if self.last_textid == '099':
+            gui.QMessageBox.information(self, self.parent.title, "Can't perform "
+                "this function: no language text identifiers below 100 left")
+            self.reject()
+        else:
+            return super().exec_()
+
+    def accept(self):
+        column_info, new_titles = [], []
+        for w_name, w_width, w_colno, w_flag in self.data:
+            name = w_name.currentText()
+            if name in self.col_names:
+                name = self.col_textids[self.col_names.index(name)]
+            else:
+                self.last_textid = "{:0>3}".format(int(self.last_textid) + 1)
+                new_titles.append((self.last_textid, name))
+                name = self.last_textid
+            column_info.append([name, int(w_width.text()), int(w_colno.text()) - 1,
+                w_flag.isChecked()])
+        if new_titles:
+            add_columntitledata(new_titles)
+        print('transferring column info')
+        self.parent.page.column_info = column_info
+        gui.QDialog.accept(self)
+
+    def add_row(self, name='', width='', colno='', is_flag=False):
+        self.rownum += 1
+        colnum = 0
+        check = gui.QCheckBox(self)
+        self.gsizer.addWidget(check, self.rownum, colnum)
+        self.checks.append(check)
+        colnum += 1
+        w_name = gui.QComboBox(self)
+        w_name.addItems(self.col_names)
+        ## w_name.setFixedWidth(88)
+        w_name.setEditable(True)
+        if name:
+            w_name.setCurrentIndex(self.col_textids.index(name))
+        else:
+            w_name.clearEditText()
+        ## w_name.setMaxLength(50)
+        self.gsizer.addWidget(w_name, self.rownum, colnum)
+        colnum += 1
+        w_width = gui.QLineEdit(str(width), self)
+        self.gsizer.addWidget(w_width, self.rownum, colnum)
+        colnum += 1
+        w_flag = gui.QCheckBox(self)
+        w_flag.setChecked(is_flag)
+        self.gsizer.addWidget(w_flag, self.rownum, colnum, core.Qt.AlignHCenter)
+        colnum += 1
+        val = self.rownum if colno == '' else colno + 1
+        w_colno = gui.QLineEdit(str(val), self)
+        w_colno.setFixedWidth(16)
+        w_colno.setReadOnly(True)
+        self.gsizer.addWidget(w_colno, self.rownum, colnum, core.Qt.AlignHCenter)
+        self.data.append((w_name, w_width, w_colno, w_flag))
+
+    def delete_row(self, rownum):
+        check = self.checks[rownum]
+        w_name, w_width, w_colno, w_flag = self.data[rownum]
+        for widget in check, w_name, w_width, w_colno, w_flag:
+            self.gsizer.removeWidget(widget)
+            widget.close() # destroy()
+        self.checks.pop(rownum)
+        self.data.pop(rownum)
+
+    def add_column(self):
+        """nieuwe rij aanmaken in self.gsizer"""
+        self.add_row()
+
+    def remove_columns(self):
+        """alle aangevinkte items verwijderen uit self.gsizer"""
+        test = [x.isChecked() for x in self.checks]
+        checked = [x for x, y in enumerate(test) if y]
+        if any(test):
+            ok = gui.QMessageBox.question(self, self.parent.title,
+                self.parent.captions['083'],
+                gui.QMessageBox.Yes | gui.QMessageBox.No)
+            if gui.QMessageBox.Yes:
+                for row in reversed(checked):
+                    self.delete_row(row)
+        return
+
 
 class ExtraSettingsDialog(gui.QDialog):
     """dialoog voor invullen tool specifieke instellingen
@@ -887,7 +1101,7 @@ class EmptyPanel(HotkeyPanel):
     def savekeys(self):
         pass
 
-class ChoiceBook(gui.QFrame): #Widget):
+class ChoiceBook(gui.QFrame):
     """ Als QTabwidget, maar met selector in plaats van tabs
     """
     def __init__(self, parent, plugins):
@@ -1100,6 +1314,7 @@ class MainFrame(gui.QMainWindow):
             (hkc.M_SETT, (
                 (hkc.M_LOC, (m_loc, 'Ctrl+F')),
                 (hkc.M_TOOL, (m_tool, '')),
+                (hkc.M_COL, (m_col, '')),
                 (hkc.M_LANG, (m_lang, 'Ctrl+L')),
                 )),
             (hkc.M_HELP, (

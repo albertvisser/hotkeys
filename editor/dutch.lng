@@ -35,6 +35,8 @@
 068 &Filter aan
 076 Voeg instelling &toe
 077 &Verwijder aangegeven instelling(en)
+084 Voeg kolom &toe
+085 &Verwijder aangegeven kolommen
 
 # title indicator
 017 (aangepast)
@@ -54,6 +56,11 @@
 073 Definieer extra instellingen (bijv.. plaats van toetsdefinitie bestanden) voor {}
 074 Naam
 075 Waarde / Beschrijving
+079 Definieer kolom instellingen voor {}
+080 Titel
+081 Breedte
+082 Is "Aangepast" indicator?
+086 Volgorde op scherm
 
 # save dialog
 020 Eerder gekozen definitie is gewijzigd - nu opslaan?
@@ -87,6 +94,7 @@
 065 Wil je de aangekruiste programma's echt verwijderen?
 067 {} items gevonden
 068 Wil je de aangekruiste instellingen echt verwijderen?
+083 Wil je de aangekruiste kolominstellingen echt verwijderen?
 
 # bestandsnamen
 029 Wincmd.ini
@@ -128,7 +136,8 @@
 210 &Instellingen
 211 &Bestandslocaties
 212 &Taal
-212 &Programmaspecifiek
+213 &Programmaspecifiek
+214 &Kolommen
 290 &Help
 299 &Over...
 
