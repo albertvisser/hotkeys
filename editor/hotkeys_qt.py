@@ -525,6 +525,7 @@ class ColumnSettingsDialog(gui.QDialog):
         pnl = gui.QFrame(self)
         self.scrl = gui.QScrollArea(self)
         self.scrl.setWidget(pnl)
+        self.scrl.setAlignment(core.Qt.AlignBottom)
         self.scrl.setWidgetResizable(True)
         self.bar = self.scrl.verticalScrollBar()
         self.gsizer = gui.QGridLayout()
@@ -631,6 +632,9 @@ class ColumnSettingsDialog(gui.QDialog):
         w_colno.setReadOnly(True)
         self.gsizer.addWidget(w_colno, self.rownum, colnum, core.Qt.AlignHCenter)
         self.data.append((w_name, w_width, w_colno, w_flag))
+        vbar = self.scrl.verticalScrollBar()
+        vbar.setMaximum(vbar.maximum() + 31)
+        vbar.setValue(vbar.maximum())
 
     def delete_row(self, rownum):
         check = self.checks[rownum]
@@ -747,6 +751,9 @@ class ExtraSettingsDialog(gui.QDialog):
         w_desc = gui.QLineEdit(desc, self)
         self.gsizer.addWidget(w_desc, self.rownum, colnum)
         self.data.append((w_name, w_value, w_desc))
+        vbar = self.scrl.verticalScrollBar()
+        vbar.setMaximum(vbar.maximum() + 62)
+        vbar.setValue(vbar.maximum())
 
     def delete_row(self, rownum):
         check = self.checks[rownum]
@@ -861,9 +868,9 @@ class FilesDialog(gui.QDialog):
         self.paths.append((name, browse))
         if self.data:
             self.pathdata[name] = self.data
-        ## self.scrl.ensureVisible(pnl.height(), pnl.width(), 0, 0)
-        ## self.scrl.ensureWidgetVisible(check)
-        ## self.scrl.update()
+        vbar = self.scrl.verticalScrollBar()
+        vbar.setMaximum(vbar.maximum() + 52)
+        vbar.setValue(vbar.maximum())
 
     def delete_row(self, rownum):
         check = self.checks[rownum]
