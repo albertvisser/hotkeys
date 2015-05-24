@@ -85,7 +85,7 @@ def read_columntitledata(self):
     last_textid = ''
     in_section = False
 
-    with open(os.path.join(hkc.HERE, self.parent.ini["lang"])) as f_in:
+    with open(os.path.join(hkc.HERELANG, self.parent.ini["lang"])) as f_in:
         for line in f_in:
             line = line.strip()
             if line == '':
@@ -110,7 +110,7 @@ def add_columntitledata(newdata):
     input is a list of tuples (textid, text)"""
     ## pass
     ## # TODO: actually build this function
-    choices = [os.path.join(hkc.HERE, x) for x in os.listdir(hkc.HERE)
+    choices = [os.path.join(hkc.HERELANG, x) for x in os.listdir(hkc.HERELANG)
         if os.path.splitext(x)[1] == ".lng"]
     for choice in choices:
         choice_o = choice + '~'
@@ -375,7 +375,7 @@ def m_lang(self):
     past de settings aan en leest het geselecteerde language file
     """
     # bepaal welke language files er beschikbaar zijn
-    choices = [x for x in os.listdir(hkc.HERE) if os.path.splitext(x)[1] == ".lng"]
+    choices = [x for x in os.listdir(hkc.HERELANG) if os.path.splitext(x)[1] == ".lng"]
     # bepaal welke er momenteel geactiveerd is
     oldlang = self.ini['lang']
     indx = choices.index(oldlang) if oldlang in choices else 0
@@ -1357,7 +1357,7 @@ class MainFrame(gui.QMainWindow):
 
     def readcaptions(self, lang):
         self.captions = {}
-        with open(os.path.join(hkc.HERE, lang)) as f_in:
+        with open(os.path.join(hkc.HERELANG, lang)) as f_in:
             for x in f_in:
                 if x[0] == '#' or x.strip() == "":
                     continue

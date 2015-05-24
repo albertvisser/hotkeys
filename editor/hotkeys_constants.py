@@ -4,6 +4,7 @@ import os
 import sys
 
 HERE = os.path.abspath(os.path.dirname(__file__))
+HERELANG = os.path.join(HERE, 'languages')
 ## try:
     ## HOME = os.environ('HOME')
 ## except KeyError:
