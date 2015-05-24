@@ -30,6 +30,5 @@ Requirements
 ------------
 
 - Python
-- PyQt4 for the current (Python 3) version
-- wxPython for the previous version (not up to date with the latest developments)
+- PyQt4 for the GUI part
 - the built in csv module for creating and reading the csv files
