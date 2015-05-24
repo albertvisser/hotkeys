@@ -1,7 +1,8 @@
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import editor.dckeys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))))
+import editor.plugin_examples.dckeys
 
 def test_buildcsv():
     editor.dckeys.buildcsv(csvfile='test_dckeys.csv')

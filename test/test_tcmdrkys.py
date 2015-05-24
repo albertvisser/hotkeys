@@ -1,5 +1,7 @@
 import os
-import tcmdrkys as tc
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))))
+import editor.plugin_examples.tcmdrkys as tc
 from logbook import Logger, FileHandler
 logger = Logger(__file__)
 

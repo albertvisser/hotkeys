@@ -1,10 +1,11 @@
 import sys
 ## sys.path.append('/home/albert/projects/hotkeys')
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))))
 import pprint
 import tarfile
-import editor.scikeys as scikeys
+import editor.plugin_examples.scikeys as scikeys
 
 def test_read_commands():
     menu_commands, command_list = scikeys.read_commands(
