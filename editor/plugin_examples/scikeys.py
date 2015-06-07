@@ -4,6 +4,7 @@ usage: scikeys.py <csvfile>
 """
 from __future__ import print_function
 import os
+import sys
 import collections                  # tbv defaultdict
 import xml.etree.ElementTree as et  # for xml parsing
 import bs4 as bs                    # import BeautifulSoup for html parsing
@@ -55,12 +56,13 @@ def read_commands(path):
         command, text = [tag.string for tag in row.find_all('td')]
         menu_commands[command] = text
 
-    command_list = {}
+    command_list, command_names = {}, {}
     for row in internals.find_all('tr'):
         command, text, description = [tag.string for tag in row.find_all('td')]
         command_list[command] = (text, description)
+        command_names[text] = (command, description)
 
-    return menu_commands, command_list
+    return menu_commands, command_list, command_names
 
 
 def read_docs(path):
@@ -385,7 +387,8 @@ def buildcsv(settings, parent=None):
     # - Directory properties file called "SciTEDirectory.properties" which may be present
     #   in the same or in a parent directory as the file being edited.
 
-    menu_commands, command_list = read_commands(settings['SCI_CMDS'][0])
+    menu_commands, command_list, command_names = read_commands(
+        settings['SCI_CMDS'][0])
 
     data = tarfile.open(settings['SCI_SRCE'][0])
     data.extractall(path='/tmp')
@@ -414,9 +417,10 @@ def buildcsv(settings, parent=None):
     # menu_keys: list of (key, modifiers, command)
     # keydefs: dict: map keycombo op (?, omschrijving)
     # global_keys, user_keys: list of (key, modifiers, context, platform, omschrijving_of_commando) items
-    default_keys = [(x, y, '*', '*', 'S', z) for x, y, z in menu_keys + keydefs]
-    default_keys += [(x, y, z, q, 'S', r) for x, y, z, q, r in global_keys]
-    userdef_keys = [(x, y, z, q, 'U', r) for x, y, z, q, r in user_keys]
+    default_keys = [(x, y, '*', '*', 'S', z, "") for x, y, z in menu_keys]
+    default_keys += [(x, y, '*', '*', 'S', "", z) for x, y, z in keydefs]
+    default_keys += [(x, y, z, q, 'S', r, "") for x, y, z, q, r in global_keys]
+    userdef_keys = [(x, y, z, q, 'U', r, "") for x, y, z, q, r in user_keys]
 
     sentinel = (chr(255), '', '', '')
     gen_def = (x for x in sorted(default_keys))
@@ -440,14 +444,26 @@ def buildcsv(settings, parent=None):
         test_user = user_item[:4] if user_item else sentinel
         num += 1
         if test_def < test_user:
-            shortcuts[num] = def_item
+            new_item = list(def_item)
             def_item = get_next_defitem()
         else:
-            shortcuts[num] = user_item
+            new_item = list(user_item)
             user_item = get_next_useritem()
         if test_def == test_user:
             def_item = get_next_defitem()
-
+        # the last item can be a command; if so, get the description
+        # add the description as a new last item; if not present, add an empty string
+        # so now we get one column more
+        test = new_item[-2]
+        if test in menu_commands:
+            new_item[-1] = menu_commands[test]
+        elif test in command_list:
+            new_item[-1] = new_item.append(command_list[test])
+        elif test in command_names:
+            new_item[-1] = new_item.append(command_names[test])
+        elif test.startswith('IDM_BUFFER'):
+            new_item[-1] = "Switch to buffer " + str(int(test[-1]) + 1)
+        shortcuts[num] = new_item
     return shortcuts
 
 def savekeys(pad):

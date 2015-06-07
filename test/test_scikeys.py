@@ -1,14 +1,13 @@
 import sys
 ## sys.path.append('/home/albert/projects/hotkeys')
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(
-    os.path.abspath(__file__)))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pprint
 import tarfile
 import editor.plugin_examples.scikeys as scikeys
 
 def test_read_commands():
-    menu_commands, command_list = scikeys.read_commands(
+    menu_commands, command_list, command_names = scikeys.read_commands(
         '/usr/share/scite/CommandValues.html')
 
     # dict: map command naam op omschrijving
@@ -18,6 +17,10 @@ def test_read_commands():
     # dict: map command nummer op (naam, omschrijving)
     with open('command_list.txt', 'w') as _out:
         for key, item in command_list.items():
+            print(key, ':', item, file=_out)
+    # dict: map command naam op (nummer, omschrijving)
+    with open('command_names.txt', 'w') as _out:
+        for key, item in command_names.items():
             print(key, ':', item, file=_out)
 
 def test_read_docs():
@@ -60,9 +63,18 @@ def test_properties(from_, type_):
             print(item, file=_out)
 
 def test_buildcsv():
-    scikeys.buildcsv(csvfile=os.path.join(os.path.dirname(__file__),
-        ('test_scikeys.csv')))
-    ## scikeys.buildcsv()
+    data = scikeys.buildcsv({
+        "SCI_GLBL": ("/etc/scite/SciTEGlobal.properties",),
+        "SCI_USER": ("/home/albert/.SciTEUser.properties",),
+        "SCI_CMDS": ("/usr/share/scite/CommandValues.html",),
+        "SCI_DOCS": ("/usr/share/scite/SciTEDoc.html",),
+        "SCI_SRCE": ("/home/albert/Downloads/SciTE/scite353.tgz",),
+        })
+    if not data:
+        print("no data")
+    with open('test_scikeys_csv.txt', 'w') as _out:
+        for key, value in data.items():
+            print(key, value, file=_out)
 
 if __name__ == '__main__':
     ## test_read_commands()
