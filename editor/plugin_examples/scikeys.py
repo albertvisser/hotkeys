@@ -209,30 +209,33 @@ class PropertiesFile():
                 # ignore non-assignments
                 print('Not an assignment: {}'.format(line))
             # add definition to dictionary
-            if not self._var_start in value:
+            if self._var_start in prop or self._var_start in value:
+                test = self._do_substitutions(prop, value)
+                if test != [[]]:
+                    for name, platform, definition in test:
+                        self.properties[name][platform] = definition
+            else:
                 self.properties[prop][self._platform] = value
-                continue
-            test = self._do_substitutions(prop, value)
-            if test != [[]]:
-                for name, platform, definition in test:
-                    self.properties[name][platform] = definition
 
     def get_keydef_props(self):
         self.data = [] # platgeslagen versie van self.properties
         number_commands = collections.defaultdict(list)
         number_shortcuts = collections.defaultdict(list)
+        number_descriptions = collections.defaultdict(list)
 
         for platform, data in self.properties['user.shortcuts'].items():
             test = data.split('|')
             for x in range(0, len(test)-1, 2):
-                self.data.append((test[x], '*', platform, test[x + 1]))
+                key, mods = nicefy_props(test[x])
+                self.data.append((key, mods, '*', platform, test[x + 1], ''))
 
         for platform, data in self.properties['menu.language'].items():
             test = data.split('|')
             for x in range(0, len(test)-1, 3):
                 if test[x + 2]:
                     test[x] = test[x].replace('&', '')
-                    self.data.append((test[x + 2], '*', platform,
+                    key, mods = nicefy_props(test[x + 2])
+                    self.data.append((key, mods, '*', platform, '',
                         'Show as {} (*.{})'.format(test[x], test[x + 1])))
 
         namedkeys = {'help': 'F1', 'compile': 'Ctrl+F7', 'build': 'F7',
@@ -244,34 +247,51 @@ class PropertiesFile():
                     if test[2] in ('subsystem', 'needs'): continue
                     context = name.split('.', 2)[-1]
                 else:
-                    if test[1] != 'shortcut': continue
+                    if test[1] not in ('shortcut', 'name'): continue
                     context = test[3]
                 for platform, data in value.items():
                     if test[1] in namedkeys:
-                        self.data.append((namedkeys[test[1]], context, platform,
-                            data))
+                        key, mods = nicefy_props(namedkeys[test[1]])
+                        self.data.append((key, mods, context, platform,
+                            data, test[1]))
                     elif test[1] == 'shortcut':
                         number_shortcuts['11' + test[2]].append((context, platform,
                             data))
-                    elif len(test[1]) == 1:
-                        self.data.append((test[1], 'C', context, platform, data))
+                    elif test[1] == 'name':
+                        number_descriptions['11' + test[2]].append((context, platform,
+                            data))
+                    # Ctrl-1 (command & name) hier net zo afhandelen als de andere
+                    ## elif len(test[1]) == 1:
+                        ## self.data.append((test[1], 'C', context, platform, data))
                     else:
                         number_commands['11' + test[1]].append((context, platform,
                             data))
 
+        data = []
         for ix, item in enumerate(self.data):
             if len(item) == 4:
                 x, y = nicefy_props(item[0])
                 self.data[ix] = x, y, item[1], item[2], item[3]
                 item = self.data[ix]
             if item[4] in number_commands:
-                print(item)
                 for defined in number_commands[item[4]]:
-                    print(defined)
                     if defined[:2] == item[2:4]:
-                        self.data[ix] = item[:4] + (defined[-1],)
+                        loc = ix
+                        dataitem = [x for x in item[:4]] + [defined[-1]]
                     else:
-                        self.data.append(item[:2] + defined)
+                        loc = -1
+                        dataitem = [x for x in item[:2]] + [defined]
+                    for defined in number_descriptions[item[4]]:
+                        if defined[:2] == item[2:4]:
+                            dataitem.append(defined[-1])
+                    data.append((loc, dataitem))
+        for loc, dataitem in data:
+            dataitem = tuple(dataitem)
+            if loc == -1:
+                self.data.append(dataitem)
+            else:
+                self.data[loc] = dataitem
+        data = []
 
         for key, value in number_shortcuts.items():
             if key in number_commands:
@@ -280,11 +300,39 @@ class PropertiesFile():
                     for defitem in number_commands[key]:
                         if defkey[:2] == defitem[:2]:
                             found = True
-                            self.data.append(nicefy_props(defkey[2]) + defitem)
+                            data.append(nicefy_props(defkey[2]) + defitem)
                             break
-                    if found:
-                        break
+        for key, value in number_shortcuts.items():
+            if key in number_descriptions:
+                for defkey in value:
+                    found = False
+                    for defitem in number_descriptions[key]:
+                        if defkey[:2] == defitem[:2]:
+                            found = True
+                            test = nicefy_props(defkey[2]) + defitem[:2]
+                            for ix, item in enumerate(data):
+                                if item[:len(test)] == test:
+                                    found = True
+                                    data[ix] = list(item)
+                                    data[ix].append(defitem[-1])
+                                    break
 
+        for key, value in number_commands.items():
+            if len(key) != 3:
+                continue
+            if key in number_descriptions:
+                for defkey in value:
+                    found = False
+                    for defitem in number_descriptions[key]:
+                        if defkey[:2] == defitem[:2]:
+                            found = True
+                            data.append([key[2], 'C'] + list(defkey) + list(defitem[-1:]))
+                            break
+            else:
+                for defkey in value:
+                    data.append([key[2], 'C'] + list(defkey) + [''])
+
+        for item in data: self.data.append(tuple(item))
 
     def _do_substitutions(self, prop, value):
         # start variable substitution in prop
@@ -419,8 +467,8 @@ def buildcsv(settings, parent=None):
     # global_keys, user_keys: list of (key, modifiers, context, platform, omschrijving_of_commando) items
     default_keys = [(x, y, '*', '*', 'S', z, "") for x, y, z in menu_keys]
     default_keys += [(x, y, '*', '*', 'S', "", z) for x, y, z in keydefs]
-    default_keys += [(x, y, z, q, 'S', r, "") for x, y, z, q, r in global_keys]
-    userdef_keys = [(x, y, z, q, 'U', r, "") for x, y, z, q, r in user_keys]
+    default_keys += [(x, y, z, q, 'S', r, s) for x, y, z, q, r, s in global_keys]
+    userdef_keys = [(x, y, z, q, 'U', r, s) for x, y, z, q, r, s in user_keys]
 
     sentinel = (chr(255), '', '', '')
     gen_def = (x for x in sorted(default_keys))
