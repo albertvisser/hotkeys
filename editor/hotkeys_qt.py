@@ -22,7 +22,7 @@ import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 
 import editor.hotkeys_constants as hkc
-
+#
 # non-gui and csv related functions
 # perhaps also add to hotkeys_constants (rename?)
 def read_settings(filename):
@@ -235,8 +235,9 @@ def quick_check(filename):
             raise
     print('{}: No errors found'.format(filename))
 
+#
 # shared (menu) functions
-
+#
 def show_message(self, message_id='', text='', caption_id='000'):
     """toon de boodschap geïdentificeerd door <message_id> in een dialoog
     met als titel aangegeven door <caption_id> en retourneer het antwoord
@@ -398,8 +399,9 @@ def m_exit(self):
     """(menu) callback om het programma direct af te sluiten"""
     self.exit()
 
+#
 # application classes (screens and subscreens)
-
+#
 class FileBrowseButton(gui.QFrame):
     """Combination widget showing a text field and a button
     making it possible to either manually enter a filename or select
@@ -522,6 +524,21 @@ class ColumnSettingsDialog(gui.QDialog):
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
 
+        hsizer = gui.QHBoxLayout()
+        hsizer.addSpacing(41)
+        hsizer.addWidget(gui.QLabel(self.parent.captions['080'], self),
+            alignment = core.Qt.AlignHCenter | core.Qt.AlignVCenter)
+        hsizer.addSpacing(82)
+        hsizer.addWidget(gui.QLabel(self.parent.captions['081'], self),
+            alignment = core.Qt.AlignVCenter)
+        hsizer.addSpacing(84)
+        hsizer.addWidget(gui.QLabel(self.parent.captions['082'], self),
+            alignment = core.Qt.AlignVCenter)
+        hsizer.addWidget(gui.QLabel(self.parent.captions['086'], self),
+            alignment = core.Qt.AlignVCenter)
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+
         pnl = gui.QFrame(self)
         self.scrl = gui.QScrollArea(self)
         self.scrl.setWidget(pnl)
@@ -529,19 +546,7 @@ class ColumnSettingsDialog(gui.QDialog):
         self.scrl.setWidgetResizable(True)
         self.bar = self.scrl.verticalScrollBar()
         self.gsizer = gui.QGridLayout()
-        rownum = colnum = 0
-        colnum += 1
-        self.gsizer.addWidget(gui.QLabel(self.parent.captions['080'], self),
-            rownum, colnum, alignment = core.Qt.AlignHCenter | core.Qt.AlignVCenter)
-        colnum += 1
-        self.gsizer.addWidget(gui.QLabel(self.parent.captions['081'], self),
-            rownum, colnum, alignment = core.Qt.AlignVCenter)
-        colnum += 1
-        self.gsizer.addWidget(gui.QLabel(self.parent.captions['082'], self),
-            rownum, colnum, alignment = core.Qt.AlignVCenter)
-        colnum += 1
-        self.gsizer.addWidget(gui.QLabel(self.parent.captions['086'], self),
-            rownum, colnum, alignment = core.Qt.AlignVCenter)
+        rownum = 0
         self.rownum = rownum
         self.data, self.checks = [], []
         self.col_textids, self.col_names, self.last_textid = read_columntitledata(
@@ -622,15 +627,19 @@ class ColumnSettingsDialog(gui.QDialog):
         w_width = gui.QLineEdit(str(width), self)
         self.gsizer.addWidget(w_width, self.rownum, colnum)
         colnum += 1
+        hsizer = gui.QHBoxLayout()
         w_flag = gui.QCheckBox(self)
         w_flag.setChecked(is_flag)
-        self.gsizer.addWidget(w_flag, self.rownum, colnum, core.Qt.AlignHCenter)
+        hsizer.addWidget(w_flag, core.Qt.AlignHCenter)
+        self.gsizer.addLayout(hsizer, self.rownum, colnum, core.Qt.AlignHCenter)
         colnum += 1
+        hsizer = gui.QHBoxLayout()
         val = self.rownum if colno == '' else colno + 1
         w_colno = gui.QLineEdit(str(val), self)
         w_colno.setFixedWidth(16)
         w_colno.setReadOnly(True)
-        self.gsizer.addWidget(w_colno, self.rownum, colnum, core.Qt.AlignHCenter)
+        hsizer.addWidget(w_colno, core.Qt.AlignHCenter)
+        self.gsizer.addLayout(hsizer, self.rownum, colnum, core.Qt.AlignHCenter)
         self.data.append((w_name, w_width, w_colno, w_flag))
         vbar = self.scrl.verticalScrollBar()
         vbar.setMaximum(vbar.maximum() + 31)
@@ -682,19 +691,24 @@ class ExtraSettingsDialog(gui.QDialog):
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
 
+        hsizer = gui.QHBoxLayout()
+        hsizer.addSpacing(41)
+        hsizer.addWidget(gui.QLabel(self.parent.captions['074'], self),
+            alignment = core.Qt.AlignHCenter)
+        hsizer.addSpacing(52)
+        hsizer.addWidget(gui.QLabel(self.parent.captions['075'], self),
+            alignment = core.Qt.AlignHCenter)
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+
         pnl = gui.QFrame(self)
         self.scrl = gui.QScrollArea(self)
         self.scrl.setWidget(pnl)
         self.scrl.setWidgetResizable(True)
         self.bar = self.scrl.verticalScrollBar()
+
         self.gsizer = gui.QGridLayout()
         rownum = colnum = 0
-        colnum += 1
-        self.gsizer.addWidget(gui.QLabel(self.parent.captions['074'], self),
-            rownum, colnum, alignment = core.Qt.AlignHCenter | core.Qt.AlignVCenter)
-        colnum += 1
-        self.gsizer.addWidget(gui.QLabel(self.parent.captions['075'], self),
-            rownum, colnum, alignment = core.Qt.AlignVCenter)
         self.rownum = rownum
         self.data, self.checks = [], []
         for name, value in self.parent.page.settings.items():
@@ -812,6 +826,16 @@ class FilesDialog(gui.QDialog):
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
 
+        hsizer = gui.QHBoxLayout()
+        hsizer.addSpacing(36)
+        hsizer.addWidget(gui.QLabel(self.parent.captions['060'], self),
+            alignment = core.Qt.AlignHCenter | core.Qt.AlignVCenter)
+        hsizer.addSpacing(84)
+        hsizer.addWidget(gui.QLabel(self.parent.captions['061'], self),
+            alignment = core.Qt.AlignVCenter)
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+
         pnl = gui.QFrame(self)
         self.scrl = gui.QScrollArea(self)
         self.scrl.setWidget(pnl)
@@ -819,11 +843,6 @@ class FilesDialog(gui.QDialog):
         self.bar = self.scrl.verticalScrollBar()
         self.gsizer = gui.QGridLayout()
         rownum = colnum = 0
-        self.gsizer.addWidget(gui.QLabel(self.parent.captions['060'], self),
-            rownum, colnum, alignment = core.Qt.AlignHCenter | core.Qt.AlignVCenter)
-        colnum += 1
-        self.gsizer.addWidget(gui.QLabel(self.parent.captions['061'], self),
-            rownum, colnum, alignment = core.Qt.AlignVCenter)
         self.rownum = rownum
         self.checks = []
         self.paths = []
