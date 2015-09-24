@@ -11,6 +11,7 @@ import bs4 as bs                    # import BeautifulSoup for html parsing
 import tarfile                      # t.b.v. read_source
 
 
+
 def nicefy_props(data):
     """split keydef into key and modifiers
     """
@@ -74,17 +75,10 @@ def read_docs(path):
 
     keyboard_commands = soup.find('table', summary="Keyboard commands")
 
-    ## keydefs = {}
     keydefs = []
     for row in keyboard_commands.find_all('tr'):
         description, shortcut = [tag.string for tag in row.find_all('td')]
-        ## parts = shortcut.lower().split('+')
-        ## if parts[-1] == '':
-            ## parts[-2] += '+'
-            ## parts.pop()
-        ## shortcut = ' '.join(reversed(parts))
         key, mods = nicefy_props(shortcut)
-        ## keydefs[shortcut] = ('', description)
         keydefs.append((key, mods, description))
 
     return keydefs
@@ -132,14 +126,16 @@ def read_source_win(fname=''):
     	MENUITEM "Open Selected &Filename\tCtrl+Shift+O",	IDM_OPENSELECTED
     """
     menu_keys = []
+    # TODO: finish this method
     return menu_keys
+
 
 class PropertiesFile():
     """# read properties and remember them
     so they can instantly substituted when needed
     """
     def __init__(self, fnaam):
-        self._default_platform = "all"
+        self._default_platform = "*"
         self.properties = collections.defaultdict(dict)
         self._var_start, self._var_end = '$(', ')'
         self._continue_assignment = False
@@ -208,6 +204,7 @@ class PropertiesFile():
             except ValueError:
                 # ignore non-assignments
                 print('Not an assignment: {}'.format(line))
+                prop = value = ''
             # add definition to dictionary
             if self._var_start in prop or self._var_start in value:
                 test = self._do_substitutions(prop, value)
@@ -241,8 +238,9 @@ class PropertiesFile():
         namedkeys = {'help': 'F1', 'compile': 'Ctrl+F7', 'build': 'F7',
                 'clean': 'Shift+F7', 'go': 'F5', 'print': 'Ctrl+P'}
         for name, value in self.properties.items():
-            if name.startswith('command'):
+            if name.startswith('command.'):
                 test = name.split('.', 3)
+                # namedkeys helemaal overslaan?
                 if test[1].isdigit() or test[1] in namedkeys:
                     if test[2] in ('subsystem', 'needs'): continue
                     context = name.split('.', 2)[-1]
@@ -435,6 +433,7 @@ def buildcsv(settings, parent=None):
     # - Directory properties file called "SciTEDirectory.properties" which may be present
     #   in the same or in a parent directory as the file being edited.
 
+    special_keys = ('help', 'go', 'build', 'compile', 'clean')
     menu_commands, command_list, command_names = read_commands(
         settings['SCI_CMDS'][0])
 
@@ -447,15 +446,30 @@ def buildcsv(settings, parent=None):
 
     keydefs = read_docs(settings['SCI_DOCS'][0]) # non menu keyboard bindings
 
-    globals = PropertiesFile(settings['SCI_GLBL'][0])
-    globals.read_props()
-    globals.get_keydef_props()
-    global_keys = globals.data
+    global_keys = []
+    root = os.path.dirname(settings['SCI_GLBL'][0])
+    for path in os.listdir(root):
+        fname = os.path.join(root, path)
+        name, ext = os.path.splitext(path)
+        if os.path.isfile(fname) and ext == '.properties' and name not in (
+                'SciTE', 'Embedded'):
+            globals = PropertiesFile(fname)
+            globals.read_props()
+            globals.get_keydef_props()
+            global_keys += [x for x in globals.data
+                if x[4] and x[5] not in special_keys]
 
-    user_ = PropertiesFile(settings['SCI_USER'][0])
-    user_.read_props()
-    user_.get_keydef_props()
-    user_keys = user_.data
+    user_keys = []
+    root = os.path.dirname(settings['SCI_USER'][0])
+    for path in os.listdir(root):
+        fname = os.path.join(root, path)
+        _, ext = os.path.splitext(path)
+        if os.path.isfile(fname) and ext == '.properties':
+            user_ = PropertiesFile(fname)
+            user_.read_props()
+            user_.get_keydef_props()
+            user_keys += [x for x in user_.data
+                if x[4] and x[5] not in special_keys]
 
     # now put the above stuff together
     # menu_commands - dict: map command naam op omschrijving
