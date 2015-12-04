@@ -159,6 +159,8 @@ def buildcsv(settings, parent=None):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het csv bestand
     """
+    shortcuts = collections.OrderedDict()
+
     keydata = get_keydefs(settings['DC_PATH'][0])
     # to determine if keys have been redefined
     stdkeys = get_stdkeys(settings['DC_KEYS'][0])
@@ -171,7 +173,7 @@ def buildcsv(settings, parent=None):
             templist.append(cmddict[value[3]])
         except KeyError:
             templist.append('')
-        keydata[key] = tuple(templist)
+        shortcuts[key] = tuple(templist)
 
     return shortcuts
 
