@@ -1278,6 +1278,8 @@ class ChoiceBook(gui.QFrame):
             return
         state = str(self.b_filter.text())
         text = str(self.find.currentText())
+        item = self.parent.page.p0list.currentItem()
+        self.reposition = item.text(0), item.text(1)
         if state == self.parent.captions['068']: # self.filter_on == False
             state = self.parent.captions['066']
             self.filter_on = True
@@ -1298,6 +1300,11 @@ class ChoiceBook(gui.QFrame):
             self.b_prev.setEnabled(True)
             self.find.setEnabled(True)
         self.parent.page.populate_list()
+        for ix in range(self.parent.page.p0list.topLevelItemCount()):
+            item = self.parent.page.p0list.topLevelItem(ix)
+            if (item.text(0), item.text(1)) == self.reposition:
+                self.parent.page.p0list.setCurrentItem(item)
+                break
         self.b_filter.setText(state)
         if self.parent.page.data == self.parent.page.olddata:
             self.items_found = self.parent.page.olditems
