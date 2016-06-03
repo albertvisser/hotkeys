@@ -1285,7 +1285,7 @@ class ChoiceBook(gui.QFrame):
             self.filter_on = True
             self.parent.page.filtertext = text
             self.parent.page.olddata = self.parent.page.data
-            self.parent.page.olditems = self.items_found
+            ## self.parent.page.olditems = self.items_found
             self.parent.page.data = {ix: item for ix, item in enumerate(
                 self.parent.page.data.values()) if text.upper() in item[-1].upper()}
             self.b_next.setEnabled(False)
@@ -1307,7 +1307,8 @@ class ChoiceBook(gui.QFrame):
                 break
         self.b_filter.setText(state)
         if self.parent.page.data == self.parent.page.olddata:
-            self.items_found = self.parent.page.olditems
+            ## self.items_found = self.parent.page.olditems
+            self.on_text_changed(text) # reselect items_found after setting filter to off
 
 class MainFrame(gui.QMainWindow):
     """Hoofdscherm van de applicatie
