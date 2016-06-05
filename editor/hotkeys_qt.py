@@ -347,9 +347,8 @@ def m_tool(self):
     """
     dlg = ExtraSettingsDialog(self).exec_()
     if dlg == gui.QDialog.Accepted:
-        csvfile = self.page.pad
-        _, coldata, data = readcsv(csvfile)
-        writecsv(csvfile, self.page.settings, coldata, data)
+        writecsv(self.page.pad, self.page.settings, self.page.column_info,
+            self.page.data)
 
 def m_col(self):
     """define tool-specific settings: column properties
@@ -362,13 +361,19 @@ def m_col(self):
         print('dialog was accepted')
         print(self.page.column_info)
         print(column_count)
-        csvfile = self.page.pad
-        settings, _, data = readcsv(csvfile)
-        writecsv(csvfile, settings, self.page.column_info, data)
+        writecsv(self.page.pad, self.page.settings, self.page.column_info,
+            self.page.data)
         if len(self.page.column_info) > column_count:
             gui.QMessageBox.information(self, self.captions['000'],
                 "You have now defined more columns for this tool than are in the "
                 "keydefs. Reloading them will result in an error.")
+
+def m_entry(self):
+    dlg = EntryDialog(self).exec_()
+    if dlg == gui.QDialog.Accepted:
+        writecsv(self.page.pad, self.page.settings, self.page.column_info,
+            self.page.data)
+        self.page.populate_list()
 
 def m_lang(self):
     """(menu) callback voor taalkeuze
@@ -953,6 +958,93 @@ class FilesDialog(gui.QDialog):
         self.parent.ini["plugins"] = update_paths(self.paths, self.pathdata)
         gui.QDialog.accept(self)
 
+class EntryDialog(gui.QDialog):
+
+    def __init__(self, parent):
+        self.parent = parent
+        self.captions = self.parent.captions
+
+        gui.QDialog.__init__(self, parent)
+        self.resize(680, 400)
+
+        # use self.parent.page.column_info to define grid
+        names, widths = [], []
+        for row in self.parent.page.column_info:
+            names.append(self.captions[row[0]])
+            widths.append(row[1])
+
+        # use self.parent.page.data to populate grid
+        self.data = self.parent.page.data
+
+        self.p0list = gui.QTableWidget(self)
+        self.p0list.setColumnCount(len(names))
+        self.p0list.setHorizontalHeaderLabels(names)
+        p0hdr = self.p0list.horizontalHeader()
+        for indx, wid in enumerate(widths):
+            p0hdr.resizeSection(indx, wid)
+        num_rows = 0
+        for rowkey, row in self.data.items():
+            self.p0list.insertRow(num_rows)
+            for i, element in enumerate(row):
+                new_item = gui.QTableWidgetItem()
+                new_item.setText(element)
+                self.p0list.setItem(num_rows, i, new_item)
+            num_rows += 1
+        self.numrows = num_rows
+
+        self.sizer = gui.QVBoxLayout()
+        hsizer = gui.QHBoxLayout()
+        hsizer.addWidget(self.p0list)
+        self.sizer.addLayout(hsizer)
+
+        buttonbox = gui.QDialogButtonBox()
+        btn = buttonbox.addButton("&Add key",
+            gui.QDialogButtonBox.ActionRole)
+        btn.clicked.connect(self.add_key)
+        btn = buttonbox.addButton("&Delete selected key(s)",
+            gui.QDialogButtonBox.ActionRole)
+        btn.clicked.connect(self.delete_key)
+        btn = buttonbox.addButton(gui.QDialogButtonBox.Ok)
+        btn = buttonbox.addButton(gui.QDialogButtonBox.Cancel)
+        buttonbox.accepted.connect(self.accept)
+        buttonbox.rejected.connect(self.reject)
+        hsizer = gui.QHBoxLayout()
+        hsizer.addStretch()
+        hsizer.addWidget(buttonbox)
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+        self.setLayout(self.sizer)
+
+    def add_key(self):
+        "add a line to the grid"
+        self.p0list.insertRow(self.numrows)
+        for i in range(self.p0list.columnCount()):
+            new_item = gui.QTableWidgetItem()
+            new_item.setText("")
+            self.p0list.setItem(self.numrows, i, new_item)
+        self.numrows += 1
+
+    def delete_key(self):
+        "remove selected line(s) from the grid"
+        selected_rows = []
+        for item in self.p0list.selectedRanges():
+            for increment in range(item.rowCount()):
+                selected_rows.append(item.topRow() + increment)
+        for row in reversed(sorted(selected_rows)):
+            self.p0list.removeRow(row)
+
+    def accept(self):
+        new_values = {}
+        for rowid in range(self.p0list.rowCount()):
+            value = []
+            for colid in range(self.p0list.columnCount()):
+                value.append(self.p0list.item(rowid, colid).text())
+            if value != [''] * self.p0list.columnCount():
+                new_values[len(new_values)] = value
+        self.parent.page.data = new_values
+        gui.QDialog.accept(self)
+
+
 class DummyPanel(gui.QFrame):
     """
     Reimplement this class when a block of fields is needed in the screen
@@ -1221,7 +1313,7 @@ class ChoiceBook(gui.QFrame):
                 # ook nog de vorige tekst in de combobox selecteren?
                 return
         self.pnl.setCurrentIndex(indx)
-        self.parent.page = self.pnl.currentWidget()
+        self.parent.page = self.pnl.currentWidget()#@$&%$#% we just did this
         if not all((self.parent.page.settings, self.parent.page.column_info,
                 self.parent.page.data)):
             return
@@ -1363,8 +1455,11 @@ class MainFrame(gui.QMainWindow):
                 )),
             (hkc.M_SETT, (
                 (hkc.M_LOC, (m_loc, 'Ctrl+F')),
-                (hkc.M_TOOL, (m_tool, '')),
-                (hkc.M_COL, (m_col, '')),
+                (hkc.M_TOOL, ((
+                    (hkc.M_COL, (m_col, '')),
+                    (hkc.M_MISC, (m_tool, '')),
+                    (hkc.M_ENTR, (m_entry, '')),
+                    ), '')),
                 (hkc.M_LANG, (m_lang, 'Ctrl+L')),
                 )),
             (hkc.M_HELP, (
@@ -1381,17 +1476,31 @@ class MainFrame(gui.QMainWindow):
                 else:
                     sel, values = sel
                     callback, shortcut = values
-                    act = gui.QAction(self.captions[sel], self)
-                    ## act.triggered.connect(functools.partial(self.on_menu, sel))
-                    act.triggered.connect(functools.partial(callback, self))
-                    act.setShortcut(shortcut)
-                    if sel == hkc.M_SAVE: # in (hkc.M_READ, hkc.M_SAVE):
-                        act.setEnabled(bool(int(self.page.settings['RedefineKeys'][0])))
-                    elif sel == hkc.M_RBLD:
-                        act.setEnabled(bool(int(self.page.settings['RebuildCSV'][0])))
-                    menu.addAction(act)
-                    menuitem[1].append((act, sel))
+                    if callable(callback):
+                        act = self.create_menuaction(sel, callback, shortcut)
+                        menu.addAction(act)
+                        menuitem[1].append((act, sel))
+                    else:
+                        submenu = menu.addMenu(self.captions[sel])
+                        submenuitem = ((submenu, sel), [])
+                        for sel, values in callback:
+                            callback, shortcut = values
+                            act = self.create_menuaction(sel, callback, shortcut)
+                            submenu.addAction(act)
+                            submenuitem[1].append((act, sel))
+                        self._menuitems.append(submenuitem)
             self._menuitems.append(menuitem)
+
+    def create_menuaction(self, sel, callback, shortcut):
+        act = gui.QAction(self.captions[sel], self)
+        ## act.triggered.connect(functools.partial(self.on_menu, sel))
+        act.triggered.connect(functools.partial(callback, self))
+        act.setShortcut(shortcut)
+        if sel == hkc.M_SAVE: # in (hkc.M_READ, hkc.M_SAVE):
+            act.setEnabled(bool(int(self.page.settings['RedefineKeys'][0])))
+        elif sel == hkc.M_RBLD:
+            act.setEnabled(bool(int(self.page.settings['RebuildCSV'][0])))
+        return act
 
     def exit(self,e=None):
         if not self.page.exit():
