@@ -470,7 +470,8 @@ class SetupDialog(gui.QDialog):
         ## grid.addSpacer(5, 0, 1, 3)
         text = gui.QLabel('Waar zullen we dit bestand opslaan?', self)
         grid.addWidget(text, 5, 0, 1, 2)
-        self.t_loc = FileBrowseButton(self, text = name + "_hotkeys.csv",
+        self.t_loc = FileBrowseButton(self, text =
+            os.path.join('editor', 'plugins', name + "_hotkeys.csv"),
             level_down=True)
         grid.addWidget(self.t_loc, 5, 2, 1, 3)
 
@@ -1122,7 +1123,7 @@ class HotkeyPanel(gui.QFrame):
             gui.QLabel('No data for this program', self)
             return
         self.p0list = gui.QTreeWidget(self)
-        modulename = "editor." + self.settings["PluginName"][0]
+        modulename = self.settings["PluginName"][0]
         self._keys = importlib.import_module(modulename)
         try:
             self._panel = self._keys.MyPanel(self)
