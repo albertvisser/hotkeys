@@ -1,0 +1,11 @@
+Setting,PluginName,editor.plugins.example_app_keys,Naam van de module met toolspecifieke code (zonder .py)
+Setting,PanelName,Example_App hotkeys,Naam van het toolpanel in de selector
+Setting,RebuildCSV,0,1 = possible to rebuild this file from the tools' settings; else 0
+Setting,RedefineKeys,0,1 = possible to change keydefs and save them back; else 0
+Title,001,043,004,Titles of the columns in the display; refer to keys in the language file
+Width,120,90,292,Column widths
+Seq,0,1,2,Column sequence numbers in the display
+is_type,0,0,0,1 = Column indicates if keydef is original or (re)defined; else 0
+Keydef,X,,does something
+Keydef,X,CAS,does something else
+Keydef,Q,C,exit the application
