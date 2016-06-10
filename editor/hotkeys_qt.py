@@ -108,8 +108,6 @@ def add_columntitledata(newdata):
     """add the new column title(s) to all language files
 
     input is a list of tuples (textid, text)"""
-    ## pass
-    ## # TODO: actually build this function
     choices = [os.path.join(hkc.HERELANG, x) for x in os.listdir(hkc.HERELANG)
         if os.path.splitext(x)[1] == ".lng"]
     for choice in choices:
@@ -191,8 +189,7 @@ def readcsv(pad):
                 key += 1
                 data[key] = ([x.strip() for x in rowdata])
             elif not rowtype.startswith('#'):
-                raise NotImplementedError("Unknown setting type '{}' in csv "
-                    "file". format(rowtype))
+                raise ValueError(self.captions['040'].format(rowtype))
     return settings, coldata, data
 
 def writecsv(pad, settings, coldata, data):
@@ -246,7 +243,7 @@ def show_message(self, message_id='', text='', caption_id='000'):
     if message_id:
         text = self.captions[message_id]
     if not text:
-        text = 'No message to show'
+        text = self.captions['026']
     ok = gui.QMessageBox.question(self, self.captions[caption_id], text,
         gui.QMessageBox.Yes | gui.QMessageBox.No | gui.QMessageBox.Cancel)
     return ok
@@ -336,7 +333,7 @@ def m_rebuild(self):
     # read data from the csv file
     settings, coldata, _ = readcsv(csvfile)
     if not settings:
-        return 'Settings could not be determined from', csvfile
+        return self.captions['031'].format(csvfile)
 
     shortcuts = self.page._keys.buildcsv(settings, self)
     if shortcuts:
@@ -358,15 +355,13 @@ def m_col(self):
     print(column_count)
     dlg = ColumnSettingsDialog(self).exec_()
     if dlg == gui.QDialog.Accepted:
-        print('dialog was accepted')
         print(self.page.column_info)
         print(column_count)
         writecsv(self.page.pad, self.page.settings, self.page.column_info,
             self.page.data)
         if len(self.page.column_info) > column_count:
             gui.QMessageBox.information(self, self.captions['000'],
-                "You have now defined more columns for this tool than are in the "
-                "keydefs. Reloading them will result in an error.")
+                ' '.join((self.captions['029'], self.captions['031'])))
 
 def m_entry(self):
     dlg = EntryDialog(self).exec_()
@@ -448,27 +443,24 @@ class SetupDialog(gui.QDialog):
     def __init__(self, parent, name):
         self.parent = parent
         gui.QDialog.__init__(self)
-        self.setWindowTitle('Initieel opzetten CSV bestand')
+        self.setWindowTitle(self.captions['031'])
 
         grid = gui.QGridLayout()
 
-        text = gui.QLabel('Naam van de module met de toolspecifieke code (will also'
-            ' create it)', self)
+        text = gui.QLabel(self.captions['032'], self)
         self.t_program = gui.QLineEdit(name.lower() + '_keys', self)
         grid.addWidget(text, 1, 0, 1, 3)
         grid.addWidget(self.t_program, 1, 3) #, 1, 1)
-        text = gui.QLabel('Naam voor de titel van het toolpanel', self)
+        text = gui.QLabel(self.captions['033'], self)
         self.t_title = gui.QLineEdit(name + ' hotkeys', self)
         grid.addWidget(text, 2, 0, 1, 3)
         grid.addWidget(self.t_title, 2, 3) #, 1, 1)
-        self.c_rebuild = gui.QCheckBox("Make it possible to rebuild this file "
-            "from the tool's settings", self)
+        self.c_rebuild = gui.QCheckBox(self.captions['034'], self)
         grid.addWidget(self.c_rebuild, 3, 1, 1, 3)
-        self.c_redef = gui.QCheckBox("Make it possible to redefine the keydefs "
-            "and save them back", self)
+        self.c_redef = gui.QCheckBox(self.captions['035'], self)
         grid.addWidget(self.c_redef, 4, 1, 1, 3)
         ## grid.addSpacer(5, 0, 1, 3)
-        text = gui.QLabel('Waar zullen we dit bestand opslaan?', self)
+        text = gui.QLabel(self.captions['036'], self)
         grid.addWidget(text, 5, 0, 1, 2)
         self.t_loc = FileBrowseButton(self, text =
             os.path.join('editor', 'plugins', name + "_hotkeys.csv"),
@@ -503,8 +495,8 @@ class SetupDialog(gui.QDialog):
         """
         loc = self.t_loc.input.text()
         if loc == "":
-            gui.QMessageBox.information(self, self.parent.title, "Sorry, can't"
-                " continue without a name - please enter one or cancel")
+            gui.QMessageBox.information(self, self.parent.title,
+                self.captions['038'])
             return
         self.parent.loc = loc
         self.parent.data = [self.t_program.text(), self.t_title.text(),
@@ -608,7 +600,6 @@ class ColumnSettingsDialog(gui.QDialog):
                 w_flag.isChecked()])
         if new_titles:
             add_columntitledata(new_titles)
-        print('transferring column info')
         self.parent.page.column_info = column_info
         gui.QDialog.accept(self)
 
@@ -930,17 +921,16 @@ class FilesDialog(gui.QDialog):
             self.parent.captions['064'])
         if ok:
             if newtool == "":
-                gui.QMessageBox.information(self, self.parent.title, "Sorry, can't"
-                    " continue without a name")
+                gui.QMessageBox.information(self, self.parent.title,
+                    self.captions['038'])
                 return
-            ok = gui.QMessageBox.question(self, self.parent.title, "Initialize new "
-                "csv file for this application?",
+            ok = gui.QMessageBox.question(self, self.parent.title,
+                self.captions['039'],
                 gui.QMessageBox.Yes | gui.QMessageBox.No, gui.QMessageBox.Yes)
             self.loc = ""
             if ok == gui.QMessageBox.Yes:
                 ok = SetupDialog(self, newtool).exec_()
             self.add_row(newtool, path=self.loc)
-            ## self.update()
 
     def remove_programs(self):
         """alle aangevinkte items verwijderen uit self.gsizer"""
@@ -953,7 +943,6 @@ class FilesDialog(gui.QDialog):
             if gui.QMessageBox.Yes:
                 for row in reversed(checked):
                     self.delete_row(row)
-                ## self.update()
 
     def accept(self):
         self.parent.ini["plugins"] = update_paths(self.paths, self.pathdata)
@@ -999,10 +988,10 @@ class EntryDialog(gui.QDialog):
         self.sizer.addLayout(hsizer)
 
         buttonbox = gui.QDialogButtonBox()
-        btn = buttonbox.addButton("&Add key",
+        btn = buttonbox.addButton(self.captions['087'],
             gui.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.add_key)
-        btn = buttonbox.addButton("&Delete selected key(s)",
+        btn = buttonbox.addButton(self.captions['088'],
             gui.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.delete_key)
         btn = buttonbox.addButton(gui.QDialogButtonBox.Ok)
@@ -1120,7 +1109,7 @@ class HotkeyPanel(gui.QFrame):
         self.captions = self.parent.parent.captions
         self.settings, self.column_info, self.data = readcsv(self.pad)
         if not self.settings or not self.column_info:
-            gui.QLabel('No data for this program', self)
+            gui.QLabel(self.captions['044'], self)
             return
         self.p0list = gui.QTreeWidget(self)
         modulename = self.settings["PluginName"][0]
@@ -1411,7 +1400,7 @@ class MainFrame(gui.QMainWindow):
         wid = 860 if hkc.LIN else 688
         hig = 594
         gui.QMainWindow.__init__(self)
-        self.title = 'Hotkeys'
+        self.title = self.captions["000"]
         self.setWindowTitle(self.title)
         self.resize(wid, hig)
         self.sb = self.statusBar()
@@ -1422,7 +1411,7 @@ class MainFrame(gui.QMainWindow):
         self.ini['lang'], self.ini['plugins'] = read_settings(self.ini['filename'])
 
         self.readcaptions(self.ini['lang']) # set up defaults
-        self.sb.showMessage('Welcome to {}!'.format(self.captions["000"]))
+        self.sb.showMessage(self.captions["089"].format(self.captions["000"]))
         pnl = gui.QWidget(self)
         self.book = ChoiceBook(pnl, self.ini['plugins']) # , size= (600, 700))
         sizer_v = gui.QVBoxLayout()

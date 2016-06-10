@@ -1,5 +1,12 @@
+# recyclable item numbers:
+021 Cannot delete - No or incorrect key and/or command selected
+022 Cannot save - No or incorrect key and/or command selected
+023 Cannot delete - hotkey definition not found
+
 # application title
 000 All-in-one hotkeys
+017 (modified)
+089 Welcome to
 
 # Keyboard mapping table headers
 001 Key
@@ -37,9 +44,8 @@
 077 &Remove Checked Settings
 084 &Add Column
 085 &Remove Checked Columns
-
-# title indicator
-017 (modified)
+087 &Add keydef
+088 &Delete selected keydef(s)
 
 # screen text
 018 Key:
@@ -66,23 +72,26 @@
 020 Previously selected definition was changed - save now?
 
 # messages
-021 Cannot delete - No or incorrect key and/or command selected
-022 Cannot save - No or incorrect key and/or command selected
-023 Cannot delete - hotkey definitie not found
 024 Can't delete standard (builtin) definition
 025 Definitions have been changed - save now?
-026 Restart Total Commander now?
+026 No message to show
 027 Choose a language file
-028 Enter/choose the paths to the following files:
-034 The directory you specified for %s doesn't exist
-035 %s doesn't exits in the specified directory
-036 Specified restart program doesn't exist
+028 Settings could not be determined from {}
+029 You have now defined more columns for this tool than are in the keydefs.
+030 Reloading them will result in an error
+031 Create Initial version of CSV file
+032 Naam of the module containing toolspecific code (will also create it)
+033 Title for the tool panel
+034 Make it possible to rebuild this file from the tool's settings
+035 Make it possible to redefine the keydefs and save them back to the tool's settings
+036 Where to store this file?
 037 You may need to restart the other program for the changes to take effect
-038 Restart TC
-039 Specify the directory containing %s
-040 Choose the programme to restart Total Commander
+038 Sorry, can't continue without a name - please enter one or cancel
+039 Initialize new csv file for this application?
+040 Unknown setting type `{}` in csv file
 041 You haven't made any changes. Are you sure you want to do this?
 042 One or more of your settings files doesn't appear to exist. Please use Settings -> File Locations from the menu to check them.
+044 No data for this program
 045 This keycombo already exists, do you want to replace it?
 052 No plugin for {} yet
 053 View/edit {} keyboard shortcuts
@@ -90,19 +99,11 @@
 055 No next item
 056 No previous item
 057 {} / version {} / {} / {}
-064 Enter a naam for the new program
+064 Enter a name for the new program
 065 Are you sure you want to remove the checked programs?
 067 {} items found
 078 Are you sure you want to remove the checked settings?
 083 Are you sure you want to remove the checked column settings?
-
-# file names
-029 wincmd.ini
-030 usercmd.ini
-031 TOTALCMD.INC
-032 KEYBOARD.TXT
-033 TC_hotkeys.csv
-044 VI_hotkeys.csv
 
 # key names
 100 Insert
