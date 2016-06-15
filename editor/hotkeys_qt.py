@@ -335,7 +335,7 @@ def m_rebuild(self):
     if not settings:
         return self.captions['031'].format(csvfile)
 
-    shortcuts = self.page._keys.buildcsv(settings, self)
+    shortcuts = self.page._keys.buildcsv(self)
     if shortcuts:
         writecsv(csvfile, settings, coldata, shortcuts)
 
@@ -694,7 +694,33 @@ class ExtraSettingsDialog(gui.QDialog):
         ## self.resize(680, 400)
 
         self.sizer = gui.QVBoxLayout()
-        ## self.sizer.addStretch()
+
+        pnl = gui.QFrame()
+        vsizer = gui.QVBoxLayout()
+        hsizer = gui.QHBoxLayout()
+        text = gui.QLabel(self.parent.captions['033'], self)
+        self.t_title = gui.QLineEdit(self.parent.page.settings['PanelName'][0], self)
+        hsizer.addWidget(text)
+        hsizer.addWidget(self.t_title)
+        vsizer.addLayout(hsizer)
+        hsizer = gui.QHBoxLayout()
+        self.c_rebuild = gui.QCheckBox(self.parent.captions['034'], self)
+        if self.parent.page.settings['RebuildCSV'][0] == '1':
+            self.c_rebuild.toggle()
+        hsizer.addWidget(self.c_rebuild)
+        vsizer.addLayout(hsizer)
+        hsizer = gui.QHBoxLayout()
+        self.c_redef = gui.QCheckBox(self.parent.captions['035'], self)
+        if self.parent.page.settings['RedefineKeys'][0] == '1':
+            self.c_redef.toggle()
+        hsizer.addWidget(self.c_redef)
+        vsizer.addLayout(hsizer)
+        pnl.setLayout(vsizer)
+        pnl.setFrameStyle(gui.QFrame.Box | gui.QFrame.Raised)
+        self.sizer.addWidget(pnl)
+
+        pnl = gui.QFrame(self)
+        vsizer = gui.QVBoxLayout()
         text = self.parent.captions['073'].format(
             self.parent.page.settings["PanelName"][0])
         hsizer = gui.QHBoxLayout()
@@ -702,7 +728,7 @@ class ExtraSettingsDialog(gui.QDialog):
         hsizer.addStretch()
         hsizer.addWidget(label)
         hsizer.addStretch()
-        self.sizer.addLayout(hsizer)
+        vsizer.addLayout(hsizer)
 
         hsizer = gui.QHBoxLayout()
         hsizer.addSpacing(41)
@@ -712,11 +738,11 @@ class ExtraSettingsDialog(gui.QDialog):
         hsizer.addWidget(gui.QLabel(self.parent.captions['075'], self),
             alignment = core.Qt.AlignHCenter)
         hsizer.addStretch()
-        self.sizer.addLayout(hsizer)
+        vsizer.addLayout(hsizer)
 
-        pnl = gui.QFrame(self)
+        pnl2 = gui.QFrame(self)
         self.scrl = gui.QScrollArea(self)
-        self.scrl.setWidget(pnl)
+        self.scrl.setWidget(pnl2)
         self.scrl.setWidgetResizable(True)
         self.bar = self.scrl.verticalScrollBar()
 
@@ -727,21 +753,28 @@ class ExtraSettingsDialog(gui.QDialog):
         for name, value in self.parent.page.settings.items():
             if name not in hkc.csv_settingnames:
                 self.add_row(name, value)
-        box = gui.QVBoxLayout()
-        box.addLayout(self.gsizer)
-        box.addStretch()
-        pnl.setLayout(box)
-        self.sizer.addWidget(self.scrl)
+        pnl2.setLayout(self.gsizer)
+        pnl.setFrameStyle(gui.QFrame.Box)
+        self.scrl.ensureVisible(0,0)
+        vsizer.addWidget(self.scrl)
+
+        hsizer =  gui.QHBoxLayout()
+        hsizer.addStretch()
+        # should be: add setting
+        btn = gui.QPushButton(self.parent.captions['076'])
+        btn.clicked.connect(self.add_setting)
+        hsizer.addWidget(btn)
+        # should be: remove checked settings
+        btn = gui.QPushButton(self.parent.captions['077'])
+        btn.clicked.connect(self.remove_settings)
+        hsizer.addWidget(btn)
+        hsizer.addStretch()
+        vsizer.addLayout(hsizer)
+        pnl.setLayout(vsizer)
+        pnl.setFrameStyle(gui.QFrame.Box | gui.QFrame.Raised)
+        self.sizer.addWidget(pnl)
 
         buttonbox = gui.QDialogButtonBox()
-        # should be: add setting
-        btn = buttonbox.addButton(self.parent.captions['076'],
-            gui.QDialogButtonBox.ActionRole)
-        btn.clicked.connect(self.add_setting)
-        # should be: remove checked settings
-        btn = buttonbox.addButton(self.parent.captions['077'],
-            gui.QDialogButtonBox.ActionRole)
-        btn.clicked.connect(self.remove_settings)
         btn = buttonbox.addButton(gui.QDialogButtonBox.Ok)
         btn = buttonbox.addButton(gui.QDialogButtonBox.Cancel)
         buttonbox.accepted.connect(self.accept)
@@ -751,7 +784,6 @@ class ExtraSettingsDialog(gui.QDialog):
         hsizer.addWidget(buttonbox)
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
-        ## self.sizer.addStretch()
         self.setLayout(self.sizer)
 
     def add_row(self, name='', value=''):
@@ -809,7 +841,15 @@ class ExtraSettingsDialog(gui.QDialog):
                 ## self.update()
 
     def accept(self):
-        settings = []
+        oms = self.parent.page.settings['PanelName'][1]
+        self.parent.page.settings['PanelName'] = (self.t_title.text(), oms)
+        oms = self.parent.page.settings['RebuildCSV'][1]
+        value = '1' if self.c_rebuild.isChecked() else '0'
+        self.parent.page.settings['RebuildCSV'] = (value, oms)
+        oms = self.parent.page.settings['RedefineKeys'][1]
+        value = '1' if self.c_redef.isChecked() else '0'
+        self.parent.page.settings['RedefineKeys'] = (value, oms)
+
         settingsdict = {}
         for w_name, w_value, w_desc in self.data:
             settingsdict[w_name.text()] = (w_value.text(), w_desc.text())
@@ -817,6 +857,7 @@ class ExtraSettingsDialog(gui.QDialog):
             if setting not in hkc.csv_settingnames:
                 del self.parent.page.settings[setting]
         self.parent.page.settings.update(settingsdict)
+
         gui.QDialog.accept(self)
 
 class FilesDialog(gui.QDialog):
@@ -1154,11 +1195,10 @@ class HotkeyPanel(gui.QFrame):
         "(re)read the data for the keydef list"
         self.data = readcsv(self.pad)[2]
 
-    def savekeys(self, pad=None):
+    def savekeys(self):
         "save modified keydef back"
-        if not pad:
-            pad = self.pad
-        self._keys.savekeys(self.settings, self.data)
+        self.parent.data = self.data
+        self._keys.savekeys(self)
         writecsv(self.pad, self.settings, self.column_info, self.data)
         self.modified = False
         self.setWindowTitle(self.captions["000"])
@@ -1199,7 +1239,7 @@ class HotkeyPanel(gui.QFrame):
         if self.modified:
             ok = show_message(self, '025')
             if ok == gui.QMessageBox.Yes:
-                self.page.savekeys()
+                self.savekeys()
             elif ok == gui.QMessageBox.Cancel:
                 return False
         return True
@@ -1400,8 +1440,6 @@ class MainFrame(gui.QMainWindow):
         wid = 860 if hkc.LIN else 688
         hig = 594
         gui.QMainWindow.__init__(self)
-        self.title = self.captions["000"]
-        self.setWindowTitle(self.title)
         self.resize(wid, hig)
         self.sb = self.statusBar()
 
@@ -1411,6 +1449,8 @@ class MainFrame(gui.QMainWindow):
         self.ini['lang'], self.ini['plugins'] = read_settings(self.ini['filename'])
 
         self.readcaptions(self.ini['lang']) # set up defaults
+        self.title = self.captions["000"]
+        self.setWindowTitle(self.title)
         self.sb.showMessage(self.captions["089"].format(self.captions["000"]))
         pnl = gui.QWidget(self)
         self.book = ChoiceBook(pnl, self.ini['plugins']) # , size= (600, 700))
@@ -1505,7 +1545,7 @@ class MainFrame(gui.QMainWindow):
                     continue
                 key, value = x.strip().split(None,1)
                 self.captions[key] = value
-        self.captions['000'] = self.title
+        ## self.captions['000'] = self.title
 
     def setcaptions(self):
         title = self.captions["000"]
