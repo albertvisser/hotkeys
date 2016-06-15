@@ -6,7 +6,7 @@
 # import PyQt4.QtCore as core
 
 # uncomment this to define a routine to (re)build the csv file from source data
-# def buildcsv(settings):
+# def buildcsv(parent):
 #     shortcuts = collections.defaultdict
 #     ...implement some logic here...
 #     return shortcuts
@@ -17,5 +17,5 @@
 #     pass
 
 # uncomment this to define a routine to write back the keydefs to the source data
-# def savekeys(filename):
+# def savekeys(parent):
 #     pass
