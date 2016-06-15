@@ -52,24 +52,10 @@ for indx, data in enumerate((
     data.insert(0, name)
     data.append(oms)
     csv_sample_data.append(data)
-plugin_skeleton = """# -*- coding: UTF-8 -*-\n
-# uncomment these where appropriate
-# import collections
-# import PyQt4.QtGui as gui
-# import PyQt4.QtCore as core
-
-# uncomment this to define a routine to (re)build the csv file from source data
-# def buildcsv(settings):
-#     shortcuts = collections.defaultdict
-#     ...implement some logic here...
-#     return shortcuts
-
-# uncomment this to define a subpanel used for (re)defining hotkeys
-# copy the contents of this class from DummyPanel in hotkeys_qt.py
-# class MyPanel(gui.QFrame):
-#     pass
-
-# uncomment this to define a routine to write back the keydefs to the source data
-# def savekeys(filename):
-#     pass
+plugin_skeleton = '''# -*- coding: UTF-8 -*-\n
 """
+See example_app_keys.py for a description of the plugin API.
+Only define the functions that need to be defined, for everything
+that's not in here the default code in the main program will be used.
+"""
+'''
