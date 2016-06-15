@@ -80,7 +80,7 @@
 029 You have now defined more columns for this tool than are in the keydefs.
 030 Reloading them will result in an error
 031 Create Initial version of CSV file
-032 Naam of the module containing toolspecific code (will also create it)
+032 Name of the module containing toolspecific code (will also create it)
 033 Title for the tool panel
 034 Make it possible to rebuild this file from the tool's settings
 035 Make it possible to redefine the keydefs and save them back to the tool's settings
