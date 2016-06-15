@@ -18,6 +18,5 @@ TOTALCMD.INC
 *zip
 data/*
 *orig
-editor/oud/*
 editor/plugins/*
-editor/plugin_examples/*
+devel/*
