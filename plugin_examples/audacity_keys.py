@@ -1,4 +1,10 @@
 # -*- coding: UTF-8 -*-
+import shutil
+import xml.etree.ElementTree as ET
+import collections
+import PyQt4.QtGui as gui
+import PyQt4.QtCore as core
+
 instructions = """\
 Instructions for rebuilding the key binding definitions
 
@@ -16,17 +22,15 @@ Step 2: Open the key bindings file and have it read the definitions.
 You can now take the time to perform step 1.
 Press "OK" to continue with step 2 or "Cancel" to return to the main program.
 """
-import shutil
-import xml.etree.ElementTree as ET
-import collections
-import PyQt4.QtGui as gui
-import PyQt4.QtCore as core
 
 def buildcsv(parent):
+    """lees de keyboard definities uit het/de settings file(s) van het tool zelf
+    en geef ze terug voor schrijven naar het csv bestand
+    """
+    shortcuts = collections.OrderedDict()
 
     ok = gui.QMessageBox.information(parent, parent.captions['000'], instructions,
         gui.QMessageBox.Ok | gui.QMessageBox.Cancel)
-
     if ok == gui.QMessageBox.Cancel:
         return
 
@@ -35,11 +39,8 @@ def buildcsv(parent):
     except KeyError:
         kbfile = gui.QFileDialog.getOpenFileName(parent, parent.captions['059'],
             filter='XML files (*.xml)')
-
     if not kbfile:
         return
-
-    shortcuts = collections.OrderedDict()
 
     tree = ET.parse(kbfile)
     root = tree.getroot()
@@ -79,7 +80,6 @@ def savekeys(parent):
 
     ok = gui.QMessageBox.information(parent, parent.captions['000'], how_to_save,
         gui.QMessageBox.Ok | gui.QMessageBox.Cancel)
-
     if ok == gui.QMessageBox.Cancel:
         return
 
