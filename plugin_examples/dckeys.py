@@ -1,25 +1,50 @@
 # -*- coding: utf-8 -*-
-"""
-Het gaat alleen om het keydefs opnieuw opbouwen. De overige regels (settings en
-kolomdefinities) blijven gehandhaafd. De settings bevat de locatie(s) van het/de
-bronbestand.
-De naam van het gebruikte settings bestand is vastgelegd in .config/doublecmd.xml
-als text bij het subelement NameShortcutFile van root element doublecmd
-
-Ik heb helaas qua doublecommander files alleen shortcuts.sfc, dat bevat wel een
-mapping van definities of commando's maar ik heb geen file met mappings van comman-
-do's op omschrijvingen.
-Eventueel kan ik daar de html files in /usr/share/doublcmd/doc/en voor gebruiken
-maar dat is wel een paar sub-versies terug (0.5 ipv 0.10)
-"""
-
 from __future__ import print_function
+
 import os
 import collections
-import xml.etree.ElementTree as et
+import shutil
+import xml.etree.ElementTree as ET
 import bs4 as bs # import BeautifulSoup
+import PyQt4.QtGui as gui
+import PyQt4.QtCore as core
 
-def _short_mods(modifier_list):
+instructions = """\
+Instructions for rebuilding the keyboard shortcut definitions
+
+
+The keydefs are stored in a file called shortcuts.scf, located in
+~/.config/doublecmd. For convenience sake, store this name in a setting
+named DC_PATH so the buildcsv and savekeys functions don't have to
+ask for a filename every time.
+
+Two extra settings are used to extract the default mappings and the
+command definitions from the help files: DC_KEYS and DC_CMDS
+respectively.
+
+Inside Double Commander, in Configuration > Options > Hot keys,
+it's possible to select the shortcuts file, so support for using
+a name different from the DC_PATH setting is present.
+"""
+
+#    basic layout:
+#    <doublecmd DCVersion="0.6.6 beta">
+#      <Hotkeys Version="20">
+#        <Form Name="Main">
+#          <Hotkey>
+#            <Shortcut>F1</Shortcut>
+#            <Command>cm_RenameOnly</Command>
+#
+#    some commands can use parameters
+#            <Command>cm_ExecuteToolbarItem</Command>
+#            <Param>ToolItemID={BE39E7CB-3FC4-44DB-99FA-30415C9D8C50}</Param>
+#    and/or other options:
+#        <Shortcut>Shift+Del</Shortcut>
+#        <Command>cm_Delete</Command>
+#        <Param>trashcan=reversesetting</Param>
+#        <Control>Files Panel</Control>
+
+def _shorten_mods(modifier_list):
     result = ''
     if 'Ctrl' in modifier_list:
         result += 'C'
@@ -59,18 +84,17 @@ def parse_keytext(text):
             elif modifiers[-1] == 'Num ': # + key on numpad
                 keyname = modifiers.pop() + keyname
 
-        retval.append((keyname, _short_mods(modifiers)))
+        retval.append((keyname, _shorten_mods(modifiers)))
 
     return retval
 
 def get_keydefs(path):
     """
     huidige keydefs afleiden
-    NB splitsen op + geeft mogelijk soms onjuist resultaat (bv bij Num +)
     """
 
     # read the key definitions file
-    data = et.parse(path)
+    data = ET.parse(path)
 
     # (re)build the definitions for the csv file
     keydata = collections.OrderedDict()
@@ -80,12 +104,20 @@ def get_keydefs(path):
         context = form.get('Name')
         for hotkey in form:
             shortcut = hotkey.find('Shortcut').text
-            parts = shortcut.split('+')
+            if shortcut.endswith('+'):
+                parts = shortcut[:-1].split('+')
+                parts[-1] += '+'
+            else:
+                parts = shortcut.split('+')
             keyname = parts[-1]
-            modifiers = _short_mods(parts[:-1])
+            modifiers = _shorten_mods(parts[:-1])
             command = hotkey.find('Command').text
+            parameter = hotkey.find('Param')
+            parameter = parameter.text if parameter is not None else ''
+            control = hotkey.find('Control')
+            control = control.text if control is not None else ''
             key += 1
-            keydata[key] = (keyname, modifiers, context, command)
+            keydata[key] = (keyname, modifiers, context, command, parameter, control)
 
     return keydata
 
@@ -161,22 +193,44 @@ def buildcsv(parent):
     """
     shortcuts = collections.OrderedDict()
 
-    keydata = get_keydefs(parent.settings['DC_PATH'][0])
+    ok = gui.QMessageBox.information(parent, parent.captions['000'], instructions,
+        gui.QMessageBox.Ok | gui.QMessageBox.Cancel)
+    if ok == gui.QMessageBox.Cancel:
+        return
+
+    kbfile = gui.QFileDialog.getOpenFileName(parent, parent.captions['059'],
+        directory=parent.page.settings['DC_PATH'][0], filter='SCF files (*.scf)')
+    if not kbfile:
+        return
+
+    keydata = get_keydefs(kbfile)
     # to determine if keys have been redefined
-    stdkeys = get_stdkeys(parent.settings['DC_KEYS'][0])
+    stdkeys = get_stdkeys(parent.page.settings['DC_KEYS'][0])
     # to find descriptions for commands
-    cmddict = get_cmddict(parent.settings['DC_CMDS'][0])
+    cmddict = get_cmddict(parent.page.settings['DC_CMDS'][0])
     for key, value in keydata.items():
         templist = list(value)
-        templist.insert(-1, '') # standard / customized
+        templist.insert(2, '') # standard / customized
         try:
             templist.append(cmddict[value[3]])
         except KeyError:
             templist.append('')
+        print(templist)
         shortcuts[key] = tuple(templist)
 
     return shortcuts
 
+how_to_save = """\
+Instructions to load the changed definitions back into Double Commander.
+
+
+After you've saved the definitions to a .scf file, go to
+Configuration > Options > Hot keys, and select it in the
+top left selector.
+
+
+You may have to close and reopen the dialog to see the changes.
+"""
 def savekeys(parent):
     """schrijf de gegevens terug
 
@@ -184,4 +238,12 @@ def savekeys(parent):
     aangepaste keys samenstellen tot een user.shortcuts statement en dat
     invoegen in shortcuts.scf
     """
-    pass
+
+    ok = gui.QMessageBox.information(parent, parent.captions['000'], how_to_save,
+        gui.QMessageBox.Ok | gui.QMessageBox.Cancel)
+    ## if ok == gui.QMessageBox.Cancel:
+        ## return
+    return
+    for key, mods, type_, context, command, descrption in parent.data.values():
+        pass
+
