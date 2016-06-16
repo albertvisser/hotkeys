@@ -231,19 +231,53 @@ top left selector.
 
 You may have to close and reopen the dialog to see the changes.
 """
+
+def build_shortcut(key, mods):
+    result = ''
+    if 'C' in mods:
+        result += 'Ctrl+'
+    if 'S' in mods:
+        result += 'Shift+'
+    if 'A' in mods:
+        result += 'Alt+'
+    key = key.capitalize()
+    if key == 'Pgup': key = 'PgUp'
+    if key == 'Pgdn': key = 'PgDn'
+    return result + key
+
 def savekeys(parent):
     """schrijf de gegevens terug
-
-    voorlopig nog niet mogelijk
-    aangepaste keys samenstellen tot een user.shortcuts statement en dat
-    invoegen in shortcuts.scf
     """
 
     ok = gui.QMessageBox.information(parent, parent.captions['000'], how_to_save,
         gui.QMessageBox.Ok | gui.QMessageBox.Cancel)
-    ## if ok == gui.QMessageBox.Cancel:
-        ## return
-    return
-    for key, mods, type_, context, command, descrption in parent.data.values():
-        pass
+    if ok == gui.QMessageBox.Cancel:
+        return
 
+    kbfile = gui.QFileDialog.getSaveFileName(parent, parent.captions['059'],
+        directory=parent.settings['DC_PATH'][0], filter='SCF files (*.scf)')
+    if not kbfile:
+        return
+
+    root = ET.Element('doublecmd', DCVersion="0.6.6 beta")
+    head = ET.SubElement(root, 'Hotkeys', Version="20")
+    oldform = ''
+    for item in sorted(parent.data.values(), key=lambda x: x[3]):
+        key, mods, type_, context, cmnd, parm, ctrl, desc = item
+        if context != oldform:
+            newform = ET.SubElement(head, 'Form', Name=context)
+            oldform = context
+        hotkey = ET.SubElement(newform, 'Hotkey')
+        shortcut = ET.SubElement(hotkey, 'Shortcut')
+        shortcut.text = build_shortcut(key, mods)
+        command = ET.SubElement(hotkey, 'Command')
+        command.text = cmnd
+        if parm:
+            param = ET.SubElement(hotkey, 'Param')
+            param.text = parm
+        if ctrl:
+            control = ET.SubElement(hotkey, 'Control')
+            control.text = ctrl
+
+    shutil.copyfile(kbfile, kbfile + '.bak')
+    ET.ElementTree(root).write(kbfile, encoding="UTF-8", xml_declaration=True)
