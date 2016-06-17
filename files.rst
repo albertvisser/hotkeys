@@ -22,7 +22,7 @@ hotkey_config_example.py
 hotkeys_constants.py
     various symbols used by hotkeys_qt.py
 hotkeys_qt.py
-    qt version of the app
+    mai program, qt version
 
 editor/languages: directory containing the language files
 ---------------------------------------------------------
@@ -35,44 +35,32 @@ english.lng
 editor/plugins: directory meant to contain tool plugins
 -------------------------------------------------------
 
-editor/plugin_examples: directory containing examples of these
---------------------------------------------------------------
-
-abapkeys.py
-
-audacity_keys.py
-
-bash_keys.py
-
-dckeys.py
-
-filezilla_keys.py
-
-firefox_keys.py
-
-gimp_keys.py
-
-kdiff3_keys.py
-
-operakeys.py
-
-opkeys.py
-
-scikeys.py
-
-tcmdrkys.py
-
-vikeys.py
-
-vivaldi_keys.py
-
-editor/test: diirectory containg test programs and data
+plugin_examples: directory containing examples of these
 -------------------------------------------------------
 
-test_dckeys.py
+abapkeys.py
+    plugin for SAP ABAP-editor (which I use at work, but I'm not allowed to use this tool there).
+    support for reading the tool configuration
 
-test_scikeys.py
+audacity_keys.py
+    plugin for Audacity; support for reading the tool configuration and writing back to it
 
-test_tcmdrkeys.py
+banshee_keys.py
+    plugin for Banshee; support for reading the tool configuration
 
-test_viksettings.py
+dckeys.py
+    plugin for Double Commander; support for reading the tool configuration and writing back to it
+
+operakeys.py
+    plugin for Opera up until version 12; support for reading the tool configuration
+    Sadly this web browser is discontinued
+
+read_gtkaccel.py
+    helper routines for plugins that manage programs using a GTK keyboard accelerator map
+
+scikeys.py
+    plugin for SciTE; support for reading the tool configuration and writing back to it
+
+tcmdrkys.py
+    plugin for Total Commander; support for reading the tool configuration and writing back to it,
+    as well as a gui extension for editing keydefs

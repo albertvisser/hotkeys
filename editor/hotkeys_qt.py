@@ -332,15 +332,18 @@ def m_user(self):
 
 def m_rebuild(self):
 
-    csvfile = self.page.pad
-    # read data from the csv file
-    settings, coldata, _ = readcsv(csvfile)
-    if not settings:
-        return self.captions['031'].format(csvfile)
+    ## csvfile = self.page.pad
+    ## # read data from the csv file
+    ## settings, coldata, _ = readcsv(csvfile)
+    ## if not settings:
+        ## return self.captions['031'].format(csvfile)
 
     shortcuts = self.page._keys.buildcsv(self)
     if shortcuts:
-        writecsv(csvfile, settings, coldata, shortcuts)
+        self.page.data = shortcuts
+        writecsv(self.page.pad, self.page.settings, self.page.column_info,
+            self.page.data)
+        self.page.populate_list()
 
 def m_tool(self):
     """define tool-specific settings
@@ -349,6 +352,8 @@ def m_tool(self):
     if dlg == gui.QDialog.Accepted:
         writecsv(self.page.pad, self.page.settings, self.page.column_info,
             self.page.data)
+        self._menuitems[hkc.M_SAVE].setEnabled(bool(int(self.page.settings['RedefineKeys'][0])))
+        self._menuitems[hkc.M_RBLD].setEnabled(bool(int(self.page.settings['RebuildCSV'][0])))
 
 def m_col(self):
     """define tool-specific settings: column properties
@@ -1344,9 +1349,9 @@ class ChoiceBook(gui.QFrame):
                 return
         self.pnl.setCurrentIndex(indx)
         self.parent.page = self.pnl.currentWidget()#@$&%$#% we just did this
-        if not all((self.parent.page.settings, self.parent.page.column_info,
-                self.parent.page.data)):
-            return
+        ## if not all((self.parent.page.settings, self.parent.page.column_info,
+                ## self.parent.page.data)):
+            ## return
         self.parent.setup_menu()
         if self.parent.page.filtertext:
             self.find.setEditText(self.parent.page.filtertext)
@@ -1495,10 +1500,10 @@ class MainFrame(gui.QMainWindow):
             (hkc.M_HELP, (
                 (hkc.M_ABOUT, (m_about, 'Ctrl+H')),
                 )))
-        self._menuitems = []
+        self._menuitems = {} # []
         for title, items in self._menus:
             menu = self.menu_bar.addMenu(self.captions[title])
-            menuitem = ((menu, title), [])
+            self._menuitems[title] = menu
             for sel in items:
                 if sel == -1:
                     menu.addSeparator()
@@ -1509,27 +1514,24 @@ class MainFrame(gui.QMainWindow):
                     if callable(callback):
                         act = self.create_menuaction(sel, callback, shortcut)
                         menu.addAction(act)
-                        menuitem[1].append((act, sel))
+                        self._menuitems[sel] = act
                     else:
                         submenu = menu.addMenu(self.captions[sel])
-                        submenuitem = ((submenu, sel), [])
+                        self._menuitems[sel] = submenu
                         for sel, values in callback:
                             callback, shortcut = values
                             act = self.create_menuaction(sel, callback, shortcut)
                             submenu.addAction(act)
-                            submenuitem[1].append((act, sel))
-                        self._menuitems.append(submenuitem)
-            self._menuitems.append(menuitem)
+                            self._menuitems[sel] = act
 
     def create_menuaction(self, sel, callback, shortcut):
         act = gui.QAction(self.captions[sel], self)
-        ## act.triggered.connect(functools.partial(self.on_menu, sel))
         act.triggered.connect(functools.partial(callback, self))
         act.setShortcut(shortcut)
-        if sel == hkc.M_SAVE: # in (hkc.M_READ, hkc.M_SAVE):
-            act.setEnabled(bool(int(self.page.settings['RedefineKeys'][0])))
-        elif sel == hkc.M_RBLD:
+        if sel == hkc.M_RBLD:
             act.setEnabled(bool(int(self.page.settings['RebuildCSV'][0])))
+        elif sel == hkc.M_SAVE:
+            act.setEnabled(bool(int(self.page.settings['RedefineKeys'][0])))
         return act
 
     def exit(self,e=None):
@@ -1552,10 +1554,11 @@ class MainFrame(gui.QMainWindow):
         if self.page.modified:
             title += ' ' + self.captions["017"]
         self.setWindowTitle(title)
-        for menu, items in self._menuitems:
-            menu[0].setTitle(self.captions[menu[1]])
-            for action in items:
-                action[0].setText(self.captions[action[1]])
+        for menu, item in self._menuitems.items():
+            try:
+                item.setTitle(self.captions[menu])
+            except AttributeError:
+                item.setText(self.captions[menu])
         self.b_exit.setText(self.captions[hkc.C_EXIT])
         self.book.setcaptions()
         self.page.setcaptions()
