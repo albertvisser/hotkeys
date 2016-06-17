@@ -134,7 +134,10 @@ def update_paths(paths, pathdata):
         newpaths.append((name, loc))
         if name in pathdata:
             data = pathdata[name]
-            with open(os.path.join('editor', data[0] + '.py'), 'w') as _out:
+            parts = data[0].split('.')
+            if parts[0] == '': parts = parts[1:]
+            newfile = os.path.join(*parts) + '.py'
+            with open(newfile, 'w') as _out:
                 _out.write(hkc.plugin_skeleton)
             initcsv(loc, data)
     return newpaths
@@ -318,8 +321,8 @@ def m_loc(self):
                     win = HotkeyPanel(self.book, new_loc) or EmptyPanel(
                         self.book.pnl, self.captions["052"].format(program))
             else: # new entry
-                 win = HotkeyPanel(self.book, new_paths[indx]) or EmptyPanel(
-                        self.book.pnl, self.captions["052"].format(program))
+                win = HotkeyPanel(self.book, new_paths[indx]) or EmptyPanel(
+                    self.book.pnl, self.captions["052"].format(program))
             self.book.sel.addItem(program)
             self.book.pnl.addWidget(win)
 
@@ -350,13 +353,9 @@ def m_tool(self):
 def m_col(self):
     """define tool-specific settings: column properties
     """
-    print(self.page.column_info)
     column_count = len(self.page.column_info)
-    print(column_count)
     dlg = ColumnSettingsDialog(self).exec_()
     if dlg == gui.QDialog.Accepted:
-        print(self.page.column_info)
-        print(column_count)
         writecsv(self.page.pad, self.page.settings, self.page.column_info,
             self.page.data)
         if len(self.page.column_info) > column_count:
@@ -443,24 +442,25 @@ class SetupDialog(gui.QDialog):
     def __init__(self, parent, name):
         self.parent = parent
         gui.QDialog.__init__(self)
-        self.setWindowTitle(self.captions['031'])
+        self.setWindowTitle(self.parent.parent.captions['031'])
 
         grid = gui.QGridLayout()
 
-        text = gui.QLabel(self.captions['032'], self)
-        self.t_program = gui.QLineEdit(name.lower() + '_keys', self)
+        text = gui.QLabel(self.parent.parent.captions['032'], self)
+        self.t_program = gui.QLineEdit('editor.plugins.{}_keys'.format(
+            name.lower()), self)
         grid.addWidget(text, 1, 0, 1, 3)
         grid.addWidget(self.t_program, 1, 3) #, 1, 1)
-        text = gui.QLabel(self.captions['033'], self)
+        text = gui.QLabel(self.parent.parent.captions['033'], self)
         self.t_title = gui.QLineEdit(name + ' hotkeys', self)
         grid.addWidget(text, 2, 0, 1, 3)
         grid.addWidget(self.t_title, 2, 3) #, 1, 1)
-        self.c_rebuild = gui.QCheckBox(self.captions['034'], self)
+        self.c_rebuild = gui.QCheckBox(self.parent.parent.captions['034'], self)
         grid.addWidget(self.c_rebuild, 3, 1, 1, 3)
-        self.c_redef = gui.QCheckBox(self.captions['035'], self)
+        self.c_redef = gui.QCheckBox(self.parent.parent.captions['035'], self)
         grid.addWidget(self.c_redef, 4, 1, 1, 3)
         ## grid.addSpacer(5, 0, 1, 3)
-        text = gui.QLabel(self.captions['036'], self)
+        text = gui.QLabel(self.parent.parent.captions['036'], self)
         grid.addWidget(text, 5, 0, 1, 2)
         self.t_loc = FileBrowseButton(self, text =
             os.path.join('editor', 'plugins', name + "_hotkeys.csv"),
@@ -963,10 +963,10 @@ class FilesDialog(gui.QDialog):
         if ok:
             if newtool == "":
                 gui.QMessageBox.information(self, self.parent.title,
-                    self.captions['038'])
+                    self.parent.captions['038'])
                 return
             ok = gui.QMessageBox.question(self, self.parent.title,
-                self.captions['039'],
+                self.parent.captions['039'],
                 gui.QMessageBox.Yes | gui.QMessageBox.No, gui.QMessageBox.Yes)
             self.loc = ""
             if ok == gui.QMessageBox.Yes:
