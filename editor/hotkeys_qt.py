@@ -338,9 +338,10 @@ def m_rebuild(self):
     ## if not settings:
         ## return self.captions['031'].format(csvfile)
 
-    shortcuts = self.page._keys.buildcsv(self)
+    shortcuts, stuff = self.page._keys.buildcsv(self)
     if shortcuts:
         self.page.data = shortcuts
+        self.page.otherstuff = stuff
         writecsv(self.page.pad, self.page.settings, self.page.column_info,
             self.page.data)
         self.page.populate_list()
@@ -1169,6 +1170,8 @@ class HotkeyPanel(gui.QFrame):
         # gelegenheid voor extra initialisaties en het opbouwen van de rest van de GUI
         # het vullen van veldwaarden hierin gebeurt als gevolg van het vullen
         # van de eerste rij in de listbox, daarom moet deze het laatst
+        self.otherstuff = {} # ruimte voor zaken als een lijst met mogelijke commando's
+        # self.otherstuff = self._keys.getotherstuff()
         self._panel.add_extra_attributes()
         self._panel.add_extra_fields()
 

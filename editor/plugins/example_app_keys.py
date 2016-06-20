@@ -6,10 +6,12 @@
 # import PyQt4.QtCore as core
 
 # uncomment this to define a routine to (re)build the csv file from source data
+# otherstuff can be used to pass on things like a list of unassigned commands
 # def buildcsv(parent):
 #     shortcuts = collections.defaultdict
+#     otherstuff = {}
 #     ...implement some logic here...
-#     return shortcuts
+#     return shortcuts, otherstuff
 
 # uncomment this to define a subpanel used for (re)defining hotkeys
 # copy the contents of this class from DummyPanel in hotkeys_qt.py
