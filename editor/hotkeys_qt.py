@@ -375,8 +375,16 @@ def m_col(self):
 
         writecsv(self.page.pad, self.page.settings, self.page.column_info,
             self.page.data)
+        ## self.page.p0list.removeItemWidget(self.page.p0list.headerItem())    # treeWidget methods
+        hdr = gui.QTreeWidgetItem()
+        self.page.p0list.setHeaderItem(hdr)
         self.page.p0list.setHeaderLabels([self.captions[col[0]] for col in
             self.page.column_info])
+        hdr = self.page.p0list.header()
+        hdr.setClickable(True)
+        for indx, col in enumerate(self.page.column_info):
+            hdr.resizeSection(indx, col[1])
+        hdr.setStretchLastSection(True)
         self.page.populate_list()
 
 def m_entry(self):
@@ -705,6 +713,9 @@ class ColumnSettingsDialog(gui.QDialog):
         if new_titles:
             add_columntitledata(new_titles)
         self.parent.page.column_info = column_info
+        for id_, name in new_titles:
+            self.parent.captions[id_] = name
+            self.parent.page.captions[id_] = name
         self.parent.col_ids = self.col_ids
         gui.QDialog.accept(self)
 
@@ -1202,11 +1213,11 @@ class HotkeyPanel(gui.QFrame):
                 self.column_info])
             self.p0list.setAlternatingRowColors(True)
             self.p0list.currentItemChanged.connect(self._panel.on_item_selected)
-            self.p0hdr = self.p0list.header()
-            self.p0hdr.setClickable(True)
+            hdr = self.p0list.header()
+            hdr.setClickable(True)
             for indx, col in enumerate(self.column_info):
-                self.p0hdr.resizeSection(indx, col[1])
-            self.p0hdr.setStretchLastSection(True)
+                hdr.resizeSection(indx, col[1])
+            hdr.setStretchLastSection(True)
             self.populate_list()
             sizer1 = gui.QHBoxLayout()
             sizer1.addWidget(self.p0list)
