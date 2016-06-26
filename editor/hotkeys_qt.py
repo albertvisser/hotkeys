@@ -359,14 +359,25 @@ def m_tool(self):
 def m_col(self):
     """define tool-specific settings: column properties
     """
-    column_count = len(self.page.column_info)
+    self.col_ids = [x for x in range(len(self.page.column_info))]
     dlg = ColumnSettingsDialog(self).exec_()
     if dlg == gui.QDialog.Accepted:
+        new_pagedata = {}
+        for key, value in self.page.data.items():
+            newvalue = []
+            for ix in self.col_ids:
+                if ix == 'new':
+                    newvalue.append('')
+                else:
+                    newvalue.append(value[ix])
+            new_pagedata[key] = newvalue
+        self.page.data = new_pagedata
+
         writecsv(self.page.pad, self.page.settings, self.page.column_info,
             self.page.data)
-        if len(self.page.column_info) > column_count:
-            gui.QMessageBox.information(self, self.captions['000'],
-                ' '.join((self.captions['029'], self.captions['031'])))
+        self.page.p0list.setHeaderLabels([self.captions[col[0]] for col in
+            self.page.column_info])
+        self.page.populate_list()
 
 def m_entry(self):
     dlg = EntryDialog(self).exec_()
@@ -514,11 +525,10 @@ class ColumnSettingsDialog(gui.QDialog):
     """
     def __init__(self, parent):
         self.parent = parent
+        self.initializing = True
         gui.QDialog.__init__(self, parent)
-        ## self.resize(680, 400)
 
         self.sizer = gui.QVBoxLayout()
-        ## self.sizer.addStretch()
         text = self.parent.captions['079'].format(
             self.parent.page.settings["PanelName"][0])
         hsizer = gui.QHBoxLayout()
@@ -549,12 +559,12 @@ class ColumnSettingsDialog(gui.QDialog):
         self.scrl.setAlignment(core.Qt.AlignBottom)
         self.scrl.setWidgetResizable(True)
         self.bar = self.scrl.verticalScrollBar()
-        self.gsizer = gui.QGridLayout()
-        rownum = 0
-        self.rownum = rownum
+        self.gsizer = gui.QVBoxLayout()
+        self.rownum = 0 # indicates the number of rows in the gridlayout
         self.data, self.checks = [], []
         self.col_textids, self.col_names, self.last_textid = read_columntitledata(
             self)
+        self.col_ids = self.parent.col_ids
         for item in self.parent.page.column_info:
             self.add_row(*item)
         box = gui.QVBoxLayout()
@@ -581,8 +591,8 @@ class ColumnSettingsDialog(gui.QDialog):
         hsizer.addWidget(buttonbox)
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
-        ## self.sizer.addStretch()
         self.setLayout(self.sizer)
+        self.initializing = False
 
     def exec_(self):
         if self.last_textid == '099':
@@ -592,44 +602,26 @@ class ColumnSettingsDialog(gui.QDialog):
         else:
             return super().exec_()
 
-    def accept(self):
-        column_info, new_titles = [], []
-        for w_name, w_width, w_colno, w_flag in self.data:
-            name = w_name.currentText()
-            if name in self.col_names:
-                name = self.col_textids[self.col_names.index(name)]
-            else:
-                self.last_textid = "{:0>3}".format(int(self.last_textid) + 1)
-                new_titles.append((self.last_textid, name))
-                name = self.last_textid
-            column_info.append([name, int(w_width.text()), int(w_colno.text()) - 1,
-                w_flag.isChecked()])
-        if new_titles:
-            add_columntitledata(new_titles)
-        self.parent.page.column_info = column_info
-        gui.QDialog.accept(self)
-
     def add_row(self, name='', width='', colno='', is_flag=False):
         self.rownum += 1
+        rownum = self.rownum #  - self.deleted
         colnum = 0
         check = gui.QCheckBox(self)
-        self.gsizer.addWidget(check, self.rownum, colnum)
+        ghsizer = gui.QHBoxLayout()
+        ghsizer.addWidget(check, rownum)
         self.checks.append(check)
         colnum += 1
         w_name = gui.QComboBox(self)
         w_name.addItems(self.col_names)
-        ## w_name.setFixedWidth(88)
         w_name.setEditable(True)
         if name:
             w_name.setCurrentIndex(self.col_textids.index(name))
         else:
             w_name.clearEditText()
-        ## w_name.setMaxLength(50)
-        self.gsizer.addWidget(w_name, self.rownum, colnum)
+        ghsizer.addWidget(w_name, rownum)
         colnum += 1
         hsizer = gui.QHBoxLayout()
         hsizer.addSpacing(20)
-        ## w_width = gui.QLineEdit(str(width), self)
         w_width = gui.QSpinBox(self)
         w_width.setMaximum(999)
         if width:
@@ -637,7 +629,7 @@ class ColumnSettingsDialog(gui.QDialog):
         w_width.setFixedWidth(48)
         hsizer.addWidget(w_width)
         hsizer.addSpacing(20)
-        self.gsizer.addLayout(hsizer, self.rownum, colnum)
+        ghsizer.addLayout(hsizer, rownum)
         colnum += 1
         hsizer = gui.QHBoxLayout()
         hsizer.addSpacing(40)
@@ -646,32 +638,39 @@ class ColumnSettingsDialog(gui.QDialog):
         w_flag.setFixedWidth(32)
         hsizer.addWidget(w_flag)
         hsizer.addSpacing(24)
-        self.gsizer.addLayout(hsizer, self.rownum, colnum)
+        ghsizer.addLayout(hsizer, rownum)
         colnum += 1
         hsizer = gui.QHBoxLayout()
         hsizer.addSpacing(68)
         val = self.rownum if colno == '' else colno + 1
-        ## w_colno = gui.QLineEdit(str(val), self)
         w_colno = gui.QLabel(self)
         w_colno.setText(str(val))
         w_colno.setFixedWidth(20)
-        ## w_colno.setReadOnly(True)
         hsizer.addWidget(w_colno)
         hsizer.addStretch()
-        self.gsizer.addLayout(hsizer, self.rownum, colnum)
+        ghsizer.addLayout(hsizer, rownum)
+        self.gsizer.addLayout(ghsizer)
         self.data.append((w_name, w_width, w_colno, w_flag))
         vbar = self.scrl.verticalScrollBar()
         vbar.setMaximum(vbar.maximum() + 31)
         vbar.setValue(vbar.maximum())
+        if not self.initializing:
+            self.col_ids.append('new')
 
     def delete_row(self, rownum):
+        self.rownum -= 1
         check = self.checks[rownum]
+        for widgets in self.data[rownum:]:
+            w_colno = widgets[2]
+            w_colno.setText(str(int(w_colno.text()) - 1))
         w_name, w_width, w_colno, w_flag = self.data[rownum]
         for widget in check, w_name, w_width, w_colno, w_flag:
             self.gsizer.removeWidget(widget)
             widget.close() # destroy()
+        self.gsizer.removeItem(self.gsizer.itemAt(rownum))
         self.checks.pop(rownum)
         self.data.pop(rownum)
+        del self.col_ids[rownum]
 
     def add_column(self):
         """nieuwe rij aanmaken in self.gsizer"""
@@ -690,6 +689,24 @@ class ColumnSettingsDialog(gui.QDialog):
                     self.delete_row(row)
         return
 
+
+    def accept(self):
+        column_info, new_titles = [], []
+        for w_name, w_width, w_colno, w_flag in self.data:
+            name = w_name.currentText()
+            if name in self.col_names:
+                name = self.col_textids[self.col_names.index(name)]
+            else:
+                self.last_textid = "{:0>3}".format(int(self.last_textid) + 1)
+                new_titles.append((self.last_textid, name))
+                name = self.last_textid
+            column_info.append([name, int(w_width.text()), int(w_colno.text()) - 1,
+                w_flag.isChecked()])
+        if new_titles:
+            add_columntitledata(new_titles)
+        self.parent.page.column_info = column_info
+        self.parent.col_ids = self.col_ids
+        gui.QDialog.accept(self)
 
 class ExtraSettingsDialog(gui.QDialog):
     """dialoog voor invullen tool specifieke instellingen
@@ -1075,7 +1092,10 @@ class EntryDialog(gui.QDialog):
         for rowid in range(self.p0list.rowCount()):
             value = []
             for colid in range(self.p0list.columnCount()):
-                value.append(self.p0list.item(rowid, colid).text())
+                try:
+                    value.append(self.p0list.item(rowid, colid).text())
+                except AttributeError:
+                    value.append('')
             if value != [''] * self.p0list.columnCount():
                 new_values[len(new_values)] = value
         self.parent.page.data = new_values
