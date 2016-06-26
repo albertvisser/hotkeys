@@ -28,6 +28,7 @@ def buildcsv(parent):
     en geef ze terug voor schrijven naar het csv bestand
     """
     shortcuts = collections.OrderedDict()
+    otherstuff = {}
 
     ok = gui.QMessageBox.information(parent, parent.captions['000'], instructions,
         gui.QMessageBox.Ok | gui.QMessageBox.Cancel)
@@ -35,7 +36,7 @@ def buildcsv(parent):
         return
 
     try:
-        kbfile = parent.settings['AC_KEYS'][0]
+        kbfile = parent.page.settings['AC_KEYS'][0]
     except KeyError:
         kbfile = gui.QFileDialog.getOpenFileName(parent, parent.captions['059'],
             filter='XML files (*.xml)')
@@ -46,21 +47,27 @@ def buildcsv(parent):
     root = tree.getroot()
     data = []
     key = 0
+    commandlist = {}
     for item in root.findall('command'):
         line = []
-        keydef = item.get('key').split('+')
-        keyname = keydef[-1] if keydef else ''
-        line.append(keyname)
+        keydef = item.get('key', default = '')
+        if keydef.endswith('+'):
+            parts = keydef[:-1].split('+')
+            parts[-1] += '+'
+        else:
+            parts = keydef.split('+')
+        keyname = parts[-1] if keydef else ''
         keymods = ''
-        if len(keydef) > 1:
-            keymods = ''.join([x[0] for x in keydef[:-1]])
-        line.append(keymods)
-        line.append(item.get('name'))
-        line.append(item.get('label'))
-        key += 1
-        shortcuts[key] = line
-
-    return shortcuts
+        if len(parts) > 1:
+            keymods = ''.join([x[0] for x in parts[:-1]])
+        cmd_name = item.get('name')
+        cmd_label = item.get('label')
+        if keyname:
+            key += 1
+            shortcuts[key] = (keyname, keymods, cmd_name, cmd_label)
+        commandlist[cmd_name] = cmd_label
+    otherstuff['commands'] = commandlist
+    return shortcuts, otherstuff
 
 how_to_save = """\
 Instructions to load the changed definitions back into Audacity.

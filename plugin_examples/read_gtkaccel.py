@@ -28,19 +28,28 @@ def read_keydefs(filename):
     new_id = 0
     with open(filename) as _in:
         for line in _in:
-            ## if line.startwith(';'):
-                ## continue
+            coloned = False
             if keydef_id in line:
+                if line.startswith(';'):
+                    coloned = True  # don't know what this means
+                    line = line[1:].strip()
+                line = line.rsplit(')', 1)[0]
                 data = line.split(keydef_id, 1)[1].strip().split('" "')
-                commented = len(data) == 4
-                name, key = [x.replace('"', '') for x in data[-2:]]
+                if len(data) != 2:
+                    print(line)
+                    print('contains more/less that 2 items, what to do?')
+                    continue
+                name = data[0].lstrip('"')
+                key = data[-1].rstrip('"')
+                ## commented = coloned
+                ## name, key = [x.replace('"', '') for x in data[-2:]]
                 if '<Actions>' not in name:
                     others.append((name, key))
                     continue
                 name = name.replace('<Actions>', '')
                 new_id += 1
                 actions[new_id] = name
-                key = key.replace(')', '')
+                ## key = key.replace(')', '')
                 if key:
                     test = key.split('>')
                     key = test[-1]
@@ -68,9 +77,9 @@ def build_extended_keydefs(keydefs, actions):
 
 def main():
     for item in (
-            ## '/home/albert/.gimp-2.8/menurc',
+            '/home/albert/.gimp-2.8/menurc',
             ## '/home/albert/.config/banshee-1/gtk_accel_map'
-            '/home/albert/.dia/menurc',
+            ## '/home/albert/.dia/menurc',
             ):
         keydefs, actions, other = read_keydefs(item)
         print(keydefs)

@@ -697,7 +697,7 @@ def buildcsv(parent):
         shortcuts = parent.tempdata
     else:
         shortcuts = []
-    return shortcuts
+    return shortcuts, {}
 
 class TCMergeDialog(gui.QDialog):
     """Dialoog om een gedocumenteerde toetscombinatie te koppelen aan een commando

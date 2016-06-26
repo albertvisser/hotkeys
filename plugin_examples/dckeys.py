@@ -27,23 +27,6 @@ it's possible to select the shortcuts file, so support for using
 a name different from the DC_PATH setting is present.
 """
 
-#    basic layout:
-#    <doublecmd DCVersion="0.6.6 beta">
-#      <Hotkeys Version="20">
-#        <Form Name="Main">
-#          <Hotkey>
-#            <Shortcut>F1</Shortcut>
-#            <Command>cm_RenameOnly</Command>
-#
-#    some commands can use parameters
-#            <Command>cm_ExecuteToolbarItem</Command>
-#            <Param>ToolItemID={BE39E7CB-3FC4-44DB-99FA-30415C9D8C50}</Param>
-#    and/or other options:
-#        <Shortcut>Shift+Del</Shortcut>
-#        <Command>cm_Delete</Command>
-#        <Param>trashcan=reversesetting</Param>
-#        <Control>Files Panel</Control>
-
 def _shorten_mods(modifier_list):
     result = ''
     if 'Ctrl' in modifier_list:
@@ -112,12 +95,19 @@ def get_keydefs(path):
             keyname = parts[-1]
             modifiers = _shorten_mods(parts[:-1])
             command = hotkey.find('Command').text
-            parameter = hotkey.find('Param')
-            parameter = parameter.text if parameter is not None else ''
-            control = hotkey.find('Control')
-            control = control.text if control is not None else ''
+            test = hotkey.find('Param')
+            if test is None:
+                parameter = ''
+            else:
+                parameter = ";".join([param.text for param in test])
+            test = hotkey.find('Control')
+            if test is None:
+                controls = ''
+            else:
+                controls = ';'.join([control.text for control in test])
             key += 1
-            keydata[key] = (keyname, modifiers, context, command, parameter, control)
+            keydata[key] = (keyname, modifiers, context, command, parameter,
+                controls)
 
     return keydata
 
@@ -210,15 +200,19 @@ def buildcsv(parent):
     cmddict = get_cmddict(parent.page.settings['DC_CMDS'][0])
     for key, value in keydata.items():
         templist = list(value)
-        templist.insert(2, '') # standard / customized
+        val = '' # standard / customized
+        # if keydef_from_keydata != keydef_from_stdkeys:
+        #     value = 'X'
+        templist.insert(2, val)
         try:
             templist.append(cmddict[value[3]])
         except KeyError:
-            templist.append('')
-        print(templist)
+            continue # do not write unassigned commands
+            ## templist.append('')
+        ## print(templist)
         shortcuts[key] = tuple(templist)
 
-    return shortcuts
+    return shortcuts, {'stdkeys': stdkeys, 'cmddict': cmddict}
 
 how_to_save = """\
 Instructions to load the changed definitions back into Double Commander.

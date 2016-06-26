@@ -33,9 +33,9 @@ def buildcsv(parent):
     for key, mods, command in keydefs:
         lastkey += 1
         shortcuts[str(lastkey)] = (key, mods, actions[command])
-        used[command] = '' # can't pop these from actions because the may have been reused
-    for key in actions:
-        if key in used: continue
-        lastkey += 1
-        shortcuts[str(lastkey)] = ('', '', actions[key])
-    return shortcuts
+        ## used[command] = '' # can't pop these from actions because the may have been reused
+    ## for key in actions:
+        ## if key in used: continue
+        ## lastkey += 1
+        ## shortcuts[str(lastkey)] = ('', '', actions[key])
+    return shortcuts, {'actions': actions, 'others': others}

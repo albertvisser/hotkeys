@@ -112,6 +112,7 @@ def buildcsv(parent):
     shortcuts = collections.OrderedDict()
 
     with open(parent.settings['AB_DEFS']) as _in:
+    ## with open('/home/albert/projects/hotkeys/data/abap/ABAP Editor/keymap.xml') as _in:
         tree = ET.ElementTree(file=_in)
     root = tree.getroot()
 
@@ -127,7 +128,7 @@ def buildcsv(parent):
                     commands[num] = [cmd, oms]
                     hotkeys.append((value, mods, num))
 
-            # build a list of used commands
+            # build a list of used commands - is this for deciding defaults?
             used_commands_list = []
             for key in sorted(commands.keys()):
                 cmd, oms = commands[key]
@@ -147,4 +148,5 @@ def buildcsv(parent):
                     keynum += 1
                     shortcuts[keynum] = [keydef, mods, cmd, oms]
 
-    return shortcuts
+    return shortcuts, {'command_list': command_codes_list, 'commands': commands,
+        'hotkeys': hotkeys, 'used_commands': used_commands_list}

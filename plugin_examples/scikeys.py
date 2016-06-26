@@ -434,6 +434,13 @@ def buildcsv(parent):
     #   in the same or in a parent directory as the file being edited.
 
     settings = parent.settings
+    ## settings = {
+        ## 'SCI_GLBL': ('/etc/scite/SciTEGlobal.properties', ''),
+        ## 'SCI_USER': ('/home/albert/.SciTEUser.properties', ''),
+        ## 'SCI_CMDS': ('/usr/share/scite/CommandValues.html', ''),
+        ## 'SCI_DOCS': ('/usr/share/scite/SciTEDoc.html', ''),
+        ## 'SCI_SRCE': ('/home/albert/Downloads/SciTE/scite353.tgz', '')
+        ## }
     special_keys = ('help', 'go', 'build', 'compile', 'clean')
     menu_commands, command_list, command_names = read_commands(
         settings['SCI_CMDS'][0])
@@ -527,7 +534,9 @@ def buildcsv(parent):
         elif test.startswith('IDM_BUFFER'):
             new_item[-1] = "Switch to buffer " + str(int(test[-1]) + 1)
         shortcuts[num] = new_item
-    return shortcuts
+    return shortcuts, {'menucommands': menu_commands, 'commandlist': command_list,
+        'command_names': command_names, 'menukeys': menu_keys, 'keydefs': keydefs,
+        'default_keys': global_keys}
 
 def savekeys(parent):
     """schrijf de gegevens terug
