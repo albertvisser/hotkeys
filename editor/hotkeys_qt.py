@@ -1546,21 +1546,40 @@ class MainFrame(gui.QMainWindow):
     def setup_menu(self):
         self.menu_bar.clear()
         self._menus = (
+            ## (hkc.M_APP, (
+                ## (hkc.M_READ, (m_read, 'Ctrl+R')),
+                ## (hkc.M_RBLD, (m_rebuild, 'Ctrl+B')),
+                ## (hkc.M_SAVE, (m_save, 'Ctrl+S')),
+                ## -1,
+                ## (hkc.M_EXIT, (m_exit, 'Ctrl+Q')),
+                ## )),
+            ## (hkc.M_SETT, (
+                ## (hkc.M_LOC, (m_loc, 'Ctrl+F')),
+                ## (hkc.M_TOOL, ((
+                    ## (hkc.M_COL, (m_col, '')),
+                    ## (hkc.M_MISC, (m_tool, '')),
+                    ## (hkc.M_ENTR, (m_entry, '')),
+                    ## ), '')),
+                ## (hkc.M_LANG, (m_lang, 'Ctrl+L')),
+                ## )),
+            ## (hkc.M_HELP, (
+                ## (hkc.M_ABOUT, (m_about, 'Ctrl+H')),
+                ## )))
             (hkc.M_APP, (
-                (hkc.M_READ, (m_read, 'Ctrl+R')),
-                (hkc.M_RBLD, (m_rebuild, 'Ctrl+B')),
-                (hkc.M_SAVE, (m_save, 'Ctrl+S')),
+                (hkc.M_LOC, (m_loc, 'Ctrl+F')),
+                (hkc.M_LANG, (m_lang, 'Ctrl+L')),
                 -1,
                 (hkc.M_EXIT, (m_exit, 'Ctrl+Q')),
                 )),
-            (hkc.M_SETT, (
-                (hkc.M_LOC, (m_loc, 'Ctrl+F')),
-                (hkc.M_TOOL, ((
+            (hkc.M_TOOL, (
+                (hkc.M_SETT, ((
                     (hkc.M_COL, (m_col, '')),
                     (hkc.M_MISC, (m_tool, '')),
                     (hkc.M_ENTR, (m_entry, '')),
                     ), '')),
-                (hkc.M_LANG, (m_lang, 'Ctrl+L')),
+                (hkc.M_READ, (m_read, 'Ctrl+R')),
+                (hkc.M_RBLD, (m_rebuild, 'Ctrl+B')),
+                (hkc.M_SAVE, (m_save, 'Ctrl+S')),
                 )),
             (hkc.M_HELP, (
                 (hkc.M_ABOUT, (m_about, 'Ctrl+H')),
