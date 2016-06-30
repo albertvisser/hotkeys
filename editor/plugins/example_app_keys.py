@@ -6,8 +6,9 @@
 # import PyQt4.QtCore as core
 
 # uncomment this to define a routine to (re)build the csv file from source data
+# showinfo is a switch for in case you want to show instructions
 # otherstuff can be used to pass on things like a list of unassigned commands
-# def buildcsv(parent):
+# def buildcsv(parent, showinfo=True):
 #     shortcuts = collections.defaultdict
 #     otherstuff = {}
 #     ...implement some logic here...

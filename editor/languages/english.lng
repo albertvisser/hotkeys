@@ -18,7 +18,7 @@
 047 Context
 048 Platform
 049 Feature
-090 Parameter
+090 Parameter(s)
 091 Controls
 092 Menu Option
 
@@ -113,8 +113,8 @@
 101 Del
 102 Home
 103 End
-104 Pgup
-105 Pgdn
+104 PgUp
+105 PgDn
 106 Space
 107 Backspace
 108 Tab

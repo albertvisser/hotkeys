@@ -23,23 +23,30 @@ You can now take the time to perform step 1.
 Press "OK" to continue with step 2 or "Cancel" to return to the main program.
 """
 
-def buildcsv(parent):
+def buildcsv(parent, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het csv bestand
     """
     shortcuts = collections.OrderedDict()
     otherstuff = {}
 
-    ok = gui.QMessageBox.information(parent, parent.captions['000'], instructions,
-        gui.QMessageBox.Ok | gui.QMessageBox.Cancel)
-    if ok == gui.QMessageBox.Cancel:
-        return
-
     try:
-        kbfile = parent.page.settings['AC_KEYS'][0]
+        initial = parent.page.settings['AC_KEYS'][0]
     except KeyError:
-        kbfile = gui.QFileDialog.getOpenFileName(parent, parent.captions['059'],
-            filter='XML files (*.xml)')
+        initial = ''
+
+    if showinfo:
+        ok = gui.QMessageBox.information(parent, parent.captions['000'],
+            instructions, gui.QMessageBox.Ok | gui.QMessageBox.Cancel)
+        if ok == gui.QMessageBox.Cancel:
+            return
+
+        gui.QFileDialog.getOpenFileName(parent, parent.captions['059'],
+                directory=initial, filter='XML files (*.xml)')
+
+    else:
+        kbfile = initial
+
     if not kbfile:
         return
 

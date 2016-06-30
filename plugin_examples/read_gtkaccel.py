@@ -1,3 +1,5 @@
+import collections
+
 keydef_id = 'gtk_accel_path'
 conversion_map = (
     ('bracketright', ']'),
@@ -22,7 +24,43 @@ def convert_key(inp):
 def build_mods(inp):
     return out
 
-def read_keydefs(filename):
+def read_keydefs_and_stuff(filename):
+
+    keydefs, actions, others = readfile(filename)
+    result = {'keydefs': keydefs}
+
+    actiondict = collections.defaultdict(list)
+    new_actions = {}
+    descriptions = {}
+    for key, value in actions.items():
+        context, action = value.lstrip('/').split('/', 1)
+        actiondict[context].append(action)
+        new_actions[key] = (context, action)
+        descriptions[key] = ''
+    actions = new_actions
+    contextlist = [x for x in actiondict.keys()]
+    result.update({'actions': actions, 'actionscontext': actiondict,
+        'contexts': contextlist, 'descriptions': descriptions})
+
+    if others:
+        othersdict = collections.defaultdict(list)
+        otheractions = {}
+        otherkeys = []
+        keyval = 0
+        for key, value in others:
+            context, action = key.lstrip('/').split('/', 1)
+            othersdict[context].append(action)
+            keyval += 1
+            otheractions[keyval] = (context, action)
+            if value:
+                otherkeys.append((value, keyval))
+        result.update({'others': others, 'othercontext': othersdict,
+            'otherkeys': otherkeys})
+
+    return result
+
+
+def readfile(filename):
     keydefs = []
     actions, others = {}, []
     new_id = 0
@@ -63,9 +101,10 @@ def read_keydefs(filename):
                         if '<Shift' in test: mods += 'S'
                     ## print(test)
                     keydefs.append((key, mods, new_id))
+
     return keydefs, actions, others
 
-def build_extended_keydefs(keydefs, actions):
+def build_extended_keydefs(keydefs, actions): # the old version
     keydefs_full, used = [], {}
     for key, mods, command in keydefs:
         keydefs_full.append('Keydef,{},{},{}'.format(key, mods, actions[command]))
@@ -76,18 +115,14 @@ def build_extended_keydefs(keydefs, actions):
     return keydefs_full
 
 def main():
+    import pprint
     for item in (
-            '/home/albert/.gimp-2.8/menurc',
-            ## '/home/albert/.config/banshee-1/gtk_accel_map'
-            ## '/home/albert/.dia/menurc',
+            ## '/home/albert/.gimp-2.8/menurc',
+            ## '/home/albert/.config/banshee-1/gtk_accel_map',
+            '/home/albert/.dia/menurc',
             ):
-        keydefs, actions, other = read_keydefs(item)
-        print(keydefs)
-        print(actions)
-        print(other)
-        keydefs_full = build_extended_keydefs(keydefs, actions)
-        for item in keydefs_full:
-            print(item)
+        stuff = read_keydefs_and_stuff(item)
+        pprint.pprint(stuff)
 
 if __name__ == "__main__":
     main()

@@ -1,5 +1,4 @@
 # -*- coding: UTF-8 -*-
-
 """
 See example_app_keys.py for a description of the plugin API.
 Only define the functions that need to be defined, for everything
@@ -17,7 +16,7 @@ def buildcsv(parent, showinfo=True):
     shortcuts = collections.OrderedDict()
 
     try:
-        initial = parent.page.settings['BSH_KEYS'][0]
+        initial = parent.page.settings['GMP_KEYS'][0]
     except KeyError:
         initial = ''
     if showinfo:
@@ -28,17 +27,16 @@ def buildcsv(parent, showinfo=True):
     if not kbfile:
         return
 
+    ## kbfile = '/home/albert/.gimp-2.8/menurc'
     stuffdict = read_keydefs_and_stuff(kbfile)
     keydefs = stuffdict.pop('keydefs')
     actions = stuffdict['actions']
-    omsdict = stuffdict['descriptions']
 
     lastkey, used = 0, {}
     for key, mods, command in keydefs:
         lastkey += 1
-        shortcuts[str(lastkey)] = (key, mods, actions[command])
         context, action = actions[command]
-        description = omsdict[command]
+        description = ''
         shortcuts[str(lastkey)] = (key, mods, context, action, description)
 
     return shortcuts, stuffdict

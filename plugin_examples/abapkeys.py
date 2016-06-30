@@ -102,7 +102,7 @@ def gethotkey(element):
 
     return hotkey
 
-def buildcsv(parent):
+def buildcsv(parent, showinfo=True):
     """
     In het huidige definities bestand zitten twee schema's (editor modes),
     eigenlijk is er maar één actief en dus belangrijk

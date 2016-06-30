@@ -31,7 +31,7 @@ def getkey(keystr):
     return mods, parts[-1]
 
 
-def buildcsv(parent):
+def buildcsv(parent, showinfo=True):
     opprefs = '/home/albert/.config/opera-developer/Preferences'
     shortcuts = collections.OrderedDict()
     commandlist = []

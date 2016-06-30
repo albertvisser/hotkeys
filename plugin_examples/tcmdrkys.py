@@ -683,18 +683,21 @@ class MyPanel(gui.QFrame):
         else:
             self.on_item_selected(item, item) # , from_update=True)
 
-def buildcsv(parent):
+def buildcsv(parent, showinfo=True):
 
-    dlg = TCMergeDialog(parent)
-    dlg.load_files((
-        parent.settings['KB_PAD'][0],
-        parent.settings['CI_PAD'][0],
-        parent.settings['UC_PAD'][0],
-        parent.settings['TC_PAD'][0],
-        parent.page.pad))
-    ok = dlg.exec_()
-    if ok == gui.QDialog.Accepted:
-        shortcuts = parent.tempdata
+    if showinfo:
+        dlg = TCMergeDialog(parent)
+        dlg.load_files((
+            parent.page.settings['KB_PAD'][0],
+            parent.page.settings['CI_PAD'][0],
+            parent.page.settings['UC_PAD'][0],
+            parent.page.settings['TC_PAD'][0],
+            parent.page.pad))
+        ok = dlg.exec_()
+        if ok == gui.QDialog.Accepted:
+            shortcuts = parent.tempdata
+        else:
+            shortcuts = []
     else:
         shortcuts = []
     return shortcuts, {}

@@ -22,6 +22,9 @@ import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 
 import editor.hotkeys_constants as hkc
+C_NEXT, C_PREV, C_SEL, C_NONE  = '014', '015', '050', "052"
+C_FIND, C_FILTER, C_FLTOFF = '051', "068", "066"
+
 #
 # non-gui and csv related functions
 # perhaps also add to hotkeys_constants (rename?)
@@ -338,10 +341,10 @@ def m_rebuild(self):
     ## if not settings:
         ## return self.captions['031'].format(csvfile)
 
-    shortcuts, stuff = self.page._keys.buildcsv(self)
-    if shortcuts:
-        self.page.data = shortcuts
-        self.page.otherstuff = stuff
+    newdata = self.page._keys.buildcsv(self)
+    if newdata:
+        self.page.data = newdata[0]
+        self.page.otherstuff = newdata[1]
         writecsv(self.page.pad, self.page.settings, self.page.column_info,
             self.page.data)
         self.page.populate_list()
@@ -1185,13 +1188,24 @@ class HotkeyPanel(gui.QFrame):
         gui.QFrame.__init__(self, parent)
         self.parent = parent # .parent()
         self.captions = self.parent.parent.captions
+
         self.settings, self.column_info, self.data = readcsv(self.pad)
+        self.otherstuff = {} # ruimte voor zaken als een lijst met mogelijke commando's
+
         if not self.settings or not self.column_info:
             gui.QLabel(self.captions['044'], self)
             return
         self.p0list = gui.QTreeWidget(self)
         modulename = self.settings["PluginName"][0]
         self._keys = importlib.import_module(modulename)
+        try:
+            parent.page = self
+            self.otherstuff = self._keys.buildcsv(parent, showinfo=False)[1]
+            with open('{}.otherstuff'.format(modulename), 'w') as _o:
+                for item, value in self.otherstuff.items():
+                    print(item, '→', value, file=_o)
+        except AttributeError:
+            pass
         try:
             self._panel = self._keys.MyPanel(self)
         except AttributeError:
@@ -1201,7 +1215,6 @@ class HotkeyPanel(gui.QFrame):
         # gelegenheid voor extra initialisaties en het opbouwen van de rest van de GUI
         # het vullen van veldwaarden hierin gebeurt als gevolg van het vullen
         # van de eerste rij in de listbox, daarom moet deze het laatst
-        self.otherstuff = {} # ruimte voor zaken als een lijst met mogelijke commando's
         # self.otherstuff = self._keys.getotherstuff()
         self._panel.add_extra_attributes()
         self._panel.add_extra_fields()
@@ -1223,7 +1236,7 @@ class HotkeyPanel(gui.QFrame):
             sizer1.addWidget(self.p0list)
             self._sizer.addLayout(sizer1)
 
-        # indien van toepassing (TC versie): toevoegen van de rest van de GUI aan de layout
+        # indien van toepassing: toevoegen van de rest van de GUI aan de layout
         self._panel.layout_extra_fields(self._sizer)
 
         self.setLayout(self._sizer)
@@ -1310,7 +1323,8 @@ class ChoiceBook(gui.QFrame):
     def __init__(self, parent, plugins):
         ## gui.QWidget.__init__(self, parent)
         self.plugins = plugins
-        self.parent = parent.parent()
+        ## self.parent = parent.parent()
+        self.parent = parent
         gui.QFrame.__init__(self, parent)
         self.sel = gui.QComboBox(self)
         self.sel.currentIndexChanged.connect(self.on_page_changed)
@@ -1318,13 +1332,15 @@ class ChoiceBook(gui.QFrame):
         self.find.setMinimumContentsLength(20)
         self.find.setEditable(True)
         self.find.editTextChanged.connect(self.on_text_changed)
-        self.b_next = gui.QPushButton(self.parent.captions["014"])
+        ## self.b_next = gui.QPushButton(self.parent.captions["014"]) C_NEXT
+        self.b_next = gui.QPushButton("", self)
         self.b_next.clicked.connect(self.find_next)
         self.b_next.setEnabled(False)
-        self.b_prev = gui.QPushButton(self.parent.captions["015"])
+        ## self.b_prev = gui.QPushButton(self.parent.captions["015"])
+        self.b_prev = gui.QPushButton('', self)
         self.b_prev.clicked.connect(self.find_prev)
         self.b_prev.setEnabled(False)
-        self.b_filter = gui.QPushButton(self.parent.captions["068"])
+        self.b_filter = gui.QPushButton(self.parent.captions[C_FILTER], self)
         self.b_filter.clicked.connect(self.filter)
         self.b_filter.setEnabled(False)
         self.filter_on = False
@@ -1333,19 +1349,23 @@ class ChoiceBook(gui.QFrame):
             win = HotkeyPanel(self, loc)
             if win is None:
                 self.pnl.addWidget(EmptyPanel(self.pnl,
-                    self.parent.captions["052"].format(txt)))
+                    self.parent.captions[C_NONE].format(txt)))
             else:
                 self.pnl.addWidget(win)
             self.sel.addItem(txt)
+
+        self.b_exit = gui.QPushButton(self.parent.captions[hkc.C_EXIT], self)
+        self.b_exit.clicked.connect(self.parent.exit)
+
         box = gui.QVBoxLayout()
         vbox = gui.QVBoxLayout()
         hbox = gui.QHBoxLayout()
         hbox.addSpacing(10)
-        self.sel_text = gui.QLabel(self.parent.captions["050"], self)
+        self.sel_text = gui.QLabel("", self)
         hbox.addWidget(self.sel_text)
         hbox.addWidget(self.sel)
         hbox.addStretch()
-        self.find_text = gui.QLabel(self.parent.captions["051"], self)
+        self.find_text = gui.QLabel("", self)
         hbox.addWidget(self.find_text)
         hbox.addWidget(self.find)
         hbox.addWidget(self.b_filter)
@@ -1358,17 +1378,26 @@ class ChoiceBook(gui.QFrame):
         hbox = gui.QVBoxLayout()
         hbox.addWidget(self.pnl)
         box.addLayout(hbox)
+
+        hbox = gui.QHBoxLayout()
+        hbox.addStretch()
+        hbox.addWidget(self.b_exit)
+        hbox.addStretch()
+        box.addLayout(hbox)
+
         self.setLayout(box)
+        self.setcaptions()
 
     def setcaptions(self):
-        self.b_next.setText(self.parent.captions['014'])
-        self.b_prev.setText(self.parent.captions['015'])
-        self.sel_text.setText(self.parent.captions['050'])
-        self.find_text.setText(self.parent.captions['051'])
+        self.b_next.setText(self.parent.captions[C_NEXT])
+        self.b_prev.setText(self.parent.captions[C_PREV])
+        self.sel_text.setText(self.parent.captions[C_SEL])
+        self.find_text.setText(self.parent.captions[C_FIND])
         if self.filter_on:
-            self.b_filter.setText(self.parent.captions["066"])
+            self.b_filter.setText(self.parent.captions[C_FLTOFF])
         else:
-            self.b_filter.setText(self.parent.captions["068"])
+            self.b_filter.setText(self.parent.captions[C_FILTER])
+        self.b_exit.setText(self.parent.captions[hkc.C_EXIT])
 
     def on_page_changed(self, indx):
         page = self.pnl.currentWidget() ## self.parent().page
@@ -1382,7 +1411,7 @@ class ChoiceBook(gui.QFrame):
                 # ook nog de vorige tekst in de combobox selecteren?
                 return
         self.pnl.setCurrentIndex(indx)
-        self.parent.page = self.pnl.currentWidget()#@$&%$#% we just did this
+        self.parent.page = page # self.pnl.currentWidget()
         ## if not all((self.parent.page.settings, self.parent.page.column_info,
                 ## self.parent.page.data)):
             ## return
@@ -1491,22 +1520,24 @@ class MainFrame(gui.QMainWindow):
         self.title = self.captions["000"]
         self.setWindowTitle(self.title)
         self.sb.showMessage(self.captions["089"].format(self.captions["000"]))
-        pnl = gui.QWidget(self)
-        self.book = ChoiceBook(pnl, self.ini['plugins']) # , size= (600, 700))
-        sizer_v = gui.QVBoxLayout()
-        sizer_h = gui.QHBoxLayout()
-        sizer_h.addWidget(self.book)
-        sizer_v.addLayout(sizer_h)
-        self.b_exit = gui.QPushButton(self.captions[hkc.C_EXIT], pnl)
-        self.b_exit.clicked.connect(self.exit)
-        sizer_h = gui.QHBoxLayout()
-        sizer_h.addStretch()
-        sizer_h.addWidget(self.b_exit)
-        sizer_h.addStretch()
-        sizer_v.addLayout(sizer_h)
-        pnl.setLayout(sizer_v)
+        ## pnl = gui.QWidget(self)
+        ## self.book = ChoiceBook(pnl, self.ini['plugins']) # , size= (600, 700))
+        self.book = ChoiceBook(self, self.ini['plugins']) # , size= (600, 700))
+        ## sizer_v = gui.QVBoxLayout()
+        ## sizer_h = gui.QHBoxLayout()
+        ## sizer_h.addWidget(self.book)
+        ## sizer_v.addLayout(sizer_h, 1)
+        ## self.b_exit = gui.QPushButton(self.captions[hkc.C_EXIT], pnl)
+        ## self.b_exit.clicked.connect(self.exit)
+        ## sizer_h = gui.QHBoxLayout()
+        ## sizer_h.addStretch()
+        ## sizer_h.addWidget(self.b_exit)
+        ## sizer_h.addStretch()
+        ## sizer_v.addLayout(sizer_h)
+        ## pnl.setLayout(sizer_v)
 
-        self.setCentralWidget(pnl)
+        ## self.setCentralWidget(pnl)
+        self.setCentralWidget(self.book)
         self.page = self.book.pnl.currentWidget()
         self.book.on_page_changed(0)
         self.setcaptions()
@@ -1593,7 +1624,6 @@ class MainFrame(gui.QMainWindow):
                 item.setTitle(self.captions[menu])
             except AttributeError:
                 item.setText(self.captions[menu])
-        self.b_exit.setText(self.captions[hkc.C_EXIT])
         self.book.setcaptions()
         self.page.setcaptions()
 
