@@ -94,7 +94,7 @@ def get_keydefs(path):
 
     # (re)build the definitions for the csv file
     keydata = collections.OrderedDict()
-    keydata_2 = collections.DefaultDict(list)
+    keydata_2 = collections.defaultdict(list)
     key = 0
     root = data.getroot()
     for form in list(root.find('Hotkeys')):
