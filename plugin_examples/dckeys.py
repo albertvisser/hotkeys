@@ -48,8 +48,12 @@ def _shorten_mods(modifier_list):
 
 def _translate_keynames(inp):
     "translate cursor keys as shown in html to notation in xml"
-    convert = {' ↑': 'Up', ' ↓': 'Down', ' ←': 'Left', ' →': 'Right'}
-    return convert[inp] if inp in convert else inp
+    convert = {'↑': 'Up', '↓': 'Down', '←': 'Left', '→': 'Right',
+        'Delete': 'Del', 'PgDown': 'PgDn'}
+    try:
+        return convert[inp.strip()]
+    except KeyError:
+        return inp.strip()
 
 def parse_keytext(text):
     """leid keynamen en modifiers op uit tekst
@@ -90,6 +94,7 @@ def get_keydefs(path):
 
     # (re)build the definitions for the csv file
     keydata = collections.OrderedDict()
+    keydata_2 = collections.DefaultDict(list)
     key = 0
     root = data.getroot()
     for form in list(root.find('Hotkeys')):
@@ -117,8 +122,9 @@ def get_keydefs(path):
             key += 1
             keydata[key] = (keyname, modifiers, context, command, parameter,
                 controls)
+            keydata_2[(keyname, modifiers)].append((context, command))
 
-    return keydata
+    return keydata, keydata_2
 
 
 def get_stdkeys(path):
@@ -132,7 +138,7 @@ def get_stdkeys(path):
     with open(path) as doc:
         soup = bs.BeautifulSoup(doc)
 
-    stdkeys = []
+    stdkeys = collections.defaultdict(list)
     sections = soup.find_all('div', class_='SECT1')
     for div in sections:
 
@@ -151,61 +157,145 @@ def get_stdkeys(path):
                     keynames = parse_keytext(test[0].text) # kan meer dan 1 key / keycombo bevatten
                 else:
                     oms = col.text # zelfde omschrijving als uit cmd's ? Heb ik deze nodig?
-            for name in keynames:
-                stdkeys.append((_translate_keynames(name), context, oms))
+            for name, mods in keynames:
+                stdkeys[(_translate_keynames(name), mods)].append((context, oms))
 
     return stdkeys
 
-def get_cmddict(path, definedcommands):
+def get_cmddict(path, stdkeys):
+    cmddict = {}
+    dflt_assign = collections.defaultdict(list) # kan wrschl een gewone dict zijn?
 
     with open(path) as doc:
         soup = bs.BeautifulSoup(doc)
 
-    cmddict = {}
     div = soup.find_all('div', class_='CHAPTER')[0]
     tbody = div.select('div > table > tbody > tr')
 
     for row in tbody:
         command, oms = '', ''
         for col in row.find_all('td', recursive=False):
-            test = col.select('tt > div > a')
+            ## test = col.select('tt > div > a')
+            test = col.select('tt > div')
             if test:
-                command = test[0].text
+                command = test[0].a.text
+                defkey = test[1].text
             else:
-                oms = ''
-                for item in col.contents:
-                    if isinstance(item, bs.Tag):
-                        if item.name == 'br':
+                # I could use the entire text and pass everything to an editing screen
+                # but for now just split off the first part
+                oms = col.get_text().split('\n')[0]
+                ## oms = ''
+                ## for item in col.contents:
+                    ## if isinstance(item, bs.Tag):
+                        ## if item.name == 'br':
+                            ## break
+                        ## else:
+                            ## oms += item.text
+                    ## else:
+                        ## oms += str(item)
+        if defkey:
+            allkeys = parse_keytext(defkey)
+            for key, mods in allkeys:
+                test = (_translate_keynames(key), mods)
+                dflt_assign[test].append((command, oms)) # command)
+                if oms == '':
+                    for context, desc in stdkeys[test]:
+                        if context == 'main window':
+                            oms = desc
                             break
-                        else:
-                            oms += item.text
-                    else:
-                        oms += str(item)
+
         cmddict[command] = oms
-        if command in definedcommands:
-            definedcommands.remove(command)
 
-    for command in definedcommands:
-        cmddict[command] = ''
+    return cmddict, dflt_assign
 
-    return cmddict
+
+class CompleteDialog(gui.QDialog):
+
+    def __init__(self, parent):
+        self.parent = parent
+        ## self.captions = self.parent.captions
+
+        gui.QDialog.__init__(self, parent)
+        self.resize(680, 400)
+
+        self.data = self.parent.complete_data['data']
+        self.outfile = self.parent.complete_data['dc_text']
+        names = [x for x in self.data.keys()]
+        values = [x for x in self.data.values()]
+        self.p0list = gui.QTableWidget(self)
+        self.p0list.setColumnCount(1)
+        self.p0list.setHorizontalHeaderLabels(['Description'])
+        hdr = self.p0list.horizontalHeader()
+        ## p0hdr.resizeSection(0, 300)
+        hdr.setStretchLastSection(True)
+        for row, text in enumerate(values):
+            self.p0list.insertRow(row)
+            new_item = gui.QTableWidgetItem()
+            new_item.setText(text)
+            self.p0list.setItem(row, 0, new_item)
+        self.p0list.setVerticalHeaderLabels(names)
+        self.numrows = len(values)
+
+        self.sizer = gui.QVBoxLayout()
+        hsizer = gui.QHBoxLayout()
+        hsizer.addWidget(self.p0list)
+        self.sizer.addLayout(hsizer)
+
+        buttonbox = gui.QDialogButtonBox()
+        btn = buttonbox.addButton(gui.QDialogButtonBox.Ok)
+        btn = buttonbox.addButton(gui.QDialogButtonBox.Cancel)
+        buttonbox.accepted.connect(self.accept)
+        buttonbox.rejected.connect(self.reject)
+        hsizer = gui.QHBoxLayout()
+        hsizer.addStretch()
+        hsizer.addWidget(buttonbox)
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+        self.setLayout(self.sizer)
+
+    def accept(self):
+        new_values = {}
+        for rowid in range(self.p0list.rowCount()):
+            value = []
+            for colid in range(self.p0list.columnCount()):
+                try:
+                    value.append(self.p0list.item(rowid, colid).text())
+                except AttributeError:
+                    value.append('')
+            if value != [''] * self.p0list.columnCount():
+                new_values[len(new_values)] = value
+        self.parent.page.data = new_values
+        if os.path.exists(self.outfile):
+            shutil.copyfile(self.outfile, self.outfile + '~')
+        with open(self.outfile, 'w') as _out:
+            for key, value in newvalues.items:
+                _out.write('{}: {}\n'.format(key, value))
+        gui.QDialog.accept(self)
 
 
 def buildcsv(parent, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het csv bestand
     """
+    try:
+        parent.page
+    except AttributeError:
+        has_page = False
+    else:
+        has_page = False
+
     initial = '/home/albert/.config/doublecmd/shortcuts.scf'
     dc_keys = '/usr/share/doublecmd/doc/en/shortcuts.html'
     dc_cmds = '/usr/share/doublecmd/doc/en/cmds.html'
 
     shortcuts = collections.OrderedDict()
-    try:
-        initial = parent.page.settings['DC_PATH'][0]
-        dc_keys = parent.page.settings['DC_KEYS'][0]
-        dc_cmds = parent.page.settings['DC_CMDS'][0]
-    except (KeyError, AttributeError):
-        pass
+    if has_page:
+        try:
+            initial = parent.page.settings['DC_PATH'][0]
+            dc_keys = parent.page.settings['DC_KEYS'][0]
+            dc_cmds = parent.page.settings['DC_CMDS'][0]
+        except KeyError:
+            pass
     if showinfo:
         ok = gui.QMessageBox.information(parent, parent.captions['000'],
             instructions, gui.QMessageBox.Ok | gui.QMessageBox.Cancel)
@@ -218,12 +308,57 @@ def buildcsv(parent, showinfo=True):
     if not kbfile:
         return
 
-    keydata = get_keydefs(kbfile)
+    keydata, definedkeys = get_keydefs(kbfile)            # alles
+    ## # need to collect commands that are defined but don't have a description
+    ## # add them to cmddict with empty oms and feed them to CompleteDialog
     definedcommands = set([x[3] for x in keydata.values()])
-    # to determine if keys have been redefined
+    with open('dc_definedkeys', 'w') as _o:
+        for x in sorted(definedkeys.items()):
+            print(x, file=_o)
+    with open('dc_definedcommands', 'w') as _o:
+        for x in sorted(definedcommands):
+            print(x, file=_o)
+
     stdkeys = get_stdkeys(dc_keys)
-    # to find descriptions for commands
-    cmddict = get_cmddict(dc_cmds, definedcommands)
+    cmddict, defaults = get_cmddict(dc_cmds, stdkeys)
+    # WIP: complete this stuff (commented out for now).
+    ## # compare mappings in stdkeys and defaults to see if any are missing
+    with open('dc_stdkeys', 'w') as _o:
+        for x in sorted(stdkeys.items()):
+            print(x, file=_o)
+    with open('dc_defaults', 'w') as _o:
+        for x in sorted(defaults.items()):
+            print(x, file=_o)
+    ## # if descriptions are missing, simply add them; otherwise we need to choose which one
+    ## # to use (the longest?)
+    with open('dc_cmddict_before', 'w') as _o:
+        for x, y in sorted(cmddict.items()):
+            print(x, y, file=_o)
+    for command in definedcommands:
+        if command not in cmddict:
+            cmddict[command] = ''
+    with open('dc_cmddict_after', 'w') as _o:
+        for x, y in sorted(cmddict.items()):
+            print(x, y, file=_o)
+    ## # if any empty ones are left, feed them to the dialog
+    ## tobecompleted = {x: y for x, y in cmddict.items() if y == ''}
+    ## with open('tobecompleted', 'w') as _o:
+        ## for x, y in sorted(tobecompleted.items()):
+            ## print(x, y, file=_o)
+    ## cmddocsfile = '/home/albert/.config/doublecmd/extratexts'
+    ## if has_page:
+        ## try:
+            ## cmddocsfile = parent.page.settings['DC_TEXTS'][0]
+        ## except KeyError:
+            ## pass
+    ## if showinfo:
+        ## parent.complete_data = {'data': tobecompleted, 'dc_text': cmddocsfile}
+        ## dlg = CompleteDialog(parent).exec_()
+        ## if dlg == gui.QDialog.accepted:
+            ## tobecompleted = parent.complete_data['data']
+            ## cmddocsfile = parent.complete_data['dc_text']
+            ## parent.page.settings['DC_TEXTS'] = (cmddocsfile,
+                ## "File containing command descriptions that aren't in cmds.html")
     for key, value in keydata.items():
         templist = list(value)
         val = '' # standard / customized
@@ -234,15 +369,13 @@ def buildcsv(parent, showinfo=True):
             templist.append(cmddict[value[3]])
         except KeyError:
             continue # do not write unassigned commands
-            ## templist.append('')
-        ## print(templist)
         shortcuts[key] = tuple(templist)
 
     controls = ['', 'Command Line', 'Files Panel', 'Quick Search']
     contexts = ['Main', 'Copy/Move Dialog', 'Differ', 'Edit Comment Dialog',
         'Viewer']
     return shortcuts, {'stdkeys': stdkeys, 'cmddict': cmddict, 'controls': controls,
-        'contexts': contexts}
+        'contexts': contexts} ##, 'manual_cmdoms': tobecompleted}
 
 how_to_save = """\
 Instructions to load the changed definitions back into Double Commander.
@@ -252,7 +385,6 @@ After you've saved the definitions to a .scf file, go to
 Configuration > Options > Hot keys, and select it in the
 top left selector.
 
-print
 You may have to close and reopen the dialog to see the changes.
 """
 
@@ -264,9 +396,9 @@ def build_shortcut(key, mods):
         result += 'Shift+'
     if 'A' in mods:
         result += 'Alt+'
+    if 'W' in mods:
+        result += 'WinKey+'
     key = key.capitalize()
-    if key == 'Pgup': key = 'PgUp'
-    if key == 'Pgdn': key = 'PgDn'
     return result + key
 
 def savekeys(parent):
