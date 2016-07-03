@@ -444,7 +444,6 @@ def on_combobox(self, cb, text):
 
     zorgt ervoor dat de buttons ge(de)activeerd worden
     """
-    pass
     text = str(text) # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan de
                      # callback soms fout?
     hlp = cb.currentText()
@@ -475,7 +474,6 @@ def on_combobox(self, cb, text):
 
 def on_checkbox(self, cb, state):
     state = bool(state)
-    pass
     for win, indx in zip((self.cb_shift, self.cb_ctrl, self.cb_alt, self.cb_win),
             range(1,5)):
         if cb == win and state != self._origdata[indx]:
@@ -493,12 +491,12 @@ def on_checkbox(self, cb, state):
     ## print(self._newdata)
 
 def on_update(self):
-    pass
+    return
     self.aanpassen()
     self.parent.p0list.setFocus()
 
 def on_delete(self):
-    pass
+    return
     self.aanpassen(delete=True)
     self.parent.p0list.setFocus()
 
@@ -524,25 +522,15 @@ class MyPanel(gui.QFrame):
         self.commandlist = sorted(self.commandsdict.keys())
         self.contextslist = self.parent.otherstuff['contexts']
         self.controlslist = self.parent.otherstuff['controls']
-        ## self.mag_weg = True
-        ## self.newfile = self.newitem = False
-        ## self.oldsort = -1
-        ## self.idlist = self.actlist = self.alist = []
-        ## paden = [self.parent.settings[x][0] for x in PATHS[:4]] + [self.parent.pad]
-        ## # ## self.cmdict, self.omsdict, self.defkeys, _ = readkeys(paden)
-        ## self.cmdict = defaultcommands(self.parent.settings['CI_PAD'][0])
-        ## self.ucmdict = usercommands(self.parent.settings['UC_PAD'][0])
-        ## self.defkeys = defaultkeys(self.parent.settings['KB_PAD'][0])
-        ## self.udefkeys = userkeys(self.parent.settings['TC_PAD'][0])
 
     def add_extra_fields(self):
         """fields showing details for selected keydef, to make editing possible
         """
         self._box = box = gui.QFrame(self)
-        ## box.setFrameShape(gui.QFrame.StyledPanel)
-        box.setMaximumHeight(150)
+        box.setMaximumHeight(120)
         self.txt_key = gui.QLabel(self.parent.captions[C_KTXT] + " ", box)
         cb = gui.QComboBox(box)
+        cb.setMaximumWidth(90)
         cb.addItems(self.keylist)
         cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
             self, cb, str))
@@ -561,9 +549,18 @@ class MyPanel(gui.QFrame):
             elif x == M_WIN:
                 self.cb_win = cb
 
+        self.lbl_contexts = gui.QLabel(self.parent.captions[C_CNTXT], box)
+        cb = gui.QComboBox(box)
+        cb.setMaximumWidth(110)
+        cb.addItems(self.contextslist)
+        cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
+            self, cb, str))
+        self.cmb_contexts = cb
+
         self.txt_cmd = gui.QLabel(self.parent.captions[C_CTXT] + " ", box)
         ## self.commandlist.sort()
         cb = gui.QComboBox(self)
+        cb.setMaximumWidth(150)
         cb.addItems(self.commandlist)
         cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
             self, cb, str))
@@ -579,12 +576,6 @@ class MyPanel(gui.QFrame):
         self.lbl_parms = gui.QLabel(self.parent.captions[C_PARMS], box)
         self.txt_parms = gui.QLineEdit(box)
         self.txt_parms.setMaximumWidth(280)
-        self.lbl_contexts = gui.QLabel(self.parent.captions[C_CNTXT], box)
-        cb = gui.QComboBox(box)
-        cb.addItems(self.contextslist)
-        cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
-            self, cb, str))
-        self.cmb_contexts = cb
         self.lbl_controls = gui.QLabel(self.parent.captions[C_CTRL], box)
         cb = gui.QComboBox(box)
         cb.addItems(self.controlslist)
@@ -594,6 +585,9 @@ class MyPanel(gui.QFrame):
 
         self.txt_oms = gui.QTextEdit(box)
         ## self.txt_oms.setMaximumHeight(40)
+        if not self.parent.settings['RedefineKeys'][0] == '1':
+            for widget in self.children():
+                widget.setEnabled(False)
         self.txt_oms.setReadOnly(True)
 
     def layout_extra_fields(self, sizer):
@@ -614,6 +608,11 @@ class MyPanel(gui.QFrame):
         sizer3.addWidget(self.cb_win)
         sizer2.addLayout(sizer3)
         sizer1.addLayout(sizer2)
+        sizer1.addStretch()
+        sizer2 = gui.QHBoxLayout()
+        sizer2.addWidget(self.lbl_contexts)
+        sizer2.addWidget(self.cmb_contexts)
+        sizer1.addLayout(sizer2)
         sizer2 = gui.QHBoxLayout()
         sizer2.addWidget(self.txt_cmd)
         sizer2.addWidget(self.cmb_commando)
@@ -631,12 +630,6 @@ class MyPanel(gui.QFrame):
         ## sizer1 = gui.QHBoxLayout()
         sizer2 = gui.QGridLayout()
         line = 0
-        sizer2.addWidget(self.lbl_contexts, line, 0)
-        sizer3 = gui.QHBoxLayout()
-        sizer3.addWidget(self.cmb_contexts)
-        sizer3.addStretch()
-        sizer2.addLayout(sizer3, line, 1)
-        line += 1
         sizer2.addWidget(self.lbl_parms, line, 0)
         sizer2.addWidget(self.txt_parms, line, 1)
         line += 1
@@ -671,7 +664,6 @@ class MyPanel(gui.QFrame):
         """callback on selection of an item
 
         velden op het hoofdscherm worden bijgewerkt vanuit de selectie"""
-        pass
         if not newitem: # bv. bij p0list.clear()
             return
         if self.initializing:
@@ -769,16 +761,14 @@ class MyPanel(gui.QFrame):
         self.cmb_commando.setCurrentIndex(ix)
         ix = self.contextslist.index(context)
         self.cmb_contexts.setCurrentIndex(ix)
-        ## self.cmb_contexts.setExitText(context)
         self.txt_parms.setText(parms)
         ix = self.controlslist.index(controls) # TODO: adapt for multiple values
         self.cmb_controls.setCurrentIndex(ix)
-        ## self.cmb_controls.setExitText(controls)
         self.txt_oms.setText(oms)
 
     def aanpassen(self, delete=False): # TODO
         print('aanpassen called')
-        pass
+        return
         item = self.parent.p0list.currentItem()
         pos = self.parent.p0list.indexOfTopLevelItem(item)
         if delete:

@@ -16,6 +16,10 @@ C_SAVE, C_DEL, C_KTXT, C_CTXT = '010', '011', '018', '019'
 M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
 PATHS = ('TC_PAD', 'UC_PAD', 'CI_PAD', 'KB_PAD', 'HK_PAD')
 
+"""
+    if key == 'Pgup': key = 'PgUp'
+    if key == 'Pgdn': key = 'PgDn'
+""" # where to put this?
 def keymods(x):
     """hulp bij omzetten wincmd.ini definitie in standaard definitie
     """
@@ -444,8 +448,11 @@ class MyPanel(gui.QFrame):
         self.idlist = self.actlist = self.alist = []
         paden = [self.parent.settings[x][0] for x in PATHS[:4]] + [self.parent.pad]
         ## self.cmdict, self.omsdict, self.defkeys, _ = readkeys(paden)
+        self.omsdict = {}
         self.cmdict = defaultcommands(self.parent.settings['CI_PAD'][0])
+        self.omsdict.update({x: y['oms'] for x, y in self.cmdict.items()})
         self.ucmdict = usercommands(self.parent.settings['UC_PAD'][0])
+        self.omsdict.update({x: y['oms'] for x, y in self.ucmdict.items()})
         self.defkeys = defaultkeys(self.parent.settings['KB_PAD'][0])
         self.udefkeys = userkeys(self.parent.settings['TC_PAD'][0])
 
@@ -454,7 +461,7 @@ class MyPanel(gui.QFrame):
         """
         self._box = box = gui.QFrame(self)
         box.setFrameShape(gui.QFrame.StyledPanel)
-        box.setMaximumHeight(90)
+        box.setMaximumHeight(110)
         self.txt_key = gui.QLabel(self.parent.captions[C_KTXT] + " ", box)
         self.keylist = [x for x in string.ascii_uppercase] + \
             [x for x in string.digits] + ["F" + str(i) for i in range(1,13)] + \
@@ -466,6 +473,7 @@ class MyPanel(gui.QFrame):
             ## 'OEM_US[{', 'OEM_US]}', 'OEM_US\\|', 'OEM_US;:', "OEM_US'" + '"',
             ## 'OEM_US/?', 'OEM_FR!']
         cb = gui.QComboBox(box)
+        cb.setMaximumWidth(90)
         cb.addItems(self.keylist)
         cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
             self, cb, str))
@@ -488,6 +496,7 @@ class MyPanel(gui.QFrame):
         self.commandlist = list(self.cmdict.keys()) + list(self.ucmdict.keys())
         self.commandlist.sort()
         cb = gui.QComboBox(self)
+        cb.setMaximumWidth(150)
         cb.addItems(self.commandlist)
         cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
             self, cb, str))
@@ -502,6 +511,9 @@ class MyPanel(gui.QFrame):
 
         self.txt_oms = gui.QTextEdit(box)
         self.txt_oms.setMaximumHeight(40)
+        if not self.parent.settings['RedefineKeys'][0] == '1':
+            for widget in self.children():
+                widget.setEnabled(False)
         self.txt_oms.setReadOnly(True)
 
     def layout_extra_fields(self, sizer):
@@ -521,6 +533,7 @@ class MyPanel(gui.QFrame):
         sizer3.addWidget(self.cb_shift)
         sizer2.addLayout(sizer3)
         sizer1.addLayout(sizer2)
+        sizer1.addStretch()
         sizer2 = gui.QHBoxLayout()
         sizer2.addWidget(self.txt_cmd)
         sizer2.addWidget(self.cmb_commando)
