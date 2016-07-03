@@ -407,8 +407,8 @@ def m_lang(self):
     # bepaal welke er momenteel geactiveerd is
     oldlang = self.ini['lang']
     indx = choices.index(oldlang) if oldlang in choices else 0
-    lang, ok = gui.QInputDialog.getItem(self, self.captions["027"],
-        self.captions["000"], choices, current=indx, editable=False)
+    lang, ok = gui.QInputDialog.getItem(self, self.captions["000"],
+        self.captions["027"], choices, current=indx, editable=False)
     if ok:
         change_language(oldlang, lang, self.ini['filename'])
         self.ini['lang'] = lang
@@ -1199,7 +1199,7 @@ class HotkeyPanel(gui.QFrame):
         modulename = self.settings["PluginName"][0]
         self._keys = importlib.import_module(modulename)
         try:
-            parent.page = self
+            self.parent.page = self
             self.otherstuff = self._keys.buildcsv(parent, showinfo=False)[1]
             with open('{}.otherstuff'.format(modulename), 'w') as _o:
                 for item, value in self.otherstuff.items():
@@ -1411,7 +1411,7 @@ class ChoiceBook(gui.QFrame):
                 # ook nog de vorige tekst in de combobox selecteren?
                 return
         self.pnl.setCurrentIndex(indx)
-        self.parent.page = page # self.pnl.currentWidget()
+        self.parent.page = self.pnl.currentWidget() # change to new selection
         ## if not all((self.parent.page.settings, self.parent.page.column_info,
                 ## self.parent.page.data)):
             ## return

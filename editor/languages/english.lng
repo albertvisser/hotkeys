@@ -133,9 +133,9 @@
 
 # menus/options
 200 &Application
-201 (re)&Read definitions (for current tool)
-202 &Save definitions (for current tool)
-203 Re&build definitions file (for current tool)
+201 (re)&Read definitions
+202 &Save definitions
+203 Re&build definitions file
 209 e&Xit
 210 &Settings
 211 &File locations

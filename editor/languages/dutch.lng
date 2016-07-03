@@ -133,9 +133,9 @@
 
 # menus/options
 200 &Application
-201 definities (her)&lezen (voor huidige tool)
-202 definities op&Slaan (voor huidige tool)
-203 definities &bestand opnieuw opbouwen (voor huidige tool)
+201 definities (her)&lezen
+202 definities op&Slaan
+203 definities &bestand opnieuw opbouwen
 209 e&Xit
 210 &Instellingen
 211 &Bestandslocaties
