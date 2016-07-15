@@ -176,21 +176,18 @@ def readcsv(pad):
                 settings[name] = (value, oms)
             elif rowtype == hkc.csv_titletype:
                 for item in rowdata[:-1]:
-                    coldata_item = ['', '', '', '', '']
-                    coldata_item[1] = item
+                    coldata_item = ['', '', '', '']
+                    coldata_item[0] = item
                     coldata.append(coldata_item)
             elif rowtype == hkc.csv_widthtype:
                 for ix, item in enumerate(rowdata[:-1]):
-                    coldata[ix][2] = int(item)
+                    coldata[ix][1] = int(item)
             elif rowtype == hkc.csv_seqnumtype:
                 for ix, item in enumerate(rowdata[:-1]):
-                    coldata[ix][0] = int(item)
-                    coldata[ix][3] = ix
+                    coldata[ix][2] = int(item)
             elif rowtype == hkc.csv_istypetype:
                 for ix, item in enumerate(rowdata[:-1]):
-                    coldata[ix][4] = bool(int(item))
-                coldata.sort()
-                coldata = [x[1:] for x in coldata]
+                    coldata[ix][3] = bool(int(item))
             elif rowtype == hkc.csv_keydeftype:
                 key += 1
                 data[key] = ([x.strip() for x in rowdata])
@@ -295,6 +292,7 @@ def m_loc(self):
     current_paths = [y for x, y in self.ini["plugins"]]
     ok = FilesDialog(self).exec_()
     if ok == gui.QDialog.Accepted:
+        selection = self.book.sel.currentIndex()
         modify_settings(self.ini)
 
         # update the screen(s)
@@ -328,6 +326,9 @@ def m_loc(self):
                     self.book.pnl, self.captions["052"].format(program))
             self.book.sel.addItem(program)
             self.book.pnl.addWidget(win)
+        if self.last_added:
+            selection = self.book.sel.findText(self.last_added)
+        self.book.sel.setCurrentIndex(selection)
 
 def m_user(self):
     """(menu) callback voor een nog niet geïmplementeerde actie"""
@@ -362,19 +363,23 @@ def m_tool(self):
 def m_col(self):
     """define tool-specific settings: column properties
     """
-    self.col_ids = [x for x in range(len(self.page.column_info))]
     dlg = ColumnSettingsDialog(self).exec_()
     if dlg == gui.QDialog.Accepted:
         new_pagedata = {}
         for key, value in self.page.data.items():
+            print(key, value)
             newvalue = []
-            for ix in self.col_ids:
-                if ix == 'new':
+            for colinf in self.page.column_info:
+                ix = colinf[2]
+                test = colinf[4]
+                if test == 'new':
                     newvalue.append('')
                 else:
-                    newvalue.append(value[ix])
+                    newvalue.append(value[test])
+                print(ix, test, newvalue)
             new_pagedata[key] = newvalue
         self.page.data = new_pagedata
+        self.page.column_info = [x[:-1] for x in self.page.column_info]
 
         writecsv(self.page.pad, self.page.settings, self.page.column_info,
             self.page.data)
@@ -382,9 +387,11 @@ def m_col(self):
         hdr = gui.QTreeWidgetItem()
         self.page.p0list.setHeaderItem(hdr)
         self.page.p0list.setHeaderLabels([self.captions[col[0]] for col in
+            ## sorted(self.page.column_info, key=lambda x: x[2])])
             self.page.column_info])
         hdr = self.page.p0list.header()
         hdr.setClickable(True)
+        ## for indx, col in enumerate(sorted(self.page.column_info, key=lambda x: x[2])):
         for indx, col in enumerate(self.page.column_info):
             hdr.resizeSection(indx, col[1])
         hdr.setStretchLastSection(True)
@@ -575,7 +582,7 @@ class ColumnSettingsDialog(gui.QDialog):
         self.data, self.checks = [], []
         self.col_textids, self.col_names, self.last_textid = read_columntitledata(
             self)
-        self.col_ids = self.parent.col_ids
+        self.oldseq = [x[2] for x in self.parent.page.column_info]
         for item in self.parent.page.column_info:
             self.add_row(*item)
         box = gui.QVBoxLayout()
@@ -654,34 +661,39 @@ class ColumnSettingsDialog(gui.QDialog):
         hsizer = gui.QHBoxLayout()
         hsizer.addSpacing(68)
         val = self.rownum if colno == '' else colno + 1
-        w_colno = gui.QLabel(self)
-        w_colno.setText(str(val))
-        w_colno.setFixedWidth(20)
+        ## w_colno = gui.QLabel(self)
+        ## w_colno.setText(str(val))
+        ## w_colno = gui.QLineEdit(str(val), self)
+        ## w_colno.setFixedWidth(20)
+        w_colno = gui.QSpinBox(self)
+        w_colno.setMinimum(1)
+        w_colno.setMaximum(99)
+        w_colno.setValue(val)
+        w_colno.setFixedWidth(36)
         hsizer.addWidget(w_colno)
         hsizer.addStretch()
         ghsizer.addLayout(hsizer, rownum)
         self.gsizer.addLayout(ghsizer)
-        self.data.append((w_name, w_width, w_colno, w_flag))
+        old_colno = "new" if colno == '' else self.oldseq.index(colno)
+        print(colno, self.rownum, val, old_colno)
+        self.data.append((w_name, w_width, w_colno, w_flag, old_colno))
         vbar = self.scrl.verticalScrollBar()
         vbar.setMaximum(vbar.maximum() + 31)
         vbar.setValue(vbar.maximum())
-        if not self.initializing:
-            self.col_ids.append('new')
 
     def delete_row(self, rownum):
         self.rownum -= 1
         check = self.checks[rownum]
         for widgets in self.data[rownum:]:
             w_colno = widgets[2]
-            w_colno.setText(str(int(w_colno.text()) - 1))
-        w_name, w_width, w_colno, w_flag = self.data[rownum]
+            w_colno.setValue(w_colno.value() - 1)
+        w_name, w_width, w_colno, w_flag, _ = self.data[rownum]
         for widget in check, w_name, w_width, w_colno, w_flag:
             self.gsizer.removeWidget(widget)
             widget.close() # destroy()
         self.gsizer.removeItem(self.gsizer.itemAt(rownum))
         self.checks.pop(rownum)
         self.data.pop(rownum)
-        del self.col_ids[rownum]
 
     def add_column(self):
         """nieuwe rij aanmaken in self.gsizer"""
@@ -702,8 +714,17 @@ class ColumnSettingsDialog(gui.QDialog):
 
 
     def accept(self):
-        column_info, new_titles = [], []
-        for w_name, w_width, w_colno, w_flag in self.data:
+        column_info, new_titles, col_oldids = [], [], []
+        lastcol = -1
+        for ix, value in enumerate(sorted(self.data,  key=lambda x: x[2].value())):
+            w_name, w_width, w_colno, w_flag, old_colno = value
+            print(w_name.currentText(), w_width.value(), w_colno.value(),
+                w_flag.isChecked(), old_colno)
+            if w_colno.value() == lastcol:
+                gui.QMessageBox.critical(self, self.parent.title, 'Identical '
+                    'values for column numbers')
+                return
+            lastcol = w_colno.value()
             name = w_name.currentText()
             if name in self.col_names:
                 name = self.col_textids[self.col_names.index(name)]
@@ -711,15 +732,17 @@ class ColumnSettingsDialog(gui.QDialog):
                 self.last_textid = "{:0>3}".format(int(self.last_textid) + 1)
                 new_titles.append((self.last_textid, name))
                 name = self.last_textid
-            column_info.append([name, int(w_width.text()), int(w_colno.text()) - 1,
-                w_flag.isChecked()])
+            column_info.append([name, int(w_width.text()), ix, w_flag.isChecked(),
+                old_colno])
+            print(column_info)
         if new_titles:
             add_columntitledata(new_titles)
+        # TODO: maak kolomnummers aansluitend - hopenlijk zorgte het sorteren daarvoor
+        ## self.parent.page.column_info = sorted(column_info, key=lambda x: x[2])
         self.parent.page.column_info = column_info
         for id_, name in new_titles:
             self.parent.captions[id_] = name
             self.parent.page.captions[id_] = name
-        self.parent.col_ids = self.col_ids
         gui.QDialog.accept(self)
 
 class ExtraSettingsDialog(gui.QDialog):
@@ -904,6 +927,7 @@ class FilesDialog(gui.QDialog):
     """
     def __init__(self, parent):
         self.parent = parent
+        self.last_added = ''
         gui.QDialog.__init__(self, parent)
         self.resize(680, 400)
 
@@ -1002,6 +1026,7 @@ class FilesDialog(gui.QDialog):
                 gui.QMessageBox.information(self, self.parent.title,
                     self.parent.captions['038'])
                 return
+            self.last_added = newtool
             ok = gui.QMessageBox.question(self, self.parent.title,
                 self.parent.captions['039'],
                 gui.QMessageBox.Yes | gui.QMessageBox.No, gui.QMessageBox.Yes)
@@ -1018,11 +1043,18 @@ class FilesDialog(gui.QDialog):
             ok = gui.QMessageBox.question(self, self.parent.title,
                 self.parent.captions['065'],
                 gui.QMessageBox.Yes | gui.QMessageBox.No)
+                # TODO: add option to remove the csv file(s) - so make this a dialog?
             if gui.QMessageBox.Yes:
                 for row in reversed(checked):
                     self.delete_row(row)
 
     def accept(self):
+        ## print('last added:', self.last_added)
+        ## print('paths:', self.paths)
+        ## print('data:', self.pathdata)
+        if self.last_added not in [x[0] for x in self.paths]:
+            self.last_added = ''
+        self.parent.last_added = self.last_added
         self.parent.ini["plugins"] = update_paths(self.paths, self.pathdata)
         gui.QDialog.accept(self)
 
@@ -1224,10 +1256,12 @@ class HotkeyPanel(gui.QFrame):
             self.p0list.setSortingEnabled(True)
             self.p0list.setHeaderLabels([self.captions[col[0]] for col in
                 self.column_info])
+                ## sorted(self.column_info, key=lambda x: x[2])])
             self.p0list.setAlternatingRowColors(True)
             self.p0list.currentItemChanged.connect(self._panel.on_item_selected)
             hdr = self.p0list.header()
             hdr.setClickable(True)
+            ## for indx, col in enumerate(sorted(self.column_info, key=lambda x: x[2])):
             for indx, col in enumerate(self.column_info):
                 hdr.resizeSection(indx, col[1])
             hdr.setStretchLastSection(True)
@@ -1272,17 +1306,20 @@ class HotkeyPanel(gui.QFrame):
         if items is None or len(items) == 0:
             return
 
+        ## print('...')
         self._panel.initializing = True
         for key, data in items:
+            ## print(key, data)
             new_item = gui.QTreeWidgetItem()
             new_item.setData(0, core.Qt.UserRole, key) # data[0])
             for indx, col in enumerate(self.column_info):
                 from_indx, is_soort = col[2], col[3]
-                value = data[from_indx]
+                value = data[indx]
+                ## print(indx, col, from_indx, value)
                 if is_soort:
                     value = hkc.C_DFLT if value == 'S' else hkc.C_RDEF
                     value = self.captions[value]
-                new_item.setText(indx, value)
+                new_item.setText(from_indx, value)
             self.p0list.addTopLevelItem(new_item)
             self.p0list.setCurrentItem(self.p0list.topLevelItem(pos))
         self._panel.initializing = False
@@ -1539,7 +1576,8 @@ class MainFrame(gui.QMainWindow):
         ## self.setCentralWidget(pnl)
         self.setCentralWidget(self.book)
         self.page = self.book.pnl.currentWidget()
-        self.book.on_page_changed(0)
+        ## self.book.on_page_changed(0)
+        self.book.sel.setCurrentIndex(0)
         self.setcaptions()
         self.show()
 
