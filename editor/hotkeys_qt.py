@@ -24,10 +24,20 @@ import PyQt4.QtCore as core
 import editor.hotkeys_constants as hkc
 C_NEXT, C_PREV, C_SEL, C_NONE  = '014', '015', '050', "052"
 C_FIND, C_FILTER, C_FLTOFF = '051', "068", "066"
-
+## M_PREF = ... # 'Default tool'
 #
 # non-gui and csv related functions
 # perhaps also add to hotkeys_constants (rename?)
+def get_pluginname(csvname):
+    with open(csvname) as _in:
+        for line in _in:
+            test = line.split(',')
+            if test[:2] == [hkc.csv_settingtype, hkc.csv_settingnames[0]]:
+                pl_name = test[2]
+                break
+    # ideally we should import the given module to determine the actual file name
+    return pl_name.replace('.', '/') + '.py'
+
 def read_settings(filename):
     lang, plugins = 'english.lng', []
     with open(filename) as _in:
@@ -428,6 +438,10 @@ def m_about(self):
     text = '\n'.join(self.captions['057'].format(self.captions['071'],
         hkc.VRS, hkc.AUTH, self.captions['072']).split(' / '))
     info = gui.QMessageBox.information(self, self.captions['000'], text)
+
+def m_prev(self):
+    "mogelijkheid bieden om een tool op te geven dat default getoond wordt"
+    # TODO: build this
 
 def m_exit(self):
     """(menu) callback om het programma direct af te sluiten"""
@@ -920,6 +934,55 @@ class ExtraSettingsDialog(gui.QDialog):
 
         gui.QDialog.accept(self)
 
+class DeleteDialog(gui.QDialog):
+
+    def __init__(self, parent):
+        self.parent = parent
+        self.last_added = ''
+        gui.QDialog.__init__(self, parent)
+        self.sizer = gui.QVBoxLayout()
+        hsizer = gui.QHBoxLayout()
+        label = gui.QLabel(self.parent.parent.captions['065'], self)
+        ## hsizer.addStretch()
+        hsizer.addWidget(label)
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+
+        hsizer = gui.QHBoxLayout()
+        check = gui.QCheckBox('Also remove keydefs data (csv)', self)
+        ## hsizer.addStretch()
+        hsizer.addWidget(check)
+        self.remove_keydefs = check
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+
+        hsizer = gui.QHBoxLayout()
+        check = gui.QCheckBox('Also remove plugin code', self)
+        ## hsizer.addStretch()
+        hsizer.addWidget(check)
+        self.remove_plugin = check
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+
+        buttonbox = gui.QDialogButtonBox()
+        btn = buttonbox.addButton(gui.QDialogButtonBox.Ok)
+        btn = buttonbox.addButton(gui.QDialogButtonBox.Cancel)
+        buttonbox.accepted.connect(self.accept)
+        buttonbox.rejected.connect(self.reject)
+        ## hsizer = gui.QHBoxLayout()
+        ## hsizer.addStretch()
+        ## hsizer.addWidget(buttonbox)
+        ## hsizer.addStretch()
+        ## self.sizer.addLayout(hsizer)
+        self.sizer.addWidget(buttonbox)
+        ## self.sizer.addStretch()
+        self.setLayout(self.sizer)
+
+    def accept(self):
+        self.parent.remove_data = self.remove_keydefs.isChecked()
+        self.parent.remove_code = self.remove_plugin.isChecked()
+        gui.QDialog.accept(self)
+
 class FilesDialog(gui.QDialog):
     """dialoog met meerdere FileBrowseButtons
 
@@ -928,6 +991,8 @@ class FilesDialog(gui.QDialog):
     def __init__(self, parent):
         self.parent = parent
         self.last_added = ''
+        self.code_to_remove = []
+        self.data_to_remove = []
         gui.QDialog.__init__(self, parent)
         self.resize(680, 400)
 
@@ -1037,24 +1102,42 @@ class FilesDialog(gui.QDialog):
 
     def remove_programs(self):
         """alle aangevinkte items verwijderen uit self.gsizer"""
-        test = [x.isChecked() for x in self.checks]
-        checked = [x for x, y in enumerate(test) if y]
-        if any(test):
-            ok = gui.QMessageBox.question(self, self.parent.title,
-                self.parent.captions['065'],
-                gui.QMessageBox.Yes | gui.QMessageBox.No)
-                # TODO: add option to remove the csv file(s) - so make this a dialog?
-            if gui.QMessageBox.Yes:
-                for row in reversed(checked):
+        ## test = [x for x in self.checks if x.isChecked()]
+        checked = [(x, y.text()) for x, y in enumerate(self.checks)
+            if y.isChecked()]
+        ## checked = [(x, y for x, y in enumerate(test) if y]
+        ## print(checked)
+        ## return
+        if checked:
+            dlg = DeleteDialog(self).exec_()
+            if dlg == gui.QDialog.Accepted:
+            ## ok = gui.QMessageBox.question(self, self.parent.title,
+                ## self.parent.captions['065'],
+                ## gui.QMessageBox.Yes | gui.QMessageBox.No)
+                ## # TODO: add option to remove the csv file(s) - so make this a dialog?
+            ## if gui.QMessageBox.Yes:
+                for row, name in reversed(checked):
+                    csv_name = ''
+                    for pl_name, pl_csv in self.parent.ini["plugins"]:
+                        if pl_name == name:
+                            csv_name = pl_csv
+                            break
+                    if not csv_name:
+                        raise ValueError('Plugin name not found')
+                    if self.remove_data:
+                        self.data_to_remove.append(csv_name)
+                    if self.remove_code:
+                        self.code_to_remove.append(get_pluginname(csv_name))
                     self.delete_row(row)
 
     def accept(self):
-        ## print('last added:', self.last_added)
-        ## print('paths:', self.paths)
-        ## print('data:', self.pathdata)
         if self.last_added not in [x[0] for x in self.paths]:
             self.last_added = ''
         self.parent.last_added = self.last_added
+        for filename in self.code_to_remove:
+            os.remove(filename)
+        for filename in self.data_to_remove:
+            os.remove(filename)
         self.parent.ini["plugins"] = update_paths(self.paths, self.pathdata)
         gui.QDialog.accept(self)
 
@@ -1584,29 +1667,12 @@ class MainFrame(gui.QMainWindow):
     def setup_menu(self):
         self.menu_bar.clear()
         self._menus = (
-            ## (hkc.M_APP, (
-                ## (hkc.M_READ, (m_read, 'Ctrl+R')),
-                ## (hkc.M_RBLD, (m_rebuild, 'Ctrl+B')),
-                ## (hkc.M_SAVE, (m_save, 'Ctrl+S')),
-                ## -1,
-                ## (hkc.M_EXIT, (m_exit, 'Ctrl+Q')),
-                ## )),
-            ## (hkc.M_SETT, (
-                ## (hkc.M_LOC, (m_loc, 'Ctrl+F')),
-                ## (hkc.M_TOOL, ((
-                    ## (hkc.M_COL, (m_col, '')),
-                    ## (hkc.M_MISC, (m_tool, '')),
-                    ## (hkc.M_ENTR, (m_entry, '')),
-                    ## ), '')),
-                ## (hkc.M_LANG, (m_lang, 'Ctrl+L')),
-                ## )),
-            ## (hkc.M_HELP, (
-                ## (hkc.M_ABOUT, (m_about, 'Ctrl+H')),
-                ## )))
             (hkc.M_APP, (
-                (hkc.M_LOC, (m_loc, 'Ctrl+F')),
-                (hkc.M_LANG, (m_lang, 'Ctrl+L')),
-                -1,
+                (hkc.M_SETT, ((
+                    (hkc.M_LOC, (m_loc, 'Ctrl+F')),
+                    (hkc.M_LANG, (m_lang, 'Ctrl+L')),
+                    ## (hkc.M_PREF, (m_pref, '')),
+                    ), '')),
                 (hkc.M_EXIT, (m_exit, 'Ctrl+Q')),
                 )),
             (hkc.M_TOOL, (
