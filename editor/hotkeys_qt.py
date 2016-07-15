@@ -13,250 +13,13 @@
 from __future__ import print_function
 import os
 import sys
-import csv
 import shutil
-import collections
 import functools
 import importlib
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 
 import editor.hotkeys_constants as hkc
-C_NEXT, C_PREV, C_SEL, C_NONE  = '014', '015', '050', "052"
-C_FIND, C_FILTER, C_FLTOFF = '051', "068", "066"
-#
-# non-gui and csv related functions
-# perhaps also add to hotkeys_constants (rename?)
-def get_pluginname(csvname):
-    with open(csvname) as _in:
-        for line in _in:
-            test = line.split(',')
-            if test[:2] == [hkc.csv_settingtype, hkc.csv_settingnames[0]]:
-                pl_name = test[2]
-                break
-    # ideally we should import the given module to determine the actual file name
-    return pl_name.replace('.', '/') + '.py'
-
-def read_settings(filename):
-    settings = {'filename': hkc.CONF}
-    lang, plugins = 'english.lng', []
-    with open(filename) as _in:
-        read_plugins = False
-        for line in _in:
-            if read_plugins:
-                if line.strip() == ']':
-                    read_plugins = False
-                elif line.strip().startswith('#'):
-                    continue
-                else:
-                    name, value = line.split(', ',1)
-                    _, name = name.split('(')
-                    value, _ = value.split(')')
-                    plugins.append((name.strip('"'),
-                        value.strip('"')))
-            if line.startswith('PLUGINS'):
-                read_plugins = True
-            elif line.startswith('LANG'):
-                lang = line.strip().split(' = ')[1].strip("'")
-            elif line.startswith('INITIAL'):
-                settings['initial'] = line.strip().split(' = ')[1].strip("'")
-    settings['plugins'] = plugins
-    settings['lang'] = lang
-    return settings
-
-def modify_settings(ini):
-    # modify the settings file
-    inifile = ini['filename']
-    shutil.copyfile(inifile, inifile + '.bak')
-    data = []
-    dontread = False
-    with open(inifile + '.bak') as _in:
-        for line in _in:
-            if dontread:
-                if line.strip() == ']':
-                    data.append(line)
-                    dontread = False
-            else:
-                data.append(line)
-                if 'PLUGINS' in line:
-                    dontread = True
-                    for name, path in ini["plugins"]:
-                        data.append('    ("{}", "{}"),\n'.format(name, path))
-    with open(inifile, 'w') as _out:
-        for line in data:
-            _out.write(line)
-
-def change_setting(setting, old, new, inifile):
-    setting = setting.upper()
-    shutil.copyfile(inifile, inifile + '.bak')
-    with open(inifile + '.bak') as _in:
-        lines = _in.readlines()
-    for ix, line in enumerate(lines):
-        if setting is not None and line.startswith(setting):
-            lines[ix] = line.replace(old, new)
-            break
-    else:
-        if setting == 'INITIAL':
-            lines.append('# application to show on startup\n')
-        lines.append("{} = '{}'\n".format(setting, new))
-    with open(inifile, 'w') as _out:
-        _out.writelines(lines)
-
-def read_columntitledata(self):
-    """read the current language file and extract the already defined column headers
-    """
-    column_textids = []
-    column_names = []
-    last_textid = ''
-    in_section = False
-
-    with open(os.path.join(hkc.HERELANG, self.parent.ini["lang"])) as f_in:
-        for line in f_in:
-            line = line.strip()
-            if line == '':
-                continue
-            elif line.startswith('#'):
-                if in_section:
-                    in_section = False
-                elif 'Keyboard mapping' in line:
-                    in_section = True
-                continue
-            test = line.split()
-            if test[0] > last_textid and test[0] < '100':
-                    last_textid = test[0]
-            if in_section:
-                column_textids.append(test[0])
-                column_names.append(test[1])
-    return column_textids, column_names, last_textid
-
-def add_columntitledata(newdata):
-    """add the new column title(s) to all language files
-
-    input is a list of tuples (textid, text)"""
-    choices = [os.path.join(hkc.HERELANG, x) for x in os.listdir(hkc.HERELANG)
-        if os.path.splitext(x)[1] == ".lng"]
-    for choice in choices:
-        choice_o = choice + '~'
-        shutil.copyfile(choice, choice_o)
-        in_section = False
-        with open(choice_o) as f_in, open(choice, 'w') as f_out:
-            for line in f_in:
-                if line.startswith('# Keyboard mapping'):
-                    in_section = True
-                elif in_section and line.strip() == '':
-                    for textid, text in newdata:
-                        f_out.write('{} {}\n'.format(textid, text))
-                    in_section = False
-                f_out.write(line)
-
-def update_paths(paths, pathdata):
-    """read the paths to the csv files from the data returned by the dialog
-    if applicable also write a skeleton plugin file
-    """
-    newpaths = []
-    for name, path in paths:
-        loc = path.input.text()
-        newpaths.append((name, loc))
-        if name in pathdata:
-            data = pathdata[name]
-            parts = data[0].split('.')
-            if parts[0] == '': parts = parts[1:]
-            newfile = os.path.join(*parts) + '.py'
-            with open(newfile, 'w') as _out:
-                _out.write(hkc.plugin_skeleton)
-            initcsv(loc, data)
-    return newpaths
-
-def initcsv(loc, data):
-    """Initialize csv file
-
-    save some basic settttings to a csv file together with some sample data
-    """
-    with open(loc, "w") as _out:
-        wrt = csv.writer(_out)
-        for indx, sett in enumerate(hkc.csv_settingnames):
-            wrt.writerow([hkc.csv_linetypes[0], sett, data[indx], hkc.csv_oms[sett]])
-        for row in hkc.csv_sample_data:
-            wrt.writerow(row)
-
-def readcsv(pad):
-    """lees het csv bestand op het aangegeven pad en geeft de inhoud terug
-
-    retourneert dictionary van nummers met (voorlopig) 4-tuples
-    """
-    data = collections.OrderedDict()
-    coldata = []
-    settings = collections.OrderedDict()
-    with open(pad, 'r') as _in:
-        rdr = csv.reader(_in)
-        key = 0
-        first = True
-        for row in rdr:
-            rowtype, rowdata = row[0], row[1:]
-            if rowtype == hkc.csv_settingtype:
-                name, value, oms = rowdata
-                settings[name] = (value, oms)
-            elif rowtype == hkc.csv_titletype:
-                for item in rowdata[:-1]:
-                    coldata_item = ['', '', '', '']
-                    coldata_item[0] = item
-                    coldata.append(coldata_item)
-            elif rowtype == hkc.csv_widthtype:
-                for ix, item in enumerate(rowdata[:-1]):
-                    coldata[ix][1] = int(item)
-            elif rowtype == hkc.csv_seqnumtype:
-                for ix, item in enumerate(rowdata[:-1]):
-                    coldata[ix][2] = int(item)
-            elif rowtype == hkc.csv_istypetype:
-                for ix, item in enumerate(rowdata[:-1]):
-                    coldata[ix][3] = bool(int(item))
-            elif rowtype == hkc.csv_keydeftype:
-                key += 1
-                data[key] = ([x.strip() for x in rowdata])
-            elif not rowtype.startswith('#'):
-                raise ValueError(self.captions['040'].format(rowtype))
-    return settings, coldata, data
-
-def writecsv(pad, settings, coldata, data):
-    ## os.remove(_outback)
-    if os.path.exists(pad):
-        shutil.copyfile(pad, pad + '~')
-    with open(pad, "w") as _out:
-        wrt = csv.writer(_out)
-        for name, value in settings.items():
-            rowdata = hkc.csv_settingtype, name, value[0], value[1]
-            wrt.writerow(rowdata)
-        for ix, row in enumerate([[hkc.csv_titletype], [hkc.csv_widthtype],
-                [hkc.csv_seqnumtype]]):
-            row += [x[ix] for x in coldata] + [hkc.csv_oms[row[0]]]
-            wrt.writerow(row)
-        wrt.writerow([hkc.csv_istypetype] + [int(x[3]) for x in coldata] +
-            [hkc.csv_oms[hkc.csv_istypetype]])
-        for keydef in data.values():
-            row = [hkc.csv_keydeftype] + [x for x in keydef]
-            wrt.writerow(row)
-
-def quick_check(filename):
-    """quick and dirty function for checking a csv file outside of the application
-
-    replicates some things that are done in building the list with keydefs
-    so we can catch errors in advance
-    """
-    _, column_info, data = readcsv(filename)
-    items = data.items()
-    if items is None or len(items) == 0:
-        print('No keydefs found in this file')
-        return
-    for key, data in items:
-        try:
-            for indx, col in enumerate(column_info):
-                from_indx, is_soort = col[2], col[3]
-                value = data[from_indx]
-        except Exception as e:
-            print(key, data)
-            raise
-    print('{}: No errors found'.format(filename))
-
 #
 # shared (menu) functions
 #
@@ -279,6 +42,10 @@ def m_read(self):
     vraagt eerst of het ok is om de hotkeys (opnieuw) te lezen
     zet de gelezen keys daarna ook in de gui
     """
+    if not self.page.settings:
+        text = 'This option should actually be disbled'
+        gui.QMessageBox.information(self, self.captions['000'], text)
+        return
     doit = True
     if not self.page.modified:
         doit = False
@@ -315,7 +82,7 @@ def m_loc(self):
     ok = FilesDialog(self).exec_()
     if ok == gui.QDialog.Accepted:
         selection = self.book.sel.currentIndex()
-        modify_settings(self.ini)
+        hkc.modify_settings(self.ini)
 
         # update the screen(s)
         # clear the selector and the stackedwidget while pairing up programs and windows
@@ -344,10 +111,14 @@ def m_loc(self):
                     win = HotkeyPanel(self.book, new_loc) or EmptyPanel(
                         self.book.pnl, self.captions["052"].format(program))
             else: # new entry
+                print('adding new entry')
                 win = HotkeyPanel(self.book, new_paths[indx]) or EmptyPanel(
                     self.book.pnl, self.captions["052"].format(program))
+            print('adding new item to choicebook selector')
             self.book.sel.addItem(program)
+            print('adding new item to choicebook panel')
             self.book.pnl.addWidget(win)
+            print('ready adding')
         if self.last_added:
             selection = self.book.sel.findText(self.last_added)
         self.book.sel.setCurrentIndex(selection)
@@ -358,26 +129,28 @@ def m_user(self):
 
 def m_rebuild(self):
 
-    ## csvfile = self.page.pad
-    ## # read data from the csv file
-    ## settings, coldata, _ = readcsv(csvfile)
-    ## if not settings:
-        ## return self.captions['031'].format(csvfile)
-
+    if not self.page.settings:
+        text = 'This option should actually be disabled'
+        gui.QMessageBox.information(self, self.captions['000'], text)
+        return
     newdata = self.page._keys.buildcsv(self)
     if newdata:
         self.page.data = newdata[0]
         self.page.otherstuff = newdata[1]
-        writecsv(self.page.pad, self.page.settings, self.page.column_info,
+        hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
             self.page.data)
         self.page.populate_list()
 
 def m_tool(self):
     """define tool-specific settings
     """
+    if not self.page.settings:
+        text = 'Please add settings information to csv file first'
+        gui.QMessageBox.information(self, self.captions['000'], text)
+        return
     dlg = ExtraSettingsDialog(self).exec_()
     if dlg == gui.QDialog.Accepted:
-        writecsv(self.page.pad, self.page.settings, self.page.column_info,
+        hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
             self.page.data)
         self._menuitems[hkc.M_SAVE].setEnabled(bool(int(self.page.settings['RedefineKeys'][0])))
         self._menuitems[hkc.M_RBLD].setEnabled(bool(int(self.page.settings['RebuildCSV'][0])))
@@ -385,6 +158,10 @@ def m_tool(self):
 def m_col(self):
     """define tool-specific settings: column properties
     """
+    if not all((self.page.settings, self.page.column_info)):
+        text = 'Please add settings and column information to csv file first'
+        gui.QMessageBox.information(self, self.captions['000'], text)
+        return
     dlg = ColumnSettingsDialog(self).exec_()
     if dlg == gui.QDialog.Accepted:
         new_pagedata = {}
@@ -403,7 +180,7 @@ def m_col(self):
         self.page.data = new_pagedata
         self.page.column_info = [x[:-1] for x in self.page.column_info]
 
-        writecsv(self.page.pad, self.page.settings, self.page.column_info,
+        hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
             self.page.data)
         ## self.page.p0list.removeItemWidget(self.page.p0list.headerItem())    # treeWidget methods
         hdr = gui.QTreeWidgetItem()
@@ -420,9 +197,13 @@ def m_col(self):
         self.page.populate_list()
 
 def m_entry(self):
+    if not all((self.page.settings, self.page.column_info)):
+        text = 'Please add settings and column information to csv file first'
+        gui.QMessageBox.information(self, self.captions['000'], text)
+        return
     dlg = EntryDialog(self).exec_()
     if dlg == gui.QDialog.Accepted:
-        writecsv(self.page.pad, self.page.settings, self.page.column_info,
+        hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
             self.page.data)
         self.page.populate_list()
 
@@ -439,7 +220,7 @@ def m_lang(self):
     lang, ok = gui.QInputDialog.getItem(self, self.captions["000"],
         self.captions["027"], choices, current=indx, editable=False)
     if ok:
-        change_setting('lang', oldlang, lang, self.ini['filename'])
+        hkc.change_setting('lang', oldlang, lang, self.ini['filename'])
         self.ini['lang'] = lang
         self.readcaptions(lang)
         self.setcaptions()
@@ -463,7 +244,7 @@ def m_pref(self):
         self.captions["217"], choices, current=indx, editable=False)
     if ok:
         self.ini['initial'] = pref
-        change_setting('initial', oldpref, pref, self.ini['filename'])
+        hkc.change_setting('initial', oldpref, pref, self.ini['filename'])
 
 def m_exit(self):
     """(menu) callback om het programma direct af te sluiten"""
@@ -583,6 +364,7 @@ class ColumnSettingsDialog(gui.QDialog):
         gui.QDialog.__init__(self, parent)
 
         self.sizer = gui.QVBoxLayout()
+        print(self.parent.page.settings)
         text = self.parent.captions['079'].format(
             self.parent.page.settings["PanelName"][0])
         hsizer = gui.QHBoxLayout()
@@ -616,7 +398,7 @@ class ColumnSettingsDialog(gui.QDialog):
         self.gsizer = gui.QVBoxLayout()
         self.rownum = 0 # indicates the number of rows in the gridlayout
         self.data, self.checks = [], []
-        self.col_textids, self.col_names, self.last_textid = read_columntitledata(
+        self.col_textids, self.col_names, self.last_textid = hkc.read_columntitledata(
             self)
         self.oldseq = [x[2] for x in self.parent.page.column_info]
         for item in self.parent.page.column_info:
@@ -772,7 +554,7 @@ class ColumnSettingsDialog(gui.QDialog):
                 old_colno])
             print(column_info)
         if new_titles:
-            add_columntitledata(new_titles)
+            hkc.add_columntitledata(new_titles)
         # TODO: maak kolomnummers aansluitend - hopenlijk zorgte het sorteren daarvoor
         ## self.parent.page.column_info = sorted(column_info, key=lambda x: x[2])
         self.parent.page.column_info = column_info
@@ -1139,20 +921,18 @@ class FilesDialog(gui.QDialog):
                 ## # TODO: add option to remove the csv file(s) - so make this a dialog?
             ## if gui.QMessageBox.Yes:
                 for row, name in reversed(checked):
-                    csv_name = ''
-                    for pl_name, pl_csv in self.parent.ini["plugins"]:
-                        if pl_name == name:
-                            csv_name = pl_csv
-                            break
-                    if not csv_name:
-                        raise ValueError('Plugin name not found')
+                    csv_name, prg_name = self.pluginfiles[name]
                     if self.remove_data:
+                        if not csv_name:
+                            raise ValueError('Plugin name not found')
                         self.data_to_remove.append(csv_name)
                     if self.remove_code:
-                        self.code_to_remove.append(get_pluginname(csv_name))
+                        if prg_name:
+                            self.code_to_remove.append(prg_name)
                     self.delete_row(row)
 
     def accept(self):
+        print('Do we need to check all filenames?')
         if self.last_added not in [x[0] for x in self.paths]:
             self.last_added = ''
         self.parent.last_added = self.last_added
@@ -1160,7 +940,7 @@ class FilesDialog(gui.QDialog):
             os.remove(filename)
         for filename in self.data_to_remove:
             os.remove(filename)
-        self.parent.ini["plugins"] = update_paths(self.paths, self.pathdata)
+        self.parent.ini["plugins"] = hkc.update_paths(self.paths, self.pathdata)
         gui.QDialog.accept(self)
 
 class EntryDialog(gui.QDialog):
@@ -1326,15 +1106,31 @@ class HotkeyPanel(gui.QFrame):
         self.parent = parent # .parent()
         self.captions = self.parent.parent.captions
 
-        self.settings, self.column_info, self.data = readcsv(self.pad)
+        try:
+            self.settings, self.column_info, self.data = hkc.readcsv(self.pad)
+        except FileNotFoundError:
+            self.settings, self.column_info, self.data = [], [], {}
         self.otherstuff = {} # ruimte voor zaken als een lijst met mogelijke commando's
 
+        nodata = False
         if not self.settings or not self.column_info:
-            gui.QLabel(self.captions['044'], self)
+            nodata = self.captions['044']
+        else:
+            modulename = self.settings["PluginName"][0]
+            try:
+                self._keys = importlib.import_module(modulename)
+            except ImportError:
+                nodata = self.captions['044'].replace('data', 'plugin code')
+        if nodata:
+            _sizer = gui.QVBoxLayout()
+            hsizer = gui.QHBoxLayout()
+            hsizer.addStretch()
+            hsizer.addWidget(gui.QLabel(nodata, self))
+            hsizer.addStretch()
+            _sizer.addLayout(hsizer)
+            self.setLayout(_sizer)
             return
         self.p0list = gui.QTreeWidget(self)
-        modulename = self.settings["PluginName"][0]
-        self._keys = importlib.import_module(modulename)
         try:
             self.parent.page = self
             self.otherstuff = self._keys.buildcsv(parent, showinfo=False)[1]
@@ -1384,13 +1180,13 @@ class HotkeyPanel(gui.QFrame):
 
     def readkeys(self):
         "(re)read the data for the keydef list"
-        self.data = readcsv(self.pad)[2]
+        self.data = hkc.readcsv(self.pad)[2]
 
     def savekeys(self):
         "save modified keydef back"
         self.parent.data = self.data
         self._keys.savekeys(self)
-        writecsv(self.pad, self.settings, self.column_info, self.data)
+        hkc.writecsv(self.pad, self.settings, self.column_info, self.data)
         self.modified = False
         self.setWindowTitle(self.captions["000"])
 
@@ -1440,12 +1236,12 @@ class HotkeyPanel(gui.QFrame):
 
 class EmptyPanel(HotkeyPanel):
 
-    def __init__(self, parent):
+    def __init__(self, parent, title="default_title"):
 
         coldata = ()
         self._txt = "default"
         HotkeyPanel.__init__(self, parent, coldata, ini="",
-            title="default_title")
+            title=title)
 
     def add_extra_fields(self):
         self.txt = gui.QLabel(self._txt, self)
@@ -1482,18 +1278,19 @@ class ChoiceBook(gui.QFrame):
         self.b_prev = gui.QPushButton('', self)
         self.b_prev.clicked.connect(self.find_prev)
         self.b_prev.setEnabled(False)
-        self.b_filter = gui.QPushButton(self.parent.captions[C_FILTER], self)
+        self.b_filter = gui.QPushButton(self.parent.captions[hkc.C_FILTER], self)
         self.b_filter.clicked.connect(self.filter)
         self.b_filter.setEnabled(False)
         self.filter_on = False
         self.pnl = gui.QStackedWidget(self)
         for txt, loc in self.plugins:
             win = HotkeyPanel(self, loc)
-            if win is None:
-                self.pnl.addWidget(EmptyPanel(self.pnl,
-                    self.parent.captions[C_NONE].format(txt)))
+            self.pnl.addWidget(win)
+            if not all((win.settings, win.column_info, win.data)):
+                fl = ''
             else:
-                self.pnl.addWidget(win)
+                fl = win._keys.__file__
+            self.parent.pluginfiles[txt] = (loc, fl)
             self.sel.addItem(txt)
 
         self.b_exit = gui.QPushButton(self.parent.captions[hkc.C_EXIT], self)
@@ -1531,14 +1328,14 @@ class ChoiceBook(gui.QFrame):
         self.setcaptions()
 
     def setcaptions(self):
-        self.b_next.setText(self.parent.captions[C_NEXT])
-        self.b_prev.setText(self.parent.captions[C_PREV])
-        self.sel_text.setText(self.parent.captions[C_SEL])
-        self.find_text.setText(self.parent.captions[C_FIND])
+        self.b_next.setText(self.parent.captions[hkc.C_NEXT])
+        self.b_prev.setText(self.parent.captions[hkc.C_PREV])
+        self.sel_text.setText(self.parent.captions[hkc.C_SEL])
+        self.find_text.setText(self.parent.captions[hkc.C_FIND])
         if self.filter_on:
-            self.b_filter.setText(self.parent.captions[C_FLTOFF])
+            self.b_filter.setText(self.parent.captions[hkc.C_FLTOFF])
         else:
-            self.b_filter.setText(self.parent.captions[C_FILTER])
+            self.b_filter.setText(self.parent.captions[hkc.C_FILTER])
         self.b_exit.setText(self.parent.captions[hkc.C_EXIT])
 
     def on_page_changed(self, indx):
@@ -1554,13 +1351,13 @@ class ChoiceBook(gui.QFrame):
                 return
         self.pnl.setCurrentIndex(indx)
         self.parent.page = self.pnl.currentWidget() # change to new selection
-        ## if not all((self.parent.page.settings, self.parent.page.column_info,
-                ## self.parent.page.data)):
-            ## return
         self.parent.setup_menu()
+        if not all((self.parent.page.settings, self.parent.page.column_info,
+                self.parent.page.data)):
+            return
         if self.parent.page.filtertext:
             self.find.setEditText(self.parent.page.filtertext)
-            self.b_filter.setText(self.parent.captions["066"])
+            self.b_filter.setText(self.parent.captions[hkc.C_FLTOFF])
             self.b_filter.setEnabled(True)
         else:
             self.find.setEditText('')
@@ -1612,8 +1409,8 @@ class ChoiceBook(gui.QFrame):
         text = str(self.find.currentText())
         item = self.parent.page.p0list.currentItem()
         self.reposition = item.text(0), item.text(1)
-        if state == self.parent.captions['068']: # self.filter_on == False
-            state = self.parent.captions['066']
+        if state == self.parent.captions[hkc.FILTER]: # self.filter_on == False
+            state = self.parent.captions[hkc.FLTOFF]
             self.filter_on = True
             self.parent.page.filtertext = text
             self.parent.page.olddata = self.parent.page.data
@@ -1624,7 +1421,7 @@ class ChoiceBook(gui.QFrame):
             self.b_prev.setEnabled(False)
             self.find.setEnabled(False)
         else:       # self.filter_on == True
-            state = self.parent.captions['068']
+            state = self.parent.captions[hkc.FILTER]
             self.filter_on = False
             self.parent.page.filtertext = ''
             self.parent.page.data = self.parent.page.olddata
@@ -1654,7 +1451,8 @@ class MainFrame(gui.QMainWindow):
         self.sb = self.statusBar()
 
         self.menu_bar = self.menuBar()
-        self.ini = read_settings(hkc.CONF)
+        self.ini = hkc.read_settings(hkc.CONF)
+        self.pluginfiles = {}
 
         self.readcaptions(self.ini['lang']) # set up defaults
         self.title = self.captions["000"]
@@ -1739,10 +1537,19 @@ class MainFrame(gui.QMainWindow):
         act = gui.QAction(self.captions[sel], self)
         act.triggered.connect(functools.partial(callback, self))
         act.setShortcut(shortcut)
+        if sel == hkc.M_READ:
+            if not self.page.data:
+                act.setEnabled(False)
         if sel == hkc.M_RBLD:
-            act.setEnabled(bool(int(self.page.settings['RebuildCSV'][0])))
+            try:
+                act.setEnabled(bool(int(self.page.settings['RebuildCSV'][0])))
+            except KeyError:
+                act.setEnabled(False)
         elif sel == hkc.M_SAVE:
-            act.setEnabled(bool(int(self.page.settings['RedefineKeys'][0])))
+            try:
+                act.setEnabled(bool(int(self.page.settings['RedefineKeys'][0])))
+            except KeyError:
+                act.setEnabled(False)
         return act
 
     def exit(self,e=None):
