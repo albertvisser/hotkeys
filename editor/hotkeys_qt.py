@@ -24,7 +24,6 @@ import PyQt4.QtCore as core
 import editor.hotkeys_constants as hkc
 C_NEXT, C_PREV, C_SEL, C_NONE  = '014', '015', '050', "052"
 C_FIND, C_FILTER, C_FLTOFF = '051', "068", "066"
-## M_PREF = ... # 'Default tool'
 #
 # non-gui and csv related functions
 # perhaps also add to hotkeys_constants (rename?)
@@ -39,6 +38,7 @@ def get_pluginname(csvname):
     return pl_name.replace('.', '/') + '.py'
 
 def read_settings(filename):
+    settings = {'filename': hkc.CONF}
     lang, plugins = 'english.lng', []
     with open(filename) as _in:
         read_plugins = False
@@ -57,8 +57,12 @@ def read_settings(filename):
             if line.startswith('PLUGINS'):
                 read_plugins = True
             elif line.startswith('LANG'):
-                lang = line.strip().split('=')[1].strip("'")
-    return lang, plugins
+                lang = line.strip().split(' = ')[1].strip("'")
+            elif line.startswith('INITIAL'):
+                settings['initial'] = line.strip().split(' = ')[1].strip("'")
+    settings['plugins'] = plugins
+    settings['lang'] = lang
+    return settings
 
 def modify_settings(ini):
     # modify the settings file
@@ -82,13 +86,21 @@ def modify_settings(ini):
         for line in data:
             _out.write(line)
 
-def change_language(oldlang, lang, inifile):
+def change_setting(setting, old, new, inifile):
+    setting = setting.upper()
     shutil.copyfile(inifile, inifile + '.bak')
-    with open(inifile + '.bak') as _in, open(inifile, 'w') as _out:
-        for line in _in:
-            if line.startswith('LANG'):
-                line = line.replace(oldlang, lang)
-            _out.write(line)
+    with open(inifile + '.bak') as _in:
+        lines = _in.readlines()
+    for ix, line in enumerate(lines):
+        if setting is not None and line.startswith(setting):
+            lines[ix] = line.replace(old, new)
+            break
+    else:
+        if setting == 'INITIAL':
+            lines.append('# application to show on startup\n')
+        lines.append("{} = '{}'\n".format(setting, new))
+    with open(inifile, 'w') as _out:
+        _out.writelines(lines)
 
 def read_columntitledata(self):
     """read the current language file and extract the already defined column headers
@@ -427,7 +439,7 @@ def m_lang(self):
     lang, ok = gui.QInputDialog.getItem(self, self.captions["000"],
         self.captions["027"], choices, current=indx, editable=False)
     if ok:
-        change_language(oldlang, lang, self.ini['filename'])
+        change_setting('lang', oldlang, lang, self.ini['filename'])
         self.ini['lang'] = lang
         self.readcaptions(lang)
         self.setcaptions()
@@ -439,9 +451,19 @@ def m_about(self):
         hkc.VRS, hkc.AUTH, self.captions['072']).split(' / '))
     info = gui.QMessageBox.information(self, self.captions['000'], text)
 
-def m_prev(self):
+def m_pref(self):
     "mogelijkheid bieden om een tool op te geven dat default getoond wordt"
-    # TODO: build this
+    choices = [x[0] for x in self.ini["plugins"]]
+    try:
+        oldpref = self.ini["initial"]
+    except KeyError:
+        oldpref = None
+    indx = choices.index(oldpref) if oldpref in choices else 0
+    pref, ok = gui.QInputDialog.getItem(self, self.captions["000"],
+        self.captions["217"], choices, current=indx, editable=False)
+    if ok:
+        self.ini['initial'] = pref
+        change_setting('initial', oldpref, pref, self.ini['filename'])
 
 def m_exit(self):
     """(menu) callback om het programma direct af te sluiten"""
@@ -1632,9 +1654,7 @@ class MainFrame(gui.QMainWindow):
         self.sb = self.statusBar()
 
         self.menu_bar = self.menuBar()
-        self.ini = {'filename': hkc.CONF, 'plugins': []}
-
-        self.ini['lang'], self.ini['plugins'] = read_settings(self.ini['filename'])
+        self.ini = read_settings(hkc.CONF)
 
         self.readcaptions(self.ini['lang']) # set up defaults
         self.title = self.captions["000"]
@@ -1659,8 +1679,11 @@ class MainFrame(gui.QMainWindow):
         ## self.setCentralWidget(pnl)
         self.setCentralWidget(self.book)
         self.page = self.book.pnl.currentWidget()
+        start = 0
         ## self.book.on_page_changed(0)
-        self.book.sel.setCurrentIndex(0)
+        if 'initial' in self.ini:
+            start = [x for x, y in self.ini['plugins']].index(self.ini['initial'])
+        self.book.sel.setCurrentIndex(start)
         self.setcaptions()
         self.show()
 
@@ -1671,7 +1694,7 @@ class MainFrame(gui.QMainWindow):
                 (hkc.M_SETT, ((
                     (hkc.M_LOC, (m_loc, 'Ctrl+F')),
                     (hkc.M_LANG, (m_lang, 'Ctrl+L')),
-                    ## (hkc.M_PREF, (m_pref, '')),
+                    (hkc.M_PREF, (m_pref, '')),
                     ), '')),
                 (hkc.M_EXIT, (m_exit, 'Ctrl+Q')),
                 )),
