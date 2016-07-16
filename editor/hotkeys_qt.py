@@ -111,16 +111,14 @@ def m_loc(self):
                     win = HotkeyPanel(self.book, new_loc) or EmptyPanel(
                         self.book.pnl, self.captions["052"].format(program))
             else: # new entry
-                print('adding new entry')
                 win = HotkeyPanel(self.book, new_paths[indx]) or EmptyPanel(
                     self.book.pnl, self.captions["052"].format(program))
-            print('adding new item to choicebook selector')
             self.book.sel.addItem(program)
-            print('adding new item to choicebook panel')
             self.book.pnl.addWidget(win)
-            print('ready adding')
         if self.last_added:
             selection = self.book.sel.findText(self.last_added)
+        if selection > len(self.ini['plugins']) - 1:
+            selection -= 1
         self.book.sel.setCurrentIndex(selection)
 
 def m_user(self):
@@ -166,7 +164,6 @@ def m_col(self):
     if dlg == gui.QDialog.Accepted:
         new_pagedata = {}
         for key, value in self.page.data.items():
-            print(key, value)
             newvalue = []
             for colinf in self.page.column_info:
                 ix = colinf[2]
@@ -175,7 +172,6 @@ def m_col(self):
                     newvalue.append('')
                 else:
                     newvalue.append(value[test])
-                print(ix, test, newvalue)
             new_pagedata[key] = newvalue
         self.page.data = new_pagedata
         self.page.column_info = [x[:-1] for x in self.page.column_info]
@@ -234,17 +230,18 @@ def m_about(self):
 
 def m_pref(self):
     "mogelijkheid bieden om een tool op te geven dat default getoond wordt"
-    choices = [x[0] for x in self.ini["plugins"]]
-    try:
-        oldpref = self.ini["initial"]
-    except KeyError:
-        oldpref = None
-    indx = choices.index(oldpref) if oldpref in choices else 0
-    pref, ok = gui.QInputDialog.getItem(self, self.captions["000"],
-        self.captions["217"], choices, current=indx, editable=False)
-    if ok:
-        self.ini['initial'] = pref
-        hkc.change_setting('initial', oldpref, pref, self.ini['filename'])
+    oldpref = self.ini.get("initial", None)
+    oldmode = self.ini.get("startup", None)
+    self.prefs = oldmode, oldpref
+    ok = InitialToolDialog(self).exec_()
+    if ok == gui.QDialog.Accepted:
+        mode, pref = self.prefs
+        if mode:
+            self.ini['startup'] = mode
+            hkc.change_setting('startup', oldmode, mode, self.ini['filename'])
+        if mode == 'Fixed':
+            self.ini['initial'] = pref
+            hkc.change_setting('initial', oldpref, pref, self.ini['filename'])
 
 def m_exit(self):
     """(menu) callback om het programma direct af te sluiten"""
@@ -253,6 +250,56 @@ def m_exit(self):
 #
 # application classes (screens and subscreens)
 #
+class InitialToolDialog(gui.QDialog):
+    def __init__(self, parent):
+        self.parent = parent
+        oldmode, oldpref = self.parent.prefs
+        choices = [x[0] for x in self.parent.ini["plugins"]]
+        indx = choices.index(oldpref) if oldpref in choices else 0
+        gui.QDialog.__init__(self)
+        self.setWindowTitle(self.parent.captions['000'])
+        vbox = gui.QVBoxLayout()
+        vbox.addWidget(gui.QLabel(self.parent.captions["217"], self))
+        hbox = gui.QHBoxLayout()
+        self.check_fixed = gui.QRadioButton('Fixed: ', self)
+        self.check_fixed.setChecked(oldmode == 'Fixed')
+        hbox.addWidget(self.check_fixed)
+        self.sel_fixed = gui.QComboBox(self)
+        self.sel_fixed.addItems(choices)
+        self.sel_fixed.setEditable(True)
+        self.sel_fixed.setCurrentIndex(indx)
+        hbox.addWidget(self.sel_fixed)
+        hbox.addStretch()
+        vbox.addLayout(hbox)
+        hbox = gui.QHBoxLayout()
+        self.check_remember = gui.QRadioButton('Remember last one', self)
+        self.check_remember.setChecked(oldmode == 'Remember')
+        hbox.addWidget(self.check_remember)
+        hbox.addStretch()
+        vbox.addLayout(hbox)
+        buttonbox = gui.QDialogButtonBox()
+        btn = buttonbox.addButton(gui.QDialogButtonBox.Ok)
+        btn = buttonbox.addButton(gui.QDialogButtonBox.Cancel)
+        buttonbox.accepted.connect(self.accept)
+        buttonbox.rejected.connect(self.reject)
+        hbox = gui.QHBoxLayout()
+        hbox.addStretch()
+        hbox.addWidget(buttonbox)
+        hbox.addStretch()
+        vbox.addLayout(hbox)
+        self.setLayout(vbox)
+
+    def accept(self):
+        if self.check_fixed.isChecked():
+            mode = 'Fixed'
+        elif self.check_remember.isChecked():
+            mode = 'Remember'
+        else:
+            mode = None
+        pref = self.sel_fixed.currentText()
+        self.parent.prefs = mode, pref
+        gui.QDialog.accept(self)
+
 class FileBrowseButton(gui.QFrame):
     """Combination widget showing a text field and a button
     making it possible to either manually enter a filename or select
@@ -364,7 +411,6 @@ class ColumnSettingsDialog(gui.QDialog):
         gui.QDialog.__init__(self, parent)
 
         self.sizer = gui.QVBoxLayout()
-        print(self.parent.page.settings)
         text = self.parent.captions['079'].format(
             self.parent.page.settings["PanelName"][0])
         hsizer = gui.QHBoxLayout()
@@ -479,10 +525,6 @@ class ColumnSettingsDialog(gui.QDialog):
         hsizer = gui.QHBoxLayout()
         hsizer.addSpacing(68)
         val = self.rownum if colno == '' else colno + 1
-        ## w_colno = gui.QLabel(self)
-        ## w_colno.setText(str(val))
-        ## w_colno = gui.QLineEdit(str(val), self)
-        ## w_colno.setFixedWidth(20)
         w_colno = gui.QSpinBox(self)
         w_colno.setMinimum(1)
         w_colno.setMaximum(99)
@@ -493,7 +535,6 @@ class ColumnSettingsDialog(gui.QDialog):
         ghsizer.addLayout(hsizer, rownum)
         self.gsizer.addLayout(ghsizer)
         old_colno = "new" if colno == '' else self.oldseq.index(colno)
-        print(colno, self.rownum, val, old_colno)
         self.data.append((w_name, w_width, w_colno, w_flag, old_colno))
         vbar = self.scrl.verticalScrollBar()
         vbar.setMaximum(vbar.maximum() + 31)
@@ -536,8 +577,6 @@ class ColumnSettingsDialog(gui.QDialog):
         lastcol = -1
         for ix, value in enumerate(sorted(self.data,  key=lambda x: x[2].value())):
             w_name, w_width, w_colno, w_flag, old_colno = value
-            print(w_name.currentText(), w_width.value(), w_colno.value(),
-                w_flag.isChecked(), old_colno)
             if w_colno.value() == lastcol:
                 gui.QMessageBox.critical(self, self.parent.title, 'Identical '
                     'values for column numbers')
@@ -552,7 +591,6 @@ class ColumnSettingsDialog(gui.QDialog):
                 name = self.last_textid
             column_info.append([name, int(w_width.text()), ix, w_flag.isChecked(),
                 old_colno])
-            print(column_info)
         if new_titles:
             hkc.add_columntitledata(new_titles)
         # TODO: maak kolomnummers aansluitend - hopenlijk zorgte het sorteren daarvoor
@@ -906,22 +944,16 @@ class FilesDialog(gui.QDialog):
 
     def remove_programs(self):
         """alle aangevinkte items verwijderen uit self.gsizer"""
-        ## test = [x for x in self.checks if x.isChecked()]
         checked = [(x, y.text()) for x, y in enumerate(self.checks)
             if y.isChecked()]
-        ## checked = [(x, y for x, y in enumerate(test) if y]
-        ## print(checked)
-        ## return
         if checked:
             dlg = DeleteDialog(self).exec_()
             if dlg == gui.QDialog.Accepted:
-            ## ok = gui.QMessageBox.question(self, self.parent.title,
-                ## self.parent.captions['065'],
-                ## gui.QMessageBox.Yes | gui.QMessageBox.No)
-                ## # TODO: add option to remove the csv file(s) - so make this a dialog?
-            ## if gui.QMessageBox.Yes:
                 for row, name in reversed(checked):
-                    csv_name, prg_name = self.pluginfiles[name]
+                    try:
+                        csv_name, prg_name = self.parent.pluginfiles[name]
+                    except KeyError:
+                        csv_name, prgname = self.parent.ini['plugins'], None
                     if self.remove_data:
                         if not csv_name:
                             raise ValueError('Plugin name not found')
@@ -932,7 +964,6 @@ class FilesDialog(gui.QDialog):
                     self.delete_row(row)
 
     def accept(self):
-        print('Do we need to check all filenames?')
         if self.last_added not in [x[0] for x in self.paths]:
             self.last_added = ''
         self.parent.last_added = self.last_added
@@ -1109,7 +1140,7 @@ class HotkeyPanel(gui.QFrame):
         try:
             self.settings, self.column_info, self.data = hkc.readcsv(self.pad)
         except FileNotFoundError:
-            self.settings, self.column_info, self.data = [], [], {}
+            self.settings, self.column_info, self.data = {}, [], {}
         self.otherstuff = {} # ruimte voor zaken als een lijst met mogelijke commando's
 
         nodata = False
@@ -1196,8 +1227,10 @@ class HotkeyPanel(gui.QFrame):
             title += ' ' + self.captions["017"]
         self.setWindowTitle(title)
 
-        self._panel.captions_extra_fields()
-        self.populate_list()
+        if self.settings:
+            self._panel.captions_extra_fields()
+        if self.data:
+            self.populate_list()
 
     def populate_list(self, pos=0):
         """vullen van de list control
@@ -1207,16 +1240,13 @@ class HotkeyPanel(gui.QFrame):
         if items is None or len(items) == 0:
             return
 
-        ## print('...')
         self._panel.initializing = True
         for key, data in items:
-            ## print(key, data)
             new_item = gui.QTreeWidgetItem()
             new_item.setData(0, core.Qt.UserRole, key) # data[0])
             for indx, col in enumerate(self.column_info):
                 from_indx, is_soort = col[2], col[3]
                 value = data[indx]
-                ## print(indx, col, from_indx, value)
                 if is_soort:
                     value = hkc.C_DFLT if value == 'S' else hkc.C_RDEF
                     value = self.captions[value]
@@ -1458,27 +1488,10 @@ class MainFrame(gui.QMainWindow):
         self.title = self.captions["000"]
         self.setWindowTitle(self.title)
         self.sb.showMessage(self.captions["089"].format(self.captions["000"]))
-        ## pnl = gui.QWidget(self)
-        ## self.book = ChoiceBook(pnl, self.ini['plugins']) # , size= (600, 700))
         self.book = ChoiceBook(self, self.ini['plugins']) # , size= (600, 700))
-        ## sizer_v = gui.QVBoxLayout()
-        ## sizer_h = gui.QHBoxLayout()
-        ## sizer_h.addWidget(self.book)
-        ## sizer_v.addLayout(sizer_h, 1)
-        ## self.b_exit = gui.QPushButton(self.captions[hkc.C_EXIT], pnl)
-        ## self.b_exit.clicked.connect(self.exit)
-        ## sizer_h = gui.QHBoxLayout()
-        ## sizer_h.addStretch()
-        ## sizer_h.addWidget(self.b_exit)
-        ## sizer_h.addStretch()
-        ## sizer_v.addLayout(sizer_h)
-        ## pnl.setLayout(sizer_v)
-
-        ## self.setCentralWidget(pnl)
         self.setCentralWidget(self.book)
         self.page = self.book.pnl.currentWidget()
         start = 0
-        ## self.book.on_page_changed(0)
         if 'initial' in self.ini:
             start = [x for x, y in self.ini['plugins']].index(self.ini['initial'])
         self.book.sel.setCurrentIndex(start)
@@ -1556,6 +1569,19 @@ class MainFrame(gui.QMainWindow):
         if not self.page.exit():
             return
         self.close()
+
+    def close(self):
+        if self.ini.get("startup", None) == 'Fixed':
+            if self.ini['initial'] not in self.ini['plugins']:
+                oldpref = self.ini["startup"]
+                pref = self.ini['startup'] = 'Remember'
+                hkc.change_setting('startup', oldpref, pref, self.ini['filename'])
+        if self.ini.get("startup", None) == 'Remember':
+            oldpref = self.ini.get('initial', None)
+            pref = self.book.sel.currentText()
+            hkc.change_setting('initial', oldpref, pref, self.ini['filename'])
+        gui.QMainWindow.close(self)
+
 
     def readcaptions(self, lang):
         self.captions = {}

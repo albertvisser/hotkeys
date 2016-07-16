@@ -101,6 +101,8 @@ def read_settings(filename):
                 lang = line.strip().split(' = ')[1].strip("'")
             elif line.startswith('INITIAL'):
                 settings['initial'] = line.strip().split(' = ')[1].strip("'")
+            elif line.startswith('STARTUP'):
+                settings['startup'] = line.strip().split(' = ')[1].strip("'")
     settings['plugins'] = plugins
     settings['lang'] = lang
     return settings
@@ -139,6 +141,8 @@ def change_setting(setting, old, new, inifile):
     else:
         if setting == 'INITIAL':
             lines.append('# application to show on startup\n')
+        elif setting == 'STARTUP':
+            lines.append('# application to show: selected or remember on closing\n')
         lines.append("{} = '{}'\n".format(setting, new))
     with open(inifile, 'w') as _out:
         _out.writelines(lines)
