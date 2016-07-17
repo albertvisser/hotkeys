@@ -26,6 +26,9 @@
 005 Default
 006 (Re)defined
 
+text_f  Fixed:
+text_r  Remember last one
+
 # modifier names
 007 Ctrl
 008 Alt
@@ -74,6 +77,10 @@
 # save dialog
 020 Previously selected definition was changed - save now?
 
+# remove dialog
+306 Also remove keydefs data (csv)
+307 Also remove plugin code
+
 # messages
 024 Can't delete standard (builtin) definition
 025 Definitions have been changed - save now?
@@ -83,7 +90,8 @@
 029 You have now defined more columns for this tool than are in the keydefs.
 030 Reloading them will result in an error
 031 Create Initial version of CSV file
-032 Name of the module containing toolspecific code (will also create it)
+032 Module containing toolspecific code
+032A Name of the {} (will also create it)
 033 Title for the tool panel
 034 Make it possible to rebuild this file from the tool's settings
 035 Make it possible to redefine the keydefs and save them back to the tool's settings
@@ -107,6 +115,11 @@
 067 {} items found
 078 Are you sure you want to remove the checked settings?
 083 Are you sure you want to remove the checked column settings?
+301 Please add settings information to csv file first
+302 Please add settings and column information to csv file first
+303 Please define savekeys function in plugin or disable this option
+304 Please define rebuild function in plugin or disable this option
+305 Identical values for column numbers
 
 # key names
 100 Insert

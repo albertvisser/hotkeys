@@ -37,6 +37,7 @@ csv_linetypes = ['Setting', 'Title', 'Width', 'Seq', 'is_type', 'Keydef']
 csv_settingtype, csv_keydeftype = csv_linetypes[0], csv_linetypes[-1]
 csv_titletype, csv_widthtype, csv_seqnumtype, csv_istypetype = csv_linetypes[1:-1]
 csv_settingnames = ['PluginName', 'PanelName', 'RebuildCSV', 'RedefineKeys']
+csv_plgsett, csv_pnlsett, csv_rbldsett, csv_redefsett = csv_settingnames
 csv_oms = dict(zip(csv_settingnames + csv_linetypes[1: -1], (
  'Naam van de module met toolspecifieke code (zonder .py)',
  'Naam van het toolpanel in de selector',
@@ -65,6 +66,7 @@ for everything that's not in here
 the default code in the main program will be used.
 """
 '''
+mode_f, mode_r = 'Fixed', 'Remember'
 #
 # non-gui and csv related functions
 # perhaps also add to hotkeys_constants (rename?)

@@ -26,6 +26,9 @@
 005 Standaard
 006 Aangepast
 
+text_f  Vast:
+text_r  Onthou laatst actieve
+
 # modifier namen
 007 Ctrl
 008 Alt
@@ -74,6 +77,10 @@
 # save dialog
 020 Eerder gekozen definitie is gewijzigd - nu opslaan?
 
+# remove dialog
+306 keydef data (csv) ook verwijderen
+307 plugin code ook verwijderen
+
 # boodschappen
 024 Kan standaard toetsdefinitie niet verwijderen
 025 Definities zijn aangepast - wil je ze terugschrijven?
@@ -107,6 +114,11 @@
 067 {} items gevonden
 078 Wil je de aangekruiste instellingen echt verwijderen?
 083 Wil je de aangekruiste kolominstellingen echt verwijderen?
+301 Eerst settings informatiie aan csv bestand toevoegen
+302 Eerst settings en kolom informatie aan csv bestand toevoegen
+303 Eerst savekeys functie in plugin definiëren of deze keuze deactiveren
+304 Eerst rebuild functie in plugin definiëren of deze keuze deactiveren
+305 Gelijke waarden voor kolomnummers
 
 # key names
 100 Insert
