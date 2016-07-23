@@ -13,8 +13,11 @@ import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 
 C_SAVE, C_DEL, C_KTXT, C_CTXT = '010', '011', '018', '019'
-C_PARMS, C_CTRL, C_CNTXT = '090', '091', '047'
 M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
+# constants for column names
+C_KEY, C_TYPE, C_CMD, C_DESC, C_MODS = '001', '002', '003', '004', '043'
+C_CODE, C_CNTXT, C_PLAT, C_FEAT = '046', '047', '048', '049'
+C_PARMS, C_CTRL, C_MNU = '090', '091', '092'
 
 instructions = """\
 Instructions for rebuilding the keyboard shortcut definitions
@@ -451,23 +454,26 @@ def on_combobox(self, cb, text):
         text = hlp
     ## print(self._origdata)
     self.defchanged = False
+    keyitemindex = 0
+    cmditemindex = 5
     if cb == self.cmb_key:
-        if text != self._origdata[0]:
-            self._newdata[0] = text
+        if text != self._origdata[keyitemindex]:
+            self._newdata[keyitemindex] = text
             self.defchanged = True
             self.b_save.setEnabled(True)
-        elif str(self.cmb_commando.currentText()) == self._origdata[5]:
+        elif str(self.cmb_commando.currentText()) == self._origdata[cmditemindex]:
             self.b_save.setEnabled(False)
     elif cb == self.cmb_commando:
-        if text != self._origdata[5]:
-            self._newdata[5] = text
+        if text != self._origdata[cmditemindex]:
+            self._newdata[cmditemindex] = text
             self.defchanged = True
-            try:
-                self.txt_oms.setText(self.omsdict[text])
-            except KeyError:
-                self.txt_oms.setText('(Geen omschrijving beschikbaar)')
+            # nog geen omsdict beschikbaar (mapt commando naar omschrijving)
+            ## try:
+                ## self.txt_oms.setText(self.parent.omsdict[text])
+            ## except KeyError:
+                ## self.txt_oms.setText('(Geen omschrijving beschikbaar)')
             self.b_save.setEnabled(True)
-        elif str(self.cmb_key.currentText()) == self._origdata[0]:
+        elif str(self.cmb_key.currentText()) == self._origdata[keyitemindex]:
             self.b_save.setEnabled(False)
     ## print(self._origdata)
     ## print(self._newdata)
@@ -737,34 +743,58 @@ class MyPanel(gui.QFrame):
         seli = selitem.data(0, core.Qt.UserRole)
         if sys.version < '3':
             seli = seli.toPyObject()
-        key, mods, soort, context, cmd, parms, controls, oms = self.parent.data[seli]
+        ## key, mods, soort, context, cmd, parms, controls, oms = self.parent.data[seli]
+        keydefdata = self.parent.data[seli]
         self.b_save.setEnabled(False)
         self.b_del.setEnabled(False)
-        if soort == 'U':
-            self.b_del.setEnabled(True)
-        self._origdata = [key, False, False, False, False, cmd, context, parms,
-            controls]
-        ix = self.keylist.index(key)
-        self.cmb_key.setCurrentIndex(ix)
-        self.cb_shift.setChecked(False)
-        self.cb_ctrl.setChecked(False)
-        self.cb_alt.setChecked(False)
-        self.cb_win.setChecked(False)
-        self.cmb_key.setEditText(key)
-        for x, y, z in zip('SCAW',(1, 2, 3, 4), (self.cb_shift, self.cb_ctrl,
-                self.cb_alt, self.cb_win)):
-            if x in mods:
-                self._origdata[y] = True
-                z.setChecked(True)
+        self._origdata = ['', False, False, False, False, '', '', '', '']
+        ## self._origdata = [key, False, False, False, False, cmd, context, parms,
+            ## controls]
+        for indx, item in enumerate(keydefdata):
+            if self.parent.column_info[indx][0] == C_KEY:
+                key = item
+                ix = self.keylist.index(key)
+                self.cmb_key.setCurrentIndex(ix)
+                ## self.cmb_key.setEditText(key)
+                self._origdata[0] = key
+            elif self.parent.column_info[indx][0] == C_MODS:
+                mods = item
+                self.cb_shift.setChecked(False)
+                self.cb_ctrl.setChecked(False)
+                self.cb_alt.setChecked(False)
+                self.cb_win.setChecked(False)
+                for x, y, z in zip('SCAW',(1, 2, 3, 4), (self.cb_shift,
+                        self.cb_ctrl, self.cb_alt, self.cb_win)):
+                    if x in mods:
+                        self._origdata[y] = True
+                        z.setChecked(True)
+            elif self.parent.column_info[indx][0] == C_TYPE:
+                soort = item
+                if soort == 'U':
+                    self.b_del.setEnabled(True)
+            elif self.parent.column_info[indx][0] == C_CMD:
+                command = item
+                ix = self.commandlist.index(command)
+                self.cmb_commando.setCurrentIndex(ix)
+                self._origdata[5] = command
+            elif self.parent.column_info[indx][0] == C_CNTXT:
+                context = item
+                ix = self.contextslist.index(context)
+                self.cmb_contexts.setCurrentIndex(ix)
+                self._origdata[6] = context
+            elif self.parent.column_info[indx][0] == C_PARMS:
+                parms = item
+                self.txt_parms.setText(parms)
+                self._origdata[7] = parms
+            elif self.parent.column_info[indx][0] == C_CTRL:
+                controls = item
+                ix = self.controlslist.index(controls) # TODO: adapt for multiple values
+                self.cmb_controls.setCurrentIndex(ix)
+                self._origdata[8] = controls
+            elif self.parent.column_info[indx][0] == C_DESC:
+                oms = item
+                self.txt_oms.setText(oms)
         self._newdata = self._origdata[:]
-        ix = self.commandlist.index(cmd)
-        self.cmb_commando.setCurrentIndex(ix)
-        ix = self.contextslist.index(context)
-        self.cmb_contexts.setCurrentIndex(ix)
-        self.txt_parms.setText(parms)
-        ix = self.controlslist.index(controls) # TODO: adapt for multiple values
-        self.cmb_controls.setCurrentIndex(ix)
-        self.txt_oms.setText(oms)
 
     def aanpassen(self, delete=False): # TODO
         print('aanpassen called')

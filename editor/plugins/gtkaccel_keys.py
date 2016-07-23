@@ -1,142 +1,64 @@
 # -*- coding: UTF-8 -*-
+"""basic plugin for tool using a gtkaccel_map
+"""
 import sys
-import shutil
-import xml.etree.ElementTree as ET
 import collections
 import functools
 import string
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
+from .read_gtkaccel import read_keydefs_and_stuff
 
 C_SAVE, C_DEL, C_KTXT, C_CTXT = '010', '011', '018', '019'
+C_PARMS, C_CTRL, C_CNTXT = '090', '091', '047'
 M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
-# constants for column names
+settname = ''
 C_KEY, C_TYPE, C_CMD, C_DESC, C_MODS = '001', '002', '003', '004', '043'
-C_CODE, C_CNTXT, C_PLAT, C_FEAT = '046', '047', '048', '049'
-C_PARMS, C_CTRL, C_MNU = '090', '091', '092'
-
-instructions = """\
-Instructions for rebuilding the key binding definitions
-
-
-Step 1: Open Audacity, Select Edit > Preferences from the menu
-(or press Ctrl-P) and go to "Keyboard".
-There you can push a button to Export the key bindings to a file.
-Remember where you saved it for step 2 (if you define a setting
-named AC_KEYS in the Settings > Tool Specific > Misc dialog
-this step will automatically pick it up).
-
-Step 2: Open the key bindings file and have it read the definitions.
-
-
-You can now take the time to perform step 1.
-Press "OK" to continue with step 2 or "Cancel" to return to the main program.
-"""
+C_CODE, C_PLAT, C_FEAT, C_MNU = '046', '048', '049', '092'
 
 def _translate_keyname(inp):
     convert = {'Escape': 'Esc', 'Delete': 'Del', 'Return': 'Enter',
-        'Page_up': 'PgUp', 'Page_down': 'PgDn', 'NUMPAD_ENTER': 'NumEnter'}
+        'Page_up': 'PgUp', 'Page_down': 'PgDn'}
     if inp in convert:
         out = convert[inp]
     else:
         out = inp
     return out
 
-def buildcsv(parent, showinfo=True):
+def buildcsv(settname, parent, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het csv bestand
     """
     shortcuts = collections.OrderedDict()
-    otherstuff = {}
 
     try:
-        initial = parent.page.settings['AC_KEYS'][0]
+        initial = parent.page.settings[settname][0]
     except KeyError:
         initial = ''
-
     if showinfo:
-        ok = gui.QMessageBox.information(parent, parent.captions['000'],
-            instructions, gui.QMessageBox.Ok | gui.QMessageBox.Cancel)
-        if ok == gui.QMessageBox.Cancel:
-            return
-
-        gui.QFileDialog.getOpenFileName(parent, parent.captions['059'],
-                directory=initial, filter='XML files (*.xml)')
-
+        kbfile = gui.QFileDialog.getOpenFileName(parent, parent.captions['059'],
+            directory=initial)
     else:
         kbfile = initial
-
     if not kbfile:
         return
 
-    tree = ET.parse(kbfile)
-    root = tree.getroot()
-    data = []
-    key = 0
-    commandlist = {}
-    for item in root.findall('command'):
-        line = []
-        keydef = item.get('key', default = '')
-        if keydef.endswith('+'):
-            parts = keydef[:-1].split('+')
-            parts[-1] += '+'
-        else:
-            parts = keydef.split('+')
-        keyname = parts[-1] if keydef else ''
-        keymods = ''
-        if len(parts) > 1:
-            keymods = ''.join([x[0] for x in parts[:-1]])
-        cmd_name = item.get('name')
-        cmd_label = item.get('label')
-        if keyname:
-            key += 1
-            shortcuts[key] = (_translate_keyname(keyname), keymods, cmd_name,
-                cmd_label)
-        commandlist[cmd_name] = cmd_label
-    otherstuff['commands'] = commandlist
-    return shortcuts, otherstuff
+    stuffdict = read_keydefs_and_stuff(kbfile)
+    keydefs = stuffdict.pop('keydefs')
+    actions = stuffdict['actions']
+    omsdict = stuffdict['descriptions']
 
-how_to_save = """\
-Instructions to load the changed definitions back into Audacity.
+    lastkey, used = 0, {}
+    for key, mods, command in keydefs:
+        lastkey += 1
+        context, action = actions[command]
+        description = omsdict[command]
+        shortcuts[str(lastkey)] = (_translate_keyname(key), mods, context, action,
+            description)
 
-First you need to save the definitions, we'll get to that shortly.
+    return shortcuts, stuffdict
 
-After that, perhaps it's sufficient to (re)start Audacity. Otherwise,
-select Edit > Preferences from the menu (or press Ctrl-P) and go to
-"Keyboard".
-Push the "Import" button and select the file you just saved.
-
-Now press "OK" to build and save the keyboard definitions file
-or "Cancel" to return to the main program.
-"""
-
-def savekeys(parent):
-
-    ok = gui.QMessageBox.information(parent, parent.captions['000'], how_to_save,
-        gui.QMessageBox.Ok | gui.QMessageBox.Cancel)
-    if ok == gui.QMessageBox.Cancel:
-        return
-
-    try:
-        kbfile = parent.settings['AC_KEYS'][0]
-    except KeyError:
-        kbfile = gui.QFileDialog.getSaveFileName(parent, parent.captions['059'],
-            filter='XML files (*.xml)')
-
-    root = ET.Element('audacitykeyboard')
-    root.set('audacityversion', "2.0.5")
-    for key, mods, name, label in parent.data.values():
-        new = ET.SubElement(root, 'command')
-        new.set('name', name)
-        new.set('label', label)
-        if 'S' in mods: key = 'Shift+' + key
-        if 'A' in mods: key = 'Alt+' + key
-        if 'C' in mods: key = 'Ctrl+' + key
-        new.set('key', key)
-
-    shutil.copyfile(kbfile, kbfile + '.bak')
-    ET.ElementTree(root).write(kbfile, encoding="UTF-8")
-
+# callbacks for gui elements
 def on_combobox(self, cb, text):
     """callback op het gebruik van een combobox
 
@@ -152,7 +74,7 @@ def on_combobox(self, cb, text):
     ## print(self._origdata)
     self.defchanged = False
     keyitemindex = 0
-    cmditemindex = 5
+    cmditemindex = 6
     if cb == self.cmb_key:
         if text != self._origdata[keyitemindex]:
             self._newdata[keyitemindex] = text
@@ -165,7 +87,7 @@ def on_combobox(self, cb, text):
             self._newdata[cmditemindex] = text
             self.defchanged = True
             try:
-                self.txt_oms.setText(self.commandsdict[text])
+                self.txt_oms.setText(self.descriptionsdict[text])
             except KeyError:
                 self.txt_oms.setText('(Geen omschrijving beschikbaar)')
             self.b_save.setEnabled(True)
@@ -213,21 +135,35 @@ class MyPanel(gui.QFrame):
 
     def add_extra_attributes(self):
          # key, mods, cmnd, params, controls
-        self._origdata = ["", False, False, False, False, ""]
+        self._origdata = ["", False, False, False, False, "", '']
         self._newdata = self._origdata[:]
 
         self.keylist = [x for x in string.ascii_uppercase] + \
             [x for x in string.digits] + ["F" + str(i) for i in range(1,13)] + \
-            ['NumEnter'] + \
+            ['Num' + x for x in string.digits] + ['>', '<'] + \
             [self.parent.captions[str(x)] for x in range(100,121)] + \
             ['.', ',', '+', '-', '`', '[', ']', '\\', ';', "'", '/']
-        self.commandsdict = self.parent.otherstuff['commands']
-        self.commandslist = sorted(self.commandsdict.keys())
+        ## self.commandsdict = self.parent.otherstuff['keydefs']
+        ## self.commandlist = sorted(self.commandsdict.keys())
+
+        self.contextslist = self.parent.otherstuff['contexts']
+        self.contextactionsdict = self.parent.otherstuff['actionscontext']
+        self.actionslist = self.parent.otherstuff['actions']
+        self.descriptionsdict = self.parent.otherstuff['descriptions']
+
+        try:
+            self.otherslist = self.parent.otherstuff['others']
+        except KeyError:
+            pass
+        else:
+            self.othersdict = self.parent.otherstuff['othercontext']
+            self.otherskeys = self.parent.otherstuff['otherkeys']
 
     def add_extra_fields(self):
         """fields showing details for selected keydef, to make editing possible
         """
         self._box = box = gui.QFrame(self)
+        ## box.setFrameShape(gui.QFrame.StyledPanel)
         box.setMaximumHeight(90)
         self.txt_key = gui.QLabel(self.parent.captions[C_KTXT] + " ", box)
         cb = gui.QComboBox(box)
@@ -250,10 +186,19 @@ class MyPanel(gui.QFrame):
             elif x == M_WIN:
                 self.cb_win = cb
 
+        self.lbl_contexts = gui.QLabel(self.parent.captions[C_CNTXT], box)
+        cb = gui.QComboBox(box)
+        cb.addItems(self.contextslist)
+        cb.setMaximumWidth(110)
+        cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
+            self, cb, str))
+        self.cmb_contexts = cb
+
         self.txt_cmd = gui.QLabel(self.parent.captions[C_CTXT] + " ", box)
+        ## self.commandlist.sort()
         cb = gui.QComboBox(self)
         cb.setMaximumWidth(150)
-        cb.addItems(self.commandslist) # only load on choosing a context
+        ## cb.addItems(self.actionslist) # only load on choosing a context
         cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
             self, cb, str))
         self.cmb_commando = cb
@@ -265,7 +210,18 @@ class MyPanel(gui.QFrame):
         self.b_del.setEnabled(False)
         self.b_del.clicked.connect(functools.partial(on_delete, self))
 
+        ## self.lbl_parms = gui.QLabel(self.parent.captions[C_PARMS], box)
+        ## self.txt_parms = gui.QLineEdit(box)
+        ## self.txt_parms.setMaximumWidth(280)
+        ## self.lbl_controls = gui.QLabel(self.parent.captions[C_CTRL], box)
+        ## cb = gui.QComboBox(box)
+        ## cb.addItems(self.controlslist)
+        ## cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
+            ## self, cb, str))
+        ## self.cmb_controls = cb
+
         self.txt_oms = gui.QTextEdit(box)
+        ## self.txt_oms.setMaximumHeight(40)
         if not self.parent.settings['RedefineKeys'][0] == '1':
             for widget in self.children():
                 widget.setEnabled(False)
@@ -291,6 +247,10 @@ class MyPanel(gui.QFrame):
         sizer1.addLayout(sizer2)
         sizer1.addStretch()
         sizer2 = gui.QHBoxLayout()
+        sizer2.addWidget(self.lbl_contexts)
+        sizer2.addWidget(self.cmb_contexts)
+        sizer1.addLayout(sizer2)
+        sizer2 = gui.QHBoxLayout()
         sizer2.addWidget(self.txt_cmd)
         sizer2.addWidget(self.cmb_commando)
         sizer1.addLayout(sizer2)
@@ -301,7 +261,27 @@ class MyPanel(gui.QFrame):
         sizer1 = gui.QHBoxLayout()
         sizer2 = gui.QVBoxLayout()
         sizer2.addWidget(self.txt_oms)
+        ## bsizer.addLayout(sizer1)
         sizer1.addLayout(sizer2, 2)
+
+        ## sizer1 = gui.QHBoxLayout()
+        ## sizer2 = gui.QGridLayout()
+        ## line = 0
+        ## sizer2.addWidget(self.lbl_contexts, line, 0)
+        ## sizer3 = gui.QHBoxLayout()
+        ## sizer3.addWidget(self.cmb_contexts)
+        ## sizer3.addStretch()
+        ## sizer2.addLayout(sizer3, line, 1)
+        ## line += 1
+        ## sizer2.addWidget(self.lbl_parms, line, 0)
+        ## sizer2.addWidget(self.txt_parms, line, 1)
+        ## line += 1
+        ## sizer2.addWidget(self.lbl_controls, line, 0)
+        ## sizer3 = gui.QHBoxLayout()
+        ## sizer3.addWidget(self.cmb_controls)
+        ## sizer3.addStretch()
+        ## sizer2.addLayout(sizer3, line, 1)
+        ## sizer1.addLayout(sizer2, 1)
 
         bsizer.addLayout(sizer1)
 
@@ -319,6 +299,9 @@ class MyPanel(gui.QFrame):
         self.b_del.setText(self.parent.captions[C_DEL])
         self.txt_key.setText(self.parent.captions[C_KTXT])
         self.txt_cmd.setText(self.parent.captions[C_CTXT])
+        ## self.lbl_parms.setText(self.parent.captions[C_PARMS])
+        ## self.lbl_controls.setText(self.parent.captions[C_CTRL])
+        self.lbl_contexts.setText(self.parent.captions[C_CNTXT])
 
     def on_item_selected(self, newitem, olditem): # olditem, newitem):
         """callback on selection of an item
@@ -333,6 +316,7 @@ class MyPanel(gui.QFrame):
         ## if olditem is not None:
             ## print('old item was', olditem.text(0))
         ## print('In itemselected:', self._origdata, self._newdata)
+        pass
         origkey = self._origdata[0]
         origmods = ''.join([y for x, y in zip((4, 2, 3, 1),
             ('WCAS')) if self._origdata[x]])
@@ -397,19 +381,18 @@ class MyPanel(gui.QFrame):
         seli = selitem.data(0, core.Qt.UserRole)
         if sys.version < '3':
             seli = seli.toPyObject()
-        ## key, mods, command, oms = self.parent.data[seli]
+        ## key, mods, context, command, oms = self.parent.data[seli]
         keydefdata = self.parent.data[seli]
+        # todo: derive the order of these elements from the csv file
         self.b_save.setEnabled(False)
         self.b_del.setEnabled(False)
-        ## if soort == 'U':
-            ## self.b_del.setEnabled(True)
-        ## self._origdata = [key, False, False, False, False, command]
-        self._origdata = ['', False, False, False, False, '']
+        self._origdata = ['', False, False, False, False, '', '']
         for indx, item in enumerate(keydefdata):
             if self.parent.column_info[indx][0] == C_KEY:
                 key = item
                 ix = self.keylist.index(key)
                 self.cmb_key.setCurrentIndex(ix)
+                ## self.cmb_key.setEditText(key)
                 self._origdata[0] = key
             elif self.parent.column_info[indx][0] == C_MODS:
                 mods = item
@@ -417,24 +400,34 @@ class MyPanel(gui.QFrame):
                 self.cb_ctrl.setChecked(False)
                 self.cb_alt.setChecked(False)
                 self.cb_win.setChecked(False)
-                self.cmb_key.setEditText(key)
                 for x, y, z in zip('SCAW',(1, 2, 3, 4), (self.cb_shift,
                         self.cb_ctrl, self.cb_alt, self.cb_win)):
                     if x in mods:
                         self._origdata[y] = True
                         z.setChecked(True)
+            elif self.parent.column_info[indx][0] == C_TYPE:
+                soort = item
+                if soort == 'U':
+                    self.b_del.setEnabled(True)
+            elif self.parent.column_info[indx][0] == C_CNTXT:
+                context = item
+                ix = self.contextslist.index(context)
+                self.cmb_contexts.setCurrentIndex(ix)
+                self._origdata[5] = context
             elif self.parent.column_info[indx][0] == C_CMD:
                 command = item
                 self.initializing = True
-                ix = self.commandslist.index(command)
+                self.cmb_commando.clear()
+                actionslist = self.contextactionsdict[context]
+                self.cmb_commando.addItems(actionslist)
+                ix = actionslist.index(command)
                 self.cmb_commando.setCurrentIndex(ix)
                 self.initializing = False
-                self._origdata[5] = command
+                self._origdata[6] = command
             elif self.parent.column_info[indx][0] == C_DESC:
                 oms = item
                 self.txt_oms.setText(oms)
         self._newdata = self._origdata[:]
-
 
     def aanpassen(self, delete=False): # TODO
         print('aanpassen called')
@@ -445,11 +438,12 @@ class MyPanel(gui.QFrame):
             indx = item.data(0, core.Qt.UserRole)
             if sys.version < '3':
                 indx = int(indx.toPyObject())
-            if self.parent.data[indx][1] == "S": # can't delete standard key
-                gui.QMessageBox.information(self, self.parent.captions["000"],
-                    self.parent.captions['024'])
-                return
-            else:
+            if self.parent.captions["{:03}".format(indx)] == C_TYPE:
+                if self.parent.data[indx][1] == "S": # can't delete standard key
+                    gui.QMessageBox.information(self, self.parent.captions["000"],
+                        self.parent.captions['024'])
+                    return
+            elif self.parent.captions["{:03}".format(indx)] == C_KEY:
                 if self.parent.data[indx][0] in self.defkeys: # restore standard if any
                     cmd = self.defkeys[self.parent.data[indx][0]]
                     if cmd in self.omsdict:

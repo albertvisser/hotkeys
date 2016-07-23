@@ -174,8 +174,7 @@ def m_col(self):
         for key, value in self.page.data.items():
             newvalue = []
             for colinf in self.page.column_info:
-                ix = colinf[2]
-                test = colinf[4]
+                test = colinf[-1]
                 if test == 'new':
                     newvalue.append('')
                 else:
@@ -454,10 +453,10 @@ class ColumnSettingsDialog(gui.QDialog):
         self.gsizer = gui.QVBoxLayout()
         self.rownum = 0 # indicates the number of rows in the gridlayout
         self.data, self.checks = [], []
-        self.col_textids, self.col_names, self.last_textid = hkc.read_columntitledata(
-            self)
-        self.oldseq = [x[2] for x in self.parent.page.column_info]
-        for item in self.parent.page.column_info:
+        self.col_textids, self.col_names, self.last_textid = \
+            hkc.read_columntitledata(self)
+        for ix, item in enumerate(self.parent.page.column_info):
+            item.append(ix)
             self.add_row(*item)
         box = gui.QVBoxLayout()
         box.addLayout(self.gsizer)
@@ -495,7 +494,7 @@ class ColumnSettingsDialog(gui.QDialog):
         else:
             return super().exec_()
 
-    def add_row(self, name='', width='', colno='', is_flag=False):
+    def add_row(self, name='', width='', is_flag=False, colno=''):
         self.rownum += 1
         rownum = self.rownum #  - self.deleted
         colnum = 0
@@ -545,7 +544,7 @@ class ColumnSettingsDialog(gui.QDialog):
         hsizer.addStretch()
         ghsizer.addLayout(hsizer, rownum)
         self.gsizer.addLayout(ghsizer)
-        old_colno = "new" if colno == '' else self.oldseq.index(colno)
+        old_colno = "new" if colno == '' else colno
         self.data.append((w_name, w_width, w_colno, w_flag, old_colno))
         vbar = self.scrl.verticalScrollBar()
         vbar.setMaximum(vbar.maximum() + 31)
@@ -584,7 +583,7 @@ class ColumnSettingsDialog(gui.QDialog):
 
 
     def accept(self):
-        column_info, new_titles, col_oldids = [], [], []
+        column_info, new_titles = [], []
         lastcol = -1
         for ix, value in enumerate(sorted(self.data,  key=lambda x: x[2].value())):
             w_name, w_width, w_colno, w_flag, old_colno = value
@@ -600,7 +599,7 @@ class ColumnSettingsDialog(gui.QDialog):
                 self.last_textid = "{:0>3}".format(int(self.last_textid) + 1)
                 new_titles.append((self.last_textid, name))
                 name = self.last_textid
-            column_info.append([name, int(w_width.text()), ix, w_flag.isChecked(),
+            column_info.append([name, int(w_width.text()), w_flag.isChecked(),
                 old_colno])
         if new_titles:
             hkc.add_columntitledata(new_titles)
@@ -1247,14 +1246,14 @@ class HotkeyPanel(gui.QFrame):
         self._panel.initializing = True
         for key, data in items:
             new_item = gui.QTreeWidgetItem()
-            new_item.setData(0, core.Qt.UserRole, key) # data[0])
+            new_item.setData(0, core.Qt.UserRole, key)
             for indx, col in enumerate(self.column_info):
-                from_indx, is_soort = col[2], col[3]
+                is_soort = col[2]
                 value = data[indx]
                 if is_soort:
                     value = hkc.C_DFLT if value == 'S' else hkc.C_RDEF
                     value = self.captions[value]
-                new_item.setText(from_indx, value)
+                new_item.setText(indx, value)
             self.p0list.addTopLevelItem(new_item)
             self.p0list.setCurrentItem(self.p0list.topLevelItem(pos))
         self._panel.initializing = False

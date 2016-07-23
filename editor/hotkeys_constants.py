@@ -245,18 +245,19 @@ def readcsv(pad):
                 settings[name] = (value, oms)
             elif rowtype == csv_titletype:
                 for item in rowdata[:-1]:
-                    coldata_item = ['', '', '', '']
+                    coldata_item = ['', '', '']
                     coldata_item[0] = item
                     coldata.append(coldata_item)
             elif rowtype == csv_widthtype:
                 for ix, item in enumerate(rowdata[:-1]):
                     coldata[ix][1] = int(item)
             elif rowtype == csv_seqnumtype:
-                for ix, item in enumerate(rowdata[:-1]):
-                    coldata[ix][2] = int(item)
+                pass
+                ## for ix, item in enumerate(rowdata[:-1]):
+                    ## coldata[ix][2] = int(item)
             elif rowtype == csv_istypetype:
                 for ix, item in enumerate(rowdata[:-1]):
-                    coldata[ix][3] = bool(int(item))
+                    coldata[ix][2] = bool(int(item))
             elif rowtype == csv_keydeftype:
                 key += 1
                 data[key] = ([x.strip() for x in rowdata])
@@ -273,11 +274,10 @@ def writecsv(pad, settings, coldata, data):
         for name, value in settings.items():
             rowdata = csv_settingtype, name, value[0], value[1]
             wrt.writerow(rowdata)
-        for ix, row in enumerate([[csv_titletype], [csv_widthtype],
-                [csv_seqnumtype]]):
+        for ix, row in enumerate([[csv_titletype], [csv_widthtype]]):
             row += [x[ix] for x in coldata] + [csv_oms[row[0]]]
             wrt.writerow(row)
-        wrt.writerow([csv_istypetype] + [int(x[3]) for x in coldata] +
+        wrt.writerow([csv_istypetype] + [int(x[2]) for x in coldata] +
             [csv_oms[csv_istypetype]])
         for keydef in data.values():
             row = [csv_keydeftype] + [x for x in keydef]
@@ -297,8 +297,8 @@ def quick_check(filename):
     for key, data in items:
         try:
             for indx, col in enumerate(column_info):
-                from_indx, is_soort = col[2], col[3]
-                value = data[from_indx]
+                is_soort = col[2]
+                value = data[indx]
         except Exception as e:
             print(key, data)
             raise
