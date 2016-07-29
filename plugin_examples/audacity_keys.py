@@ -410,6 +410,7 @@ class MyPanel(gui.QFrame):
                 key = item
                 ix = self.keylist.index(key)
                 self.cmb_key.setCurrentIndex(ix)
+                ## self.cmb_key.setEditText(key)
                 self._origdata[0] = key
             elif self.parent.column_info[indx][0] == C_MODS:
                 mods = item
@@ -417,7 +418,6 @@ class MyPanel(gui.QFrame):
                 self.cb_ctrl.setChecked(False)
                 self.cb_alt.setChecked(False)
                 self.cb_win.setChecked(False)
-                self.cmb_key.setEditText(key)
                 for x, y, z in zip('SCAW',(1, 2, 3, 4), (self.cb_shift,
                         self.cb_ctrl, self.cb_alt, self.cb_win)):
                     if x in mods:
