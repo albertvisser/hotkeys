@@ -6,7 +6,6 @@ from __future__ import print_function
 import os
 import sys
 import collections                  # tbv defaultdict
-import xml.etree.ElementTree as et  # for xml parsing
 import bs4 as bs                    # import BeautifulSoup for html parsing
 import tarfile                      # t.b.v. read_source
 
