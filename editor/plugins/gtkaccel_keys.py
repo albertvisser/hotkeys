@@ -9,12 +9,12 @@ import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 from .read_gtkaccel import read_keydefs_and_stuff
 
-C_SAVE, C_DEL, C_KTXT, C_CTXT = '010', '011', '018', '019'
-C_PARMS, C_CTRL, C_CNTXT = '090', '091', '047'
-M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
 settname = ''
-C_KEY, C_TYPE, C_CMD, C_DESC, C_MODS = '001', '002', '003', '004', '043'
-C_CODE, C_PLAT, C_FEAT, C_MNU = '046', '048', '049', '092'
+## C_SAVE, C_DEL, C_KTXT, C_CTXT = '010', '011', '018', '019'
+## C_PARMS, C_CTRL, C_CNTXT = '090', '091', '047'
+## M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
+## C_KEY, C_TYPE, C_CMD, C_DESC, C_MODS = '001', '002', '003', '004', '043'
+## C_CODE, C_PLAT, C_FEAT, C_MNU = '046', '048', '049', '092'
 
 def _translate_keyname(inp):
     convert = {'Escape': 'Esc', 'Delete': 'Del', 'Return': 'Enter',
@@ -165,7 +165,7 @@ class MyPanel(gui.QFrame):
         self._box = box = gui.QFrame(self)
         ## box.setFrameShape(gui.QFrame.StyledPanel)
         box.setMaximumHeight(90)
-        self.txt_key = gui.QLabel(self.parent.captions[C_KTXT] + " ", box)
+        self.txt_key = gui.QLabel(self.parent.captions['C_KTXT'] + " ", box)
         cb = gui.QComboBox(box)
         cb.setMaximumWidth(90)
         cb.addItems(self.keylist)
@@ -173,20 +173,20 @@ class MyPanel(gui.QFrame):
             self, cb, str))
         self.cmb_key = cb
 
-        for x in (M_CTRL, M_ALT, M_SHFT, M_WIN):
+        for x in ('M_CTRL', 'M_ALT', 'M_SHFT', 'M_WIN'):
             cb = gui.QCheckBox(self.parent.captions[x].join(("+ ","")), box)
             cb.setChecked(False)
             cb.stateChanged.connect(functools.partial(on_checkbox, self, cb))
-            if x == M_CTRL:
+            if x == 'M_CTRL':
                 self.cb_ctrl = cb
-            elif x == M_ALT:
+            elif x == 'M_ALT':
                 self.cb_alt = cb
-            elif x == M_SHFT:
+            elif x == 'M_SHFT':
                 self.cb_shift = cb
-            elif x == M_WIN:
+            elif x == 'M_WIN':
                 self.cb_win = cb
 
-        self.lbl_contexts = gui.QLabel(self.parent.captions[C_CNTXT], box)
+        self.lbl_contexts = gui.QLabel(self.parent.captions['C_CNTXT'], box)
         cb = gui.QComboBox(box)
         cb.addItems(self.contextslist)
         cb.setMaximumWidth(110)
@@ -194,7 +194,7 @@ class MyPanel(gui.QFrame):
             self, cb, str))
         self.cmb_contexts = cb
 
-        self.txt_cmd = gui.QLabel(self.parent.captions[C_CTXT] + " ", box)
+        self.txt_cmd = gui.QLabel(self.parent.captions['C_CTXT'] + " ", box)
         ## self.commandlist.sort()
         cb = gui.QComboBox(self)
         cb.setMaximumWidth(150)
@@ -203,10 +203,10 @@ class MyPanel(gui.QFrame):
             self, cb, str))
         self.cmb_commando = cb
 
-        self.b_save = gui.QPushButton(self.parent.captions[C_SAVE], box) ##, (120, 45))
+        self.b_save = gui.QPushButton(self.parent.captions['C_SAVE'], box) ##, (120, 45))
         self.b_save.setEnabled(False)
         self.b_save.clicked.connect(functools.partial(on_update, self))
-        self.b_del = gui.QPushButton(self.parent.captions[C_DEL], box) #, size= (50,-1)) ##, (120, 45))
+        self.b_del = gui.QPushButton(self.parent.captions['C_DEL'], box) #, size= (50,-1)) ##, (120, 45))
         self.b_del.setEnabled(False)
         self.b_del.clicked.connect(functools.partial(on_delete, self))
 
@@ -291,17 +291,17 @@ class MyPanel(gui.QFrame):
     def captions_extra_fields(self):
         """to be called on changing the language
         """
-        self.cb_win.setText(self.parent.captions[M_WIN].join(("+", "  ")))
-        self.cb_ctrl.setText(self.parent.captions[M_CTRL].join(("+", "  ")))
-        self.cb_alt.setText(self.parent.captions[M_ALT].join(("+", "  ")))
-        self.cb_shift.setText(self.parent.captions[M_SHFT].join(("+", "  ")))
-        self.b_save.setText(self.parent.captions[C_SAVE])
-        self.b_del.setText(self.parent.captions[C_DEL])
-        self.txt_key.setText(self.parent.captions[C_KTXT])
-        self.txt_cmd.setText(self.parent.captions[C_CTXT])
+        self.cb_win.setText(self.parent.captions['M_WIN'].join(("+", "  ")))
+        self.cb_ctrl.setText(self.parent.captions['M_CTRL'].join(("+", "  ")))
+        self.cb_alt.setText(self.parent.captions['M_ALT'].join(("+", "  ")))
+        self.cb_shift.setText(self.parent.captions['M_SHFT'].join(("+", "  ")))
+        self.b_save.setText(self.parent.captions['C_SAVE'])
+        self.b_del.setText(self.parent.captions['C_DEL'])
+        self.txt_key.setText(self.parent.captions['C_KTXT'])
+        self.txt_cmd.setText(self.parent.captions['C_CTXT'])
         ## self.lbl_parms.setText(self.parent.captions[C_PARMS])
         ## self.lbl_controls.setText(self.parent.captions[C_CTRL])
-        self.lbl_contexts.setText(self.parent.captions[C_CNTXT])
+        self.lbl_contexts.setText(self.parent.captions['C_CNTXT'])
 
     def on_item_selected(self, newitem, olditem): # olditem, newitem):
         """callback on selection of an item
@@ -388,13 +388,13 @@ class MyPanel(gui.QFrame):
         self.b_del.setEnabled(False)
         self._origdata = ['', False, False, False, False, '', '']
         for indx, item in enumerate(keydefdata):
-            if self.parent.column_info[indx][0] == C_KEY:
+            if self.parent.column_info[indx][0] == 'C_KEY':
                 key = item
                 ix = self.keylist.index(key)
                 self.cmb_key.setCurrentIndex(ix)
                 ## self.cmb_key.setEditText(key)
                 self._origdata[0] = key
-            elif self.parent.column_info[indx][0] == C_MODS:
+            elif self.parent.column_info[indx][0] == 'C_MODS':
                 mods = item
                 self.cb_shift.setChecked(False)
                 self.cb_ctrl.setChecked(False)
@@ -405,16 +405,16 @@ class MyPanel(gui.QFrame):
                     if x in mods:
                         self._origdata[y] = True
                         z.setChecked(True)
-            elif self.parent.column_info[indx][0] == C_TYPE:
+            elif self.parent.column_info[indx][0] == 'C_TYPE':
                 soort = item
                 if soort == 'U':
                     self.b_del.setEnabled(True)
-            elif self.parent.column_info[indx][0] == C_CNTXT:
+            elif self.parent.column_info[indx][0] == 'C_CNTXT':
                 context = item
                 ix = self.contextslist.index(context)
                 self.cmb_contexts.setCurrentIndex(ix)
                 self._origdata[5] = context
-            elif self.parent.column_info[indx][0] == C_CMD:
+            elif self.parent.column_info[indx][0] == 'C_CMD':
                 command = item
                 self.initializing = True
                 self.cmb_commando.clear()
@@ -424,7 +424,7 @@ class MyPanel(gui.QFrame):
                 self.cmb_commando.setCurrentIndex(ix)
                 self.initializing = False
                 self._origdata[6] = command
-            elif self.parent.column_info[indx][0] == C_DESC:
+            elif self.parent.column_info[indx][0] == 'C_DESC':
                 oms = item
                 self.txt_oms.setText(oms)
         self._newdata = self._origdata[:]
@@ -438,12 +438,12 @@ class MyPanel(gui.QFrame):
             indx = item.data(0, core.Qt.UserRole)
             if sys.version < '3':
                 indx = int(indx.toPyObject())
-            if self.parent.captions["{:03}".format(indx)] == C_TYPE:
+            if self.parent.captions["{:03}".format(indx)] == 'C_TYPE':
                 if self.parent.data[indx][1] == "S": # can't delete standard key
                     gui.QMessageBox.information(self, self.parent.captions["000"],
                         self.parent.captions['024'])
                     return
-            elif self.parent.captions["{:03}".format(indx)] == C_KEY:
+            elif self.parent.captions["{:03}".format(indx)] == 'C_KEY':
                 if self.parent.data[indx][0] in self.defkeys: # restore standard if any
                     cmd = self.defkeys[self.parent.data[indx][0]]
                     if cmd in self.omsdict:

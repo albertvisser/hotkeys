@@ -1170,9 +1170,9 @@ class HotkeyPanel(gui.QFrame):
         try:
             self.parent.page = self
             self.otherstuff = self._keys.buildcsv(parent, showinfo=False)[1]
-            with open('{}.otherstuff'.format(modulename), 'w') as _o:
-                for item, value in self.otherstuff.items():
-                    print(item, '→', value, file=_o)
+            ## with open('{}.otherstuff'.format(modulename), 'w') as _o:
+                ## for item, value in self.otherstuff.items():
+                    ## print(item, '→', value, file=_o)
         except AttributeError:
             pass
         try:
@@ -1251,7 +1251,7 @@ class HotkeyPanel(gui.QFrame):
                 is_soort = col[2]
                 value = data[indx]
                 if is_soort:
-                    value = hkc.C_DFLT if value == 'S' else hkc.C_RDEF
+                    value = 'C_DFLT' if value == 'S' else 'C_RDEF'
                     value = self.captions[value]
                 new_item.setText(indx, value)
             self.p0list.addTopLevelItem(new_item)
@@ -1307,7 +1307,7 @@ class ChoiceBook(gui.QFrame):
         self.b_prev = gui.QPushButton('', self)
         self.b_prev.clicked.connect(self.find_prev)
         self.b_prev.setEnabled(False)
-        self.b_filter = gui.QPushButton(self.parent.captions[hkc.C_FILTER], self)
+        self.b_filter = gui.QPushButton(self.parent.captions['C_FILTER'], self)
         self.b_filter.clicked.connect(self.filter)
         self.b_filter.setEnabled(False)
         self.filter_on = False
@@ -1322,7 +1322,7 @@ class ChoiceBook(gui.QFrame):
             self.parent.pluginfiles[txt] = (loc, fl)
             self.sel.addItem(txt)
 
-        self.b_exit = gui.QPushButton(self.parent.captions[hkc.C_EXIT], self)
+        self.b_exit = gui.QPushButton(self.parent.captions['C_EXIT'], self)
         self.b_exit.clicked.connect(self.parent.exit)
 
         box = gui.QVBoxLayout()
@@ -1356,15 +1356,15 @@ class ChoiceBook(gui.QFrame):
         self.setcaptions()
 
     def setcaptions(self):
-        self.b_next.setText(self.parent.captions[hkc.C_NEXT])
-        self.b_prev.setText(self.parent.captions[hkc.C_PREV])
-        self.sel_text.setText(self.parent.captions[hkc.C_SEL])
-        self.find_text.setText(self.parent.captions[hkc.C_FIND])
+        self.b_next.setText(self.parent.captions['C_NEXT'])
+        self.b_prev.setText(self.parent.captions['C_PREV'])
+        self.sel_text.setText(self.parent.captions['C_SEL'])
+        self.find_text.setText(self.parent.captions['C_FIND'])
         if self.filter_on:
-            self.b_filter.setText(self.parent.captions[hkc.C_FLTOFF])
+            self.b_filter.setText(self.parent.captions['C_FLTOFF'])
         else:
-            self.b_filter.setText(self.parent.captions[hkc.C_FILTER])
-        self.b_exit.setText(self.parent.captions[hkc.C_EXIT])
+            self.b_filter.setText(self.parent.captions['C_FILTER'])
+        self.b_exit.setText(self.parent.captions['C_EXIT'])
 
     def on_page_changed(self, indx):
         page = self.pnl.currentWidget() ## self.parent().page
@@ -1384,7 +1384,7 @@ class ChoiceBook(gui.QFrame):
             return
         if self.parent.page.filtertext:
             self.find.setEditText(self.parent.page.filtertext)
-            self.b_filter.setText(self.parent.captions[hkc.C_FLTOFF])
+            self.b_filter.setText(self.parent.captions['C_FLTOFF'])
             self.b_filter.setEnabled(True)
         else:
             self.find.setEditText('')
@@ -1436,8 +1436,8 @@ class ChoiceBook(gui.QFrame):
         text = str(self.find.currentText())
         item = self.parent.page.p0list.currentItem()
         self.reposition = item.text(0), item.text(1)
-        if state == self.parent.captions[hkc.FILTER]:
-            state = self.parent.captions[hkc.FLTOFF]
+        if state == self.parent.captions['FILTER']:
+            state = self.parent.captions['FLTOFF']
             self.filter_on = True
             self.parent.page.filtertext = text
             self.parent.page.olddata = self.parent.page.data
@@ -1447,7 +1447,7 @@ class ChoiceBook(gui.QFrame):
             self.b_prev.setEnabled(False)
             self.find.setEnabled(False)
         else:       # self.filter_on == True
-            state = self.parent.captions[hkc.FILTER]
+            state = self.parent.captions['FILTER']
             self.filter_on = False
             self.parent.page.filtertext = ''
             self.parent.page.data = self.parent.page.olddata
@@ -1496,26 +1496,26 @@ class MainFrame(gui.QMainWindow):
     def setup_menu(self):
         self.menu_bar.clear()
         self._menus = (
-            (hkc.M_APP, (
-                (hkc.M_SETT, ((
-                    (hkc.M_LOC, (m_loc, 'Ctrl+F')),
-                    (hkc.M_LANG, (m_lang, 'Ctrl+L')),
-                    (hkc.M_PREF, (m_pref, '')),
+            ('M_APP', (
+                ('M_SETT', ((
+                    ('M_LOC', (m_loc, 'Ctrl+F')),
+                    ('M_LANG', (m_lang, 'Ctrl+L')),
+                    ('M_PREF', (m_pref, '')),
                     ), '')),
-                (hkc.M_EXIT, (m_exit, 'Ctrl+Q')),
+                ('M_EXIT', (m_exit, 'Ctrl+Q')),
                 )),
-            (hkc.M_TOOL, (
-                (hkc.M_SETT, ((
-                    (hkc.M_COL, (m_col, '')),
-                    (hkc.M_MISC, (m_tool, '')),
-                    (hkc.M_ENTR, (m_entry, '')),
+            ('M_TOOL', (
+                ('M_SETT', ((
+                    ('M_COL', (m_col, '')),
+                    ('M_MISC', (m_tool, '')),
+                    ('M_ENTR', (m_entry, '')),
                     ), '')),
-                (hkc.M_READ, (m_read, 'Ctrl+R')),
-                (hkc.M_RBLD, (m_rebuild, 'Ctrl+B')),
-                (hkc.M_SAVE, (m_save, 'Ctrl+S')),
+                ('M_READ', (m_read, 'Ctrl+R')),
+                ('M_RBLD', (m_rebuild, 'Ctrl+B')),
+                ('M_SAVE', (m_save, 'Ctrl+S')),
                 )),
-            (hkc.M_HELP, (
-                (hkc.M_ABOUT, (m_about, 'Ctrl+H')),
+            ('M_HELP', (
+                ('M_ABOUT', (m_about, 'Ctrl+H')),
                 )))
         self._menuitems = {} # []
         for title, items in self._menus:
@@ -1545,15 +1545,15 @@ class MainFrame(gui.QMainWindow):
         act = gui.QAction(self.captions[sel], self)
         act.triggered.connect(functools.partial(callback, self))
         act.setShortcut(shortcut)
-        if sel == hkc.M_READ:
+        if sel == 'M_READ':
             if not self.page.data:
                 act.setEnabled(False)
-        if sel == hkc.M_RBLD:
+        if sel == 'M_RBLD':
             try:
                 act.setEnabled(bool(int(self.page.settings[hkc.csv_rbldsett][0])))
             except KeyError:
                 act.setEnabled(False)
-        elif sel == hkc.M_SAVE:
+        elif sel == 'M_SAVE':
             try:
                 act.setEnabled(bool(int(self.page.settings[hkc.csv_redefsett][0])))
             except KeyError:

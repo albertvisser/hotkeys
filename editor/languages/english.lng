@@ -9,43 +9,43 @@
 089 Welcome to
 
 # Keyboard mapping table headers
-001 Key
-002 Type
-003 Command
-004 Description
-043 Modifier(s)
-046 Code
-047 Context
-048 Platform
-049 Feature
-090 Parameter(s)
-091 Controls
-092 Menu Option
+C_KEY Key
+C_TYPE Type
+C_CMD Command
+C_DESC Description
+C_MODS Modifier(s)
+C_CODE Code
+C_CNTXT Context
+C_PLAT Platform
+C_FEAT Feature
+C_PARMS Parameter(s)
+C_CTRL Controls
+C_MNU Menu Option
 
 # soorten definities
-005 Default
-006 (Re)defined
+C_DFLT Default
+C_RDEF (Re)defined
 
 text_f  Fixed:
 text_r  Remember last one
 
 # modifier names
-007 Ctrl
-008 Alt
-009 Shift
-013 Win (meta)
+M_CTRL Ctrl
+M_ALT Alt
+M_SHFT Shift
+M_WIN Win (meta)
 
 #  buttons
-010 &Change keydef
-011 &Remove
-012 E&xit
-014 Find &Next
-015 Find &Prev
+C_SAVE &Change keydef
+C_DEL &Remove
+C_EXIT E&xit
+C_NEXT Find &Next
+C_PREV Find &Prev
 058 Browse
 062 &Add Program
 063 &Remove Checked Programs
-066 &Filter off
-068 &Filter
+C_FLTOFF &Filter off
+C_FILTER &Filter
 076 &Add Setting
 077 &Remove Checked Settings
 084 &Add Column
@@ -54,10 +54,10 @@ text_r  Remember last one
 088 &Delete selected keydef(s)
 
 # screen text
-018 Key:
-019 Map key to:
-050 Select tool:
-051 Find tekst in description:
+C_KTXT Key:
+C_CTXT Map key to:
+C_SEL Select tool:
+C_FIND Find tekst in description:
 059 Choose a file
 060 Program
 061 Location of the CSV-file
@@ -104,7 +104,7 @@ text_r  Remember last one
 042 One or more of your settings files doesn't appear to exist. Please use Settings -> File Locations from the menu to check them.
 044 No data for this program
 045 This keycombo already exists, do you want to replace it?
-052 No plugin for {} yet
+C_NONE No plugin for {} yet
 053 View/edit {} keyboard shortcuts
 054 {} not found
 055 No next item
@@ -145,20 +145,20 @@ text_r  Remember last one
 120 Letter(s)
 
 # menus/options
-200 &Application
-201 (re)&Read definitions
-202 &Save definitions
-203 Re&build definitions file
-209 e&Xit
-210 &Settings
-211 &File locations
-212 &Language
-213 &Tool Specific
-214 &Columns
-215 &Misc
-216 Manual &Entry
-217 Set Preferred Tool
-290 &Help
-299 &About
+M_APP &Application
+M_READ (re)&Read definitions
+M_SAVE &Save definitions
+M_RBLD Re&build definitions file
+M_EXIT e&Xit
+M_SETT &Settings
+M_LOC &File locations
+M_LANG &Language
+M_TOOL &Tool Specific
+M_COL &Columns
+M_MISC &Misc
+M_ENTR Manual &Entry
+M_PREF Set Preferred Tool
+M_HELP &Help
+M_ABOUT &About
 
 404 Function not yet implemented
