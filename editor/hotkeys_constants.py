@@ -24,13 +24,20 @@ NOT_IMPLEMENTED = '404'
 csv_linetypes = ['Setting', 'Title', 'Width', 'Seq', 'is_type', 'Keydef']
 csv_settingtype, csv_keydeftype = csv_linetypes[0], csv_linetypes[-1]
 csv_titletype, csv_widthtype, csv_seqnumtype, csv_istypetype = csv_linetypes[1:-1]
-csv_settingnames = ['PluginName', 'PanelName', 'RebuildCSV', 'RedefineKeys']
-csv_plgsett, csv_pnlsett, csv_rbldsett, csv_redefsett = csv_settingnames
+csv_settingnames = ['PluginName', 'PanelName', 'RebuildCSV', 'ShowDetails',
+    'RedefineKeys']
+csv_plgsett, csv_pnlsett, csv_rbldsett, csv_detsett, csv_redefsett = csv_settingnames
 csv_oms = dict(zip(csv_settingnames + csv_linetypes[1: -1], (
  'Naam van de module met toolspecifieke code (zonder .py)',
+    # self.captions['032A'].format(self.captions['032'], self.captions['032C'])
  'Naam van het toolpanel in de selector',
+    # self.captions['033']
  "1 = possible to rebuild this file from the tools' settings; else 0",
+    # self.captions['034B'].format('034'])
+ "1 = show keydef details in a separate part of the screen; else 0",
+    # self.captions['034B'].format('S_DETS'])
  '1 = possible to change keydefs and save them back; else 0',
+    # self.captions['034B'].format('035'])
  'Titles of the columns in the display; refer to keys in the language file',
  'Column widths',
  'Column sequence numbers in the display',

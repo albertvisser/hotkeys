@@ -90,11 +90,21 @@ C_FIND Zoek tekst in omschrijving:
 029 Er zijn meer kolommen gedefinieerd dan in de toetsdefinities gebruikt worden.
 030 Herladen gaat een probleem veroorzaken
 031 Initieel opzetten CSV bestand
+#S_PLGN
 032 Module met de toolspecifieke code
-032A Naam van de {} (wordt hierdoor tevens aangemaakt)
-033 Naam voor de titel van het toolpanel
-034 Maak het mogelijk dit bestand opnieuw op te bouwen vanuit de instellingen van het tool
-035 Maak het mogelijk om de defiities aan te passen en terug te schrijven naar de tool instellingen
+032B wordt hierdoor tevens aangemaakt
+032C zonder .py
+032A Naam van de {} ({})
+#S_PNLN
+033 Titel van het toolpanel
+033A {} in de selector
+#S_RBLD
+034 mogelijk dit bestand opnieuw op te bouwen vanuit de instellingen van het tool
+034A Maak het {}
+034B 1 = {}; anders 0
+#S_RSAV
+035 mogelijk om de defiities aan te passen en terug te schrijven naar de tool instellingen
+S_DETS Toon keydef details in een apart deel van het scherm
 036 Waar zullen we dit bestand opslaan?
 037 De nieuwe definities werken mogelijk pas als het andere programma opnieuw gestart wordt
 038 Restart TC

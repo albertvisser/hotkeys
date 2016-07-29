@@ -156,10 +156,18 @@ def m_tool(self):
     if dlg == gui.QDialog.Accepted:
         hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
             self.page.data)
-        self._menuitems[hkc.M_SAVE].setEnabled(bool(
+        self._menuitems['M_SAVE'].setEnabled(bool(
             int(self.page.settings[hkc.csv_redefsett][0])))
-        self._menuitems[hkc.M_RBLD].setEnabled(bool(
+        self._menuitems['M_RBLD'].setEnabled(bool(
             int(self.page.settings[hkc.csv_rbldsett][0])))
+        indx = self.book.sel.currentIndex()
+        win = self.book.pnl.widget(indx)
+        if bool(int(self.page.settings[hkc.csv_detsett][0])) != self.page.has_extrapanel:
+            newwin = HotkeyPanel(self.book, self.book.plugins[indx][1])
+            self.book.pnl.insertWidget(indx, newwin)
+            self.book.pnl.setCurrentIndex(indx)
+            self.book.pnl.removeWidget(win)
+
 
 def m_col(self):
     """define tool-specific settings: column properties
@@ -354,7 +362,8 @@ class SetupDialog(gui.QDialog):
         grid = gui.QGridLayout()
 
         text = gui.QLabel(self.parent.parent.captions['032A'].format(
-            self.parent.parent.captions['032'].lower()), self)
+            self.parent.parent.captions['032'].lower(),
+            self.parent.parent.captions['032B']), self)
         self.t_program = gui.QLineEdit('editor.plugins.{}_keys'.format(
             name.lower()), self)
         grid.addWidget(text, 1, 0, 1, 3)
@@ -363,17 +372,21 @@ class SetupDialog(gui.QDialog):
         self.t_title = gui.QLineEdit(name + ' hotkeys', self)
         grid.addWidget(text, 2, 0, 1, 3)
         grid.addWidget(self.t_title, 2, 3) #, 1, 1)
-        self.c_rebuild = gui.QCheckBox(self.parent.parent.captions['034'], self)
+        self.c_rebuild = gui.QCheckBox(self.parent.parent.captions['034A'].format(
+            self.parent.parent.captions['034']), self)
         grid.addWidget(self.c_rebuild, 3, 1, 1, 3)
-        self.c_redef = gui.QCheckBox(self.parent.parent.captions['035'], self)
-        grid.addWidget(self.c_redef, 4, 1, 1, 3)
+        self.c_details = gui.QCheckBox(self.parent.parent.captions['S_DETS'])
+        grid.addWidget(self.c_details, 4, 1, 1, 3)
+        self.c_redef = gui.QCheckBox(self.parent.parent.captions['034A'].format(
+            self.parent.parent.captions['035']), self)
+        grid.addWidget(self.c_redef, 5, 1, 1, 3)
         ## grid.addSpacer(5, 0, 1, 3)
         text = gui.QLabel(self.parent.parent.captions['036'], self)
-        grid.addWidget(text, 5, 0, 1, 2)
+        grid.addWidget(text, 6, 0, 1, 2)
         self.t_loc = FileBrowseButton(self, text =
             os.path.join('editor', 'plugins', name + "_hotkeys.csv"),
             level_down=True)
-        grid.addWidget(self.t_loc, 5, 2, 1, 3)
+        grid.addWidget(self.t_loc, 6, 2, 1, 3)
 
         buttonbox = gui.QDialogButtonBox()
         btn = buttonbox.addButton(gui.QDialogButtonBox.Ok)
@@ -408,7 +421,8 @@ class SetupDialog(gui.QDialog):
             return
         self.parent.loc = loc
         self.parent.data = [self.t_program.text(), self.t_title.text(),
-            int(self.c_rebuild.isChecked()), int(self.c_redef.isChecked())]
+            int(self.c_rebuild.isChecked()), int(self.c_details.isChecked()),
+            int(self.c_redef.isChecked())]
         gui.QDialog.accept(self)
 
 class ColumnSettingsDialog(gui.QDialog):
@@ -638,13 +652,24 @@ class ExtraSettingsDialog(gui.QDialog):
         hsizer.addWidget(self.t_title)
         vsizer.addLayout(hsizer)
         hsizer = gui.QHBoxLayout()
-        self.c_rebuild = gui.QCheckBox(self.parent.captions['034'], self)
+        self.c_rebuild = gui.QCheckBox(self.parent.captions['034A'].format(
+            self.parent.captions['034']), self)
         if self.parent.page.settings[hkc.csv_rbldsett][0] == '1':
             self.c_rebuild.toggle()
         hsizer.addWidget(self.c_rebuild)
         vsizer.addLayout(hsizer)
         hsizer = gui.QHBoxLayout()
-        self.c_redef = gui.QCheckBox(self.parent.captions['035'], self)
+        self.c_showdet = gui.QCheckBox(self.parent.captions['S_DETS'], self)
+        try:
+            if self.parent.page.settings[hkc.csv_detsett][0] == '1':
+                self.c_showdet.toggle()
+        except KeyError:
+            pass
+        hsizer.addWidget(self.c_showdet)
+        vsizer.addLayout(hsizer)
+        hsizer = gui.QHBoxLayout()
+        self.c_redef = gui.QCheckBox(self.parent.captions['034A'].format(
+            self.parent.captions['035']), self)
         if self.parent.page.settings[hkc.csv_redefsett][0] == '1':
             self.c_redef.toggle()
         hsizer.addWidget(self.c_redef)
@@ -779,6 +804,13 @@ class ExtraSettingsDialog(gui.QDialog):
         oms = self.parent.page.settings[hkc.csv_rbldsett][1]
         value = '1' if self.c_rebuild.isChecked() else '0'
         self.parent.page.settings[hkc.csv_rbldsett] = (value, oms)
+        try:
+            oms = self.parent.page.settings[hkc.csv_detsett][1]
+        except KeyError:
+            oms = self.parent.captions['034B'].format(
+                self.parent.captions['S_DETS'])
+        value = '1' if self.c_showdet.isChecked() else '0'
+        self.parent.page.settings[hkc.csv_detsett] = (value, oms)
         oms = self.parent.page.settings[hkc.csv_redefsett][1]
         value = '1' if self.c_redef.isChecked() else '0'
         self.parent.page.settings[hkc.csv_redefsett] = (value, oms)
@@ -1166,6 +1198,7 @@ class HotkeyPanel(gui.QFrame):
             _sizer.addLayout(hsizer)
             self.setLayout(_sizer)
             return
+
         self.p0list = gui.QTreeWidget(self)
         try:
             self.parent.page = self
@@ -1175,10 +1208,25 @@ class HotkeyPanel(gui.QFrame):
                     ## print(item, '→', value, file=_o)
         except AttributeError:
             pass
+
+        self._panel = DummyPanel(self)
+        self.has_extrapanel = False
         try:
-            self._panel = self._keys.MyPanel(self)
-        except AttributeError:
-            self._panel = DummyPanel(self)
+            test = int(self.settings[hkc.csv_detsett][0])
+        except KeyError:
+            pass
+        else:
+            if test:
+                try:
+                    self._panel = self._keys.MyPanel(self)
+                except AttributeError:
+                    pass
+                else:
+                    self.has_extrapanel = True
+        ## try:
+            ## self._panel = self._keys.MyPanel(self)
+        ## except AttributeError:
+            ## self._panel = DummyPanel(self)
         self.title = self.settings["PanelName"][0]
 
         # gelegenheid voor extra initialisaties en het opbouwen van de rest van de GUI
@@ -1222,7 +1270,7 @@ class HotkeyPanel(gui.QFrame):
         self._keys.savekeys(self)
         hkc.writecsv(self.pad, self.settings, self.column_info, self.data)
         self.modified = False
-        self.setWindowTitle(self.captions["000"])
+        ## self.setWindowTitle(self.captions["000"]) ??
 
     def setcaptions(self):
         title = self.captions["000"]

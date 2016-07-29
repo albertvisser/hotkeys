@@ -90,12 +90,22 @@ C_FIND Find tekst in description:
 029 You have now defined more columns for this tool than are in the keydefs.
 030 Reloading them will result in an error
 031 Create Initial version of CSV file
+#S_PLGN
 032 Module containing toolspecific code
-032A Name of the {} (will also create it)
+032B will also create it
+032C without .py
+032A Name of the {} ({})
+#S_PNLN
 033 Title for the tool panel
-034 Make it possible to rebuild this file from the tool's settings
-035 Make it possible to redefine the keydefs and save them back to the tool's settings
-036 Where to store this file?
+033A {} in the selector
+#S_RBLD
+034 possible to rebuild this file from the tool's settings
+034A Make it {}
+034B 1 = {}; else 0
+#S_RSAV
+035 possible to redefine the keydefs and save them back to the tool's settings
+S_DETS Show keydef details in a separate part of the screen
+036 Where do you want to store this file?
 037 You may need to restart the other program for the changes to take effect
 038 Sorry, can't continue without a name - please enter one or cancel
 039 Initialize new csv file for this application?
