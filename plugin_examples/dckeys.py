@@ -12,12 +12,12 @@ import bs4 as bs # import BeautifulSoup
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 
-C_SAVE, C_DEL, C_KTXT, C_CTXT = '010', '011', '018', '019'
-M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
-# constants for column names
-C_KEY, C_TYPE, C_CMD, C_DESC, C_MODS = '001', '002', '003', '004', '043'
-C_CODE, C_CNTXT, C_PLAT, C_FEAT = '046', '047', '048', '049'
-C_PARMS, C_CTRL, C_MNU = '090', '091', '092'
+## C_SAVE, C_DEL, C_KTXT, C_CTXT = '010', '011', '018', '019'
+## M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
+## # constants for column names
+## C_KEY, C_TYPE, C_CMD, C_DESC, C_MODS = '001', '002', '003', '004', '043'
+## C_CODE, C_CNTXT, C_PLAT, C_FEAT = '046', '047', '048', '049'
+## C_PARMS, C_CTRL, C_MNU = '090', '091', '092'
 
 instructions = """\
 Instructions for rebuilding the keyboard shortcut definitions
@@ -315,34 +315,18 @@ def buildcsv(parent, showinfo=True):
     ## # need to collect commands that are defined but don't have a description
     ## # add them to cmddict with empty oms and feed them to CompleteDialog
     definedcommands = set([x[3] for x in keydata.values()])
-    with open('dc_definedkeys', 'w') as _o:
-        for x in sorted(definedkeys.items()):
-            print(x, file=_o)
-    with open('dc_definedcommands', 'w') as _o:
-        for x in sorted(definedcommands):
-            print(x, file=_o)
 
     stdkeys = get_stdkeys(dc_keys)
     cmddict, defaults = get_cmddict(dc_cmds, stdkeys)
+    tobecompleted = {}
     # WIP: complete this stuff (commented out for now).
+    # alternatively, we can do this /after/ building the shortcuts list
     ## # compare mappings in stdkeys and defaults to see if any are missing
-    with open('dc_stdkeys', 'w') as _o:
-        for x in sorted(stdkeys.items()):
-            print(x, file=_o)
-    with open('dc_defaults', 'w') as _o:
-        for x in sorted(defaults.items()):
-            print(x, file=_o)
     ## # if descriptions are missing, simply add them; otherwise we need to choose which one
     ## # to use (the longest?)
-    with open('dc_cmddict_before', 'w') as _o:
-        for x, y in sorted(cmddict.items()):
-            print(x, y, file=_o)
-    for command in definedcommands:
-        if command not in cmddict:
-            cmddict[command] = ''
-    with open('dc_cmddict_after', 'w') as _o:
-        for x, y in sorted(cmddict.items()):
-            print(x, y, file=_o)
+    ## with open('dc_cmddict_before', 'w') as _o:
+        ## for x, y in sorted(cmddict.items()):
+            ## print(x, y, file=_o)
     ## # if any empty ones are left, feed them to the dialog
     ## tobecompleted = {x: y for x, y in cmddict.items() if y == ''}
     ## with open('tobecompleted', 'w') as _o:
@@ -369,10 +353,20 @@ def buildcsv(parent, showinfo=True):
         #     value = 'X'
         templist.insert(2, val)
         try:
-            templist.append(cmddict[value[3]])
+            oms = cmddict[value[3]]
         except KeyError:
-            continue # do not write unassigned commands
+            oms = cmddict[value[3]] = tobecompleted[value[3]] = ''
+        templist.append(oms)
         shortcuts[key] = tuple(templist)
+
+    ## if tobecompleted:
+
+        ## # open dialog to complete missing descriptions (as above)
+        ## # afterwards: fill in completed descriptions
+        ## for key, value in tobecompleted:
+            ## if value:
+                ## cmddict[key] = tobecompleted[key]
+        ## for key, value in shortcuts
 
     controls = ['', 'Command Line', 'Files Panel', 'Quick Search']
     contexts = ['Main', 'Copy/Move Dialog', 'Differ', 'Edit Comment Dialog',
@@ -447,6 +441,8 @@ def on_combobox(self, cb, text):
 
     zorgt ervoor dat de buttons ge(de)activeerd worden
     """
+    if self.initializing:   # kan evt. weer weg as self.omsdict gedefinieerd is
+        return
     text = str(text) # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan de
                      # callback soms fout?
     hlp = cb.currentText()
@@ -467,11 +463,10 @@ def on_combobox(self, cb, text):
         if text != self._origdata[cmditemindex]:
             self._newdata[cmditemindex] = text
             self.defchanged = True
-            # nog geen omsdict beschikbaar (mapt commando naar omschrijving)
-            ## try:
-                ## self.txt_oms.setText(self.parent.omsdict[text])
-            ## except KeyError:
-                ## self.txt_oms.setText('(Geen omschrijving beschikbaar)')
+            try:
+                self.txt_oms.setText(self.commandsdict[text])
+            except KeyError:
+                self.txt_oms.setText('(Geen omschrijving beschikbaar)')
             self.b_save.setEnabled(True)
         elif str(self.cmb_key.currentText()) == self._origdata[keyitemindex]:
             self.b_save.setEnabled(False)
@@ -534,7 +529,7 @@ class MyPanel(gui.QFrame):
         """
         self._box = box = gui.QFrame(self)
         box.setMaximumHeight(120)
-        self.txt_key = gui.QLabel(self.parent.captions[C_KTXT] + " ", box)
+        self.txt_key = gui.QLabel(self.parent.captions['C_KTXT'] + " ", box)
         cb = gui.QComboBox(box)
         cb.setMaximumWidth(90)
         cb.addItems(self.keylist)
@@ -542,20 +537,20 @@ class MyPanel(gui.QFrame):
             self, cb, str))
         self.cmb_key = cb
 
-        for x in (M_CTRL, M_ALT, M_SHFT, M_WIN):
+        for x in ('M_CTRL', 'M_ALT', 'M_SHFT', 'M_WIN'):
             cb = gui.QCheckBox(self.parent.captions[x].join(("+ ","")), box)
             cb.setChecked(False)
             cb.stateChanged.connect(functools.partial(on_checkbox, self, cb))
-            if x == M_CTRL:
+            if x == 'M_CTRL':
                 self.cb_ctrl = cb
-            elif x == M_ALT:
+            elif x == 'M_ALT':
                 self.cb_alt = cb
-            elif x == M_SHFT:
+            elif x == 'M_SHFT':
                 self.cb_shift = cb
-            elif x == M_WIN:
+            elif x == 'M_WIN':
                 self.cb_win = cb
 
-        self.lbl_contexts = gui.QLabel(self.parent.captions[C_CNTXT], box)
+        self.lbl_contexts = gui.QLabel(self.parent.captions['C_CNTXT'], box)
         cb = gui.QComboBox(box)
         cb.setMaximumWidth(110)
         cb.addItems(self.contextslist)
@@ -563,7 +558,7 @@ class MyPanel(gui.QFrame):
             self, cb, str))
         self.cmb_contexts = cb
 
-        self.txt_cmd = gui.QLabel(self.parent.captions[C_CTXT] + " ", box)
+        self.txt_cmd = gui.QLabel(self.parent.captions['C_CTXT'] + " ", box)
         ## self.commandlist.sort()
         cb = gui.QComboBox(self)
         cb.setMaximumWidth(150)
@@ -572,17 +567,17 @@ class MyPanel(gui.QFrame):
             self, cb, str))
         self.cmb_commando = cb
 
-        self.b_save = gui.QPushButton(self.parent.captions[C_SAVE], box) ##, (120, 45))
+        self.b_save = gui.QPushButton(self.parent.captions['C_SAVE'], box) ##, (120, 45))
         self.b_save.setEnabled(False)
         self.b_save.clicked.connect(functools.partial(on_update, self))
-        self.b_del = gui.QPushButton(self.parent.captions[C_DEL], box) #, size= (50,-1)) ##, (120, 45))
+        self.b_del = gui.QPushButton(self.parent.captions['C_DEL'], box) #, size= (50,-1)) ##, (120, 45))
         self.b_del.setEnabled(False)
         self.b_del.clicked.connect(functools.partial(on_delete, self))
 
-        self.lbl_parms = gui.QLabel(self.parent.captions[C_PARMS], box)
+        self.lbl_parms = gui.QLabel(self.parent.captions['C_PARMS'], box)
         self.txt_parms = gui.QLineEdit(box)
         self.txt_parms.setMaximumWidth(280)
-        self.lbl_controls = gui.QLabel(self.parent.captions[C_CTRL], box)
+        self.lbl_controls = gui.QLabel(self.parent.captions['C_CTRL'], box)
         cb = gui.QComboBox(box)
         cb.addItems(self.controlslist)
         cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
@@ -654,17 +649,17 @@ class MyPanel(gui.QFrame):
     def captions_extra_fields(self):
         """to be called on changing the language
         """
-        self.cb_win.setText(self.parent.captions[M_WIN].join(("+", "  ")))
-        self.cb_ctrl.setText(self.parent.captions[M_CTRL].join(("+", "  ")))
-        self.cb_alt.setText(self.parent.captions[M_ALT].join(("+", "  ")))
-        self.cb_shift.setText(self.parent.captions[M_SHFT].join(("+", "  ")))
-        self.b_save.setText(self.parent.captions[C_SAVE])
-        self.b_del.setText(self.parent.captions[C_DEL])
-        self.txt_key.setText(self.parent.captions[C_KTXT])
-        self.txt_cmd.setText(self.parent.captions[C_CTXT])
-        self.lbl_parms.setText(self.parent.captions[C_PARMS])
-        self.lbl_controls.setText(self.parent.captions[C_CTRL])
-        self.lbl_contexts.setText(self.parent.captions[C_CNTXT])
+        self.cb_win.setText(self.parent.captions['M_WIN'].join(("+", "  ")))
+        self.cb_ctrl.setText(self.parent.captions['M_CTRL'].join(("+", "  ")))
+        self.cb_alt.setText(self.parent.captions['M_ALT'].join(("+", "  ")))
+        self.cb_shift.setText(self.parent.captions['M_SHFT'].join(("+", "  ")))
+        self.b_save.setText(self.parent.captions['C_SAVE'])
+        self.b_del.setText(self.parent.captions['C_DEL'])
+        self.txt_key.setText(self.parent.captions['C_KTXT'])
+        self.txt_cmd.setText(self.parent.captions['C_CTXT'])
+        self.lbl_parms.setText(self.parent.captions['C_PARMS'])
+        self.lbl_controls.setText(self.parent.captions['C_CTRL'])
+        self.lbl_contexts.setText(self.parent.captions['C_CNTXT'])
 
     def on_item_selected(self, newitem, olditem): # olditem, newitem):
         """callback on selection of an item
@@ -751,13 +746,13 @@ class MyPanel(gui.QFrame):
         ## self._origdata = [key, False, False, False, False, cmd, context, parms,
             ## controls]
         for indx, item in enumerate(keydefdata):
-            if self.parent.column_info[indx][0] == C_KEY:
+            if self.parent.column_info[indx][0] == 'C_KEY':
                 key = item
                 ix = self.keylist.index(key)
                 self.cmb_key.setCurrentIndex(ix)
                 ## self.cmb_key.setEditText(key)
                 self._origdata[0] = key
-            elif self.parent.column_info[indx][0] == C_MODS:
+            elif self.parent.column_info[indx][0] == 'C_MODS':
                 mods = item
                 self.cb_shift.setChecked(False)
                 self.cb_ctrl.setChecked(False)
@@ -768,30 +763,30 @@ class MyPanel(gui.QFrame):
                     if x in mods:
                         self._origdata[y] = True
                         z.setChecked(True)
-            elif self.parent.column_info[indx][0] == C_TYPE:
+            elif self.parent.column_info[indx][0] == 'C_TYPE':
                 soort = item
                 if soort == 'U':
                     self.b_del.setEnabled(True)
-            elif self.parent.column_info[indx][0] == C_CMD:
+            elif self.parent.column_info[indx][0] == 'C_CMD':
                 command = item
                 ix = self.commandlist.index(command)
                 self.cmb_commando.setCurrentIndex(ix)
                 self._origdata[5] = command
-            elif self.parent.column_info[indx][0] == C_CNTXT:
+            elif self.parent.column_info[indx][0] == 'C_CNTXT':
                 context = item
                 ix = self.contextslist.index(context)
                 self.cmb_contexts.setCurrentIndex(ix)
                 self._origdata[6] = context
-            elif self.parent.column_info[indx][0] == C_PARMS:
+            elif self.parent.column_info[indx][0] == 'C_PARMS':
                 parms = item
                 self.txt_parms.setText(parms)
                 self._origdata[7] = parms
-            elif self.parent.column_info[indx][0] == C_CTRL:
+            elif self.parent.column_info[indx][0] == 'C_CTRL':
                 controls = item
                 ix = self.controlslist.index(controls) # TODO: adapt for multiple values
                 self.cmb_controls.setCurrentIndex(ix)
                 self._origdata[8] = controls
-            elif self.parent.column_info[indx][0] == C_DESC:
+            elif self.parent.column_info[indx][0] == 'C_DESC':
                 oms = item
                 self.txt_oms.setText(oms)
         self._newdata = self._origdata[:]

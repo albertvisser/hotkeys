@@ -8,12 +8,12 @@ import string
 import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 
-C_SAVE, C_DEL, C_KTXT, C_CTXT = '010', '011', '018', '019'
-M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
-# constants for column names
-C_KEY, C_TYPE, C_CMD, C_DESC, C_MODS = '001', '002', '003', '004', '043'
-C_CODE, C_CNTXT, C_PLAT, C_FEAT = '046', '047', '048', '049'
-C_PARMS, C_CTRL, C_MNU = '090', '091', '092'
+## C_SAVE, C_DEL, C_KTXT, C_CTXT = '010', '011', '018', '019'
+## M_CTRL, M_ALT, M_SHFT, M_WIN = '007', '008', '009', '013'
+## # constants for column names
+## C_KEY, C_TYPE, C_CMD, C_DESC, C_MODS = '001', '002', '003', '004', '043'
+## C_CODE, C_CNTXT, C_PLAT, C_FEAT = '046', '047', '048', '049'
+## C_PARMS, C_CTRL, C_MNU = '090', '091', '092'
 
 instructions = """\
 Instructions for rebuilding the key binding definitions
@@ -229,7 +229,7 @@ class MyPanel(gui.QFrame):
         """
         self._box = box = gui.QFrame(self)
         box.setMaximumHeight(90)
-        self.txt_key = gui.QLabel(self.parent.captions[C_KTXT] + " ", box)
+        self.txt_key = gui.QLabel(self.parent.captions['C_KTXT'] + " ", box)
         cb = gui.QComboBox(box)
         cb.setMaximumWidth(90)
         cb.addItems(self.keylist)
@@ -237,20 +237,20 @@ class MyPanel(gui.QFrame):
             self, cb, str))
         self.cmb_key = cb
 
-        for x in (M_CTRL, M_ALT, M_SHFT, M_WIN):
+        for x in ('M_CTRL', 'M_ALT', 'M_SHFT', 'M_WIN'):
             cb = gui.QCheckBox(self.parent.captions[x].join(("+ ","")), box)
             cb.setChecked(False)
             cb.stateChanged.connect(functools.partial(on_checkbox, self, cb))
-            if x == M_CTRL:
+            if x == 'M_CTRL':
                 self.cb_ctrl = cb
-            elif x == M_ALT:
+            elif x == 'M_ALT':
                 self.cb_alt = cb
-            elif x == M_SHFT:
+            elif x == 'M_SHFT':
                 self.cb_shift = cb
-            elif x == M_WIN:
+            elif x == 'M_WIN':
                 self.cb_win = cb
 
-        self.txt_cmd = gui.QLabel(self.parent.captions[C_CTXT] + " ", box)
+        self.txt_cmd = gui.QLabel(self.parent.captions['C_CTXT'] + " ", box)
         cb = gui.QComboBox(self)
         cb.setMaximumWidth(150)
         cb.addItems(self.commandslist) # only load on choosing a context
@@ -258,10 +258,10 @@ class MyPanel(gui.QFrame):
             self, cb, str))
         self.cmb_commando = cb
 
-        self.b_save = gui.QPushButton(self.parent.captions[C_SAVE], box) ##, (120, 45))
+        self.b_save = gui.QPushButton(self.parent.captions['C_SAVE'], box) ##, (120, 45))
         self.b_save.setEnabled(False)
         self.b_save.clicked.connect(functools.partial(on_update, self))
-        self.b_del = gui.QPushButton(self.parent.captions[C_DEL], box) #, size= (50,-1)) ##, (120, 45))
+        self.b_del = gui.QPushButton(self.parent.captions['C_DEL'], box) #, size= (50,-1)) ##, (120, 45))
         self.b_del.setEnabled(False)
         self.b_del.clicked.connect(functools.partial(on_delete, self))
 
@@ -311,14 +311,14 @@ class MyPanel(gui.QFrame):
     def captions_extra_fields(self):
         """to be called on changing the language
         """
-        self.cb_win.setText(self.parent.captions[M_WIN].join(("+", "  ")))
-        self.cb_ctrl.setText(self.parent.captions[M_CTRL].join(("+", "  ")))
-        self.cb_alt.setText(self.parent.captions[M_ALT].join(("+", "  ")))
-        self.cb_shift.setText(self.parent.captions[M_SHFT].join(("+", "  ")))
-        self.b_save.setText(self.parent.captions[C_SAVE])
-        self.b_del.setText(self.parent.captions[C_DEL])
-        self.txt_key.setText(self.parent.captions[C_KTXT])
-        self.txt_cmd.setText(self.parent.captions[C_CTXT])
+        self.cb_win.setText(self.parent.captions['M_WIN'].join(("+", "  ")))
+        self.cb_ctrl.setText(self.parent.captions['M_CTRL'].join(("+", "  ")))
+        self.cb_alt.setText(self.parent.captions['M_ALT'].join(("+", "  ")))
+        self.cb_shift.setText(self.parent.captions['M_SHFT'].join(("+", "  ")))
+        self.b_save.setText(self.parent.captions['C_SAVE'])
+        self.b_del.setText(self.parent.captions['C_DEL'])
+        self.txt_key.setText(self.parent.captions['C_KTXT'])
+        self.txt_cmd.setText(self.parent.captions['C_CTXT'])
 
     def on_item_selected(self, newitem, olditem): # olditem, newitem):
         """callback on selection of an item
@@ -406,31 +406,31 @@ class MyPanel(gui.QFrame):
         ## self._origdata = [key, False, False, False, False, command]
         self._origdata = ['', False, False, False, False, '']
         for indx, item in enumerate(keydefdata):
-            if self.parent.column_info[indx][0] == C_KEY:
+            if self.parent.column_info[indx][0] == 'C_KEY':
                 key = item
                 ix = self.keylist.index(key)
                 self.cmb_key.setCurrentIndex(ix)
-                ## self.cmb_key.setEditText(key)
                 self._origdata[0] = key
-            elif self.parent.column_info[indx][0] == C_MODS:
+            elif self.parent.column_info[indx][0] == 'C_MODS':
                 mods = item
                 self.cb_shift.setChecked(False)
                 self.cb_ctrl.setChecked(False)
                 self.cb_alt.setChecked(False)
                 self.cb_win.setChecked(False)
+                self.cmb_key.setEditText(key)
                 for x, y, z in zip('SCAW',(1, 2, 3, 4), (self.cb_shift,
                         self.cb_ctrl, self.cb_alt, self.cb_win)):
                     if x in mods:
                         self._origdata[y] = True
                         z.setChecked(True)
-            elif self.parent.column_info[indx][0] == C_CMD:
+            elif self.parent.column_info[indx][0] == 'C_CMD':
                 command = item
                 self.initializing = True
                 ix = self.commandslist.index(command)
                 self.cmb_commando.setCurrentIndex(ix)
                 self.initializing = False
                 self._origdata[5] = command
-            elif self.parent.column_info[indx][0] == C_DESC:
+            elif self.parent.column_info[indx][0] == 'C_DESC':
                 oms = item
                 self.txt_oms.setText(oms)
         self._newdata = self._origdata[:]
