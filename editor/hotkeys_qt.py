@@ -156,13 +156,15 @@ def m_tool(self):
     if dlg == gui.QDialog.Accepted:
         hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
             self.page.data)
-        self._menuitems['M_SAVE'].setEnabled(bool(
-            int(self.page.settings[hkc.csv_redefsett][0])))
-        self._menuitems['M_RBLD'].setEnabled(bool(
-            int(self.page.settings[hkc.csv_rbldsett][0])))
+        test = bool(int(self.page.settings[hkc.csv_redefsett][0]))
+        self._menuitems['M_SAVE'].setEnabled(test)
+        test = bool(int(self.page.settings[hkc.csv_rbldsett][0]))
+        self._menuitems['M_RBLD'].setEnabled(test)
         indx = self.book.sel.currentIndex()
         win = self.book.pnl.widget(indx)
-        if bool(int(self.page.settings[hkc.csv_detsett][0])) != self.page.has_extrapanel:
+        test = bool(int(self.page.settings[hkc.csv_detsett][0]))
+        if test != self.page.has_extrapanel:
+            self.page.has_extrapanel = test
             newwin = HotkeyPanel(self.book, self.book.plugins[indx][1])
             self.book.pnl.insertWidget(indx, newwin)
             self.book.pnl.setCurrentIndex(indx)
@@ -1233,8 +1235,9 @@ class HotkeyPanel(gui.QFrame):
         # het vullen van veldwaarden hierin gebeurt als gevolg van het vullen
         # van de eerste rij in de listbox, daarom moet deze het laatst
         # self.otherstuff = self._keys.getotherstuff()
-        self._panel.add_extra_attributes()
-        self._panel.add_extra_fields()
+        if self.has_extrapanel:
+            self._panel.add_extra_attributes()
+            self._panel.add_extra_fields()
 
         self._sizer = gui.QVBoxLayout()
         if self.column_info:
@@ -1254,7 +1257,8 @@ class HotkeyPanel(gui.QFrame):
             self._sizer.addLayout(sizer1)
 
         # indien van toepassing: toevoegen van de rest van de GUI aan de layout
-        self._panel.layout_extra_fields(self._sizer)
+        if self.has_extrapanel:
+            self._panel.layout_extra_fields(self._sizer)
 
         self.setLayout(self._sizer)
         self._initializing = False
@@ -1278,7 +1282,8 @@ class HotkeyPanel(gui.QFrame):
             title += ' ' + self.captions["017"]
         self.setWindowTitle(title)
 
-        if all((self.settings, self.column_info, self.data)):
+        ## if all((self.settings, self.column_info, self.data)):
+        if self.has_extrapanel:
             self._panel.captions_extra_fields()
         if self.data:
             self.populate_list()
