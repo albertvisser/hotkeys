@@ -111,11 +111,9 @@ def m_loc(self):
                 if new_loc == old_loc:  # unchanged
                     win = hlpdict[program]
                 else: # take data from different location
-                    win = HotkeyPanel(self.book, new_loc) or EmptyPanel(
-                        self.book.pnl, self.captions["052"].format(program))
+                    win = HotkeyPanel(self.book, new_loc)
             else: # new entry
-                win = HotkeyPanel(self.book, new_paths[indx]) or EmptyPanel(
-                    self.book.pnl, self.captions["052"].format(program))
+                win = HotkeyPanel(self.book, new_paths[indx])
             self.book.sel.addItem(program)
             self.book.pnl.addWidget(win)
         if self.last_added:
@@ -1319,27 +1317,6 @@ class HotkeyPanel(gui.QFrame):
             elif ok == gui.QMessageBox.Cancel:
                 return False
         return True
-
-class EmptyPanel(HotkeyPanel):
-
-    def __init__(self, parent, title="default_title"):
-
-        coldata = ()
-        self._txt = "default"
-        HotkeyPanel.__init__(self, parent, coldata, ini="",
-            title=title)
-
-    def add_extra_fields(self):
-        self.txt = gui.QLabel(self._txt, self)
-
-    def layout_extra_fields(self):
-        self._sizer.addWidget(self.txt)
-
-    def readkeys(self):
-        self.data = {}
-
-    def savekeys(self):
-        pass
 
 class ChoiceBook(gui.QFrame):
     """ Als QTabwidget, maar met selector in plaats van tabs
