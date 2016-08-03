@@ -1466,8 +1466,8 @@ class ChoiceBook(gui.QFrame):
         text = str(self.find.currentText())
         item = self.parent.page.p0list.currentItem()
         self.reposition = item.text(0), item.text(1)
-        if state == self.parent.captions['FILTER']:
-            state = self.parent.captions['FLTOFF']
+        if state == self.parent.captions['C_FILTER']:
+            state = self.parent.captions['C_FLTOFF']
             self.filter_on = True
             self.parent.page.filtertext = text
             self.parent.page.olddata = self.parent.page.data
@@ -1477,7 +1477,7 @@ class ChoiceBook(gui.QFrame):
             self.b_prev.setEnabled(False)
             self.find.setEnabled(False)
         else:       # self.filter_on == True
-            state = self.parent.captions['FILTER']
+            state = self.parent.captions['C_FILTER']
             self.filter_on = False
             self.parent.page.filtertext = ''
             self.parent.page.data = self.parent.page.olddata
