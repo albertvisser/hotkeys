@@ -164,7 +164,7 @@ def m_tool(self):
         indx = self.book.sel.currentIndex()
         win = self.book.pnl.widget(indx)
         if test_dets != self.page.has_extrapanel:
-            self.page.has_extrapanel = test
+            self.page.has_extrapanel = test_dets
             newwin = HotkeyPanel(self.book, self.book.plugins[indx][1])
             self.book.pnl.insertWidget(indx, newwin)
             self.book.pnl.setCurrentIndex(indx)
@@ -1119,8 +1119,6 @@ def on_combobox(self, cb, text):
     if text != hlp:
         text = hlp
     self.defchanged = False
-    keyitemindex = self.ix_key
-    cmditemindex = self.ix_cmd
     try:
         test_key = bool(self.cmb_key)
     except AttributeError:
@@ -1134,6 +1132,7 @@ def on_combobox(self, cb, text):
     except AttributeError:
         test_cnx = False
     if test_key and cb == self.cmb_key:
+        keyitemindex = self.ix_key
         if text != self._origdata[keyitemindex]:
             self._newdata[keyitemindex] = text
             if not self.initializing_keydef:
@@ -1155,6 +1154,7 @@ def on_combobox(self, cb, text):
             self.defchanged = False
             self.b_save.setEnabled(False)
     elif test_cmd and cb == self.cmb_commando:
+        cmditemindex = self.ix_cmd
         if text != self._origdata[cmditemindex]:
             self._newdata[cmditemindex] = text
             try:
@@ -1369,7 +1369,8 @@ class HotkeyPanel(gui.QFrame):
         try:
             self._keys.add_extra_attributes(self) # user exit
         except AttributeError as e:
-            print(e)
+            ## print(e)
+            pass
         self.keylist.sort()
 
     def add_extra_fields(self):
@@ -1547,25 +1548,38 @@ class HotkeyPanel(gui.QFrame):
             self.vuldetails(newitem)
             self.initializing_keydef = False
             return
-        if 'C_MODS' in self.fields:
+        other_item = other_cntxt = other_cmd = False
+        if 'C_KEYS' in self.fields:
             origkey = self._origdata[self.ix_key]
+            key = self._newdata[self.ix_key]
+            other_item = key != origkey
+        if 'C_MODS' in self.fields:
             origmods = ''.join([y for x, y in zip(self.ix_mods, ('WCAS'))
                 if self._origdata[x]])
-            key = self._newdata[self.ix_key]
             mods = ''.join([y for x, y in zip(self.ix_mods, ('WCAS'))
                 if self._newdata[x]])
+            other_item = other_item or mods != origmods
         if 'C_CMD' in self.fields:
             origcmd = self._origdata[self.ix_cmd]
             cmnd = self._newdata[self.ix_cmd]
+            other_cmd = cmnd != origcmd
         if 'C_CNTXT' in self.fields:
+            origcntxt = self._origdata[self.ix_cntxt]
             context = self._newdata[self.ix_cntxt]  # TODO: ook nog iets mee doen
+            other_cntxt = context != origcntxt
         cursor_moved = True if newitem != olditem and olditem is not None else False
-        other_item = key != origkey or mods != origmods
-        other_cmd = cmnd != origcmd
-        any_change = other_item or other_cmd
-        gevonden = False
+        any_change = other_item or other_cmd or other_cntxt
+        exact_match = False
         for number, item in self.data.items():
-            if key == item[0] == key and item[1] == mods:
+            keymatch = modmatch = cntxtmatch = True
+            #TODO: fix indices for item (refer to self.column_info)
+            if 'C_KEYS' in self.fields and item[0] != key:
+                keymatch = False
+            if 'C_MODS' in self.fields and item[1] != mods:
+                modmatch = False
+            if 'C_CNTXT' in self.fields and item[2] != context:
+                cntxtmatch = False
+            if keymatch and modmatch and cntxtmatch:
                 gevonden = True
                 indx = number
                 break
