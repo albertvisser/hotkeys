@@ -14,6 +14,7 @@ from __future__ import print_function
 import os
 import sys
 import shutil
+import string
 import functools
 import importlib
 import PyQt4.QtGui as gui
@@ -150,23 +151,27 @@ def m_tool(self):
     """
     if not self.page.settings:
         self.page.settings = {x: ('', hkc.csv_oms[x]) for x in hkc.csv_settingnames}
+    old_redef = bool(int(self.page.settings[hkc.csv_redefsett][0]))
     dlg = ExtraSettingsDialog(self).exec_()
     if dlg == gui.QDialog.Accepted:
         hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
             self.page.data)
-        test = bool(int(self.page.settings[hkc.csv_redefsett][0]))
-        self._menuitems['M_SAVE'].setEnabled(test)
-        test = bool(int(self.page.settings[hkc.csv_rbldsett][0]))
-        self._menuitems['M_RBLD'].setEnabled(test)
+        test_redef = bool(int(self.page.settings[hkc.csv_redefsett][0]))
+        test_dets = bool(int(self.page.settings[hkc.csv_detsett][0]))
+        test_rbld = bool(int(self.page.settings[hkc.csv_rbldsett][0]))
+        self._menuitems['M_SAVE'].setEnabled(test_redef)
+        self._menuitems['M_RBLD'].setEnabled(test_rbld)
         indx = self.book.sel.currentIndex()
         win = self.book.pnl.widget(indx)
-        test = bool(int(self.page.settings[hkc.csv_detsett][0]))
-        if test != self.page.has_extrapanel:
+        if test_dets != self.page.has_extrapanel:
             self.page.has_extrapanel = test
             newwin = HotkeyPanel(self.book, self.book.plugins[indx][1])
             self.book.pnl.insertWidget(indx, newwin)
             self.book.pnl.setCurrentIndex(indx)
             self.book.pnl.removeWidget(win)
+        elif test_redef != old_redef and test_dets:
+            win = self.book.pnl.currentWidget()
+            win.set_extrascreen_editable(test_redef)
 
 
 def m_col(self):
@@ -275,7 +280,7 @@ class InitialToolDialog(gui.QDialog):
         gui.QDialog.__init__(self)
         self.setWindowTitle(self.parent.captions['000'])
         vbox = gui.QVBoxLayout()
-        vbox.addWidget(gui.QLabel(self.parent.captions["217"], self))
+        vbox.addWidget(gui.QLabel(self.parent.captions["M_PREF"], self))
         hbox = gui.QHBoxLayout()
         self.check_fixed = gui.QRadioButton(self.parent.captions["text_f"], self)
         self.check_fixed.setChecked(oldmode == hkc.mode_f)
@@ -1101,58 +1106,93 @@ class EntryDialog(gui.QDialog):
         gui.QDialog.accept(self)
 
 
-class DummyPanel(gui.QFrame):
+def on_combobox(self, cb, text):
+    """callback op het gebruik van een combobox
+
+    zorgt ervoor dat de buttons ge(de)activeerd worden
     """
-    Reimplement this class when a block of fields is needed in the screen
-    to show details about the selected key and make it possible to change
-    its definition
-    """
-    def __init__(self, parent):
-        gui.QFrame.__init__(self)
-        self.parent = parent
-        self.initializing = False
+    if self._initializing_screen:
+        return
+    text = str(text) # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan de
+                     # callback soms fout? Of is het Py3 vs Py2?
+    hlp = cb.currentText()
+    if text != hlp:
+        text = hlp
+    self.defchanged = False
+    keyitemindex = self.ix_key
+    cmditemindex = self.ix_cmd
+    try:
+        test_key = bool(self.cmb_key)
+    except AttributeError:
+        test_key = False
+    try:
+        test_cmd = bool(self.cmb_commando)
+    except AttributeError:
+        test_cmd = False
+    try:
+        test_cnx = bool(self.cmb_context)
+    except AttributeError:
+        test_cnx = False
+    if test_key and cb == self.cmb_key:
+        if text != self._origdata[keyitemindex]:
+            self._newdata[keyitemindex] = text
+            if not self.initializing_keydef:
+                self.defchanged = True
+                self.b_save.setEnabled(True)
+        elif str(self.cmb_commando.currentText()) == self._origdata[cmditemindex]:
+            self.defchanged = False
+            self.b_save.setEnabled(False)
+    elif test_cnx and cb == self.cmb_context:
+        if text != self._origdata[self.ix_cntxt]:
+            context = self._origdata[self.ix_cntxt] = self.cmb_context.currentText()
+            self.cmb_commando.clear()
+            actionslist = self.contextactionsdict[context]
+            self.cmb_commando.addItems(actionslist)
+            if not self.initializing_keydef:
+                self.defchanged = True
+                self.b_save.setEnabled(True)
+        elif str(self.cmb_commando.currentText()) == self._origdata[self.ix_cntxt]:
+            self.defchanged = False
+            self.b_save.setEnabled(False)
+    elif test_cmd and cb == self.cmb_commando:
+        if text != self._origdata[cmditemindex]:
+            self._newdata[cmditemindex] = text
+            try:
+                self.txt_oms.setText(self.descriptions[text])
+            except KeyError:
+                self.txt_oms.setText('(Geen omschrijving beschikbaar)')
+            if not self.initializing_keydef:
+                self.defchanged = True
+                self.b_save.setEnabled(True)
+        elif str(self.cmb_key.currentText()) == self._origdata[keyitemindex]:
+            self.b_save.setEnabled(False)
+    else:
+        try:
+            self._keys.on_combobox(self, cb, text) # user exit
+        except AttributeError:
+            pass
 
-    def add_extra_attributes(self):
-        """
-        Define extra instance attributes if needed
-        """
-        pass
-
-    def add_extra_fields(self):
-        """define other widgets to be used in the panel
-        needed for showing details subpanel
-        """
-        pass
-
-    def layout_extra_fields(self, sizer):
-        """add extra widgets to self._sizer
-        needed for showing details subpanel
-        """
-        pass
-
-    def captions_extra_fields(self):
-        """refresh captions for extra widgets
-        needed for showing details subpanel
-        """
-        pass
-
-    def vuldetails(self, value):
-        """
-        copy details of the selected key definition to the subpanel
-        """
-        pass
-
-    def on_item_selected(self, olditem, newitem):
-        """callback for list selection
-        needed for copying details to subpanel
-        """
-        pass
-
-    def aanpassen(self, delete=False):
-        """
-        copying details to the list after updating the subpanel
-        """
-        pass
+def on_checkbox(self, cb, state):
+    if self._initializing_screen:
+        return
+    ## state = bool(state)
+    for win, indx in zip(
+            (self.cb_shift, self.cb_ctrl, self.cb_alt, self.cb_win),
+            self.ix_mods):
+        if cb == win and state != self._origdata[indx]:
+            self._newdata[indx] = state
+            if not self.initializing_keydef:
+                self.defchanged = True
+                self.b_save.setEnabled(True)
+    else:
+        states = [self.cb_shift.isChecked(), self.cb_ctrl.isChecked(),
+            self.cb_alt.isChecked(), self.cb_win.isChecked()]
+        if states == [self._origdata[x] for x in self.ix_mods]:
+            self.defchanged = False
+            self.b_save.setEnabled(False)
+    ## print('on checkbox:', indx, state)
+    ## print(self._origdata)
+    ## print(self._newdata)
 
 class HotkeyPanel(gui.QFrame):
     """base class voor het gedeelte van het hoofdscherm met de listcontrol erin
@@ -1167,12 +1207,13 @@ class HotkeyPanel(gui.QFrame):
 
         self.pad = pad
         # switch om het gedrag van bepaalde routines tijdens initialisatie te beïnvloeden
-        self._initializing = True
+        self._initializing_screen = True
         self.modified = False
 
         gui.QFrame.__init__(self, parent)
         self.parent = parent # .parent()
         self.captions = self.parent.parent.captions
+        self.has_extrapanel = False
 
         try:
             self.settings, self.column_info, self.data = hkc.readcsv(self.pad)
@@ -1209,33 +1250,21 @@ class HotkeyPanel(gui.QFrame):
         except AttributeError:
             pass
 
-        self._panel = DummyPanel(self)
-        self.has_extrapanel = False
         try:
-            test = int(self.settings[hkc.csv_detsett][0])
+            self.has_extrapanel = bool(int(self.settings[hkc.csv_detsett][0]))
         except KeyError:
             pass
-        else:
-            if test:
-                try:
-                    self._panel = self._keys.MyPanel(self)
-                except AttributeError:
-                    pass
-                else:
-                    self.has_extrapanel = True
-        ## try:
-            ## self._panel = self._keys.MyPanel(self)
-        ## except AttributeError:
-            ## self._panel = DummyPanel(self)
+
         self.title = self.settings["PanelName"][0]
 
-        # gelegenheid voor extra initialisaties en het opbouwen van de rest van de GUI
+        # self.has_extrapanel controleert extra initialisaties en het opbouwen van de rest van de GUI
         # het vullen van veldwaarden hierin gebeurt als gevolg van het vullen
         # van de eerste rij in de listbox, daarom moet deze het laatst
         # self.otherstuff = self._keys.getotherstuff()
         if self.has_extrapanel:
-            self._panel.add_extra_attributes()
-            self._panel.add_extra_fields()
+            self.fields = [x[0] for x in self.column_info]
+            self.add_extra_attributes()
+            self.add_extra_fields()
 
         self._sizer = gui.QVBoxLayout()
         if self.column_info:
@@ -1243,7 +1272,7 @@ class HotkeyPanel(gui.QFrame):
             self.p0list.setHeaderLabels([self.captions[col[0]] for col in
                 self.column_info])
             self.p0list.setAlternatingRowColors(True)
-            self.p0list.currentItemChanged.connect(self._panel.on_item_selected)
+            self.p0list.currentItemChanged.connect(self.on_item_selected)
             hdr = self.p0list.header()
             hdr.setClickable(True)
             for indx, col in enumerate(self.column_info):
@@ -1256,10 +1285,10 @@ class HotkeyPanel(gui.QFrame):
 
         # indien van toepassing: toevoegen van de rest van de GUI aan de layout
         if self.has_extrapanel:
-            self._panel.layout_extra_fields(self._sizer)
+            self.layout_extra_fields(self._sizer)
 
         self.setLayout(self._sizer)
-        self._initializing = False
+        self._initializing_screen = False
         self.filtertext = ''
 
     def readkeys(self):
@@ -1272,7 +1301,7 @@ class HotkeyPanel(gui.QFrame):
         self._keys.savekeys(self)
         hkc.writecsv(self.pad, self.settings, self.column_info, self.data)
         self.modified = False
-        ## self.setWindowTitle(self.captions["000"]) ??
+        self.setWindowTitle(self.captions["000"])
 
     def setcaptions(self):
         title = self.captions["000"]
@@ -1280,9 +1309,8 @@ class HotkeyPanel(gui.QFrame):
             title += ' ' + self.captions["017"]
         self.setWindowTitle(title)
 
-        ## if all((self.settings, self.column_info, self.data)):
         if self.has_extrapanel:
-            self._panel.captions_extra_fields()
+            self.captions_extra_fields()
         if self.data:
             self.populate_list()
 
@@ -1294,7 +1322,7 @@ class HotkeyPanel(gui.QFrame):
         if items is None or len(items) == 0:
             return
 
-        self._panel.initializing = True
+        ## self._initializing = True
         for key, data in items:
             new_item = gui.QTreeWidgetItem()
             new_item.setData(0, core.Qt.UserRole, key)
@@ -1307,7 +1335,7 @@ class HotkeyPanel(gui.QFrame):
                 new_item.setText(indx, value)
             self.p0list.addTopLevelItem(new_item)
             self.p0list.setCurrentItem(self.p0list.topLevelItem(pos))
-        self._panel.initializing = False
+        ## self._initializing = False
 
     def exit(self):
         if self.modified:
@@ -1317,6 +1345,387 @@ class HotkeyPanel(gui.QFrame):
             elif ok == gui.QMessageBox.Cancel:
                 return False
         return True
+
+    def add_extra_attributes(self):
+         # key, mods, cmnd, params, controls
+        self.init_origdata = []
+        if 'C_KEY' in self.fields:
+            self.init_origdata.append('')
+            self.ix_key = 0
+            self.keylist = [x for x in string.ascii_uppercase] + \
+                [x for x in string.digits] + ["F" + str(i) for i in range(1,13)] + \
+                [self.captions[str(x)] for x in range(100,121)] + \
+                ['.', ',', '+', '=', '-', '`', '[', ']', '\\', ';', "'", '/']
+        if 'C_MODS' in self.fields:
+            self.init_origdata += [False, False, False, False]
+            self.ix_mods = (1, 2, 3, 4)
+        if 'C_CMD' in self.fields:
+            self.init_origdata.append('')
+            self.ix_cmd = 5
+        if 'C_CNTXT' in self.fields:
+            self.init_origdata.append('')
+            self.ix_cntxt = self.ix_cmd
+            self.ix_cmd += 1
+        try:
+            self._keys.add_extra_attributes(self) # user exit
+        except AttributeError as e:
+            print(e)
+        self.keylist.sort()
+
+    def add_extra_fields(self):
+        """fields showing details for selected keydef, to make editing possible
+        """
+        self.screenfields = []
+        self._box = box = gui.QFrame(self)
+        frameheight = 90
+        try:
+            frameheight = self._keys.get_frameheight() # user exit
+        except AttributeError:
+            pass
+        box.setMaximumHeight(frameheight)
+
+        if 'C_KEY' in self.fields:
+            self.txt_key = gui.QLabel(self.captions['C_KTXT'] + " ", box)
+            cb = gui.QComboBox(box)
+            cb.setMaximumWidth(90)
+            cb.addItems(self.keylist) # niet sorteren
+            cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
+                self, cb, str))
+            self.screenfields.append(cb)
+            self.cmb_key = cb
+
+        if 'C_MODS' in self.fields:
+            for ix, x in enumerate(('M_CTRL', 'M_ALT', 'M_SHFT', 'M_WIN')):
+                cb = gui.QCheckBox(self.captions[x].join(("+ ","")), box)
+                cb.setChecked(False)
+                self.screenfields.append(cb)
+                cb.stateChanged.connect(functools.partial(on_checkbox, self, cb))
+                if ix == 0:
+                    self.cb_ctrl = cb
+                elif ix == 1:
+                    self.cb_alt = cb
+                elif ix == 2:
+                    self.cb_shift = cb
+                elif ix == 3:
+                    self.cb_win = cb
+
+        if 'C_CNTXT' in self.fields:
+            self.lbl_context = gui.QLabel(self.captions['C_CNTXT'], box)
+            cb = gui.QComboBox(box)
+            cb.addItems(self.contextslist)
+            cb.setMaximumWidth(110)
+            cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
+                self, cb, str))
+            self.screenfields.append(cb)
+            self.cmb_context = cb
+
+        if 'C_CMD' in self.fields:
+            self.txt_cmd = gui.QLabel(self.captions['C_CTXT'] + " ", box)
+            cb = gui.QComboBox(self)
+            cb.setMaximumWidth(150)
+            if not 'C_CNTXT' in self.fields: # load on choosing context
+                cb.addItems(self.commandslist)
+            cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
+                self, cb, str))
+            self.screenfields.append(cb)
+            self.cmb_commando = cb
+
+        self.b_save = gui.QPushButton(self.captions['C_SAVE'], box) ##, (120, 45))
+        self.b_save.setEnabled(False)
+        self.b_save.clicked.connect(self.on_update)
+        self.b_del = gui.QPushButton(self.captions['C_DEL'], box) #, size= (50,-1)) ##, (120, 45))
+        self.b_del.setEnabled(False)
+        self.b_del.clicked.connect(self.on_delete)
+        self._savestates = (False, False)
+
+        if 'C_DESC' in self.fields:
+            self.txt_oms = gui.QTextEdit(box)
+            self.txt_oms.setReadOnly(True)
+
+        try:
+            self._keys.add_extra_fields(self, box) # user exit
+        except AttributeError:
+            pass
+
+        self.set_extrascreen_editable(bool(int(self.settings['RedefineKeys'][0])))
+
+    def set_extrascreen_editable(self, switch):
+        if switch:
+            state_s, state_d = self._savestates
+        else:
+            self._savestates = (self.b_save.isEnabled(), self.b_del.isEnabled())
+            state_s, state_d = False, False
+        for widget in self.screenfields:
+            widget.setEnabled(switch)
+        self.b_save.setEnabled(state_s)
+        self.b_del.setEnabled(state_d)
+
+    def layout_extra_fields(self, sizer):
+        """add the extra fields to the layout
+        """
+        bsizer = gui.QVBoxLayout()
+
+        sizer1 = gui.QHBoxLayout()
+        sizer2 = gui.QHBoxLayout()
+        if 'C_KEY' in self.fields:
+            sizer3 = gui.QHBoxLayout()
+            sizer3.addWidget(self.txt_key)
+            sizer3.addWidget(self.cmb_key)
+            sizer2.addLayout(sizer3)
+        if 'C_MODS' in self.fields:
+            sizer3 = gui.QHBoxLayout()
+            sizer3.addWidget(self.cb_ctrl)
+            sizer3.addWidget(self.cb_alt)
+            sizer3.addWidget(self.cb_shift)
+            sizer3.addWidget(self.cb_win)
+            sizer2.addLayout(sizer3)
+        sizer1.addLayout(sizer2)
+        sizer1.addStretch()
+        if 'C_CNTXT' in self.fields:
+            sizer2 = gui.QHBoxLayout()
+            sizer2.addWidget(self.lbl_context)
+            sizer2.addWidget(self.cmb_context)
+            sizer1.addLayout(sizer2)
+        if 'C_CMD' in self.fields:
+            sizer2 = gui.QHBoxLayout()
+            sizer2.addWidget(self.txt_cmd)
+            sizer2.addWidget(self.cmb_commando)
+            sizer1.addLayout(sizer2)
+        sizer1.addWidget(self.b_save)
+        sizer1.addWidget(self.b_del)
+        bsizer.addLayout(sizer1)
+
+        sizer1 = gui.QHBoxLayout()
+        if 'C_DESC' in self.fields:
+            sizer2 = gui.QVBoxLayout()
+            sizer2.addWidget(self.txt_oms)
+        sizer1.addLayout(sizer2, 2)
+
+        try:
+            self._keys.layout_extra_fields(self, sizer1) # user exit
+        except AttributeError:
+            pass
+
+        bsizer.addLayout(sizer1)
+
+        self._box.setLayout(bsizer)
+        sizer.addWidget(self._box)
+
+    def captions_extra_fields(self):
+        """to be called on changing the language
+        """
+        if 'C_KEY' in self.fields:
+            self.txt_key.setText(self.captions['C_KTXT'])
+        if 'C_MODS' in self.fields:
+            self.cb_win.setText(self.captions['M_WIN'].join(("+", "  ")))
+            self.cb_ctrl.setText(self.captions['M_CTRL'].join(("+", "  ")))
+            self.cb_alt.setText(self.captions['M_ALT'].join(("+", "  ")))
+            self.cb_shift.setText(self.captions['M_SHFT'].join(("+", "  ")))
+        if 'C_CNTXT' in self.fields:
+            self.lbl_context.setText(self.captions['C_CNTXT'])
+        if 'C_CMD' in self.fields:
+            self.txt_cmd.setText(self.captions['C_CTXT'])
+        if 'C_SAVE' in self.fields:
+            self.b_save.setText(self.captions['C_SAVE'])
+        if 'C_DEL' in self.fields:
+            self.b_del.setText(self.captions['C_DEL'])
+        try:
+            self._keys.captions_extra_fields(self) # user exit
+        except AttributeError:
+            pass
+
+    def on_item_selected(self, newitem, olditem): # olditem, newitem):
+        """callback on selection of an item
+
+        velden op het hoofdscherm worden bijgewerkt vanuit de selectie"""
+        if not self.has_extrapanel:
+            return
+        if not newitem: # bv. bij p0list.clear()
+            return
+        self.initializing_keydef = True
+        if self._initializing_screen:
+            self.vuldetails(newitem)
+            self.initializing_keydef = False
+            return
+        if 'C_MODS' in self.fields:
+            origkey = self._origdata[self.ix_key]
+            origmods = ''.join([y for x, y in zip(self.ix_mods, ('WCAS'))
+                if self._origdata[x]])
+            key = self._newdata[self.ix_key]
+            mods = ''.join([y for x, y in zip(self.ix_mods, ('WCAS'))
+                if self._newdata[x]])
+        if 'C_CMD' in self.fields:
+            origcmd = self._origdata[self.ix_cmd]
+            cmnd = self._newdata[self.ix_cmd]
+        if 'C_CNTXT' in self.fields:
+            context = self._newdata[self.ix_cntxt]  # TODO: ook nog iets mee doen
+        cursor_moved = True if newitem != olditem and olditem is not None else False
+        other_item = key != origkey or mods != origmods
+        other_cmd = cmnd != origcmd
+        any_change = other_item or other_cmd
+        gevonden = False
+        for number, item in self.data.items():
+            if key == item[0] == key and item[1] == mods:
+                gevonden = True
+                indx = number
+                break
+        ## print(cursor_moved, other_item, other_cmd, gevonden)
+        make_change = False
+        if any_change:
+            if cursor_moved:
+                h = gui.QMessageBox.question(self,
+                    self.captions["000"], self.captions["020"],
+                    gui.QMessageBox.Yes | gui.QMessageBox.No)
+                make_change = True if h == gui.QMessageBox.Yes else False
+            elif other_item:
+                if gevonden:
+                    ok = gui.QMessageBox.question(self,
+                        self.captions["000"], self.captions["045"],
+                        gui.QMessageBox.Yes | gui.QMessageBox.No)
+                    make_change = True if ok == gui.QMessageBox.Yes else False
+                else:
+                    make_change = True
+            else:
+                make_change = True
+        # note this only works for one specific plugin (tcmdrkys) I think
+        # which is no problem as long as I don't modify keydefs
+        if make_change:
+            item = self.p0list.currentItem()
+            pos = self.p0list.indexOfTopLevelItem(item)
+            if gevonden:
+                self.data[indx] = (key, mods, 'U', cmnd,
+                    self.omsdict[command])
+            else:
+                newdata = [x for x in self.data.values()]
+                newvalue = (key, mods, 'U', cmnd, self.omsdict[cmnd])
+                newdata.append(newvalue)
+                newdata.sort()
+                for x, y in enumerate(newdata):
+                    if y == newvalue:
+                        indx = x
+                    self.data[x] = y
+            self.modified = True
+            self._origdata = self.init_origdata
+            if 'C_KEY' in self.fields:
+                self._origdata[self.ix_key] = key
+            if 'C_MODS' in self.fields:
+                for mod, indx in zip(('WCAS'), self.ix_mods):
+                    self._origdata[indx] = mod in mods
+            if 'C_CMD' in self.fields:
+                self._origdata[self.ix_cmd] = cmnd
+            if 'C_CNTXT' in self.fields:
+                self._origdata[self.ix_cntxt] = cntxt
+            try:
+                self._keys.on_extra_selected(self, item) # user exit
+            except AttributeError:
+                pass
+            newitem = self.p0list.topLevelItem(pos)
+            self.populate_list(pos)    # refresh
+        self.vuldetails(newitem)
+        self.initializing_keydef = False
+
+    def on_update(self):
+        self.aanpassen()
+        self.p0list.setFocus()
+
+    def on_delete(self):
+        self.aanpassen(delete=True)
+        self.p0list.setFocus()
+
+    def vuldetails(self, selitem):
+        if not selitem: # bv. bij p0list.clear()
+            return
+        seli = selitem.data(0, core.Qt.UserRole)
+        if sys.version < '3':
+            seli = seli.toPyObject()
+        keydefdata = self.data[seli]
+        self.b_save.setEnabled(False)
+        self.b_del.setEnabled(False)
+        self._origdata = self.init_origdata[:]
+        for indx, item in enumerate(keydefdata):
+            if self.column_info[indx][0] == 'C_KEY':
+                key = item
+                ix = self.keylist.index(key)
+                self.cmb_key.setCurrentIndex(ix)
+                self._origdata[self.ix_key] = key
+            elif self.column_info[indx][0] == 'C_MODS':
+                mods = item
+                self.cb_shift.setChecked(False)
+                self.cb_ctrl.setChecked(False)
+                self.cb_alt.setChecked(False)
+                self.cb_win.setChecked(False)
+                for x, y, z in zip('SCAW', self.ix_mods, (self.cb_shift,
+                        self.cb_ctrl, self.cb_alt, self.cb_win)):
+                    if x in mods:
+                        self._origdata[y] = True
+                        z.setChecked(True)
+            elif self.column_info[indx][0] == 'C_TYPE':
+                soort = item
+                if soort == 'U':
+                    self.b_del.setEnabled(True)
+            elif self.column_info[indx][0] == 'C_CNTXT':
+                context = item
+                ix = self.contextslist.index(context)
+                self.cmb_context.setCurrentIndex(ix)
+                self._origdata[self.ix_cntxt] = context
+            elif self.column_info[indx][0] == 'C_CMD':
+                command = item
+                if 'C_CNTXT' in self.fields:
+                    self.cmb_commando.clear()
+                    context = self.cmb_context.currentText()
+                    actionslist = self.contextactionsdict[context]
+                    self.cmb_commando.addItems(actionslist)
+                    ix = actionslist.index(command)
+                else:
+                    ix = self.commandslist.index(command)
+                self.cmb_commando.setCurrentIndex(ix)
+                self._origdata[self.ix_cmd] = command
+            elif self.column_info[indx][0] == 'C_DESC':
+                oms = item
+                self.txt_oms.setText(oms)
+            else:
+                try:
+                    self._keys.vul_extra_details(self, indx, item) # user exit
+                except AttributeError:
+                    pass
+        self._newdata = self._origdata[:]
+
+    def aanpassen(self, delete=False): # TODO
+        print("Aanpassen uitgezet, werkt nog niet voor alles")
+        return
+        # currently this only works for tcmdrkys
+        item = self.p0list.currentItem()
+        pos = self.p0list.indexOfTopLevelItem(item)
+        if delete:
+            indx = item.data(0, core.Qt.UserRole)
+            if sys.version < '3':
+                indx = int(indx.toPyObject())
+            if self.captions["{:03}".format(indx)] == 'C_TYPE':
+                if self.data[indx][1] == "S": # can't delete standard key
+                    gui.QMessageBox.information(self, self.parent.captions["000"],
+                        self.parent.captions['024'])
+                    return
+            elif self.captions["{:03}".format(indx)] == 'C_KEY':
+                if self.data[indx][0] in self.defkeys: # restore standard if any
+                    cmnd = self.defkeys[self.data[indx][0]]
+                    if cmnd in self.omsdict:
+                        oms = self.omsdict[cmnd]
+                    else:
+                        oms, cmnd = cmnd, ""
+                    self.data[indx] = (key, 'S', cmnd, oms)
+                else:
+                    del self.data[indx]
+                    ## pos -= 1
+            self.b_save.setEnabled(False)
+            self.b_del.setEnabled(False)
+            self.modified = True
+            self.setWindowTitle(' '.join((self.captions["000"],
+                self.captions['017'])))
+            print('item deleted, pos is', pos)
+            self.populate_list(pos)    # refresh
+        else:
+            self.on_item_selected(item, item) # , from_update=True)
+
 
 class ChoiceBook(gui.QFrame):
     """ Als QTabwidget, maar met selector in plaats van tabs
@@ -1351,7 +1760,6 @@ class ChoiceBook(gui.QFrame):
                 fl = win._keys.__file__
             self.parent.pluginfiles[txt] = (loc, fl)
             self.sel.addItem(txt)
-
         self.b_exit = gui.QPushButton(self.parent.captions['C_EXIT'], self)
         self.b_exit.clicked.connect(self.parent.exit)
 
@@ -1425,7 +1833,10 @@ class ChoiceBook(gui.QFrame):
 
     def on_text_changed(self, text):
         page = self.parent.page # self.pnl.currentWidget()
-        col = page.p0list.columnCount() - 1
+        for ix, item in enumerate(page.column_info):
+            if item[0] == 'C_DESC':
+                col = ix
+                break
         self.items_found = page.p0list.findItems(text, core.Qt.MatchContains, col)
         self.b_next.setEnabled(False)
         self.b_prev.setEnabled(False)
@@ -1506,9 +1917,12 @@ class MainFrame(gui.QMainWindow):
         self.sb = self.statusBar()
 
         self.menu_bar = self.menuBar()
-        self.ini = hkc.read_settings(hkc.CONF)
-        self.pluginfiles = {}
+        self.ini = hkc.read_settings()
+        if self.ini['plugins'] == []:
+            self.show_empty_screen()
+            return
 
+        self.pluginfiles = {}
         self.readcaptions(self.ini['lang']) # set up defaults
         self.title = self.captions["000"]
         self.setWindowTitle(self.title)
@@ -1521,6 +1935,12 @@ class MainFrame(gui.QMainWindow):
             start = [x for x, y in self.ini['plugins']].index(self.ini['initial'])
         self.book.sel.setCurrentIndex(start)
         self.setcaptions()
+        self.show()
+
+    def show_empty_screen(self):
+        text = gui.QLabel(hkc.EMPTY_CONFIG_TEXT, self)
+        self.setCentralWidget(text)
+        self.resize(640, 80)
         self.show()
 
     def setup_menu(self):
@@ -1596,7 +2016,7 @@ class MainFrame(gui.QMainWindow):
         self.close()
 
     def close(self):
-        if self.ini['initial'] not in self.ini['plugins']:
+        if 'initial' in self.ini and self.ini['initial'] not in self.ini['plugins']:
             if self.ini.get("startup", None) == hkc.mode_f:
                 oldpref = self.ini["startup"]
                 pref = self.ini['startup'] = hkc.mode_r

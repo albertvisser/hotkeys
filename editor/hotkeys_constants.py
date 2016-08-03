@@ -5,6 +5,7 @@ import sys
 import shutil
 import collections
 import csv
+import importlib
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 HERELANG = os.path.join(HERE, 'languages')
@@ -12,7 +13,7 @@ HERELANG = os.path.join(HERE, 'languages')
     ## HOME = os.environ('HOME')
 ## except KeyError:
     ## HOME = os.environ('USERPROFILE') # Windows
-CONF = os.path.join(HERE, 'hotkey_config.py') # don't import, can be modified at runtime
+CONF = 'editor.hotkey_config' # don't import, can be modified at runtime
 VRS = "2.1.x"
 AUTH = "(C) 2008-today Albert Visser"
 WIN = True if sys.platform == "win32" else False
@@ -20,6 +21,10 @@ WIN = True if sys.platform == "win32" else False
 LIN = True if os.name == 'posix' else False
 
 NOT_IMPLEMENTED = '404'
+EMPTY_CONFIG_TEXT = (
+    '      Copy or rename "hotkey_config_example.py" to "hotkey_config.py" '
+    'to get a glimpse of what this tool does'
+    )
 
 csv_linetypes = ['Setting', 'Title', 'Width', 'Seq', 'is_type', 'Keydef']
 csv_settingtype, csv_keydeftype = csv_linetypes[0], csv_linetypes[-1]
@@ -75,33 +80,30 @@ def get_pluginname(csvname):
     # ideally we should import the given module to determine the actual file name
     return pl_name.replace('.', '/') + '.py'
 
-def read_settings(filename):
-    settings = {'filename': CONF}
-    lang, plugins = 'english.lng', []
-    with open(filename) as _in:
-        read_plugins = False
-        for line in _in:
-            if read_plugins:
-                if line.strip() == ']':
-                    read_plugins = False
-                elif line.strip().startswith('#'):
-                    continue
-                else:
-                    name, value = line.split(', ',1)
-                    _, name = name.split('(')
-                    value, _ = value.split(')')
-                    plugins.append((name.strip('"'),
-                        value.strip('"')))
-            if line.startswith('PLUGINS'):
-                read_plugins = True
-            elif line.startswith('LANG'):
-                lang = line.strip().split(' = ')[1].strip("'")
-            elif line.startswith('INITIAL'):
-                settings['initial'] = line.strip().split(' = ')[1].strip("'")
-            elif line.startswith('STARTUP'):
-                settings['startup'] = line.strip().split(' = ')[1].strip("'")
-    settings['plugins'] = plugins
-    settings['lang'] = lang
+def read_settings():
+
+    settings = {}
+    try:
+        sett = importlib.import_module(CONF)
+        settings['filename'] = sett.__file__
+    except ImportError:
+        sett = None
+    try:
+        settings['plugins'] = sett.PLUGINS
+    except AttributeError:
+        settings['plugins'] = []
+    try:
+        settings['lang'] = sett.LANG
+    except AttributeError:
+        settings['lang'] = 'english.lng'
+    try:
+        settings['initial'] = sett.INITIAL
+    except AttributeError:
+        pass
+    try:
+        settings['startup'] = sett.STARTUP
+    except AttributeError:
+        pass
     return settings
 
 def modify_settings(ini):
