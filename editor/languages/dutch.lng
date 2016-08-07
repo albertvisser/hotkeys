@@ -1,12 +1,9 @@
-# recyclable item numbers:
-021 Kan niet verwijderen - Toets en/of commando niet gekozen of niet correct
-022 Kan niet opslaan - Toets en/of commando niet gekozen of niet correct
-023 Kan niet verwijderen - toetsdefinitie niet gevonden
+EMPTY_CONFIG_TEXT Kopieer of hernoem "hotkey_config_example.py" naar "hotkey_config.py" om een idee te krijgen van wat dit programma doet
 
 # application title
-000 Alles Bijeen Sneltoetsen
-017 (aangepast)
-089 Welkom bij {}
+T_MAIN Alles Bijeen Sneltoetsen
+T_MOD (aangepast)
+T_HELLO Welkom bij {}
 
 # Keyboard mapping kolom titels
 C_KEY Toets
@@ -26,8 +23,8 @@ C_MNU Menukeuze
 C_DFLT Standaard
 C_RDEF Aangepast
 
-text_f  Vast:
-text_r  Onthou laatst actieve
+T_FIXED  Vast:
+T_RMBR  Onthou laatst actieve
 
 # modifier namen
 M_CTRL Ctrl
@@ -41,121 +38,93 @@ C_DEL  &Verwijderen
 C_EXIT E&xit
 C_NEXT Zoek Vo&lgende
 C_PREV Zoek Vo&rige
-058 Zoek op
-062 Voeg programma &toe
-063 &Verwijder aangegeven programma('s)
+C_BRWS Zoek op
+C_ADDPRG Voeg programma &toe
+C_REMPRG &Verwijder aangegeven programma('s)
 C_FLTOFF &Filter uit
 C_FILTER &Filter aan
-076 Voeg instelling &toe
-077 &Verwijder aangegeven instelling(en)
-084 Voeg kolom &toe
-085 &Verwijder aangegeven kolommen
-087 Voeg regel &toe
-088 &Verwijder geselecteerde regels
+C_ADDSET Voeg instelling &toe
+C_REMSET &Verwijder aangegeven instelling(en)
+C_ADDCOL Voeg kolom &toe
+C_REMCOL &Verwijder aangegeven kolommen
+C_ADDKEY Voeg regel &toe
+C_REMKEY &Verwijder geselecteerde regels
 
 # screen text
 C_KTXT Toets:
 C_CTXT Stel toets in op:
-C_SEL  Selecteer tool:
+C_SELPRG  Selecteer tool:
 C_FIND Zoek tekst in omschrijving:
-059 Selecteer een bestand
-060 Programma
-061 Locatie van het CSV-bestand
-069 Met deze dialoog kun je bepalen voor welke tools keyboarddefinities getoond worden
-070 en waar deze staan (in de vorm van csv bestanden)
-071 Een hotkey viewer/editor
-072 oorspronkelijk gebouwd voor Total Commander, / uitgebreid om te gebruiken / bij al je favoriete tools
-073 Definieer extra instellingen (bijv.. plaats van toetsdefinitie bestanden) voor {}
-074 Naam
-075 Waarde / Beschrijving
-079 Definieer kolom instellingen voor {}
-080 Titel
-081 Breedte
-082 "Is Aangepast" indicator
-086 Volgorde op scherm
+C_SELFIL Selecteer een bestand
+C_PRGNAM Programma
+C_CSVLOC Locatie van het CSV-bestand
+T_TOOLS Met deze dialoog kun je bepalen voor welke tools keyboarddefinities getoond worden / en waar deze staan (in de vorm van csv bestanden)
+T_SHORT Een hotkey viewer/editor
+T_LONG oorspronkelijk gebouwd voor Total Commander / uitgebreid om te gebruiken / bij al je favoriete tools
+T_XTRASET Definieer extra instellingen (bijv.. plaats van toetsdefinitie bestanden) voor {}
+C_NAM Naam
+C_VAL Waarde / Beschrijving
+T_COLSET Definieer kolom instellingen voor {}
+C_TTL Titel
+C_WID Breedte
+C_IND "Is Aangepast" indicator
+C_SEQ Volgorde op scherm
 
 # save dialog
-020 Eerder gekozen definitie is gewijzigd - nu opslaan?
+Q_SAVCHG Eerder gekozen definitie is gewijzigd - nu opslaan?
 
 # remove dialog
-306 keydef data (csv) ook verwijderen
-307 plugin code ook verwijderen
+Q_REMCSV keydef data (csv) ook verwijderen
+Q_REMPLG plugin code ook verwijderen
 
 # boodschappen
-024 Kan standaard toetsdefinitie niet verwijderen
-025 Definities zijn aangepast - wil je ze terugschrijven?
-026 Geen melding om te laten zien
-027 Kies een taalbestand
-028 Instellingen konden niet gelezen worden uit {}
-029 Er zijn meer kolommen gedefinieerd dan in de toetsdefinities gebruikt worden.
-030 Herladen gaat een probleem veroorzaken
-031 Initieel opzetten CSV bestand
-#S_PLGN
-032 Module met de toolspecifieke code
-032B wordt hierdoor tevens aangemaakt
-032C zonder .py
-032A Naam van de {} ({})
-#S_PNLN
-033 Titel van het toolpanel
-033A {} in de selector
-#S_RBLD
-034 mogelijk dit bestand opnieuw op te bouwen vanuit de instellingen van het tool
-034A Maak het {}
-034B 1 = {}; anders 0
-#S_RSAV
-035 mogelijk om de defiities aan te passen en terug te schrijven naar de tool instellingen
+I_STDDEF Kan standaard toetsdefinitie niet verwijderen
+Q_SAVXIT Definities zijn aangepast - wil je ze terugschrijven?
+I_NOMSG Geen melding om te laten zien
+P_SELLNG Kies een taalbestand
+T_INICSV Initieel opzetten CSV bestand
+S_PLGNAM Module met de toolspecifieke code
+T_ISMADE wordt hierdoor tevens aangemaakt
+T_NOPY zonder .py
+T_NAMOF Naam van de {} ({})
+S_PNLNAM Titel van het toolpanel
+T_INSEL {} in de selector
+S_RBLD mogelijk dit bestand opnieuw op te bouwen vanuit de instellingen van het tool
+T_MAKE Maak het {}
+T_BOOL 1 = {}; anders 0
+S_RSAV mogelijk om de defiities aan te passen en terug te schrijven naar de tool instellingen
 S_DETS Toon keydef details in een apart deel van het scherm
-036 Waar zullen we dit bestand opslaan?
-037 De nieuwe definities werken mogelijk pas als het andere programma opnieuw gestart wordt
-038 Restart TC
-039 Kies de directory waar %s in zit
-040 Kies het programma om Total Commander te herstarten
-041 Je hebt niks gewijzigd. Weet je zeker dat je dit wilt doen?
-042 Een of meer bestanden met instellingen lijkt niet te bestaan. Gebruik Instellingen -> Bestandslocaties in het menu om ze te controleren.
-044 VI_hotkeys.csv
-045 Deze toetsencombinatie is al gedefinieerd, wil je hem vervangen?
+Q_SAVLOC Waar zullen we dit bestand opslaan?
+I_RSTRT De nieuwe definities werken mogelijk pas als het andere programma opnieuw gestart wordt
+I_NEEDNAME Sorry, zonder een naam kunnen we niet verder - geef er een op of breek af
+P_INICSV Nieuw CSV bestand initialiseren voor deze applicatie?
+I_NOSET Onbekend soort instelling `{}` in CSV bestand
+Q_NOCHG Je hebt niks gewijzigd. Weet je zeker dat je dit wilt doen?
+I_NODATA Geen data voor dit programma
+Q_DPLKEY Deze toetsencombinatie is al gedefinieerd, wil je hem vervangen?
 C_NONE Nog geen plugin voor {}
-053 {} keyboard shortcuts bekijken/aanpassen
-054 {} niet gevonden
-055 Geen volgend item
-056 Geen vorig item
-057 {} / versie {} / {} / {}
-064 Geef een naam op voor het nieuwe programma
-065 Wil je de aangekruiste programma's echt verwijderen?
-067 {} items gevonden
-078 Wil je de aangekruiste instellingen echt verwijderen?
-083 Wil je de aangekruiste kolominstellingen echt verwijderen?
-301 Eerst settings informatiie aan csv bestand toevoegen
-302 Eerst settings en kolom informatie aan csv bestand toevoegen
-303 Eerst savekeys functie in plugin definiëren of deze keuze deactiveren
-304 Eerst rebuild functie in plugin definiëren of deze keuze deactiveren
-305 Gelijke waarden voor kolomnummers
-
-# key names
-100 Insert
-101 Del
-102 Home
-103 End
-104 PgUp
-105 PgDn
-106 Space
-107 Backspace
-108 Tab
-109 Num+
-110 Num-
-111 Num*
-112 Num/
-113 Enter
-114 Esc
-115 Left
-116 Right
-117 Up
-118 Down
-119 Letter
-120 Letter(s)
+M_DESC {} keyboard shortcuts bekijken/aanpassen
+I_NOTFND {} niet gevonden
+I_NONXT Geen volgend item
+I_NOPRV Geen vorig item
+T_ABOUT {} / versie {} / {} / {}
+P_NEWPRG Geef een naam op voor het nieuwe programma
+Q_REMPRG Wil je de aangekruiste programma's echt verwijderen?
+I_#FOUND {} items gevonden
+Q_REMSET Wil je de aangekruiste instellingen echt verwijderen?
+Q_REMCOL Wil je de aangekruiste kolominstellingen echt verwijderen?
+I_ADDSET  Eerst settings informatie aan csv bestand toevoegen
+I_ADDCOL  Eerst settings en kolom informatie aan csv bestand toevoegen
+I_DEFSAV  Eerst savekeys functie in plugin definiëren of deze keuze deactiveren
+I_DEFRBLD Eerst rebuild functie in plugin definiëren of deze keuze deactiveren
+I_DPLCOL  Opslaan niet mogelijk: gelijke waarden voor kolomnummers
+M_NODESC (Geen omschrijving beschikbaar)
+T_COLTTL Titels van de kolommen; zie de sleutels in het taalbestand
+T_COLWID Breedte van de kolommen
+T_COLIND geeft aan of de keydef standaard is of ge(her)definieerd
 
 # menus/options
-M_APP  &Application
+M_APP  &Applicatie
 M_READ definities (her)&lezen
 M_SAVE definities op&Slaan
 M_RBLD definities &bestand opnieuw opbouwen
@@ -170,5 +139,3 @@ M_ENTR Handmatige &Invoer
 M_PREF Voorkeursapplicatie
 M_HELP &Help
 M_ABOUT &Over...
-
-404 Functie nog niet beschikbaar

@@ -20,44 +20,12 @@ WIN = True if sys.platform == "win32" else False
 ## LIN = True if sys.platform == 'linux2' else False
 LIN = True if os.name == 'posix' else False
 
-NOT_IMPLEMENTED = '404'
-EMPTY_CONFIG_TEXT = (
-    '      Copy or rename "hotkey_config_example.py" to "hotkey_config.py" '
-    'to get a glimpse of what this tool does'
-    )
-
-csv_linetypes = ['Setting', 'Title', 'Width', 'Seq', 'is_type', 'Keydef']
+csv_linetypes = ['Setting', 'Title', 'Width', 'is_type', 'Keydef']
 csv_settingtype, csv_keydeftype = csv_linetypes[0], csv_linetypes[-1]
-csv_titletype, csv_widthtype, csv_seqnumtype, csv_istypetype = csv_linetypes[1:-1]
+csv_titletype, csv_widthtype, csv_istypetype = csv_linetypes[1:-1]
 csv_settingnames = ['PluginName', 'PanelName', 'RebuildCSV', 'ShowDetails',
     'RedefineKeys']
 csv_plgsett, csv_pnlsett, csv_rbldsett, csv_detsett, csv_redefsett = csv_settingnames
-csv_oms = dict(zip(csv_settingnames + csv_linetypes[1: -1], (
- 'Naam van de module met toolspecifieke code (zonder .py)',
-    # self.captions['032A'].format(self.captions['032'], self.captions['032C'])
- 'Naam van het toolpanel in de selector',
-    # self.captions['033']
- "1 = possible to rebuild this file from the tools' settings; else 0",
-    # self.captions['034B'].format('034'])
- "1 = show keydef details in a separate part of the screen; else 0",
-    # self.captions['034B'].format('S_DETS'])
- '1 = possible to change keydefs and save them back; else 0',
-    # self.captions['034B'].format('035'])
- 'Titles of the columns in the display; refer to keys in the language file',
- 'Column widths',
- 'Column sequence numbers in the display',
- '1 = Column indicates if keydef is original or (re)defined; else 0')))
-csv_sample_data = []
-for indx, data in enumerate((
-        ['C_KEY', 'C_MODS', 'C_DESC'],
-        [120, 90, 292],
-        [0, 1, 2],
-        [0, 0, 0],)):
-    name = csv_linetypes[indx + 1]
-    oms = csv_oms[name]
-    data.insert(0, name)
-    data.append(oms)
-    csv_sample_data.append(data)
 plugin_skeleton = '''# -*- coding: UTF-8 -*-\n
 """
 See example_app_keys.py for a description of the plugin API.
@@ -67,9 +35,50 @@ the default code in the main program will be used.
 """
 '''
 mode_f, mode_r = 'Fixed', 'Remember'
+named_keys = ['Insert', 'Del', 'Home', 'End', 'PgUp', 'PgDn', 'Space', 'Backspace',
+    'Tab', 'Num+', 'Num-', 'Num*', 'Num/', 'Enter', 'Esc', 'Left', 'Right', 'Up',
+    'Down', 'Letter', 'Letter(s)']
 #
 # non-gui and csv related functions
-# perhaps also add to hotkeys_constants (rename?)
+#
+def readlang(lang):
+    captions = {}
+    with open(os.path.join(HERELANG, lang)) as f_in:
+        for x in f_in:
+            if x[0] == '#' or x.strip() == "":
+                continue
+            key, value = x.strip().split(None,1)
+            captions[key] = value
+        return captions
+
+def get_csv_oms(lang):
+    captions = readlang(lang)
+    csv_oms = dict(zip(csv_settingnames + csv_linetypes[1: -1], (
+        captions['T_NAMOF'].format(captions['S_PLGNAM'], captions['T_NOPY']),
+        captions['T_INSEL'].format(captions['S_PNLNAM']),
+        captions['T_BOOL'].format(captions['S_RBLD']),
+        captions['T_BOOL'].format(captions['S_DETS']),
+        captions['T_BOOL'].format(captions['S_RSAV']),
+        captions['T_COLTTL'],
+        captions['T_COLWID'],
+        captions['T_BOOL'].format(captions['T_COLIND']),
+        )))
+    return csv_oms
+
+def build_csv_sample_data(lang):
+    csv_sample_data = []
+    csv_oms = get_csv_oms(lang)
+    for indx, data in enumerate((
+            ['C_KEY', 'C_MODS', 'C_DESC'],
+            [120, 90, 292],
+            [0, 0, 0],)):
+        name = csv_linetypes[indx + 1]
+        oms = csv_oms[name]
+        data.insert(0, name)
+        data.append(oms)
+        csv_sample_data.append(data)
+    return csv_sample_data
+
 def get_pluginname(csvname):
     with open(csvname) as _in:
         for line in _in:
@@ -177,7 +186,7 @@ def add_columntitledata(newdata):
     """add the new column title(s) to all language files
 
     input is a list of tuples (textid, text)"""
-    choices = [os.path.join(HERELANG, x) for x in os.listdir(hkc.HERELANG)
+    choices = [os.path.join(HERELANG, x) for x in os.listdir(HERELANG)
         if os.path.splitext(x)[1] == ".lng"]
     for choice in choices:
         choice_o = choice + '~'
@@ -193,7 +202,7 @@ def add_columntitledata(newdata):
                     in_section = False
                 f_out.write(line)
 
-def update_paths(paths, pathdata):
+def update_paths(paths, pathdata, lang):
     """read the paths to the csv files from the data returned by the dialog
     if applicable also write a skeleton plugin file
     """
@@ -208,19 +217,20 @@ def update_paths(paths, pathdata):
             newfile = os.path.join(*parts) + '.py'
             with open(newfile, 'w') as _out:
                 _out.write(plugin_skeleton)
-            initcsv(loc, data)
+            initcsv(loc, data, lang)
     return newpaths
 
-def initcsv(loc, data):
+def initcsv(loc, data, lang):
     """Initialize csv file
 
-    save some basic settttings to a csv file together with some sample data
+    save some basic settings to a csv file together with some sample data
     """
+    csv_oms = get_csv_oms(lang)
     with open(loc, "w") as _out:
         wrt = csv.writer(_out)
         for indx, sett in enumerate(csv_settingnames):
             wrt.writerow([csv_linetypes[0], sett, data[indx], csv_oms[sett]])
-        for row in csv_sample_data:
+        for row in build_csv_sample_data(lang):
             wrt.writerow(row)
 
 def readcsv(pad):
@@ -248,10 +258,6 @@ def readcsv(pad):
             elif rowtype == csv_widthtype:
                 for ix, item in enumerate(rowdata[:-1]):
                     coldata[ix][1] = int(item)
-            elif rowtype == csv_seqnumtype:
-                pass
-                ## for ix, item in enumerate(rowdata[:-1]):
-                    ## coldata[ix][2] = int(item)
             elif rowtype == csv_istypetype:
                 for ix, item in enumerate(rowdata[:-1]):
                     coldata[ix][2] = bool(int(item))
@@ -259,7 +265,7 @@ def readcsv(pad):
                 key += 1
                 data[key] = ([x.strip() for x in rowdata])
             elif not rowtype.startswith('#'):
-                raise ValueError(self.captions['040'].format(rowtype))
+                raise ValueError(self.captions['I_NOSET'].format(rowtype))
     return settings, coldata, data
 
 def writecsv(pad, settings, coldata, data):
@@ -272,7 +278,7 @@ def writecsv(pad, settings, coldata, data):
             rowdata = csv_settingtype, name, value[0], value[1]
             wrt.writerow(rowdata)
         for ix, row in enumerate([[csv_titletype], [csv_widthtype]]):
-            row += [x[ix] for x in coldata] + [csv_oms[row[0]]]
+            row += [x[ix] for x in coldata] + [coldata[row[0][-1]]]
             wrt.writerow(row)
         wrt.writerow([csv_istypetype] + [int(x[2]) for x in coldata] +
             [csv_oms[csv_istypetype]])

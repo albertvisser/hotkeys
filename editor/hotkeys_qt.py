@@ -24,18 +24,32 @@ import editor.hotkeys_constants as hkc
 #
 # shared (menu) functions
 #
-def show_message(self, message_id='', text='', caption_id='000'):
+def show_message(win, message_id='', text=''):
     """toon de boodschap geïdentificeerd door <message_id> in een dialoog
-    met als titel aangegeven door <caption_id> en retourneer het antwoord
-    na sluiten van de dialoog
+    met als titel aangegeven door <caption_id>
     """
     if message_id:
-        text = self.captions[message_id]
-    if not text:
-        text = self.captions['026']
-    ok = gui.QMessageBox.question(self, self.captions[caption_id], text,
-        gui.QMessageBox.Yes | gui.QMessageBox.No | gui.QMessageBox.Cancel)
-    return ok
+        text = win.captions[message_id]
+    elif not text:
+        text = win.captions['I_NOMSG']
+    gui.QMessageBox.information(win, win.title, text)
+    return
+
+def ask_question(win, message_id='', text=''):
+    """toon de vraag geïdentificeerd door <message_id> in een dialoog
+    met als titel aangegeven door <caption_id> en retourneer het antwoord
+    (Yes als True, No als False) na sluiten van de dialoog
+    """
+    if message_id:
+        text = win.captions[message_id]
+    elif not text:
+        text = win.captions['I_NOMSG']
+    ok = gui.QMessageBox.question(win, win.title, text,
+        gui.QMessageBox.Yes | gui.QMessageBox.No, gui.QMessageBox.Yes)
+    if ok == gui.QMessageBox.Yes:
+        return True
+    else:
+        return False
 
 def m_read(self):
     """(menu) callback voor het lezen van de hotkeys
@@ -44,13 +58,10 @@ def m_read(self):
     zet de gelezen keys daarna ook in de gui
     """
     if not self.page.settings:
-        gui.QMessageBox.information(self, self.captions['000'],
-            self.captions['301'])
+        show_message(self, 'I_ADDSET')
         return
     if not self.page.modified:
-        doit = False
-        h = show_message(self, '041')
-        if h != gui.QMessageBox.Yes:
+        if not ask_question(self, 'Q_NOCHG'):
             return
     self.page.readkeys()
     self.page.populate_list()
@@ -62,16 +73,14 @@ def m_save(self):
     vraagt daarna eventueel of de betreffende applicatie geherstart moet worden
     """
     if not self.page.modified:
-        h = show_message(self, '041')
-        if h != gui.QMessageBox.Yes:
+        if not ask_question(self, 'Q_NOCHG'):
             return
     try:
         self.page.savekeys()
     except AttributeError:
-        gui.QMessageBox.information(self, self.captions['000'],
-            self.captions['303'])
+        show_message(self, 'I_DEFSAV')
         return
-    gui.QMessageBox.information(self, self.captions['000'], self.captions['037'])
+    show_message(self, 'I_RSTRT')
 
 def m_loc(self):
     """(menu) callback voor aanpassen van de bestandslocaties
@@ -123,21 +132,15 @@ def m_loc(self):
             selection -= 1
         self.book.sel.setCurrentIndex(selection)
 
-def m_user(self):
-    """(menu) callback voor een nog niet geïmplementeerde actie"""
-    return self.captions[NOT_IMPLEMENTED]
-
 def m_rebuild(self):
 
     if not self.page.settings:
-        gui.QMessageBox.information(self, self.captions['000'],
-            self.captions['301'])
+        show_message(self, 'I_ADDSET')
         return
     try:
         newdata = self.page._keys.buildcsv(self)
     except AttributeError:
-        gui.QMessageBox.information(self, self.captions['000'],
-            self.captions['304'])
+        show_message(self, 'I_DEFRBLD')
         return
     if newdata:
         self.page.data = newdata[0]
@@ -150,7 +153,8 @@ def m_tool(self):
     """define tool-specific settings
     """
     if not self.page.settings:
-        self.page.settings = {x: ('', hkc.csv_oms[x]) for x in hkc.csv_settingnames}
+        csv_oms = hkc.get_csv_oms(self.page.settings['LANG'])
+        self.page.settings = {x: ('', csv_oms[x]) for x in hkc.csv_settingnames}
     old_redef = bool(int(self.page.settings[hkc.csv_redefsett][0]))
     dlg = ExtraSettingsDialog(self).exec_()
     if dlg == gui.QDialog.Accepted:
@@ -178,8 +182,7 @@ def m_col(self):
     """define tool-specific settings: column properties
     """
     if not self.page.settings:
-        gui.QMessageBox.information(self, self.captions['000'],
-            self.captions['301'])
+        show_message(self, 'I_ADDSET')
         return
     dlg = ColumnSettingsDialog(self).exec_()
     if dlg == gui.QDialog.Accepted:
@@ -213,8 +216,7 @@ def m_col(self):
 
 def m_entry(self):
     if not all((self.page.settings, self.page.column_info)):
-        gui.QMessageBox.information(self, self.captions['000'],
-            self.captions['302'])
+        show_message(self, 'I_ADDCOL')
         return
     dlg = EntryDialog(self).exec_()
     if dlg == gui.QDialog.Accepted:
@@ -234,8 +236,8 @@ def m_lang(self):
     # bepaal welke er momenteel geactiveerd is
     oldlang = self.ini['lang']
     indx = choices.index(oldlang) if oldlang in choices else 0
-    lang, ok = gui.QInputDialog.getItem(self, self.captions["000"],
-        self.captions["027"], choices, current=indx, editable=False)
+    lang, ok = gui.QInputDialog.getItem(self, self.title,
+        self.captions["P_SELLNG"], choices, current=indx, editable=False)
     if ok:
         hkc.change_setting('lang', oldlang, lang, self.ini['filename'])
         self.ini['lang'] = lang
@@ -245,9 +247,9 @@ def m_lang(self):
 def m_about(self):
     """(menu) callback voor het tonen van de "about" dialoog
     """
-    text = '\n'.join(self.captions['057'].format(self.captions['071'],
-        hkc.VRS, hkc.AUTH, self.captions['072']).split(' / '))
-    info = gui.QMessageBox.information(self, self.captions['000'], text)
+    show_message(self, text='\n'.join(self.captions['T_ABOUT'].format(
+        self.captions['T_SHORT'], hkc.VRS, hkc.AUTH,
+        self.captions['T_LONG']).split(' / ')))
 
 def m_pref(self):
     "mogelijkheid bieden om een tool op te geven dat default getoond wordt"
@@ -278,11 +280,11 @@ class InitialToolDialog(gui.QDialog):
         choices = [x[0] for x in self.parent.ini["plugins"]]
         indx = choices.index(oldpref) if oldpref in choices else 0
         gui.QDialog.__init__(self)
-        self.setWindowTitle(self.parent.captions['000'])
+        self.setWindowTitle(self.parent.title)
         vbox = gui.QVBoxLayout()
         vbox.addWidget(gui.QLabel(self.parent.captions["M_PREF"], self))
         hbox = gui.QHBoxLayout()
-        self.check_fixed = gui.QRadioButton(self.parent.captions["text_f"], self)
+        self.check_fixed = gui.QRadioButton(self.parent.captions["T_FIXED"], self)
         self.check_fixed.setChecked(oldmode == hkc.mode_f)
         hbox.addWidget(self.check_fixed)
         self.sel_fixed = gui.QComboBox(self)
@@ -293,7 +295,7 @@ class InitialToolDialog(gui.QDialog):
         hbox.addStretch()
         vbox.addLayout(hbox)
         hbox = gui.QHBoxLayout()
-        self.check_remember = gui.QRadioButton(self.parent.captions["text_r"], self)
+        self.check_remember = gui.QRadioButton(self.parent.captions["T_RMBR"], self)
         self.check_remember.setChecked(oldmode == hkc.mode_r)
         hbox.addWidget(self.check_remember)
         hbox.addStretch()
@@ -340,7 +342,7 @@ class FileBrowseButton(gui.QFrame):
         self.input = gui.QLineEdit(text, self)
         self.input.setMinimumWidth(200)
         box.addWidget(self.input)
-        caption = self.parent.captions['058']
+        caption = self.parent.captions['C_BRWS']
         self.button = gui.QPushButton(caption, self, clicked=self.browse)
         box.addWidget(self.button)
         vbox.addLayout(box)
@@ -349,7 +351,7 @@ class FileBrowseButton(gui.QFrame):
     def browse(self):
         startdir = str(self.input.text()) or os.getcwd()
         path = gui.QFileDialog.getOpenFileName(self,
-            self.parent.captions['059'], startdir)
+            self.parent.captions['C_SELFIL'], startdir)
         if path:
             self.input.setText(path)
 
@@ -362,31 +364,30 @@ class SetupDialog(gui.QDialog):
     def __init__(self, parent, name):
         self.parent = parent
         gui.QDialog.__init__(self)
-        self.setWindowTitle(self.parent.parent.captions['031'])
+        self.setWindowTitle(self.parent.parent.captions['T_INICSV'])
 
         grid = gui.QGridLayout()
 
-        text = gui.QLabel(self.parent.parent.captions['032A'].format(
-            self.parent.parent.captions['032'].lower(),
-            self.parent.parent.captions['032B']), self)
+        text = gui.QLabel(self.parent.parent.captions['T_NAMOF'].format(
+            self.parent.parent.captions['S_PLGNAM'].lower(),
+            self.parent.parent.captions['T_ISMADE']), self)
         self.t_program = gui.QLineEdit('editor.plugins.{}_keys'.format(
             name.lower()), self)
         grid.addWidget(text, 1, 0, 1, 3)
         grid.addWidget(self.t_program, 1, 3) #, 1, 1)
-        text = gui.QLabel(self.parent.parent.captions['033'], self)
+        text = gui.QLabel(self.parent.parent.captions['S_PNLNAM'], self)
         self.t_title = gui.QLineEdit(name + ' hotkeys', self)
         grid.addWidget(text, 2, 0, 1, 3)
         grid.addWidget(self.t_title, 2, 3) #, 1, 1)
-        self.c_rebuild = gui.QCheckBox(self.parent.parent.captions['034A'].format(
-            self.parent.parent.captions['034']), self)
-        grid.addWidget(self.c_rebuild, 3, 1, 1, 3)
+        self.c_rebuild = gui.QCheckBox(self.parent.parent.captions['T_MAKE'].format(
+            self.parent.parent.captions['S_RBLD']), self)
+        grid.addWidget(self.c_rebuild, 3, 0, 1, 4)
         self.c_details = gui.QCheckBox(self.parent.parent.captions['S_DETS'])
-        grid.addWidget(self.c_details, 4, 1, 1, 3)
-        self.c_redef = gui.QCheckBox(self.parent.parent.captions['034A'].format(
-            self.parent.parent.captions['035']), self)
-        grid.addWidget(self.c_redef, 5, 1, 1, 3)
-        ## grid.addSpacer(5, 0, 1, 3)
-        text = gui.QLabel(self.parent.parent.captions['036'], self)
+        grid.addWidget(self.c_details, 4, 0, 1, 4)
+        self.c_redef = gui.QCheckBox(self.parent.parent.captions['T_MAKE'].format(
+            self.parent.parent.captions['S_RSAV']), self)
+        grid.addWidget(self.c_redef, 5, 0, 1, 4)
+        text = gui.QLabel(self.parent.parent.captions['Q_SAVLOC'], self)
         grid.addWidget(text, 6, 0, 1, 2)
         self.t_loc = FileBrowseButton(self, text =
             os.path.join('editor', 'plugins', name + "_hotkeys.csv"),
@@ -421,8 +422,7 @@ class SetupDialog(gui.QDialog):
         """
         loc = self.t_loc.input.text()
         if loc == "":
-            gui.QMessageBox.information(self, self.parent.title,
-                self.captions['038'])
+            show_message(self.parent, 'I_NEEDNAME')
             return
         self.parent.loc = loc
         self.parent.data = [self.t_program.text(), self.t_title.text(),
@@ -439,7 +439,7 @@ class ColumnSettingsDialog(gui.QDialog):
         gui.QDialog.__init__(self, parent)
 
         self.sizer = gui.QVBoxLayout()
-        text = self.parent.captions['079'].format(
+        text = self.parent.captions['T_COLSET'].format(
             self.parent.page.settings[hkc.csv_pnlsett][0])
         hsizer = gui.QHBoxLayout()
         label = gui.QLabel(text, self)
@@ -450,15 +450,15 @@ class ColumnSettingsDialog(gui.QDialog):
 
         hsizer = gui.QHBoxLayout()
         hsizer.addSpacing(41)
-        hsizer.addWidget(gui.QLabel(self.parent.captions['080'], self),
+        hsizer.addWidget(gui.QLabel(self.parent.captions['C_TTL'], self),
             alignment = core.Qt.AlignHCenter | core.Qt.AlignVCenter)
         hsizer.addSpacing(102) #82)
-        hsizer.addWidget(gui.QLabel(self.parent.captions['081'], self),
+        hsizer.addWidget(gui.QLabel(self.parent.captions['C_WID'], self),
             alignment = core.Qt.AlignVCenter)
         hsizer.addSpacing(8) # 84)
-        hsizer.addWidget(gui.QLabel(self.parent.captions['082'], self),
+        hsizer.addWidget(gui.QLabel(self.parent.captions['C_IND'], self),
             alignment = core.Qt.AlignVCenter)
-        hsizer.addWidget(gui.QLabel(self.parent.captions['086'], self),
+        hsizer.addWidget(gui.QLabel(self.parent.captions['C_SEQ'], self),
             alignment = core.Qt.AlignVCenter)
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
@@ -484,12 +484,10 @@ class ColumnSettingsDialog(gui.QDialog):
         self.sizer.addWidget(self.scrl)
 
         buttonbox = gui.QDialogButtonBox()
-        # should be: add setting
-        btn = buttonbox.addButton(self.parent.captions['084'],
+        btn = buttonbox.addButton(self.parent.captions['C_ADDCOL'],
             gui.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.add_column)
-        # should be: remove checked settings
-        btn = buttonbox.addButton(self.parent.captions['085'],
+        btn = buttonbox.addButton(self.parent.captions['C_REMCOL'],
             gui.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.remove_columns)
         btn = buttonbox.addButton(gui.QDialogButtonBox.Ok)
@@ -507,7 +505,7 @@ class ColumnSettingsDialog(gui.QDialog):
     def exec_(self):
         if self.last_textid == '099':
             # TODO: rethink this
-            gui.QMessageBox.information(self, self.parent.title, "Can't perform "
+            show_message(self.parent, text="Can't perform "
                 "this function: no language text identifiers below 100 left")
             self.reject()
         else:
@@ -515,7 +513,7 @@ class ColumnSettingsDialog(gui.QDialog):
 
     def add_row(self, name='', width='', is_flag=False, colno=''):
         self.rownum += 1
-        rownum = self.rownum #  - self.deleted
+        rownum = self.rownum
         colnum = 0
         check = gui.QCheckBox(self)
         ghsizer = gui.QHBoxLayout()
@@ -578,7 +576,7 @@ class ColumnSettingsDialog(gui.QDialog):
         w_name, w_width, w_colno, w_flag, _ = self.data[rownum]
         for widget in check, w_name, w_width, w_colno, w_flag:
             self.gsizer.removeWidget(widget)
-            widget.close() # destroy()
+            widget.close()
         self.gsizer.removeItem(self.gsizer.itemAt(rownum))
         self.checks.pop(rownum)
         self.data.pop(rownum)
@@ -593,13 +591,9 @@ class ColumnSettingsDialog(gui.QDialog):
         checked = [x for x, y in enumerate(test) if y]
         if not any(test):
             return
-        ok = gui.QMessageBox.question(self, self.parent.title,
-            self.parent.captions['083'],
-            gui.QMessageBox.Yes | gui.QMessageBox.No)
-        if gui.QMessageBox.Yes:
+        if ask_question(self.parent, 'Q_REMCOL'):
             for row in reversed(checked):
                 self.delete_row(row)
-
 
     def accept(self):
         column_info, new_titles = [], []
@@ -607,8 +601,7 @@ class ColumnSettingsDialog(gui.QDialog):
         for ix, value in enumerate(sorted(self.data,  key=lambda x: x[2].value())):
             w_name, w_width, w_colno, w_flag, old_colno = value
             if w_colno.value() == lastcol:
-                gui.QMessageBox.critical(self, self.parent.title,
-                    self.parent.captions['305'])
+                show_message(self.parent, 'I_DPLCOL')
                 return
             lastcol = w_colno.value()
             name = w_name.currentText()
@@ -642,7 +635,7 @@ class ExtraSettingsDialog(gui.QDialog):
         vsizer = gui.QVBoxLayout()
 
         hsizer = gui.QHBoxLayout()
-        text = gui.QLabel(self.parent.captions['032'], self)
+        text = gui.QLabel(self.parent.captions['S_PLGNAM'], self)
         self.t_program = gui.QLineEdit(self.parent.page.settings[hkc.csv_plgsett][0],
             self)
         hsizer.addWidget(text)
@@ -650,15 +643,15 @@ class ExtraSettingsDialog(gui.QDialog):
         vsizer.addLayout(hsizer)
 
         hsizer = gui.QHBoxLayout()
-        text = gui.QLabel(self.parent.captions['033'], self)
+        text = gui.QLabel(self.parent.captions['S_PNLNAM'], self)
         self.t_title = gui.QLineEdit(self.parent.page.settings[hkc.csv_pnlsett][0],
             self)
         hsizer.addWidget(text)
         hsizer.addWidget(self.t_title)
         vsizer.addLayout(hsizer)
         hsizer = gui.QHBoxLayout()
-        self.c_rebuild = gui.QCheckBox(self.parent.captions['034A'].format(
-            self.parent.captions['034']), self)
+        self.c_rebuild = gui.QCheckBox(self.parent.captions['T_MAKE'].format(
+            self.parent.captions['S_RBLD']), self)
         if self.parent.page.settings[hkc.csv_rbldsett][0] == '1':
             self.c_rebuild.toggle()
         hsizer.addWidget(self.c_rebuild)
@@ -673,8 +666,8 @@ class ExtraSettingsDialog(gui.QDialog):
         hsizer.addWidget(self.c_showdet)
         vsizer.addLayout(hsizer)
         hsizer = gui.QHBoxLayout()
-        self.c_redef = gui.QCheckBox(self.parent.captions['034A'].format(
-            self.parent.captions['035']), self)
+        self.c_redef = gui.QCheckBox(self.parent.captions['S_MAKE'].format(
+            self.parent.captions['S_RSAV']), self)
         if self.parent.page.settings[hkc.csv_redefsett][0] == '1':
             self.c_redef.toggle()
         hsizer.addWidget(self.c_redef)
@@ -685,7 +678,7 @@ class ExtraSettingsDialog(gui.QDialog):
 
         pnl = gui.QFrame(self)
         vsizer = gui.QVBoxLayout()
-        text = self.parent.captions['073'].format(
+        text = self.parent.captions['T_XTRASET'].format(
             self.parent.page.settings[hkc.csv_pnlsett][0])
         hsizer = gui.QHBoxLayout()
         label = gui.QLabel(text, self)
@@ -696,10 +689,10 @@ class ExtraSettingsDialog(gui.QDialog):
 
         hsizer = gui.QHBoxLayout()
         hsizer.addSpacing(41)
-        hsizer.addWidget(gui.QLabel(self.parent.captions['074'], self),
+        hsizer.addWidget(gui.QLabel(self.parent.captions['C_NAM'], self),
             alignment = core.Qt.AlignHCenter)
         hsizer.addSpacing(52)
-        hsizer.addWidget(gui.QLabel(self.parent.captions['075'], self),
+        hsizer.addWidget(gui.QLabel(self.parent.captions['C_VAL'], self),
             alignment = core.Qt.AlignHCenter)
         hsizer.addStretch()
         vsizer.addLayout(hsizer)
@@ -724,10 +717,10 @@ class ExtraSettingsDialog(gui.QDialog):
 
         hsizer =  gui.QHBoxLayout()
         hsizer.addStretch()
-        btn = gui.QPushButton(self.parent.captions['076'])
+        btn = gui.QPushButton(self.parent.captions['C_ADDSET'], self)
         btn.clicked.connect(self.add_setting)
         hsizer.addWidget(btn)
-        btn = gui.QPushButton(self.parent.captions['077'])
+        btn = gui.QPushButton(self.parent.captions['C_REMSET'], self)
         btn.clicked.connect(self.remove_settings)
         hsizer.addWidget(btn)
         hsizer.addStretch()
@@ -781,7 +774,7 @@ class ExtraSettingsDialog(gui.QDialog):
         w_name, w_value, w_desc = self.data[rownum]
         for widget in check, w_name, w_value, w_desc:
             self.gsizer.removeWidget(widget)
-            widget.close() # destroy()
+            widget.close()
         self.checks.pop(rownum)
         self.data.pop(rownum)
 
@@ -794,10 +787,7 @@ class ExtraSettingsDialog(gui.QDialog):
         test = [x.isChecked() for x in self.checks]
         checked = [x for x, y in enumerate(test) if y]
         if any(test):
-            ok = gui.QMessageBox.question(self, self.parent.title,
-                self.parent.captions['078'],
-                gui.QMessageBox.Yes | gui.QMessageBox.No)
-            if gui.QMessageBox.Yes:
+            if ask_question(self.parent, 'Q_REMSET'):
                 for row in reversed(checked):
                     self.delete_row(row)
 
@@ -812,7 +802,7 @@ class ExtraSettingsDialog(gui.QDialog):
         try:
             oms = self.parent.page.settings[hkc.csv_detsett][1]
         except KeyError:
-            oms = self.parent.captions['034B'].format(
+            oms = self.parent.captions['T_BOOL'].format(
                 self.parent.captions['S_DETS'])
         value = '1' if self.c_showdet.isChecked() else '0'
         self.parent.page.settings[hkc.csv_detsett] = (value, oms)
@@ -838,20 +828,20 @@ class DeleteDialog(gui.QDialog):
         gui.QDialog.__init__(self, parent)
         self.sizer = gui.QVBoxLayout()
         hsizer = gui.QHBoxLayout()
-        label = gui.QLabel(self.parent.parent.captions['065'], self)
+        label = gui.QLabel(self.parent.parent.captions['Q_REMPRG'], self)
         hsizer.addWidget(label)
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
 
         hsizer = gui.QHBoxLayout()
-        check = gui.QCheckBox(self.parent.parent.captions['306'], self)
+        check = gui.QCheckBox(self.parent.parent.captions['Q_REMCSV'], self)
         hsizer.addWidget(check)
         self.remove_keydefs = check
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
 
         hsizer = gui.QHBoxLayout()
-        check = gui.QCheckBox(self.parent.parent.captions['307'], self)
+        check = gui.QCheckBox(self.parent.parent.captions['Q_REMPLG'], self)
         hsizer.addWidget(check)
         self.remove_plugin = check
         hsizer.addStretch()
@@ -884,7 +874,7 @@ class FilesDialog(gui.QDialog):
         self.resize(680, 400)
 
         self.sizer = gui.QVBoxLayout()
-        text = '\n'.join((self.parent.captions['069'], self.parent.captions['070']))
+        text = '\n'.join((self.parent.captions['T_TOOLS'].split(' / ')))
         hsizer = gui.QHBoxLayout()
         label = gui.QLabel(text, self)
         hsizer.addStretch()
@@ -894,10 +884,10 @@ class FilesDialog(gui.QDialog):
 
         hsizer = gui.QHBoxLayout()
         hsizer.addSpacing(36)
-        hsizer.addWidget(gui.QLabel(self.parent.captions['060'], self),
+        hsizer.addWidget(gui.QLabel(self.parent.captions['C_PRGNAM'], self),
             alignment = core.Qt.AlignHCenter | core.Qt.AlignVCenter)
         hsizer.addSpacing(84)
-        hsizer.addWidget(gui.QLabel(self.parent.captions['061'], self),
+        hsizer.addWidget(gui.QLabel(self.parent.captions['C_CSVLOC'], self),
             alignment = core.Qt.AlignVCenter)
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
@@ -923,10 +913,10 @@ class FilesDialog(gui.QDialog):
         self.sizer.addWidget(self.scrl)
 
         buttonbox = gui.QDialogButtonBox()
-        btn = buttonbox.addButton(self.parent.captions['062'],
+        btn = buttonbox.addButton(self.parent.captions['C_ADDPRG'],
             gui.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.add_program)
-        btn = buttonbox.addButton(self.parent.captions['063'],
+        btn = buttonbox.addButton(self.parent.captions['C_REMPRG'],
             gui.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.remove_programs)
         btn = buttonbox.addButton(gui.QDialogButtonBox.Ok)
@@ -960,9 +950,9 @@ class FilesDialog(gui.QDialog):
         check = self.checks[rownum]
         _, win = self.paths[rownum]
         self.gsizer.removeWidget(check)
-        check.close() # destroy()
+        check.close()
         self.gsizer.removeWidget(win)
-        win.close() # destroy()
+        win.close()
         self.checks.pop(rownum)
         self.paths.pop(rownum)
 
@@ -970,19 +960,17 @@ class FilesDialog(gui.QDialog):
         """nieuwe rij aanmaken in self.gsizer"""
         self.data = []
         newtool, ok = gui.QInputDialog.getText(self, self.parent.title,
-            self.parent.captions['064'])
+            self.parent.captions['P_NEWPRG'])
         if ok:
             if newtool == "":
-                gui.QMessageBox.information(self, self.parent.title,
-                    self.parent.captions['038'])
+                show_message(self.parent, 'I_NEEDNAME')
                 return
             self.last_added = newtool
-            ok = gui.QMessageBox.question(self, self.parent.title,
-                self.parent.captions['039'],
-                gui.QMessageBox.Yes | gui.QMessageBox.No, gui.QMessageBox.Yes)
             self.loc = ""
-            if ok == gui.QMessageBox.Yes:
+            if ask_question(self.parent, 'P_INICSV'):
                 ok = SetupDialog(self, newtool).exec_()
+                # self.data uitbreiden met settingomschrijvingen
+                print(self.data)
             self.add_row(newtool, path=self.loc)
 
     def remove_programs(self):
@@ -1013,7 +1001,8 @@ class FilesDialog(gui.QDialog):
             os.remove(filename)
         for filename in self.data_to_remove:
             os.remove(filename)
-        self.parent.ini["plugins"] = hkc.update_paths(self.paths, self.pathdata)
+        self.parent.ini["plugins"] = hkc.update_paths(self.paths, self.pathdata,
+            self.parent.ini["lang"])
         gui.QDialog.accept(self)
 
 class EntryDialog(gui.QDialog):
@@ -1056,10 +1045,10 @@ class EntryDialog(gui.QDialog):
         self.sizer.addLayout(hsizer)
 
         buttonbox = gui.QDialogButtonBox()
-        btn = buttonbox.addButton(self.captions['087'],
+        btn = buttonbox.addButton(self.captions['C_ADDKEY'],
             gui.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.add_key)
-        btn = buttonbox.addButton(self.captions['088'],
+        btn = buttonbox.addButton(self.captions['C_REMKEY'],
             gui.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.delete_key)
         btn = buttonbox.addButton(gui.QDialogButtonBox.Ok)
@@ -1137,10 +1126,12 @@ def on_combobox(self, cb, text):
             self._newdata[keyitemindex] = text
             if not self.initializing_keydef:
                 self.defchanged = True
-                self.b_save.setEnabled(True)
+                if 'C_CMD' in self.fields:
+                    self.b_save.setEnabled(True)
         elif str(self.cmb_commando.currentText()) == self._origdata[cmditemindex]:
             self.defchanged = False
-            self.b_save.setEnabled(False)
+            if 'C_CMD' in self.fields:
+                self.b_save.setEnabled(False)
     elif test_cnx and cb == self.cmb_context:
         if text != self._origdata[self.ix_cntxt]:
             context = self._origdata[self.ix_cntxt] = self.cmb_context.currentText()
@@ -1149,10 +1140,12 @@ def on_combobox(self, cb, text):
             self.cmb_commando.addItems(actionslist)
             if not self.initializing_keydef:
                 self.defchanged = True
-                self.b_save.setEnabled(True)
+                if 'C_CMD' in self.fields:
+                    self.b_save.setEnabled(True)
         elif str(self.cmb_commando.currentText()) == self._origdata[self.ix_cntxt]:
             self.defchanged = False
-            self.b_save.setEnabled(False)
+            if 'C_CMD' in self.fields:
+                self.b_save.setEnabled(False)
     elif test_cmd and cb == self.cmb_commando:
         cmditemindex = self.ix_cmd
         if text != self._origdata[cmditemindex]:
@@ -1160,12 +1153,14 @@ def on_combobox(self, cb, text):
             try:
                 self.txt_oms.setText(self.descriptions[text])
             except KeyError:
-                self.txt_oms.setText('(Geen omschrijving beschikbaar)')
+                self.txt_oms.setText(self.captions['M_NODESC'])
             if not self.initializing_keydef:
                 self.defchanged = True
-                self.b_save.setEnabled(True)
-        elif str(self.cmb_key.currentText()) == self._origdata[keyitemindex]:
-            self.b_save.setEnabled(False)
+                if 'C_CMD' in self.fields:
+                    self.b_save.setEnabled(True)
+        elif str(self.cmb_key.currentText()) == self._origdata[cmditemindex]:
+            if 'C_CMD' in self.fields:
+                self.b_save.setEnabled(False)
     else:
         try:
             self._keys.on_combobox(self, cb, text) # user exit
@@ -1183,16 +1178,15 @@ def on_checkbox(self, cb, state):
             self._newdata[indx] = state
             if not self.initializing_keydef:
                 self.defchanged = True
-                self.b_save.setEnabled(True)
+                if 'C_CMD' in self.fields:
+                    self.b_save.setEnabled(True)
     else:
         states = [self.cb_shift.isChecked(), self.cb_ctrl.isChecked(),
             self.cb_alt.isChecked(), self.cb_win.isChecked()]
         if states == [self._origdata[x] for x in self.ix_mods]:
             self.defchanged = False
-            self.b_save.setEnabled(False)
-    ## print('on checkbox:', indx, state)
-    ## print(self._origdata)
-    ## print(self._newdata)
+            if 'C_CMD' in self.fields:
+                self.b_save.setEnabled(False)
 
 class HotkeyPanel(gui.QFrame):
     """base class voor het gedeelte van het hoofdscherm met de listcontrol erin
@@ -1223,13 +1217,13 @@ class HotkeyPanel(gui.QFrame):
 
         nodata = False
         if not self.settings or not self.column_info:
-            nodata = self.captions['044']
+            nodata = self.captions['I_NODATA']
         else:
             modulename = self.settings[hkc.csv_plgsett][0]
             try:
                 self._keys = importlib.import_module(modulename)
             except ImportError:
-                nodata = self.captions['044'].replace('data', 'plugin code')
+                nodata = self.captions['I_NODATA'].replace('data', 'plugin code')
         if nodata:
             _sizer = gui.QVBoxLayout()
             hsizer = gui.QHBoxLayout()
@@ -1244,9 +1238,6 @@ class HotkeyPanel(gui.QFrame):
         try:
             self.parent.page = self
             self.otherstuff = self._keys.buildcsv(parent, showinfo=False)[1]
-            ## with open('{}.otherstuff'.format(modulename), 'w') as _o:
-                ## for item, value in self.otherstuff.items():
-                    ## print(item, '→', value, file=_o)
         except AttributeError:
             pass
 
@@ -1300,15 +1291,22 @@ class HotkeyPanel(gui.QFrame):
         self.parent.data = self.data
         self._keys.savekeys(self)
         hkc.writecsv(self.pad, self.settings, self.column_info, self.data)
-        self.modified = False
-        self.setWindowTitle(self.captions["000"])
+        self.set_title(modified=False)
 
-    def setcaptions(self):
-        title = self.captions["000"]
+    def set_title(self, modified=None):
+        """set title and adapt to modified flag
+        if modified flag is not supplied, use its current state
+        """
+        # is this of any use? does this window has its own title?
+        if modified is not None:
+            self.modified = False
+        title = self.title
         if self.modified:
-            title += ' ' + self.captions["017"]
+            title += ' ' + self.captions["T_MOD"]
         self.setWindowTitle(title)
 
+    def setcaptions(self):
+        self.set_title()
         if self.has_extrapanel:
             self.captions_extra_fields()
         if self.data:
@@ -1322,7 +1320,6 @@ class HotkeyPanel(gui.QFrame):
         if items is None or len(items) == 0:
             return
 
-        ## self._initializing = True
         for key, data in items:
             new_item = gui.QTreeWidgetItem()
             new_item.setData(0, core.Qt.UserRole, key)
@@ -1335,11 +1332,12 @@ class HotkeyPanel(gui.QFrame):
                 new_item.setText(indx, value)
             self.p0list.addTopLevelItem(new_item)
             self.p0list.setCurrentItem(self.p0list.topLevelItem(pos))
-        ## self._initializing = False
 
     def exit(self):
         if self.modified:
-            ok = show_message(self, '025')
+            ok = gui.QMessageBox.question(self, self.parent.title,
+                self.parent.captions['Q_SAVXIT'],
+                gui.QMessageBox.Yes | gui.QMessageBox.No | gui.QMessageBox.Cancel)
             if ok == gui.QMessageBox.Yes:
                 self.savekeys()
             elif ok == gui.QMessageBox.Cancel:
@@ -1347,25 +1345,32 @@ class HotkeyPanel(gui.QFrame):
         return True
 
     def add_extra_attributes(self):
-         # key, mods, cmnd, params, controls
         self.init_origdata = []
+        ix_item = 0
         if 'C_KEY' in self.fields:
             self.init_origdata.append('')
-            self.ix_key = 0
+            self.ix_key = ix_item
+            ix_item += 1
             self.keylist = [x for x in string.ascii_uppercase] + \
                 [x for x in string.digits] + ["F" + str(i) for i in range(1,13)] + \
-                [self.captions[str(x)] for x in range(100,121)] + \
+                hkc.named_keys + \
                 ['.', ',', '+', '=', '-', '`', '[', ']', '\\', ';', "'", '/']
         if 'C_MODS' in self.fields:
             self.init_origdata += [False, False, False, False]
-            self.ix_mods = (1, 2, 3, 4)
-        if 'C_CMD' in self.fields:
-            self.init_origdata.append('')
-            self.ix_cmd = 5
+            self.ix_mods = []
+            for i in range(4):
+                self.ix_mods.append(ix_item)
+                ix_item += 1
         if 'C_CNTXT' in self.fields:
             self.init_origdata.append('')
-            self.ix_cntxt = self.ix_cmd
-            self.ix_cmd += 1
+            self.ix_cntxt = ix_item
+            ix_item += 1
+        if 'C_CMD' in self.fields:
+            self.init_origdata.append('')
+            self.ix_cmd = ix_item
+            ix_item += 1
+        self.contextslist = []
+        self.commandslist = []
         try:
             self._keys.add_extra_attributes(self) # user exit
         except AttributeError as e:
@@ -1430,14 +1435,13 @@ class HotkeyPanel(gui.QFrame):
                 self, cb, str))
             self.screenfields.append(cb)
             self.cmb_commando = cb
-
-        self.b_save = gui.QPushButton(self.captions['C_SAVE'], box) ##, (120, 45))
-        self.b_save.setEnabled(False)
-        self.b_save.clicked.connect(self.on_update)
-        self.b_del = gui.QPushButton(self.captions['C_DEL'], box) #, size= (50,-1)) ##, (120, 45))
-        self.b_del.setEnabled(False)
-        self.b_del.clicked.connect(self.on_delete)
-        self._savestates = (False, False)
+            self.b_save = gui.QPushButton(self.captions['C_SAVE'], box)
+            self.b_save.setEnabled(False)
+            self.b_save.clicked.connect(self.on_update)
+            self.b_del = gui.QPushButton(self.captions['C_DEL'], box)
+            self.b_del.setEnabled(False)
+            self.b_del.clicked.connect(self.on_delete)
+            self._savestates = (False, False)
 
         if 'C_DESC' in self.fields:
             self.txt_oms = gui.QTextEdit(box)
@@ -1451,15 +1455,16 @@ class HotkeyPanel(gui.QFrame):
         self.set_extrascreen_editable(bool(int(self.settings['RedefineKeys'][0])))
 
     def set_extrascreen_editable(self, switch):
-        if switch:
-            state_s, state_d = self._savestates
-        else:
-            self._savestates = (self.b_save.isEnabled(), self.b_del.isEnabled())
-            state_s, state_d = False, False
         for widget in self.screenfields:
             widget.setEnabled(switch)
-        self.b_save.setEnabled(state_s)
-        self.b_del.setEnabled(state_d)
+        if 'C_CMD' in self.fields:
+            if switch:
+                state_s, state_d = self._savestates
+            else:
+                self._savestates = (self.b_save.isEnabled(), self.b_del.isEnabled())
+                state_s, state_d = False, False
+            self.b_save.setEnabled(state_s)
+            self.b_del.setEnabled(state_d)
 
     def layout_extra_fields(self, sizer):
         """add the extra fields to the layout
@@ -1473,6 +1478,7 @@ class HotkeyPanel(gui.QFrame):
             sizer3.addWidget(self.txt_key)
             sizer3.addWidget(self.cmb_key)
             sizer2.addLayout(sizer3)
+
         if 'C_MODS' in self.fields:
             sizer3 = gui.QHBoxLayout()
             sizer3.addWidget(self.cb_ctrl)
@@ -1480,6 +1486,7 @@ class HotkeyPanel(gui.QFrame):
             sizer3.addWidget(self.cb_shift)
             sizer3.addWidget(self.cb_win)
             sizer2.addLayout(sizer3)
+
         sizer1.addLayout(sizer2)
         sizer1.addStretch()
         if 'C_CNTXT' in self.fields:
@@ -1487,20 +1494,21 @@ class HotkeyPanel(gui.QFrame):
             sizer2.addWidget(self.lbl_context)
             sizer2.addWidget(self.cmb_context)
             sizer1.addLayout(sizer2)
+
         if 'C_CMD' in self.fields:
             sizer2 = gui.QHBoxLayout()
             sizer2.addWidget(self.txt_cmd)
             sizer2.addWidget(self.cmb_commando)
             sizer1.addLayout(sizer2)
-        sizer1.addWidget(self.b_save)
-        sizer1.addWidget(self.b_del)
-        bsizer.addLayout(sizer1)
+            sizer1.addWidget(self.b_save)
+            sizer1.addWidget(self.b_del)
 
+        bsizer.addLayout(sizer1)
         sizer1 = gui.QHBoxLayout()
         if 'C_DESC' in self.fields:
             sizer2 = gui.QVBoxLayout()
             sizer2.addWidget(self.txt_oms)
-        sizer1.addLayout(sizer2, 2)
+            sizer1.addLayout(sizer2, 2)
 
         try:
             self._keys.layout_extra_fields(self, sizer1) # user exit
@@ -1526,16 +1534,14 @@ class HotkeyPanel(gui.QFrame):
             self.lbl_context.setText(self.captions['C_CNTXT'])
         if 'C_CMD' in self.fields:
             self.txt_cmd.setText(self.captions['C_CTXT'])
-        if 'C_SAVE' in self.fields:
             self.b_save.setText(self.captions['C_SAVE'])
-        if 'C_DEL' in self.fields:
             self.b_del.setText(self.captions['C_DEL'])
         try:
             self._keys.captions_extra_fields(self) # user exit
         except AttributeError:
             pass
 
-    def on_item_selected(self, newitem, olditem): # olditem, newitem):
+    def on_item_selected(self, newitem, olditem):
         """callback on selection of an item
 
         velden op het hoofdscherm worden bijgewerkt vanuit de selectie"""
@@ -1545,7 +1551,7 @@ class HotkeyPanel(gui.QFrame):
             return
         self.initializing_keydef = True
         if self._initializing_screen:
-            self.vuldetails(newitem)
+            self.refresh_extrascreen(newitem)
             self.initializing_keydef = False
             return
         other_item = other_cntxt = other_cmd = False
@@ -1565,14 +1571,13 @@ class HotkeyPanel(gui.QFrame):
             other_cmd = cmnd != origcmd
         if 'C_CNTXT' in self.fields:
             origcntxt = self._origdata[self.ix_cntxt]
-            context = self._newdata[self.ix_cntxt]  # TODO: ook nog iets mee doen
+            context = self._newdata[self.ix_cntxt]
             other_cntxt = context != origcntxt
         cursor_moved = True if newitem != olditem and olditem is not None else False
         any_change = other_item or other_cmd or other_cntxt
-        exact_match = False
+        found = False
         for number, item in self.data.items():
             keymatch = modmatch = cntxtmatch = True
-            #TODO: fix indices for item (refer to self.column_info)
             if 'C_KEYS' in self.fields and item[0] != key:
                 keymatch = False
             if 'C_MODS' in self.fields and item[1] != mods:
@@ -1580,23 +1585,16 @@ class HotkeyPanel(gui.QFrame):
             if 'C_CNTXT' in self.fields and item[2] != context:
                 cntxtmatch = False
             if keymatch and modmatch and cntxtmatch:
-                gevonden = True
+                found = True
                 indx = number
                 break
-        ## print(cursor_moved, other_item, other_cmd, gevonden)
         make_change = False
         if any_change:
             if cursor_moved:
-                h = gui.QMessageBox.question(self,
-                    self.captions["000"], self.captions["020"],
-                    gui.QMessageBox.Yes | gui.QMessageBox.No)
-                make_change = True if h == gui.QMessageBox.Yes else False
+                make_change = ask_question(self, "Q_SAVCHG")
             elif other_item:
-                if gevonden:
-                    ok = gui.QMessageBox.question(self,
-                        self.captions["000"], self.captions["045"],
-                        gui.QMessageBox.Yes | gui.QMessageBox.No)
-                    make_change = True if ok == gui.QMessageBox.Yes else False
+                if found:
+                    make_change = ask_question(self, "Q_DPLKEY")
                 else:
                     make_change = True
             else:
@@ -1606,11 +1604,13 @@ class HotkeyPanel(gui.QFrame):
         if make_change:
             item = self.p0list.currentItem()
             pos = self.p0list.indexOfTopLevelItem(item)
-            if gevonden:
+            if found:
                 self.data[indx] = (key, mods, 'U', cmnd,
                     self.omsdict[command])
             else:
                 newdata = [x for x in self.data.values()]
+                # TODO: fix error when modifying TC keydef
+                # UnboundLocalError: local variable 'key' referenced before assignment
                 newvalue = (key, mods, 'U', cmnd, self.omsdict[cmnd])
                 newdata.append(newvalue)
                 newdata.sort()
@@ -1635,26 +1635,27 @@ class HotkeyPanel(gui.QFrame):
                 pass
             newitem = self.p0list.topLevelItem(pos)
             self.populate_list(pos)    # refresh
-        self.vuldetails(newitem)
+        self.refresh_extrascreen(newitem)
         self.initializing_keydef = False
 
     def on_update(self):
-        self.aanpassen()
+        self.do_modification()
         self.p0list.setFocus()
 
     def on_delete(self):
-        self.aanpassen(delete=True)
+        self.do_modification(delete=True)
         self.p0list.setFocus()
 
-    def vuldetails(self, selitem):
+    def refresh_extrascreen(self, selitem):
         if not selitem: # bv. bij p0list.clear()
             return
         seli = selitem.data(0, core.Qt.UserRole)
         if sys.version < '3':
             seli = seli.toPyObject()
         keydefdata = self.data[seli]
-        self.b_save.setEnabled(False)
-        self.b_del.setEnabled(False)
+        if 'C_CMD' in self.fields:
+            self.b_save.setEnabled(False)
+            self.b_del.setEnabled(False)
         self._origdata = self.init_origdata[:]
         for indx, item in enumerate(keydefdata):
             if self.column_info[indx][0] == 'C_KEY':
@@ -1704,7 +1705,7 @@ class HotkeyPanel(gui.QFrame):
                     pass
         self._newdata = self._origdata[:]
 
-    def aanpassen(self, delete=False): # TODO
+    def do_modification(self, delete=False): # TODO
         print("Aanpassen uitgezet, werkt nog niet voor alles")
         return
         # currently this only works for tcmdrkys
@@ -1716,8 +1717,7 @@ class HotkeyPanel(gui.QFrame):
                 indx = int(indx.toPyObject())
             if self.captions["{:03}".format(indx)] == 'C_TYPE':
                 if self.data[indx][1] == "S": # can't delete standard key
-                    gui.QMessageBox.information(self, self.parent.captions["000"],
-                        self.parent.captions['024'])
+                    show_message(self.parent, 'I_STDDEF')
                     return
             elif self.captions["{:03}".format(indx)] == 'C_KEY':
                 if self.data[indx][0] in self.defkeys: # restore standard if any
@@ -1732,10 +1732,7 @@ class HotkeyPanel(gui.QFrame):
                     ## pos -= 1
             self.b_save.setEnabled(False)
             self.b_del.setEnabled(False)
-            self.modified = True
-            self.setWindowTitle(' '.join((self.captions["000"],
-                self.captions['017'])))
-            print('item deleted, pos is', pos)
+            self.set_title(modified=True)
             self.populate_list(pos)    # refresh
         else:
             self.on_item_selected(item, item) # , from_update=True)
@@ -1810,7 +1807,7 @@ class ChoiceBook(gui.QFrame):
     def setcaptions(self):
         self.b_next.setText(self.parent.captions['C_NEXT'])
         self.b_prev.setText(self.parent.captions['C_PREV'])
-        self.sel_text.setText(self.parent.captions['C_SEL'])
+        self.sel_text.setText(self.parent.captions['C_SELPRG'])
         self.find_text.setText(self.parent.captions['C_FIND'])
         if self.filter_on:
             self.b_filter.setText(self.parent.captions['C_FLTOFF'])
@@ -1819,10 +1816,10 @@ class ChoiceBook(gui.QFrame):
         self.b_exit.setText(self.parent.captions['C_EXIT'])
 
     def on_page_changed(self, indx):
-        page = self.pnl.currentWidget() ## self.parent().page
+        page = self.pnl.currentWidget()
         if page is None:
             return
-        self.parent.sb.showMessage(self.parent.captions["053"].format(
+        self.parent.sb.showMessage(self.parent.captions["M_DESC"].format(
             self.sel.currentText()))
         if page.modified:
             ok = page.exit()
@@ -1861,24 +1858,24 @@ class ChoiceBook(gui.QFrame):
             if len(self.items_found) < len(self.parent.page.data.items()):
                 self.b_next.setEnabled(True)
                 self.b_filter.setEnabled(True)
-            self.parent.sb.showMessage(self.parent.captions["067"].format(
+            self.parent.sb.showMessage(self.parent.captions["I_#FOUND"].format(
                 len(self.items_found)))
         else:
-            self.parent.sb.showMessage(self.parent.captions["054"].format(text))
+            self.parent.sb.showMessage(self.parent.captions["I_NOTFND"].format(text))
 
     def find_next(self):
         self.b_prev.setEnabled(True)
-        if self.founditem < len(self.items_found) -1:
+        if self.founditem < len(self.items_found) - 1:
             self.founditem += 1
             self.parent.page.p0list.setCurrentItem(self.items_found[self.founditem])
         else:
-            self.parent.sb.showMessage(self.parent.captions["055"])
+            self.parent.sb.showMessage(self.parent.captions["I_NONXT"])
             self.b_next.setEnabled(False)
 
     def find_prev(self):
         self.b_next.setEnabled(True)
         if self.founditem == 0:
-            self.parent.sb.showMessage(self.parent.captions["056"])
+            self.parent.sb.showMessage(self.parent.captions["I_NOPRV"])
             self.b_prev.setEnabled(False)
         else:
             self.founditem -= 1
@@ -1938,10 +1935,10 @@ class MainFrame(gui.QMainWindow):
 
         self.pluginfiles = {}
         self.readcaptions(self.ini['lang']) # set up defaults
-        self.title = self.captions["000"]
+        self.title = self.captions["T_MAIN"]
         self.setWindowTitle(self.title)
-        self.sb.showMessage(self.captions["089"].format(self.captions["000"]))
-        self.book = ChoiceBook(self, self.ini['plugins']) # , size= (600, 700))
+        self.sb.showMessage(self.captions["T_HELLO"].format(self.captions["T_MAIN"]))
+        self.book = ChoiceBook(self, self.ini['plugins'])
         self.setCentralWidget(self.book)
         self.page = self.book.pnl.currentWidget()
         start = 0
@@ -1952,7 +1949,7 @@ class MainFrame(gui.QMainWindow):
         self.show()
 
     def show_empty_screen(self):
-        text = gui.QLabel(hkc.EMPTY_CONFIG_TEXT, self)
+        text = gui.QLabel(self.captions["EMPTY_CONFIG_TEXT"], self)
         self.setCentralWidget(text)
         self.resize(640, 80)
         self.show()
@@ -2043,19 +2040,16 @@ class MainFrame(gui.QMainWindow):
 
 
     def readcaptions(self, lang):
-        self.captions = {}
-        with open(os.path.join(hkc.HERELANG, lang)) as f_in:
-            for x in f_in:
-                if x[0] == '#' or x.strip() == "":
-                    continue
-                key, value = x.strip().split(None,1)
-                self.captions[key] = value
+        self.captions = hkc.readlang(lang)
+
+    def set_title(self):
+        title = self.title
+        if self.page.modified:
+            title += ' ' + self.captions["T_MOD"]
+        self.setWindowTitle(title)
 
     def setcaptions(self):
-        title = self.captions["000"]
-        if self.page.modified:
-            title += ' ' + self.captions["017"]
-        self.setWindowTitle(title)
+        self.set_title()
         for menu, item in self._menuitems.items():
             try:
                 item.setTitle(self.captions[menu])
