@@ -248,8 +248,10 @@ def readcsv(pad):
         for row in rdr:
             rowtype, rowdata = row[0], row[1:]
             if rowtype == csv_settingtype:
-                name, value, oms = rowdata
-                settings[name] = (value, oms)
+                name, value, desc = rowdata
+                settings[name] = value
+                if name not in csv_settingnames:
+                    data[name] = desc
             elif rowtype == csv_titletype:
                 for item in rowdata[:-1]:
                     coldata_item = ['', '', '']
@@ -268,20 +270,24 @@ def readcsv(pad):
                 raise ValueError(self.captions['I_NOSET'].format(rowtype))
     return settings, coldata, data
 
-def writecsv(pad, settings, coldata, data):
-    ## os.remove(_outback)
+def writecsv(pad, settings, coldata, data, lang):
+    csvoms = get_csv_oms(lang)
     if os.path.exists(pad):
         shutil.copyfile(pad, pad + '~')
     with open(pad, "w") as _out:
         wrt = csv.writer(_out)
         for name, value in settings.items():
-            rowdata = csv_settingtype, name, value[0], value[1]
+            try:
+                settdesc = csvoms[name]
+            except KeyError:
+                settdesc = data.pop(name)
+            rowdata = csv_settingtype, name, value, settdesc
             wrt.writerow(rowdata)
         for ix, row in enumerate([[csv_titletype], [csv_widthtype]]):
-            row += [x[ix] for x in coldata] + [coldata[row[0][-1]]]
+            row += [x[ix] for x in coldata] + [csvoms[row[0]]]
             wrt.writerow(row)
         wrt.writerow([csv_istypetype] + [int(x[2]) for x in coldata] +
-            [csv_oms[csv_istypetype]])
+            [csvoms[csv_istypetype]])
         for keydef in data.values():
             row = [csv_keydeftype] + [x for x in keydef]
             wrt.writerow(row)
