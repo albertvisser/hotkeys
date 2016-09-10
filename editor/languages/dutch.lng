@@ -17,7 +17,8 @@ C_PLAT Platform
 C_FEAT Feature
 C_PARMS Parameter(s)
 C_CTRL Controls
-C_MNU Menukeuze
+C_MNU Menu
+C_MNUSEL Menukeuze
 
 # soorten definities
 C_DFLT Standaard
