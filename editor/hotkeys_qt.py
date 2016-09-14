@@ -1223,15 +1223,20 @@ class HotkeyPanel(gui.QFrame):
         self.captions = self.parent.parent.captions
         self.has_extrapanel = False
 
+        nodata = ''
         try:
             self.settings, self.column_info, self.data = hkc.readcsv(self.pad)
+        except ValueError as e:
+            nodata = self.captions['I_NOSET'].format(e, self.pad)
         except FileNotFoundError:
+            nodata = self.captions['I_NOSETFIL'].format(self.pad)
+        if nodata:
             self.settings, self.column_info, self.data = {}, [], {}
         self.otherstuff = {} # ruimte voor zaken als een lijst met mogelijke commando's
 
-        nodata = False
         if not self.settings or not self.column_info:
-            nodata = self.captions['I_NODATA']
+            tmp = ":\n\n" + nodata if nodata else ""
+            nodata = self.captions['I_NODATA'] + tmp
         else:
             modulename = self.settings[hkc.csv_plgsett]
             try:

@@ -99,7 +99,8 @@ Q_SAVLOC Where do you want to store this file?
 I_RSTRT You may need to restart the other program for the changes to take effect
 I_NEEDNAME Sorry, can't continue without a name - please enter one or cancel
 P_INICSV Initialize new csv file for this application?
-I_NOSET Unknown setting type `{}` in csv file
+I_NOSETFIL CSV file {} not found
+I_NOSET Unknown setting type `{}` in CSV file {}
 Q_NOCHG You haven't made any changes. Are you sure you want to do this?
 I_NODATA No data for this program
 Q_DPLKEY This keycombo already exists, do you want to replace it?

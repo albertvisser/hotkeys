@@ -272,7 +272,7 @@ def readcsv(pad):
                 key += 1
                 data[key] = ([x.strip() for x in rowdata])
             elif not rowtype.startswith('#'):
-                raise ValueError(self.captions['I_NOSET'].format(rowtype))
+                raise ValueError
     return settings, coldata, data
 
 def writecsv(pad, settings, coldata, data, lang):
