@@ -144,7 +144,12 @@ def change_setting(setting, old, new, inifile):
         lines = _in.readlines()
     for ix, line in enumerate(lines):
         if setting is not None and line.startswith(setting):
-            lines[ix] = line.replace(old, new)
+            if not old:
+                lines[ix] = line.replace("''", "'{}'".format(new))
+            elif not new:
+                lines[ix] = line.replace("'{}'".format(old), "''")
+            else:
+                lines[ix] = line.replace(old, new)
             break
     else:
         if setting == 'INITIAL':
