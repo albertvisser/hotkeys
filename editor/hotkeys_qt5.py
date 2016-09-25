@@ -21,7 +21,7 @@ import PyQt5.QtWidgets as qtw
 import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
 
-import editor.hotkeys_constants_qt5 as hkc
+import editor.hotkeys_constants as hkc
 #
 # shared (menu) functions
 #
