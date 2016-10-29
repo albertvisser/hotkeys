@@ -21,6 +21,7 @@ import PyQt4.QtGui as gui
 import PyQt4.QtCore as core
 
 import editor.hotkeys_constants as hkc
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 #
 # shared (menu) functions
 #
@@ -1251,6 +1252,7 @@ class HotkeyPanel(gui.QFrame):
             hsizer.addStretch()
             _sizer.addLayout(hsizer)
             self.setLayout(_sizer)
+            self.title = self.parent.parent.title
             return
 
         self.p0list = gui.QTreeWidget(self)
@@ -1812,6 +1814,8 @@ class ChoiceBook(gui.QFrame):
         self.filter_on = False
         self.pnl = gui.QStackedWidget(self)
         for txt, loc in self.plugins:
+            if not os.path.exists(loc):
+                loc = os.path.join(BASE, loc)
             win = HotkeyPanel(self, loc)
             self.pnl.addWidget(win)
             if not all((win.settings, win.column_info, win.data)):
