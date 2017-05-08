@@ -142,6 +142,7 @@ def m_rebuild(self):
     try:
         newdata = self.page._keys.buildcsv(self)
     except AttributeError:
+        raise
         show_message(self, 'I_DEFRBLD')
         return
     if newdata:
@@ -815,9 +816,12 @@ class ExtraSettingsDialog(qtw.QDialog):
             ## settingsdict[w_name.text()] = (w_value.text(), w_desc.text())
             settingsdict[w_name.text()] = w_value.text()
             settdescdict[w_name.text()] = w_desc.text()
+        todelete = []
         for setting in self.parent.page.settings:
             if setting not in hkc.csv_settingnames:
-                del self.parent.page.settings[setting]
+                todelete.append(setting)
+        for setting in todelete:
+            del self.parent.page.settings[setting]
         self.parent.page.settings.update(settingsdict)
         self.parent.page.data.update(settdescdict)
 
