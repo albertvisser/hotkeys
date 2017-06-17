@@ -9,11 +9,6 @@ import importlib
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 HERELANG = os.path.join(HERE, 'languages')
-## try:
-    ## HOME = os.environ('HOME')
-## except KeyError:
-    ## HOME = os.environ('USERPROFILE') # Windows
-CONF = 'editor.hotkey_config' # don't import, can be modified at runtime
 VRS = "2.1.x"
 AUTH = "(C) 2008-today Albert Visser"
 WIN = True if sys.platform == "win32" else False
@@ -89,11 +84,11 @@ def get_pluginname(csvname):
     # ideally we should import the given module to determine the actual file name
     return pl_name.replace('.', '/') + '.py'
 
-def read_settings():
+def read_settings(ini):
 
     settings = {}
     try:
-        sett = importlib.import_module(CONF)
+        sett = importlib.import_module(ini)
         settings['filename'] = sett.__file__
     except ImportError:
         sett = None

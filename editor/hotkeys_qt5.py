@@ -22,6 +22,7 @@ import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
 
 import editor.hotkeys_constants as hkc
+CONF = 'editor.hotkey_config' # default configuration file
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 #
 # shared (menu) functions
@@ -1988,13 +1989,14 @@ class MainFrame(qtw.QMainWindow):
         self.sb = self.statusBar()
 
         self.menu_bar = self.menuBar()
-        self.ini = hkc.read_settings()
+        ini = args.conf or CONF
+        self.ini = hkc.read_settings(ini)
+        self.readcaptions(self.ini['lang']) # set up defaults
         if self.ini['plugins'] == []:
             self.show_empty_screen()
             return
 
         self.pluginfiles = {}
-        self.readcaptions(self.ini['lang']) # set up defaults
         self.title = self.captions["T_MAIN"]
         self.setWindowTitle(self.title)
         self.sb.showMessage(self.captions["T_HELLO"].format(self.captions["T_MAIN"]))
