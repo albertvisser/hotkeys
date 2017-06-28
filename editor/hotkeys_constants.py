@@ -206,18 +206,20 @@ def update_paths(paths, pathdata, lang):
     """read the paths to the csv files from the data returned by the dialog
     if applicable also write a skeleton plugin file
     """
+    updir = os.path.dirname(HERE)
     newpaths = []
     for name, path in paths:
-        loc = path.input.text()
+        loc = path.input.text()         # bv editor/plugins/gitrefs_hotkeys.csv
+        print(name, loc)
         newpaths.append((name, loc))
         if name in pathdata:
-            data = pathdata[name]
+            data = pathdata[name]       # bv. ['editor.plugins.gitrefs_keys', 'gitrefs hotkeys', 0, 0, 0]
             parts = data[0].split('.')
             if parts[0] == '': parts = parts[1:]
-            newfile = os.path.join(*parts) + '.py'
+            newfile = os.path.join(updir, *parts) + '.py'
             with open(newfile, 'w') as _out:
                 _out.write(plugin_skeleton)
-            initcsv(loc, data, lang)
+            initcsv(os.path.join(updir, loc), data, lang)
     return newpaths
 
 def initcsv(loc, data, lang):
@@ -312,4 +314,3 @@ def quick_check(filename):
             print(key, data)
             raise
     print('{}: No errors found'.format(filename))
-
