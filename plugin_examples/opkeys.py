@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
-
+"""HotKeys plugin for Opera > 12
+"""
 from __future__ import print_function
 import os
 import csv
 import shutil
 
+
 def get_keydefs(doc, soort, keydefs=None):
+    """build dictionary of key combo definitions
+    """
     if not keydefs:
         keydefs = {}
 
@@ -43,10 +47,13 @@ def get_keydefs(doc, soort, keydefs=None):
                     elif word.lower() == 'feature':
                         got_feature = True
             keydefs[context].append([platform, feature, keydata.strip(), soort,
-                definition.strip()])
+                                     definition.strip()])
     return keydefs
 
+
 def writecsv():
+    """implemntation of standard function to build the csvfile
+    """
     ini = Settings('/home/albert/tcmdrkeys/tcmdrkeys/opkey_config.py')
     ## ini_pad = '/home/albert/tcmdrkeys/opera'
     ## stdfile = os.path.join(ini.std)
@@ -69,6 +76,7 @@ def writecsv():
                 linedata.insert(0, context)
                 writer.writerow(linedata)
 
+
 def savekeys(parent):
     """schrijf de gegevens terug
 
@@ -77,6 +85,7 @@ def savekeys(parent):
     aangegeven bestand
     """
     pass
+
 
 class Settings(object):
     """bevat de settings uit het aangegeven bestand
@@ -110,6 +119,8 @@ class Settings(object):
                     self.csv = waarde
 
     def write(self):
+        """write settings back
+        """
         fn_o = self.fnaam + '.bak'
         shutil.copyfile(self.fnaam, fn_o)
         with open(fn_o) as f_in, open(self.fnaam, 'w') as f_out:
@@ -130,10 +141,3 @@ class Settings(object):
                     f_out.write(line.replace(waarde, self.csv))
                 else:
                     f_out.write(line)
-
-def test_readkeys(pad):
-    data = readkeys(pad)
-    print(data)
-
-if __name__ == '__main__':
-    test_readkeys('/home/albert/tcmdrkeys/opera')

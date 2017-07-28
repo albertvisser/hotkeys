@@ -1,31 +1,39 @@
+"""basic plugin for tool using a gtkaccel_map - gui independent stuff
+"""
 import collections
 
 keydef_id = 'gtk_accel_path'
-conversion_map = (
-    ('bracketright', ']'),
-    ('bracketleft', '['),
-    ('less', '<'),
-    ('plus', '+'),
-    ('minus', '-'),
-    ('comma', ','),
-    ('grave', '`'),
-    ('period', '.'),
-    ('greater', '>'),
-    ('semicolon', ';'),
-    ('backslash', '\\'),
-    ('KP_', 'Num'),
-    ('Add', '+'),
-    ('Subtract', '-')
-    )
+conversion_map = (('bracketright', ']'),
+                  ('bracketleft', '['),
+                  ('less', '<'),
+                  ('plus', '+'),
+                  ('minus', '-'),
+                  ('comma', ','),
+                  ('grave', '`'),
+                  ('period', '.'),
+                  ('greater', '>'),
+                  ('semicolon', ';'),
+                  ('backslash', '\\'),
+                  ('KP_', 'Num'),
+                  ('Add', '+'),
+                  ('Subtract', '-'))
+
 
 def convert_key(inp):
+    """map gtk key name to HotKeys key name
+    """
     return out
+
 
 def build_mods(inp):
+    """Um...
+    """
     return out
 
-def read_keydefs_and_stuff(filename):
 
+def read_keydefs_and_stuff(filename):
+    """Get data from file
+    """
     keydefs, actions, others = readfile(filename)
     result = {'keydefs': keydefs}
 
@@ -40,7 +48,7 @@ def read_keydefs_and_stuff(filename):
     actions = new_actions
     contextlist = [x for x in actiondict.keys()]
     result.update({'actions': actions, 'actionscontext': actiondict,
-        'contexts': contextlist, 'descriptions': descriptions})
+                   'contexts': contextlist, 'descriptions': descriptions})
 
     if others:
         othersdict = collections.defaultdict(list)
@@ -55,21 +63,23 @@ def read_keydefs_and_stuff(filename):
             if value:
                 otherkeys.append((value, keyval))
         result.update({'others': others, 'othercontext': othersdict,
-            'otherkeys': otherkeys})
+                       'otherkeys': otherkeys})
 
     return result
 
 
 def readfile(filename):
+    """ read and parse the accel file
+    """
     keydefs = []
     actions, others = {}, []
     new_id = 0
     with open(filename) as _in:
         for line in _in:
-            coloned = False
+            ## colon_ed = False
             if keydef_id in line:
                 if line.startswith(';'):
-                    coloned = True  # don't know what this means
+                    ## colon_ed = True  # don't know what this means: line ended in colon
                     line = line[1:].strip()
                 line = line.rsplit(')', 1)[0]
                 data = line.split(keydef_id, 1)[1].strip().split('" "')
@@ -96,31 +106,39 @@ def readfile(filename):
                     key = key.capitalize()
                     mods = ''
                     if len(test) > 1:
-                        if '<Primary' in test: mods += 'C'
-                        if '<Alt' in test: mods += 'A'
-                        if '<Shift' in test: mods += 'S'
+                        if '<Primary' in test:
+                            mods += 'C'
+                        if '<Alt' in test:
+                            mods += 'A'
+                        if '<Shift' in test:
+                            mods += 'S'
                     ## print(test)
                     keydefs.append((key, mods, new_id))
 
     return keydefs, actions, others
 
-def build_extended_keydefs(keydefs, actions): # the old version
+
+def build_extended_keydefs(keydefs, actions):  # the old version
+    """create lines for csv file
+    """
     keydefs_full, used = [], {}
     for key, mods, command in keydefs:
         keydefs_full.append('Keydef,{},{},{}'.format(key, mods, actions[command]))
-        used[command] = '' # can't pop these from actions because the may have been reused
+        used[command] = ''  # can't pop these from actions because the may have been reused
     for key in actions:
-        if key in used: continue
+        if key in used:
+            continue
         keydefs_full.append('Keydef,,,{}'.format(actions[key]))
     return keydefs_full
 
+
 def main():
+    """test function
+    """
     import pprint
-    for item in (
-            ## '/home/albert/.gimp-2.8/menurc',
-            ## '/home/albert/.config/banshee-1/gtk_accel_map',
-            '/home/albert/.dia/menurc',
-            ):
+    for item in ('/home/albert/.gimp-2.8/menurc',
+                 '/home/albert/.config/banshee-1/gtk_accel_map',
+                 '/home/albert/.dia/menurc'):
         stuff = read_keydefs_and_stuff(item)
         pprint.pprint(stuff)
 

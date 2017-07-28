@@ -1,3 +1,5 @@
+"""Hotkeys plugin for Banshee Music Player
+"""
 import functools
 import editor.plugins.gtkaccel_keys as gk
 F_KEYS = 'BNSH_KEYS'

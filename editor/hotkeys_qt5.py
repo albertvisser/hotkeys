@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-"""hotkeys.py
+"""hotkeys.py - PyQt5 version
 
     main gui (choicebook)
     importeert de verschillende applicatiemodules
@@ -13,20 +13,21 @@
 from __future__ import print_function
 import os
 import sys
-import shutil
+## import shutil
 import string
 import functools
 import importlib
 import PyQt5.QtWidgets as qtw
-import PyQt5.QtGui as gui
+## import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
 
 import editor.hotkeys_constants as hkc
-CONF = 'editor.hotkey_config' # default configuration file
+CONF = 'editor.hotkey_config'  # default configuration file
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-#
+
 # shared (menu) functions
-#
+
+
 def show_message(win, message_id='', text=''):
     """toon de boodschap geïdentificeerd door <message_id> in een dialoog
     met als titel aangegeven door <caption_id>
@@ -38,6 +39,7 @@ def show_message(win, message_id='', text=''):
     qtw.QMessageBox.information(win, win.title, text)
     return
 
+
 def ask_question(win, message_id='', text=''):
     """toon de vraag geïdentificeerd door <message_id> in een dialoog
     met als titel aangegeven door <caption_id> en retourneer het antwoord
@@ -48,11 +50,10 @@ def ask_question(win, message_id='', text=''):
     elif not text:
         text = win.captions['I_NOMSG']
     ok = qtw.QMessageBox.question(win, win.title, text,
-        qtw.QMessageBox.Yes | qtw.QMessageBox.No, qtw.QMessageBox.Yes)
-    if ok == qtw.QMessageBox.Yes:
-        return True
-    else:
-        return False
+                                  qtw.QMessageBox.Yes | qtw.QMessageBox.No,
+                                  qtw.QMessageBox.Yes)
+    return ok == qtw.QMessageBox.Yes
+
 
 def m_read(self):
     """(menu) callback voor het lezen van de hotkeys
@@ -69,6 +70,7 @@ def m_read(self):
     self.page.readkeys()
     self.page.populate_list()
 
+
 def m_save(self):
     """(menu) callback voor het terugschrijven van de hotkeys
 
@@ -84,6 +86,7 @@ def m_save(self):
         show_message(self, 'I_DEFSAV')
         return
     show_message(self, 'I_RSTRT')
+
 
 def m_loc(self):
     """(menu) callback voor aanpassen van de bestandslocaties
@@ -108,24 +111,24 @@ def m_loc(self):
         current_items = reversed([(x, y) for x, y in enumerate(current_programs)])
         new_programs = [x for x, y in self.ini["plugins"]]
         new_paths = [y for x, y in self.ini["plugins"]]
-        for indx, program in current_items: # we need to do this in reverse
+        for indx, program in current_items:  # we need to do this in reverse
             win = self.book.pnl.widget(indx)
             self.book.pnl.removeWidget(win)
             if program in new_programs:
-                hlpdict[program] = win # keep the widget
+                hlpdict[program] = win  # keep the widget
             else:
-                win.close() # lose the widget
+                win.close()  # lose the widget
         # add new ones, modify existing or leave them alone
         for indx, program in enumerate(new_programs):
             if program in current_programs:
-                #compare the new and the existing path
+                # compare the new and the existing path
                 old_loc = current_paths[current_programs.index(program)]
                 new_loc = new_paths[new_programs.index(program)]
                 if new_loc == old_loc:  # unchanged
                     win = hlpdict[program]
-                else: # take data from different location
+                else:  # take data from different location
                     win = HotkeyPanel(self.book, new_loc)
-            else: # new entry
+            else:  # new entry
                 win = HotkeyPanel(self.book, new_paths[indx])
             self.book.sel.addItem(program)
             self.book.pnl.addWidget(win)
@@ -135,23 +138,26 @@ def m_loc(self):
             selection -= 1
         self.book.sel.setCurrentIndex(selection)
 
-def m_rebuild(self):
 
+def m_rebuild(self):
+    """rebuild csv data from (updated) settings
+    """
     if not self.page.settings:
         show_message(self, 'I_ADDSET')
         return
     try:
         newdata = self.page._keys.buildcsv(self)
     except AttributeError:
-        raise
+        ## raise
         show_message(self, 'I_DEFRBLD')
         return
     if newdata:
         self.page.data = newdata[0]
         self.page.otherstuff = newdata[1]
         hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
-            self.page.data, self.ini['lang'])
+                     self.page.data, self.ini['lang'])
         self.page.populate_list()
+
 
 def m_tool(self):
     """define tool-specific settings
@@ -162,7 +168,7 @@ def m_tool(self):
     dlg = ExtraSettingsDialog(self).exec_()
     if dlg == qtw.QDialog.Accepted:
         hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
-            self.page.data, self.ini['lang'])
+                     self.page.data, self.ini['lang'])
         test_redef = bool(int(self.page.settings[hkc.csv_redefsett]))
         test_dets = bool(int(self.page.settings[hkc.csv_detsett]))
         test_rbld = bool(int(self.page.settings[hkc.csv_rbldsett]))
@@ -203,13 +209,13 @@ def m_col(self):
         self.page.column_info = [x[:-1] for x in self.page.column_info]
 
         hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
-            self.page.data, self.ini['lang'])
+                     self.page.data, self.ini['lang'])
         if not self.page.data:
             return
         hdr = qtw.QTreeWidgetItem()
         self.page.p0list.setHeaderItem(hdr)
         self.page.p0list.setHeaderLabels([self.captions[col[0]] for col in
-            self.page.column_info])
+                                          self.page.column_info])
         hdr = self.page.p0list.header()
         hdr.setClickable(True)
         for indx, col in enumerate(self.page.column_info):
@@ -217,7 +223,10 @@ def m_col(self):
         hdr.setStretchLastSection(True)
         self.page.populate_list()
 
+
 def m_entry(self):
+    """manual entry of keyboard shortcuts
+    """
     if not all((self.page.settings, self.page.column_info)):
         show_message(self, 'I_ADDCOL')
         return
@@ -225,8 +234,9 @@ def m_entry(self):
     if dlg == qtw.QDialog.Accepted:
         if self.page.data:
             hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
-                self.page.data, self.ini['lang'])
+                         self.page.data, self.ini['lang'])
             self.page.populate_list()
+
 
 def m_lang(self):
     """(menu) callback voor taalkeuze
@@ -235,17 +245,18 @@ def m_lang(self):
     """
     # bepaal welke language files er beschikbaar zijn
     choices = [x for x in os.listdir(hkc.HERELANG)
-        if os.path.splitext(x)[1] == ".lng"]
+               if os.path.splitext(x)[1] == ".lng"]
     # bepaal welke er momenteel geactiveerd is
     oldlang = self.ini['lang']
     indx = choices.index(oldlang) if oldlang in choices else 0
-    lang, ok = qtw.QInputDialog.getItem(self, self.title,
-        self.captions["P_SELLNG"], choices, current=indx, editable=False)
+    lang, ok = qtw.QInputDialog.getItem(self, self.title, self.captions["P_SELLNG"],
+                                        choices, current=indx, editable=False)
     if ok:
         hkc.change_setting('lang', oldlang, lang, self.ini['filename'])
         self.ini['lang'] = lang
         self.readcaptions(lang)
         self.setcaptions()
+
 
 def m_about(self):
     """(menu) callback voor het tonen van de "about" dialoog
@@ -254,8 +265,10 @@ def m_about(self):
         self.captions['T_SHORT'], hkc.VRS, hkc.AUTH,
         self.captions['T_LONG']).split(' / ')))
 
+
 def m_pref(self):
-    "mogelijkheid bieden om een tool op te geven dat default getoond wordt"
+    """mogelijkheid bieden om een tool op te geven dat default getoond wordt
+    """
     oldpref = self.ini.get("initial", None)
     oldmode = self.ini.get("startup", None)
     self.prefs = oldmode, oldpref
@@ -270,14 +283,18 @@ def m_pref(self):
             self.ini['initial'] = pref
             hkc.change_setting('initial', oldpref, pref, self.ini['filename'])
 
+
 def m_exit(self):
     """(menu) callback om het programma direct af te sluiten"""
     self.exit()
 
-#
-# application classes (screens and subscreens)
-#
+
+# application classes (dialog)
+
+
 class InitialToolDialog(qtw.QDialog):
+    """dialog to define which tool to show on startup
+    """
     def __init__(self, parent):
         self.parent = parent
         oldmode, oldpref = self.parent.prefs
@@ -305,8 +322,8 @@ class InitialToolDialog(qtw.QDialog):
         hbox.addStretch()
         vbox.addLayout(hbox)
         buttonbox = qtw.QDialogButtonBox()
-        btn = buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        btn = buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
         hbox = qtw.QHBoxLayout()
@@ -317,6 +334,8 @@ class InitialToolDialog(qtw.QDialog):
         self.setLayout(vbox)
 
     def accept(self):
+        """confirm dialog
+        """
         if self.check_fixed.isChecked():
             mode = hkc.mode_f
         elif self.check_remember.isChecked():
@@ -327,6 +346,7 @@ class InitialToolDialog(qtw.QDialog):
         self.parent.prefs = mode, pref
         print('in initialtooldialog: {}, {}'.format(mode, pref))
         super().accept()
+
 
 class FileBrowseButton(qtw.QFrame):
     """Combination widget showing a text field and a button
@@ -341,7 +361,7 @@ class FileBrowseButton(qtw.QFrame):
         if text:
             self.startdir = os.path.dirname(text)
         super().__init__(parent)
-        self.setFrameStyle(qtw.QFrame.Panel | qtw.QFrame.Raised);
+        self.setFrameStyle(qtw.QFrame.Panel | qtw.QFrame.Raised)
         vbox = qtw.QVBoxLayout()
         box = qtw.QHBoxLayout()
         self.input = qtw.QLineEdit(text, self)
@@ -354,11 +374,14 @@ class FileBrowseButton(qtw.QFrame):
         self.setLayout(vbox)
 
     def browse(self):
+        """callback for button
+        """
         startdir = str(self.input.text()) or os.getcwd()
         path = qtw.QFileDialog.getOpenFileName(self,
-            self.parent.captions['C_SELFIL'], startdir)
+                                               self.parent.captions['C_SELFIL'], startdir)
         if path[0]:
             self.input.setText(path[0])
+
 
 class SetupDialog(qtw.QDialog):
     """dialoog voor het opzetten van een csv bestand
@@ -379,11 +402,11 @@ class SetupDialog(qtw.QDialog):
         self.t_program = qtw.QLineEdit('editor.plugins.{}_keys'.format(
             name.lower()), self)
         grid.addWidget(text, 1, 0, 1, 3)
-        grid.addWidget(self.t_program, 1, 3) #, 1, 1)
+        grid.addWidget(self.t_program, 1, 3)  # , 1, 1)
         text = qtw.QLabel(self.parent.parent.captions['S_PNLNAM'], self)
         self.t_title = qtw.QLineEdit(name + ' hotkeys', self)
         grid.addWidget(text, 2, 0, 1, 3)
-        grid.addWidget(self.t_title, 2, 3) #, 1, 1)
+        grid.addWidget(self.t_title, 2, 3)  # , 1, 1)
         self.c_rebuild = qtw.QCheckBox(self.parent.parent.captions['T_MAKE'].format(
             self.parent.parent.captions['S_RBLD']), self)
         grid.addWidget(self.c_rebuild, 3, 0, 1, 4)
@@ -394,14 +417,14 @@ class SetupDialog(qtw.QDialog):
         grid.addWidget(self.c_redef, 5, 0, 1, 4)
         text = qtw.QLabel(self.parent.parent.captions['Q_SAVLOC'], self)
         grid.addWidget(text, 6, 0, 1, 2)
-        self.t_loc = FileBrowseButton(self, text =
-            os.path.join('editor', 'plugins', name + "_hotkeys.csv"),
-            level_down=True)
+        self.t_loc = FileBrowseButton(self, text=os.path.join(
+                                      'editor', 'plugins', name + "_hotkeys.csv"),
+                                      level_down=True)
         grid.addWidget(self.t_loc, 6, 2, 1, 3)
 
         buttonbox = qtw.QDialogButtonBox()
-        btn = buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        btn = buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
 
@@ -431,9 +454,10 @@ class SetupDialog(qtw.QDialog):
             return
         self.parent.loc = loc
         self.parent.data = [self.t_program.text(), self.t_title.text(),
-            int(self.c_rebuild.isChecked()), int(self.c_details.isChecked()),
-            int(self.c_redef.isChecked())]
+                            int(self.c_rebuild.isChecked()), int(self.c_details.isChecked()),
+                            int(self.c_redef.isChecked())]
         super().accept()
+
 
 class ColumnSettingsDialog(qtw.QDialog):
     """dialoog voor invullen tool specifieke instellingen
@@ -456,15 +480,15 @@ class ColumnSettingsDialog(qtw.QDialog):
         hsizer = qtw.QHBoxLayout()
         hsizer.addSpacing(41)
         hsizer.addWidget(qtw.QLabel(self.parent.captions['C_TTL'], self),
-            alignment = core.Qt.AlignHCenter | core.Qt.AlignVCenter)
-        hsizer.addSpacing(102) #82)
+                         alignment=core.Qt.AlignHCenter | core.Qt.AlignVCenter)
+        hsizer.addSpacing(102)  # 82)
         hsizer.addWidget(qtw.QLabel(self.parent.captions['C_WID'], self),
-            alignment = core.Qt.AlignVCenter)
-        hsizer.addSpacing(8) # 84)
+                         alignment=core.Qt.AlignVCenter)
+        hsizer.addSpacing(8)  # 84)
         hsizer.addWidget(qtw.QLabel(self.parent.captions['C_IND'], self),
-            alignment = core.Qt.AlignVCenter)
+                         alignment=core.Qt.AlignVCenter)
         hsizer.addWidget(qtw.QLabel(self.parent.captions['C_SEQ'], self),
-            alignment = core.Qt.AlignVCenter)
+                         alignment=core.Qt.AlignVCenter)
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
 
@@ -475,7 +499,7 @@ class ColumnSettingsDialog(qtw.QDialog):
         self.scrl.setWidgetResizable(True)
         self.bar = self.scrl.verticalScrollBar()
         self.gsizer = qtw.QVBoxLayout()
-        self.rownum = 0 # indicates the number of rows in the gridlayout
+        self.rownum = 0  # indicates the number of rows in the gridlayout
         self.data, self.checks = [], []
         self.col_textids, self.col_names, self.last_textid = \
             hkc.read_columntitledata(self)
@@ -490,13 +514,13 @@ class ColumnSettingsDialog(qtw.QDialog):
 
         buttonbox = qtw.QDialogButtonBox()
         btn = buttonbox.addButton(self.parent.captions['C_ADDCOL'],
-            qtw.QDialogButtonBox.ActionRole)
+                                  qtw.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.add_column)
         btn = buttonbox.addButton(self.parent.captions['C_REMCOL'],
-            qtw.QDialogButtonBox.ActionRole)
+                                  qtw.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.remove_columns)
-        btn = buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        btn = buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
         hsizer = qtw.QHBoxLayout()
@@ -508,15 +532,19 @@ class ColumnSettingsDialog(qtw.QDialog):
         self.initializing = False
 
     def exec_(self):
+        """reimplementation to prevent dialog from showing in some cases
+        """
         if self.last_textid == '099':
             # TODO: rethink this
-            show_message(self.parent, text="Can't perform "
-                "this function: no language text identifiers below 100 left")
+            show_message(self.parent, text="Can't perform this function: "
+                                           "no language text identifiers below 100 left")
             self.reject()
         else:
             return super().exec_()
 
     def add_row(self, name='', width='', is_flag=False, colno=''):
+        """create a row for defining column settings
+        """
         self.rownum += 1
         rownum = self.rownum
         colnum = 0
@@ -573,6 +601,8 @@ class ColumnSettingsDialog(qtw.QDialog):
         vbar.setValue(vbar.maximum())
 
     def delete_row(self, rownum):
+        """remove a column settings row
+        """
         self.rownum -= 1
         check = self.checks[rownum]
         for widgets in self.data[rownum:]:
@@ -601,9 +631,11 @@ class ColumnSettingsDialog(qtw.QDialog):
                 self.delete_row(row)
 
     def accept(self):
+        """save the changed settings and leave
+        """
         column_info, new_titles = [], []
         lastcol = -1
-        for ix, value in enumerate(sorted(self.data,  key=lambda x: x[2].value())):
+        for ix, value in enumerate(sorted(self.data, key=lambda x: x[2].value())):
             w_name, w_width, w_colno, w_flag, old_colno = value
             if w_colno.value() == lastcol:
                 show_message(self.parent, 'I_DPLCOL')
@@ -617,7 +649,7 @@ class ColumnSettingsDialog(qtw.QDialog):
                 new_titles.append((self.last_textid, name))
                 name = self.last_textid
             column_info.append([name, int(w_width.text()), w_flag.isChecked(),
-                old_colno])
+                                old_colno])
         if new_titles:
             hkc.add_columntitledata(new_titles)
         self.parent.page.column_info = column_info
@@ -625,6 +657,7 @@ class ColumnSettingsDialog(qtw.QDialog):
             self.parent.captions[id_] = name
             self.parent.page.captions[id_] = name
         super().accept()
+
 
 class ExtraSettingsDialog(qtw.QDialog):
     """dialoog voor invullen tool specifieke instellingen
@@ -641,16 +674,14 @@ class ExtraSettingsDialog(qtw.QDialog):
 
         hsizer = qtw.QHBoxLayout()
         text = qtw.QLabel(self.parent.captions['S_PLGNAM'], self)
-        self.t_program = qtw.QLineEdit(self.parent.page.settings[hkc.csv_plgsett],
-            self)
+        self.t_program = qtw.QLineEdit(self.parent.page.settings[hkc.csv_plgsett], self)
         hsizer.addWidget(text)
         hsizer.addWidget(self.t_program)
         vsizer.addLayout(hsizer)
 
         hsizer = qtw.QHBoxLayout()
         text = qtw.QLabel(self.parent.captions['S_PNLNAM'], self)
-        self.t_title = qtw.QLineEdit(self.parent.page.settings[hkc.csv_pnlsett],
-            self)
+        self.t_title = qtw.QLineEdit(self.parent.page.settings[hkc.csv_pnlsett], self)
         hsizer.addWidget(text)
         hsizer.addWidget(self.t_title)
         vsizer.addLayout(hsizer)
@@ -695,10 +726,10 @@ class ExtraSettingsDialog(qtw.QDialog):
         hsizer = qtw.QHBoxLayout()
         hsizer.addSpacing(41)
         hsizer.addWidget(qtw.QLabel(self.parent.captions['C_NAM'], self),
-            alignment = core.Qt.AlignHCenter)
+                         alignment=core.Qt.AlignHCenter)
         hsizer.addSpacing(52)
         hsizer.addWidget(qtw.QLabel(self.parent.captions['C_VAL'], self),
-            alignment = core.Qt.AlignHCenter)
+                         alignment=core.Qt.AlignHCenter)
         hsizer.addStretch()
         vsizer.addLayout(hsizer)
 
@@ -709,7 +740,7 @@ class ExtraSettingsDialog(qtw.QDialog):
         self.bar = self.scrl.verticalScrollBar()
 
         self.gsizer = qtw.QGridLayout()
-        rownum = colnum = 0
+        rownum = 0
         self.rownum = rownum
         self.data, self.checks = [], []
         for name, value in self.parent.page.settings.items():
@@ -718,10 +749,10 @@ class ExtraSettingsDialog(qtw.QDialog):
                 self.add_row(name, value, desc)
         pnl2.setLayout(self.gsizer)
         pnl.setFrameStyle(qtw.QFrame.Box)
-        self.scrl.ensureVisible(0,0)
+        self.scrl.ensureVisible(0, 0)
         vsizer.addWidget(self.scrl)
 
-        hsizer =  qtw.QHBoxLayout()
+        hsizer = qtw.QHBoxLayout()
         hsizer.addStretch()
         btn = qtw.QPushButton(self.parent.captions['C_ADDSET'], self)
         btn.clicked.connect(self.add_setting)
@@ -748,6 +779,8 @@ class ExtraSettingsDialog(qtw.QDialog):
         self.setLayout(self.sizer)
 
     def add_row(self, name='', value='', desc=''):
+        """add a row for defining a setting (name, value)
+        """
         ## if value:
             ## value, desc = value
         ## else:
@@ -776,6 +809,8 @@ class ExtraSettingsDialog(qtw.QDialog):
         vbar.setValue(vbar.maximum())
 
     def delete_row(self, rownum):
+        """delete a setting definition row
+        """
         check = self.checks[rownum]
         w_name, w_value, w_desc = self.data[rownum]
         for widget in check, w_name, w_value, w_desc:
@@ -798,12 +833,14 @@ class ExtraSettingsDialog(qtw.QDialog):
                     self.delete_row(row)
 
     def accept(self):
+        """update settings and leave
+        """
         self.parent.page.settings[hkc.csv_plgsett] = self.t_program.text()
         self.parent.page.settings[hkc.csv_pnlsett] = self.t_title.text()
         value = '1' if self.c_rebuild.isChecked() else '0'
         self.parent.page.settings[hkc.csv_rbldsett] = value
         try:
-            oms = self.parent.page.settings[hkc.csv_detsett]
+            oms = self.parent.page.settings[hkc.csv_detsett]    # oms variable not used?
         except KeyError:
             oms = self.parent.captions['T_BOOL'].format(
                 self.parent.captions['S_DETS'])
@@ -812,7 +849,7 @@ class ExtraSettingsDialog(qtw.QDialog):
         value = '1' if self.c_redef.isChecked() else '0'
         self.parent.page.settings[hkc.csv_redefsett] = value
 
-        settingsdict, settdescdict  = {}, {}
+        settingsdict, settdescdict = {}, {}
         for w_name, w_value, w_desc in self.data:
             ## settingsdict[w_name.text()] = (w_value.text(), w_desc.text())
             settingsdict[w_name.text()] = w_value.text()
@@ -828,8 +865,10 @@ class ExtraSettingsDialog(qtw.QDialog):
 
         super().accept()
 
-class DeleteDialog(qtw.QDialog):
 
+class DeleteDialog(qtw.QDialog):
+    """dialog for deleting a tool from the collection
+    """
     def __init__(self, parent):
         self.parent = parent
         self.last_added = ''
@@ -856,17 +895,20 @@ class DeleteDialog(qtw.QDialog):
         self.sizer.addLayout(hsizer)
 
         buttonbox = qtw.QDialogButtonBox()
-        btn = buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        btn = buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
         self.sizer.addWidget(buttonbox)
         self.setLayout(self.sizer)
 
     def accept(self):
+        """send settings to parent and leave
+        """
         self.parent.remove_data = self.remove_keydefs.isChecked()
         self.parent.remove_code = self.remove_plugin.isChecked()
         qtw.QDialog.accept(self)
+
 
 class FilesDialog(qtw.QDialog):
     """dialoog met meerdere FileBrowseButtons
@@ -893,10 +935,10 @@ class FilesDialog(qtw.QDialog):
         hsizer = qtw.QHBoxLayout()
         hsizer.addSpacing(36)
         hsizer.addWidget(qtw.QLabel(self.parent.captions['C_PRGNAM'], self),
-            alignment = core.Qt.AlignHCenter | core.Qt.AlignVCenter)
+                         alignment=core.Qt.AlignHCenter | core.Qt.AlignVCenter)
         hsizer.addSpacing(84)
         hsizer.addWidget(qtw.QLabel(self.parent.captions['C_CSVLOC'], self),
-            alignment = core.Qt.AlignVCenter)
+                         alignment=core.Qt.AlignVCenter)
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
 
@@ -906,11 +948,11 @@ class FilesDialog(qtw.QDialog):
         self.scrl.setWidgetResizable(True)
         self.bar = self.scrl.verticalScrollBar()
         self.gsizer = qtw.QGridLayout()
-        rownum = colnum = 0
+        rownum = 0
         self.rownum = rownum
         self.checks = []
         self.paths = []
-        self.data = [] #
+        self.data = []
         self.pathdata = {}
         for name, path in self.parent.ini["plugins"]:
             self.add_row(name, path)
@@ -922,13 +964,13 @@ class FilesDialog(qtw.QDialog):
 
         buttonbox = qtw.QDialogButtonBox()
         btn = buttonbox.addButton(self.parent.captions['C_ADDPRG'],
-            qtw.QDialogButtonBox.ActionRole)
+                                  qtw.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.add_program)
         btn = buttonbox.addButton(self.parent.captions['C_REMPRG'],
-            qtw.QDialogButtonBox.ActionRole)
+                                  qtw.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.remove_programs)
-        btn = buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        btn = buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
         hsizer = qtw.QHBoxLayout()
@@ -939,6 +981,8 @@ class FilesDialog(qtw.QDialog):
         self.setLayout(self.sizer)
 
     def add_row(self, name, path=''):
+        """create a row for defining a file location
+        """
         self.rownum += 1
         colnum = 0
         check = qtw.QCheckBox(name, self)
@@ -955,6 +999,8 @@ class FilesDialog(qtw.QDialog):
         vbar.setValue(vbar.maximum())
 
     def delete_row(self, rownum):
+        """remove a tool location definition row
+        """
         check = self.checks[rownum]
         _, win = self.paths[rownum]
         self.gsizer.removeWidget(check)
@@ -968,7 +1014,7 @@ class FilesDialog(qtw.QDialog):
         """nieuwe rij aanmaken in self.gsizer"""
         self.data = []
         newtool, ok = qtw.QInputDialog.getText(self, self.parent.title,
-            self.parent.captions['P_NEWPRG'])
+                                               self.parent.captions['P_NEWPRG'])
         if ok:
             if newtool == "":
                 show_message(self.parent, 'I_NEEDNAME')
@@ -983,7 +1029,7 @@ class FilesDialog(qtw.QDialog):
     def remove_programs(self):
         """alle aangevinkte items verwijderen uit self.gsizer"""
         checked = [(x, y.text()) for x, y in enumerate(self.checks)
-            if y.isChecked()]
+                   if y.isChecked()]
         if checked:
             dlg = DeleteDialog(self).exec_()
             if dlg == qtw.QDialog.Accepted:
@@ -991,7 +1037,7 @@ class FilesDialog(qtw.QDialog):
                     try:
                         csv_name, prg_name = self.parent.pluginfiles[name]
                     except KeyError:
-                        csv_name, prgname = self.parent.ini['plugins'], None
+                        csv_name, prg_name = self.parent.ini['plugins'], None
                     if self.remove_data:
                         if csv_name:
                             self.data_to_remove.append(csv_name)
@@ -1001,6 +1047,8 @@ class FilesDialog(qtw.QDialog):
                     self.delete_row(row)
 
     def accept(self):
+        """send updates to parent and leave
+        """
         if self.last_added not in [x[0] for x in self.paths]:
             self.last_added = ''
         self.parent.last_added = self.last_added
@@ -1009,11 +1057,13 @@ class FilesDialog(qtw.QDialog):
         for filename in self.data_to_remove:
             os.remove(filename)
         self.parent.ini["plugins"] = hkc.update_paths(self.paths, self.pathdata,
-            self.parent.ini["lang"])
+                                                      self.parent.ini["lang"])
         super().accept()
 
-class EntryDialog(qtw.QDialog):
 
+class EntryDialog(qtw.QDialog):
+    """Dialog for Manual Entry
+    """
     def __init__(self, parent):
         self.parent = parent
         self.captions = self.parent.captions
@@ -1053,13 +1103,13 @@ class EntryDialog(qtw.QDialog):
 
         buttonbox = qtw.QDialogButtonBox()
         btn = buttonbox.addButton(self.captions['C_ADDKEY'],
-            qtw.QDialogButtonBox.ActionRole)
+                                  qtw.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.add_key)
         btn = buttonbox.addButton(self.captions['C_REMKEY'],
-            qtw.QDialogButtonBox.ActionRole)
+                                  qtw.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.delete_key)
-        btn = buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        btn = buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
         hsizer = qtw.QHBoxLayout()
@@ -1088,6 +1138,8 @@ class EntryDialog(qtw.QDialog):
             self.p0list.removeRow(row)
 
     def accept(self):
+        """send updates to parent and leave
+        """
         new_values = {}
         for rowid in range(self.p0list.rowCount()):
             value = []
@@ -1101,12 +1153,16 @@ class EntryDialog(qtw.QDialog):
         self.parent.page.data = new_values
         super().accept()
 
+# general callbacks (I think)
+
 
 def on_text(self, ted, text):
+    """on changing a text entry
+    """
     if self._initializing_screen:
         return
-    text = str(text) # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan de
-                     # callback soms fout? Of is het Py3 vs Py2?
+    text = str(text)    # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan de
+                        # callback soms fout? Of is het Py3 vs Py2?
     hlp = ted.text()
     if text != hlp:
         text = hlp
@@ -1118,6 +1174,7 @@ def on_text(self, ted, text):
             self.defchanged = False
             self.b_save.setEnabled(False)
 
+
 def on_combobox(self, cb, text):
     """callback op het gebruik van een combobox
 
@@ -1125,8 +1182,8 @@ def on_combobox(self, cb, text):
     """
     if self._initializing_screen:
         return
-    text = str(text) # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan de
-                     # callback soms fout? Of is het Py3 vs Py2?
+    text = str(text)    # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan de
+                        # callback soms fout? Of is het Py3 vs Py2?
     hlp = cb.currentText()
     if text != hlp:
         text = hlp
@@ -1151,7 +1208,7 @@ def on_combobox(self, cb, text):
                 self.defchanged = True
                 if 'C_CMD' in self.fields:
                     self.b_save.setEnabled(True)
-        elif str(self.cmb_commando.currentText()) == self._origdata[cmditemindex]:
+        elif str(self.cmb_commando.currentText()) == self._origdata[cmditemindex]:  # UNDEF
             self.defchanged = False
             if 'C_CMD' in self.fields:
                 self.b_save.setEnabled(False)
@@ -1186,11 +1243,14 @@ def on_combobox(self, cb, text):
                 self.b_save.setEnabled(False)
     else:
         try:
-            self._keys.on_combobox(self, cb, text) # user exit
+            self._keys.on_combobox(self, cb, text)  # user exit
         except AttributeError:
             pass
 
+
 def on_checkbox(self, cb, state):
+    """callback op het gebruik van een checkbox
+    """
     if self._initializing_screen:
         return
     ## state = bool(state)
@@ -1203,13 +1263,16 @@ def on_checkbox(self, cb, state):
                 self.defchanged = True
                 if 'C_CMD' in self.fields:
                     self.b_save.setEnabled(True)
-    else:
+    else:   # else without break statement
         states = [self.cb_shift.isChecked(), self.cb_ctrl.isChecked(),
-            self.cb_alt.isChecked(), self.cb_win.isChecked()]
+                  self.cb_alt.isChecked(), self.cb_win.isChecked()]
         if states == [self._origdata[x] for x in self.ix_mods]:
             self.defchanged = False
             if 'C_CMD' in self.fields:
                 self.b_save.setEnabled(False)
+
+# application classes (main screen and subscreens)
+
 
 class HotkeyPanel(qtw.QFrame):
     """base class voor het gedeelte van het hoofdscherm met de listcontrol erin
@@ -1228,7 +1291,7 @@ class HotkeyPanel(qtw.QFrame):
         self.modified = False
 
         super().__init__(parent)
-        self.parent = parent # .parent()
+        self.parent = parent  # .parent()
         self.captions = self.parent.parent.captions
         self.has_extrapanel = False
 
@@ -1241,7 +1304,7 @@ class HotkeyPanel(qtw.QFrame):
             nodata = self.captions['I_NOSETFIL'].format(self.pad)
         if nodata:
             self.settings, self.column_info, self.data = {}, [], {}
-        self.otherstuff = {} # ruimte voor zaken als een lijst met mogelijke commando's
+        self.otherstuff = {}  # ruimte voor zaken als een lijst met mogelijke commando's
 
         if not self.settings or not self.column_info:
             tmp = ":\n\n" + nodata if nodata else ""
@@ -1290,7 +1353,7 @@ class HotkeyPanel(qtw.QFrame):
         if self.column_info:
             self.p0list.setSortingEnabled(True)
             self.p0list.setHeaderLabels([self.captions[col[0]] for col in
-                self.column_info])
+                                         self.column_info])
             self.p0list.setAlternatingRowColors(True)
             self.p0list.currentItemChanged.connect(self.on_item_selected)
             hdr = self.p0list.header()
@@ -1326,7 +1389,7 @@ class HotkeyPanel(qtw.QFrame):
         except AttributeError:
             pass
         hkc.writecsv(self.pad, self.settings, self.column_info, self.data,
-            self.parent.parent.ini['lang'])
+                     self.parent.parent.ini['lang'])
         self.set_title(modified=False)
 
     def set_title(self, modified=None):
@@ -1342,6 +1405,8 @@ class HotkeyPanel(qtw.QFrame):
         self.setWindowTitle(title)
 
     def setcaptions(self):
+        """update captions according to selected language
+        """
         self.set_title()
         if self.has_extrapanel:
             self.captions_extra_fields()
@@ -1358,7 +1423,7 @@ class HotkeyPanel(qtw.QFrame):
 
         for key, data in items:
             try:
-                _ = int(key)
+                int(key)
             except ValueError:
                 continue
             new_item = qtw.QTreeWidgetItem()
@@ -1374,10 +1439,13 @@ class HotkeyPanel(qtw.QFrame):
             self.p0list.setCurrentItem(self.p0list.topLevelItem(pos))
 
     def exit(self):
+        """processing triggered by exit button
+        """
         if self.modified:
             ok = qtw.QMessageBox.question(self, self.parent.title,
-                self.parent.captions['Q_SAVXIT'],
-                qtw.QMessageBox.Yes | qtw.QMessageBox.No | qtw.QMessageBox.Cancel)
+                                          self.parent.captions['Q_SAVXIT'],
+                                          qtw.QMessageBox.Yes | qtw.QMessageBox.No |
+                                          qtw.QMessageBox.Cancel)
             if ok == qtw.QMessageBox.Yes:
                 self.savekeys()
             elif ok == qtw.QMessageBox.Cancel:
@@ -1385,6 +1453,8 @@ class HotkeyPanel(qtw.QFrame):
         return True
 
     def add_extra_attributes(self):
+        """pertaining to details for selected keydef, to make editing possible
+        """
         self.init_origdata = []
         ix_item = 0
         if 'C_KEY' in self.fields:
@@ -1392,13 +1462,13 @@ class HotkeyPanel(qtw.QFrame):
             self.ix_key = ix_item
             ix_item += 1
             self.keylist = [x for x in string.ascii_uppercase] + \
-                [x for x in string.digits] + ["F" + str(i) for i in range(1,13)] + \
+                [x for x in string.digits] + ["F" + str(i) for i in range(1, 13)] + \
                 hkc.named_keys + \
                 ['.', ',', '+', '=', '-', '`', '[', ']', '\\', ';', "'", '/']
         if 'C_MODS' in self.fields:
             self.init_origdata += [False, False, False, False]
             self.ix_mods = []
-            for i in range(4):
+            for _ in self.init_origdata:  # for i in range(4):
                 self.ix_mods.append(ix_item)
                 ix_item += 1
         if 'C_CNTXT' in self.fields:
@@ -1412,9 +1482,8 @@ class HotkeyPanel(qtw.QFrame):
         self.contextslist = []
         self.commandslist = []
         try:
-            self._keys.add_extra_attributes(self) # user exit
-        except AttributeError as e:
-            ## print(e)
+            self._keys.add_extra_attributes(self)  # user exit
+        except AttributeError:
             pass
         if self.keylist:
             self.keylist.sort()
@@ -1426,7 +1495,7 @@ class HotkeyPanel(qtw.QFrame):
         self._box = box = qtw.QFrame(self)
         frameheight = 90
         try:
-            frameheight = self._keys.get_frameheight() # user exit
+            frameheight = self._keys.get_frameheight()  # user exit
         except AttributeError:
             pass
         box.setMaximumHeight(frameheight)
@@ -1436,22 +1505,21 @@ class HotkeyPanel(qtw.QFrame):
             if self.keylist is None:
                 ted = qtw.QLineEdit(box)
                 ted.setMaximumWidth(90)
-                ted.textChanged[str].connect(functools.partial(on_text,
-                    self, ted, str))
+                ted.textChanged[str].connect(functools.partial(on_text, self, ted, str))
                 self.screenfields.append(ted)
                 self.txt_key = ted
             else:
                 cb = qtw.QComboBox(box)
                 cb.setMaximumWidth(90)
-                cb.addItems(self.keylist) # niet sorteren
+                cb.addItems(self.keylist)  # niet sorteren
                 cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
-                    self, cb, str))
+                                                                      self, cb, str))
                 self.screenfields.append(cb)
                 self.cmb_key = cb
 
         if 'C_MODS' in self.fields:
             for ix, x in enumerate(('M_CTRL', 'M_ALT', 'M_SHFT', 'M_WIN')):
-                cb = qtw.QCheckBox(self.captions[x].join(("+ ","")), box)
+                cb = qtw.QCheckBox(self.captions[x].join(("+ ", "")), box)
                 cb.setChecked(False)
                 self.screenfields.append(cb)
                 cb.stateChanged.connect(functools.partial(on_checkbox, self, cb))
@@ -1470,7 +1538,7 @@ class HotkeyPanel(qtw.QFrame):
             cb.addItems(self.contextslist)
             cb.setMaximumWidth(110)
             cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
-                self, cb, str))
+                                                                  self, cb, str))
             self.screenfields.append(cb)
             self.cmb_context = cb
 
@@ -1478,10 +1546,10 @@ class HotkeyPanel(qtw.QFrame):
             self.txt_cmd = qtw.QLabel(self.captions['C_CTXT'] + " ", box)
             cb = qtw.QComboBox(self)
             cb.setMaximumWidth(150)
-            if not 'C_CNTXT' in self.fields: # load on choosing context
+            if 'C_CNTXT' not in self.fields:  # load on choosing context
                 cb.addItems(self.commandslist)
             cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
-                self, cb, str))
+                                                                  self, cb, str))
             self.screenfields.append(cb)
             self.cmb_commando = cb
 
@@ -1498,13 +1566,15 @@ class HotkeyPanel(qtw.QFrame):
             self.txt_oms.setReadOnly(True)
 
         try:
-            self._keys.add_extra_fields(self, box) # user exit
+            self._keys.add_extra_fields(self, box)  # user exit
         except AttributeError:
             pass
 
         self.set_extrascreen_editable(bool(int(self.settings['RedefineKeys'])))
 
     def set_extrascreen_editable(self, switch):
+        """open up fields in extra screen when applicable
+        """
         for widget in self.screenfields:
             widget.setEnabled(switch)
         ## if 'C_CMD' in self.fields:
@@ -1567,7 +1637,7 @@ class HotkeyPanel(qtw.QFrame):
             sizer1.addLayout(sizer2, 2)
 
         try:
-            self._keys.layout_extra_fields(self, sizer1) # user exit
+            self._keys.layout_extra_fields(self, sizer1)  # user exit
         except AttributeError:
             pass
 
@@ -1593,7 +1663,7 @@ class HotkeyPanel(qtw.QFrame):
         self.b_save.setText(self.captions['C_SAVE'])
         self.b_del.setText(self.captions['C_DEL'])
         try:
-            self._keys.captions_extra_fields(self) # user exit
+            self._keys.captions_extra_fields(self)  # user exit
         except AttributeError:
             pass
 
@@ -1603,7 +1673,7 @@ class HotkeyPanel(qtw.QFrame):
         velden op het hoofdscherm worden bijgewerkt vanuit de selectie"""
         if not self.has_extrapanel:
             return
-        if not newitem: # bv. bij p0list.clear()
+        if not newitem:  # bv. bij p0list.clear()
             return
         self.initializing_keydef = True
         if self._initializing_screen:
@@ -1617,9 +1687,9 @@ class HotkeyPanel(qtw.QFrame):
             other_item = key != origkey
         if 'C_MODS' in self.fields:
             origmods = ''.join([y for x, y in zip(self.ix_mods, ('WCAS'))
-                if self._origdata[x]])
+                                if self._origdata[x]])
             mods = ''.join([y for x, y in zip(self.ix_mods, ('WCAS'))
-                if self._newdata[x]])
+                            if self._newdata[x]])
             other_item = other_item or mods != origmods
         if 'C_CMD' in self.fields:
             origcmd = self._origdata[self.ix_cmd]
@@ -1661,8 +1731,7 @@ class HotkeyPanel(qtw.QFrame):
             item = self.p0list.currentItem()
             pos = self.p0list.indexOfTopLevelItem(item)
             if found:
-                self.data[indx] = (key, mods, 'U', cmnd,
-                    self.omsdict[command])
+                self.data[indx] = (key, mods, 'U', cmnd, self.omsdict[cmnd])
             else:
                 newdata = [x for x in self.data.values()]
                 # TODO: fix error when modifying TC keydef
@@ -1684,9 +1753,9 @@ class HotkeyPanel(qtw.QFrame):
             if 'C_CMD' in self.fields:
                 self._origdata[self.ix_cmd] = cmnd
             if 'C_CNTXT' in self.fields:
-                self._origdata[self.ix_cntxt] = cntxt
+                self._origdata[self.ix_cntxt] = context
             try:
-                self._keys.on_extra_selected(self, item) # user exit
+                self._keys.on_extra_selected(self, item)  # user exit
             except AttributeError:
                 pass
             newitem = self.p0list.topLevelItem(pos)
@@ -1695,15 +1764,21 @@ class HotkeyPanel(qtw.QFrame):
         self.initializing_keydef = False
 
     def on_update(self):
+        """callback for editing kb shortcut
+        """
         self.do_modification()
         self.p0list.setFocus()
 
     def on_delete(self):
+        """callback for deleting kb shortcut
+        """
         self.do_modification(delete=True)
         self.p0list.setFocus()
 
     def refresh_extrascreen(self, selitem):
-        if not selitem: # bv. bij p0list.clear()
+        """show new values after changing kb shortcut
+        """
+        if not selitem:  # bv. bij p0list.clear()
             return
         seli = selitem.data(0, core.Qt.UserRole)
         if sys.version < '3':
@@ -1728,8 +1803,8 @@ class HotkeyPanel(qtw.QFrame):
                 self.cb_ctrl.setChecked(False)
                 self.cb_alt.setChecked(False)
                 self.cb_win.setChecked(False)
-                for x, y, z in zip('SCAW', self.ix_mods, (self.cb_shift,
-                        self.cb_ctrl, self.cb_alt, self.cb_win)):
+                for x, y, z in zip('SCAW', self.ix_mods, (self.cb_shift, self.cb_ctrl,
+                                                          self.cb_alt, self.cb_win)):
                     if x in mods:
                         self._origdata[y] = True
                         z.setChecked(True)
@@ -1759,15 +1834,16 @@ class HotkeyPanel(qtw.QFrame):
                 self.txt_oms.setText(oms)
             else:
                 try:
-                    self._keys.vul_extra_details(self, indx, item) # user exit
+                    self._keys.vul_extra_details(self, indx, item)  # user exit
                 except AttributeError:
                     pass
         self._newdata = self._origdata[:]
 
-    def do_modification(self, delete=False): # TODO
+    def do_modification(self, delete=False):  # TODO
+        """currently this only works for tcmdrkys
+        """
         print("Aanpassen uitgezet, werkt nog niet voor alles")
         return
-        # currently this only works for tcmdrkys
         item = self.p0list.currentItem()
         pos = self.p0list.indexOfTopLevelItem(item)
         if delete:
@@ -1775,17 +1851,17 @@ class HotkeyPanel(qtw.QFrame):
             if sys.version < '3':
                 indx = int(indx.toPyObject())
             if self.captions["{:03}".format(indx)] == 'C_TYPE':
-                if self.data[indx][1] == "S": # can't delete standard key
+                if self.data[indx][1] == "S":  # can't delete standard key
                     show_message(self.parent, 'I_STDDEF')
                     return
             elif self.captions["{:03}".format(indx)] == 'C_KEY':
-                if self.data[indx][0] in self.defkeys: # restore standard if any
+                if self.data[indx][0] in self.defkeys:  # restore standard if any
                     cmnd = self.defkeys[self.data[indx][0]]
                     if cmnd in self.omsdict:
                         oms = self.omsdict[cmnd]
                     else:
                         oms, cmnd = cmnd, ""
-                    self.data[indx] = (key, 'S', cmnd, oms)
+                    self.data[indx] = (key, 'S', cmnd, oms)  # key UNDEF
                 else:
                     del self.data[indx]
                     ## pos -= 1
@@ -1794,7 +1870,7 @@ class HotkeyPanel(qtw.QFrame):
             self.set_title(modified=True)
             self.populate_list(pos)    # refresh
         else:
-            self.on_item_selected(item, item) # , from_update=True)
+            self.on_item_selected(item, item)  # , from_update=True)
 
 
 class ChoiceBook(qtw.QFrame):
@@ -1866,6 +1942,8 @@ class ChoiceBook(qtw.QFrame):
         self.setcaptions()
 
     def setcaptions(self):
+        """update captions according to selected language
+        """
         self.b_next.setText(self.parent.captions['C_NEXT'])
         self.b_prev.setText(self.parent.captions['C_PREV'])
         self.sel_text.setText(self.parent.captions['C_SELPRG'])
@@ -1877,6 +1955,8 @@ class ChoiceBook(qtw.QFrame):
         self.b_exit.setText(self.parent.captions['C_EXIT'])
 
     def on_page_changed(self, indx):
+        """callback for change in tool page
+        """
         page = self.pnl.currentWidget()
         if page is None:
             return
@@ -1887,10 +1967,10 @@ class ChoiceBook(qtw.QFrame):
             if not ok:
                 return
         self.pnl.setCurrentIndex(indx)
-        self.parent.page = self.pnl.currentWidget() # change to new selection
+        self.parent.page = self.pnl.currentWidget()  # change to new selection
         self.parent.setup_menu()
         if not all((self.parent.page.settings, self.parent.page.column_info,
-                self.parent.page.data)):
+                    self.parent.page.data)):
             return
         if self.parent.page.filtertext:
             self.find.setEditText(self.parent.page.filtertext)
@@ -1904,7 +1984,9 @@ class ChoiceBook(qtw.QFrame):
             self.b_filter.setEnabled(False)
 
     def on_text_changed(self, text):
-        page = self.parent.page # self.pnl.currentWidget()
+        """callback for change in search text
+        """
+        page = self.parent.page  # self.pnl.currentWidget()
         for ix, item in enumerate(page.column_info):
             if item[0] == 'C_DESC':
                 col = ix
@@ -1925,6 +2007,8 @@ class ChoiceBook(qtw.QFrame):
             self.parent.sb.showMessage(self.parent.captions["I_NOTFND"].format(text))
 
     def find_next(self):
+        """to next search result
+        """
         self.b_prev.setEnabled(True)
         if self.founditem < len(self.items_found) - 1:
             self.founditem += 1
@@ -1934,6 +2018,8 @@ class ChoiceBook(qtw.QFrame):
             self.b_next.setEnabled(False)
 
     def find_prev(self):
+        """to previous search result
+        """
         self.b_next.setEnabled(True)
         if self.founditem == 0:
             self.parent.sb.showMessage(self.parent.captions["I_NOPRV"])
@@ -1943,6 +2029,8 @@ class ChoiceBook(qtw.QFrame):
             self.parent.page.p0list.setCurrentItem(self.items_found[self.founditem])
 
     def filter(self):
+        """filter shown items according to search text
+        """
         if not self.items_found:
             return
         state = str(self.b_filter.text())
@@ -1975,7 +2063,8 @@ class ChoiceBook(qtw.QFrame):
                 break
         self.b_filter.setText(state)
         if self.parent.page.data == self.parent.page.olddata:
-            self.on_text_changed(text) # reselect items_found after setting filter to off
+            self.on_text_changed(text)  # reselect items_found after setting filter to off
+
 
 class MainFrame(qtw.QMainWindow):
     """Hoofdscherm van de applicatie
@@ -1991,7 +2080,7 @@ class MainFrame(qtw.QMainWindow):
         self.menu_bar = self.menuBar()
         ini = args.conf or CONF
         self.ini = hkc.read_settings(ini)
-        self.readcaptions(self.ini['lang']) # set up defaults
+        self.readcaptions(self.ini['lang'])  # set up defaults
         if self.ini['plugins'] == []:
             self.show_empty_screen()
             return
@@ -2011,36 +2100,40 @@ class MainFrame(qtw.QMainWindow):
         self.show()
 
     def show_empty_screen(self):
+        """what to do when there's no data to show
+        """
         text = qtw.QLabel(self.captions["EMPTY_CONFIG_TEXT"], self)
         self.setCentralWidget(text)
         self.resize(640, 80)
         self.show()
 
     def setup_menu(self):
+        """build menus and actions
+        """
         self.menu_bar.clear()
         self._menus = (
             ('M_APP', (
                 ('M_SETT', ((
                     ('M_LOC', (m_loc, 'Ctrl+F')),
                     ('M_LANG', (m_lang, 'Ctrl+L')),
-                    ('M_PREF', (m_pref, '')),
-                    ), '')),
+                    ('M_PREF', (m_pref, ''))
+                ), '')),
                 ('M_EXIT', (m_exit, 'Ctrl+Q')),
-                )),
+            )),
             ('M_TOOL', (
                 ('M_SETT', ((
                     ('M_COL', (m_col, '')),
                     ('M_MISC', (m_tool, '')),
                     ('M_ENTR', (m_entry, '')),
-                    ), '')),
+                ), '')),
                 ('M_READ', (m_read, 'Ctrl+R')),
                 ('M_RBLD', (m_rebuild, 'Ctrl+B')),
                 ('M_SAVE', (m_save, 'Ctrl+S')),
-                )),
+            )),
             ('M_HELP', (
                 ('M_ABOUT', (m_about, 'Ctrl+H')),
-                )))
-        self._menuitems = {} # []
+            )))
+        self._menuitems = {}  # []
         for title, items in self._menus:
             menu = self.menu_bar.addMenu(self.captions[title])
             self._menuitems[title] = menu
@@ -2065,6 +2158,8 @@ class MainFrame(qtw.QMainWindow):
                             self._menuitems[sel] = act
 
     def create_menuaction(self, sel, callback, shortcut):
+        """return created action w. some special cases
+        """
         act = qtw.QAction(self.captions[sel], self)
         act.triggered.connect(functools.partial(callback, self))
         act.setShortcut(shortcut)
@@ -2083,12 +2178,16 @@ class MainFrame(qtw.QMainWindow):
                 act.setEnabled(False)
         return act
 
-    def exit(self,e=None):
+    def exit(self):  # , e=None):
+        """quit the application
+        """
         if not self.page.exit():
             return
         self.close()
 
     def close(self):
+        """extra actions to perfrom on closing
+        """
         ## print(self.ini)
         ## if 'initial' in self.ini and self.ini['initial'] not in self.ini['plugins']:
             ## if self.ini.get("startup", None) == hkc.mode_f:
@@ -2101,17 +2200,22 @@ class MainFrame(qtw.QMainWindow):
             ## hkc.change_setting('initial', oldpref, pref, self.ini['filename'])
         super().close()
 
-
     def readcaptions(self, lang):
+        """get captions from language file or settings
+        """
         self.captions = hkc.readlang(lang)
 
     def set_title(self):
+        """adjust title and modified flag
+        """
         title = self.title
         if self.page.modified:
             title += ' ' + self.captions["T_MOD"]
         self.setWindowTitle(title)
 
     def setcaptions(self):
+        """propagate captions to other parts of the application
+        """
         self.set_title()
         for menu, item in self._menuitems.items():
             try:
@@ -2121,9 +2225,12 @@ class MainFrame(qtw.QMainWindow):
         self.book.setcaptions()
         self.page.setcaptions()
 
+
 def main(args=None):
+    """launch the application
+    """
     app = qtw.QApplication(sys.argv)
-    frame = MainFrame(args)
+    MainFrame(args)
     sys.exit(app.exec_())
 
 if __name__ == "__main__":

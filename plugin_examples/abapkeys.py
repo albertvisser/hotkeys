@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-usage: abapkeys.py <csvfile>
+HotKeys plugin for SAP ABAP Editor
 
-This program takes the definitions in abap_hotkeys.py and builds from it
-three csv files per editor mode (currently we have "SAPGUI" and "VS 98 like")
+As originally written this program takes the definitions in abap_hotkeys.py and builds
+from it three csv files per editor mode (currently we have "SAPGUI" and "VS 98 like")
 
 <mode>_commands.csv contains a list of command codes, names and descriptions
     and could be useful in an editing extension to list available possibilities
@@ -16,11 +16,12 @@ three csv files per editor mode (currently we have "SAPGUI" and "VS 98 like")
     menu shortcuts are also included so some differentiation may be useful
 """
 from __future__ import print_function
-import os
-import shutil
+## import os
+## import shutil
 import xml.etree.ElementTree as ET
 ## from editor.hotkeys_qt import read_settings, readcsv, writecsv
 import collections
+
 
 def savekeys(parent):
     """schrijf de gegevens terug
@@ -33,28 +34,25 @@ def savekeys(parent):
 def getkeyname(value):
     '''translate keycode to key name
     '''
-    keytext = {
-        "8": "BackSpace",
-        "9": "Tab",
-        "13": "Enter",
-        "32": "Space",
-        "33": "PageUp",
-        "34": "PageDown",
-        "35": "End",
-        "36": "Home",
-        "37": "Left",
-        "38": "Up",
-        "39": "Right",
-        "40": "Down",
-        "45": "Insert",
-        "46": "Delete",
-        "106": "Num *",
-        "107": "Num +",
-        "109": "Num -",
-        "111": "Num /",
-        "226": "<",
-    }
-
+    keytext = {"8": "BackSpace",
+               "9": "Tab",
+               "13": "Enter",
+               "32": "Space",
+               "33": "PageUp",
+               "34": "PageDown",
+               "35": "End",
+               "36": "Home",
+               "37": "Left",
+               "38": "Up",
+               "39": "Right",
+               "40": "Down",
+               "45": "Insert",
+               "46": "Delete",
+               "106": "Num *",
+               "107": "Num +",
+               "109": "Num -",
+               "111": "Num /",
+               "226": "<"}
     if value in keytext:
         key = keytext[value]
     elif '111' < value < '123':
@@ -63,13 +61,12 @@ def getkeyname(value):
         key = chr(int(value) - 128)
     elif value:
         key = chr(int(value))
-
     return key
+
 
 def getmodifiers(element):
     '''interpret XML attributes to build modifier string
     '''
-
     mods = ''
     if element.attrib['Ctrl'] == '1':
         mods += 'C'
@@ -77,8 +74,8 @@ def getmodifiers(element):
         mods += 'A'
     if element.attrib['Shift'] == '1':
         mods += 'S'
-
     return mods
+
 
 def gethotkey(element):
     '''interpret XML elements/attributes to build key definition
@@ -95,12 +92,13 @@ def gethotkey(element):
             hotkey_mods = getmodifiers(sub)
             hotkey_value = sub.attrib['Key']
             hotkey.append((hotkey_id, hotkey_verb, hotkey_desc, hotkey_mods,
-                hotkey_value))
+                           hotkey_value))
 
     if not hotkey:
         hotkey = [(hotkey_id, hotkey_verb, hotkey_desc, '', '')]
 
     return hotkey
+
 
 def buildcsv(parent, showinfo=True):
     """
@@ -112,14 +110,12 @@ def buildcsv(parent, showinfo=True):
     shortcuts = collections.OrderedDict()
 
     with open(parent.settings['AB_DEFS']) as _in:
-    ## with open('/home/albert/projects/hotkeys/data/abap/ABAP Editor/keymap.xml') as _in:
         tree = ET.ElementTree(file=_in)
     root = tree.getroot()
 
     keynum = 0
     for element in list(root):
 
-        ## if element.tag in ('HOTKEYSCHEMA', 'HOTKEYSCHEMA.bak'):
         if element.tag == 'HOTKEYSCHEMA':
 
             # read the defined keys
@@ -143,10 +139,10 @@ def buildcsv(parent, showinfo=True):
             for hotkey in sorted(hotkeys):
                 value, mods, num = hotkey
                 cmd, oms = commands[num]
-                if hotkey[0]: # only write if there's a key defined
+                if hotkey[0]:  # only write if there's a key defined
                     keydef = getkeyname(value)
                     keynum += 1
                     shortcuts[keynum] = [keydef, mods, cmd, oms]
 
     return shortcuts, {'command_list': command_codes_list, 'commands': commands,
-        'hotkeys': hotkeys, 'used_commands': used_commands_list}
+                       'hotkeys': hotkeys, 'used_commands': used_commands_list}

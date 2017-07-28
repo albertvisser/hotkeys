@@ -1,11 +1,12 @@
 # -*- coding: UTF-8 -*-
-import collections
-import json
-"""
+"""Hotkeys plugin for Opera 12 - not maintained anymore
+
 See example_app_keys.py for a description of the plugin API.
 Only define the functions that need to be defined, for everything
 that's not in here the default code in the main program will be used.
 """
+import collections
+import json
 ## lees /home/albert/.config/opera-developer/Preferences met een json parser
 ## Onder het hoofdniveau Keybindings subniveau Basic zit een dictionary met
 ## key = commando en value is een list met keyboard shortcuts
@@ -13,7 +14,11 @@ that's not in here the default code in the main program will be used.
         ## "BasicPrint":["Ctrl+Shift+P"],
 ## geen idee of er ergens een command list is
 ## aan de settings te zien is alles dat er is gedefinieerd
+
+
 def getkey(keystr):
+    """convert a keystroke sequence
+    """
     endsinplus = False
     if keystr.endswith('+'):
         keystr = keystr[:-1]
@@ -32,6 +37,8 @@ def getkey(keystr):
 
 
 def buildcsv(parent, showinfo=True):
+    """implementation of generic function to build the csv file
+    """
     opprefs = '/home/albert/.config/opera-developer/Preferences'
     shortcuts = collections.OrderedDict()
     commandlist = []

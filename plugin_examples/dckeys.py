@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
+"""HotKeys plugin for Double Commander PyQt5 version
+"""
 from __future__ import print_function
 
 import os
-import sys
-import string
+## import sys
+## import string
 import collections
 import functools
 import shutil
 import xml.etree.ElementTree as ET
-import bs4 as bs # import BeautifulSoup
-import PyQt4.QtGui as gui
-import PyQt4.QtCore as core
+import bs4 as bs  # import BeautifulSoup
+import PyQt5.QtWidgets as qtw
+## import PyQt5.QtGui as gui
+## import PyQt5.QtCore as core
 
 instructions = """\
 Instructions for rebuilding the keyboard shortcut definitions
@@ -30,6 +33,7 @@ it's possible to select the shortcuts file, so support for using
 a name different from the DC_PATH setting is present.
 """
 
+
 def _shorten_mods(modifier_list):
     result = ''
     if 'Ctrl' in modifier_list:
@@ -42,14 +46,16 @@ def _shorten_mods(modifier_list):
         result += 'W'
     return result
 
+
 def _translate_keynames(inp):
     "translate cursor keys as shown in html to notation in xml"
     convert = {'↑': 'Up', '↓': 'Down', '←': 'Left', '→': 'Right',
-        'Delete': 'Del', 'PgDown': 'PgDn'}
+               'Delete': 'Del', 'PgDown': 'PgDn'}
     try:
         return convert[inp.strip()]
     except KeyError:
         return inp.strip()
+
 
 def parse_keytext(text):
     """leid keynamen en modifiers op uit tekst
@@ -62,23 +68,21 @@ def parse_keytext(text):
     # split keycombos
     shortcuts = text.split(', ')
     for sc in shortcuts:
-
         # split for modifiers
         test = sc.split('+')
         keyname = test[-1]
         modifiers = test[:-1]
-
         # correct for + key
         if keyname == '':
             keyname = '+'
-            if modifiers[-1] == '': # + key not on numpad
+            if modifiers[-1] == '':  # + key not on numpad
                 modifiers.pop()
-            elif modifiers[-1] == 'Num ': # + key on numpad
+            elif modifiers[-1] == 'Num ':  # + key on numpad
                 keyname = modifiers.pop() + keyname
-
         retval.append((keyname, _shorten_mods(modifiers)))
 
     return retval
+
 
 def get_keydefs(path):
     """
@@ -116,8 +120,7 @@ def get_keydefs(path):
             else:
                 controls = ';'.join([control.text for control in test])
             key += 1
-            keydata[key] = (keyname, modifiers, context, command, parameter,
-                controls)
+            keydata[key] = (keyname, modifiers, context, command, parameter, controls)
             keydata_2[(keyname, modifiers)].append((context, command))
 
     return keydata, keydata_2
@@ -150,17 +153,20 @@ def get_stdkeys(path):
             for col in row.select('td'):
                 test = col.select('tt')
                 if test:
-                    keynames = parse_keytext(test[0].text) # kan meer dan 1 key / keycombo bevatten
+                    keynames = parse_keytext(test[0].text)  # kan meer dan 1 key / keycombo bevatten
                 else:
-                    oms = col.text # zelfde omschrijving als uit cmd's ? Heb ik deze nodig?
+                    oms = col.text  # zelfde omschrijving als uit cmd's ? Heb ik deze nodig?
             for name, mods in keynames:
                 stdkeys[(_translate_keynames(name), mods)].append((context, oms))
 
     return stdkeys
 
+
 def get_cmddict(path, stdkeys):
+    """build dictionary of commands with descriptions
+    """
     cmddict = {}
-    dflt_assign = collections.defaultdict(list) # kan wrschl een gewone dict zijn?
+    dflt_assign = collections.defaultdict(list)  # kan wrschl een gewone dict zijn?
 
     with open(path) as doc:
         soup = bs.BeautifulSoup(doc)
@@ -193,7 +199,7 @@ def get_cmddict(path, stdkeys):
             allkeys = parse_keytext(defkey)
             for key, mods in allkeys:
                 test = (_translate_keynames(key), mods)
-                dflt_assign[test].append((command, oms)) # command)
+                dflt_assign[test].append((command, oms))  # command)
                 if oms == '':
                     for context, desc in stdkeys[test]:
                         if context == 'main window':
@@ -205,20 +211,21 @@ def get_cmddict(path, stdkeys):
     return cmddict, dflt_assign
 
 
-class CompleteDialog(gui.QDialog):
-
+class CompleteDialog(qtw.QDialog):
+    """(re)definition of generic dialog used in the main program
+    """
     def __init__(self, parent):
         self.parent = parent
         ## self.captions = self.parent.captions
 
-        gui.QDialog.__init__(self, parent)
+        super().__init__(parent)
         self.resize(680, 400)
 
         self.data = self.parent.complete_data['data']
         self.outfile = self.parent.complete_data['dc_text']
         names = [x for x in self.data.keys()]
         values = [x for x in self.data.values()]
-        self.p0list = gui.QTableWidget(self)
+        self.p0list = qtw.QTableWidget(self)
         self.p0list.setColumnCount(1)
         self.p0list.setHorizontalHeaderLabels(['Description'])
         hdr = self.p0list.horizontalHeader()
@@ -226,23 +233,23 @@ class CompleteDialog(gui.QDialog):
         hdr.setStretchLastSection(True)
         for row, text in enumerate(values):
             self.p0list.insertRow(row)
-            new_item = gui.QTableWidgetItem()
+            new_item = qtw.QTableWidgetItem()
             new_item.setText(text)
             self.p0list.setItem(row, 0, new_item)
         self.p0list.setVerticalHeaderLabels(names)
         self.numrows = len(values)
 
-        self.sizer = gui.QVBoxLayout()
-        hsizer = gui.QHBoxLayout()
+        self.sizer = qtw.QVBoxLayout()
+        hsizer = qtw.QHBoxLayout()
         hsizer.addWidget(self.p0list)
         self.sizer.addLayout(hsizer)
 
-        buttonbox = gui.QDialogButtonBox()
-        btn = buttonbox.addButton(gui.QDialogButtonBox.Ok)
-        btn = buttonbox.addButton(gui.QDialogButtonBox.Cancel)
+        buttonbox = qtw.QDialogButtonBox()
+        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
-        hsizer = gui.QHBoxLayout()
+        hsizer = qtw.QHBoxLayout()
         hsizer.addStretch()
         hsizer.addWidget(buttonbox)
         hsizer.addStretch()
@@ -250,6 +257,8 @@ class CompleteDialog(gui.QDialog):
         self.setLayout(self.sizer)
 
     def accept(self):
+        """confirm changes
+        """
         new_values = {}
         for rowid in range(self.p0list.rowCount()):
             value = []
@@ -264,9 +273,9 @@ class CompleteDialog(gui.QDialog):
         if os.path.exists(self.outfile):
             shutil.copyfile(self.outfile, self.outfile + '~')
         with open(self.outfile, 'w') as _out:
-            for key, value in newvalues.items:
+            for key, value in new_values.items():
                 _out.write('{}: {}\n'.format(key, value))
-        gui.QDialog.accept(self)
+        qtw.QDialog.accept(self)
 
 
 def buildcsv(parent, showinfo=True):
@@ -287,18 +296,19 @@ def buildcsv(parent, showinfo=True):
     shortcuts = collections.OrderedDict()
     if has_page:
         try:
-            initial = parent.page.settings['DC_PATH'][0]
-            dc_keys = parent.page.settings['DC_KEYS'][0]
-            dc_cmds = parent.page.settings['DC_CMDS'][0]
+            initial = parent.page.settings['DC_PATH']
+            dc_keys = parent.page.settings['DC_KEYS']
+            dc_cmds = parent.page.settings['DC_CMDS']
         except KeyError:
             pass
     if showinfo:
-        ok = gui.QMessageBox.information(parent, parent.captions['000'],
-            instructions, gui.QMessageBox.Ok | gui.QMessageBox.Cancel)
-        if ok == gui.QMessageBox.Cancel:
+        ok = qtw.QMessageBox.information(parent, parent.title, instructions,
+                                         qtw.QMessageBox.Ok | qtw.QMessageBox.Cancel)
+        if ok == qtw.QMessageBox.Cancel:
             return
-        kbfile = gui.QFileDialog.getOpenFileName(parent, parent.captions['059'],
-            directory=initial, filter='SCF files (*.scf)')
+        kbfile = qtw.QFileDialog.getOpenFileName(parent, parent.captions['C_SELFIL'],
+                                                 directory=initial,
+                                                 filter='SCF files (*.scf)')
     else:
         kbfile = initial
     if not kbfile:
@@ -307,7 +317,7 @@ def buildcsv(parent, showinfo=True):
     keydata, definedkeys = get_keydefs(kbfile)            # alles
     ## # need to collect commands that are defined but don't have a description
     ## # add them to cmddict with empty oms and feed them to CompleteDialog
-    definedcommands = set([x[3] for x in keydata.values()])
+    ## definedcommands = set([x[3] for x in keydata.values()])
 
     stdkeys = get_stdkeys(dc_keys)
     cmddict, defaults = get_cmddict(dc_cmds, stdkeys)
@@ -328,20 +338,20 @@ def buildcsv(parent, showinfo=True):
     ## cmddocsfile = '/home/albert/.config/doublecmd/extratexts'
     ## if has_page:
         ## try:
-            ## cmddocsfile = parent.page.settings['DC_TEXTS'][0]
+            ## cmddocsfile = parent.page.settings['DC_TEXTS']
         ## except KeyError:
             ## pass
     ## if showinfo:
         ## parent.complete_data = {'data': tobecompleted, 'dc_text': cmddocsfile}
         ## dlg = CompleteDialog(parent).exec_()
-        ## if dlg == gui.QDialog.accepted:
+        ## if dlg == qtw.QDialog.accepted:
             ## tobecompleted = parent.complete_data['data']
             ## cmddocsfile = parent.complete_data['dc_text']
             ## parent.page.settings['DC_TEXTS'] = (cmddocsfile,
                 ## "File containing command descriptions that aren't in cmds.html")
     for key, value in keydata.items():
         templist = list(value)
-        val = '' # standard / customized
+        val = ''  # standard / customized
         # if keydef_from_keydata != keydef_from_stdkeys:
         #     value = 'X'
         templist.insert(2, val)
@@ -363,9 +373,9 @@ def buildcsv(parent, showinfo=True):
 
     controls = ['', 'Command Line', 'Files Panel', 'Quick Search']
     contexts = ['Main', 'Copy/Move Dialog', 'Differ', 'Edit Comment Dialog',
-        'Viewer']
+                'Viewer']
     return shortcuts, {'stdkeys': stdkeys, 'cmddict': cmddict, 'controls': controls,
-        'contexts': contexts} ##, 'manual_cmdoms': tobecompleted}
+                       'contexts': contexts}  # , 'manual_cmdoms': tobecompleted}
 
 how_to_save = """\
 Instructions to load the changed definitions back into Double Commander.
@@ -378,38 +388,36 @@ top left selector.
 You may have to close and reopen the dialog to see the changes.
 """
 
+
 def build_shortcut(key, mods):
+    """return text for key combo
+    """
+    mod2str = (('C', 'Ctrl+'), ('S', 'Shift+'), ('A', 'Alt+'), ('W', 'WinKey+'))
     result = ''
-    if 'C' in mods:
-        result += 'Ctrl+'
-    if 'S' in mods:
-        result += 'Shift+'
-    if 'A' in mods:
-        result += 'Alt+'
-    if 'W' in mods:
-        result += 'WinKey+'
+    for x, y in mod2str:
+        if x in mods:
+            result += y
     key = key.capitalize()
     return result + key
+
 
 def savekeys(parent):
     """schrijf de gegevens terug
     """
-
-    ok = gui.QMessageBox.information(parent, parent.captions['000'], how_to_save,
-        gui.QMessageBox.Ok | gui.QMessageBox.Cancel)
-    if ok == gui.QMessageBox.Cancel:
+    ok = qtw.QMessageBox.information(parent, parent.title, how_to_save,
+                                     qtw.QMessageBox.Ok | qtw.QMessageBox.Cancel)
+    if ok == qtw.QMessageBox.Cancel:
         return
-
-    kbfile = gui.QFileDialog.getSaveFileName(parent, parent.captions['059'],
-        directory=parent.settings['DC_PATH'][0], filter='SCF files (*.scf)')
+    kbfile = qtw.QFileDialog.getSaveFileName(parent, parent.captions['C_SELFIL'],
+                                             directory=parent.settings['DC_PATH'],
+                                             filter='SCF files (*.scf)')
     if not kbfile:
         return
-
     root = ET.Element('doublecmd', DCVersion="0.6.6 beta")
     head = ET.SubElement(root, 'Hotkeys', Version="20")
     oldform = ''
     for item in sorted(parent.data.values(), key=lambda x: x[3]):
-        key, mods, type_, context, cmnd, parm, ctrl, desc = item
+        key, mods, kind, context, cmnd, parm, ctrl, desc = item
         if context != oldform:
             newform = ET.SubElement(head, 'Form', Name=context)
             oldform = context
@@ -424,19 +432,21 @@ def savekeys(parent):
         if ctrl:
             control = ET.SubElement(hotkey, 'Control')
             control.text = ctrl
-
     shutil.copyfile(kbfile, kbfile + '.bak')
     ET.ElementTree(root).write(kbfile, encoding="UTF-8", xml_declaration=True)
 
 # stuff for gui elements
 
-def add_extra_attributes(win):
-     # key, mods, cmnd, params, controls
-    win.init_origdata += ['', '']
 
+def add_extra_attributes(win):
+    """stuff needed for redefining keyboard combos
+
+    key, mods, cmnd, params, controls
+    """
+    win.init_origdata += ['', '']
     win.commandsdict = win.otherstuff['cmddict']
     win.commandslist = sorted(win.commandsdict.keys())
-    win.descriptions = win.commandsdict # is this correct?
+    win.descriptions = win.commandsdict  # is this correct?
     win.contextslist = win.otherstuff['contexts']
     # not entirely correct, but will have to do for now
     win.contextactionsdict = {x: win.commandslist for x in win.contextslist}
@@ -444,58 +454,66 @@ def add_extra_attributes(win):
 
 
 def get_frameheight():
+    """return fixed height for extra panel
+    """
     return 120
 
+
 def on_combobox(win, cb, text):
+    """callback from GUI
+    """
     hlp = cb.currentText()
     if text != hlp:
         text = hlp
     win.defchanged = False
     if cb == win.cmb_controls:
-        if text != win._origdata[self.ix_controls]:
+        if text != win._origdata[win.ix_controls]:
             win._newdata[win.ix_controls] = text
             win.defchanged = True
             win.b_save.setEnabled(True)
-        elif str(win.cmb_controls.currentText()) == win._origdata[self.ix_controls]:
+        elif str(win.cmb_controls.currentText()) == win._origdata[win.ix_controls]:
             win.b_save.setEnabled(False)
+
 
 def add_extra_fields(win, box):
     """fields showing details for selected keydef, to make editing possible
     """
-    win.lbl_parms = gui.QLabel(win.captions['C_PARMS'], box)
-    win.txt_parms = gui.QLineEdit(box)
+    win.lbl_parms = qtw.QLabel(win.captions['C_PARMS'], box)
+    win.txt_parms = qtw.QLineEdit(box)
     win.txt_parms.setMaximumWidth(280)
     win.screenfields.append(win.txt_parms)
     win.ix_parms = 7
-    win.lbl_controls = gui.QLabel(win.captions['C_CTRL'], box)
-    cb = gui.QComboBox(box)
+    win.lbl_controls = qtw.QLabel(win.captions['C_CTRL'], box)
+    cb = qtw.QComboBox(box)
     cb.addItems(win.controlslist)
-    cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
-        win, cb, str))
+    cb.currentIndexChanged[str].connect(functools.partial(on_combobox, win, cb, str))
     win.screenfields.append(cb)
     win.cmb_controls = cb
     win.ix_controls = 8
 
+
 def layout_extra_fields(win, layout):
     """add the extra fields to the layout
     """
-    sizer2 = gui.QGridLayout()
+    sizer2 = qtw.QGridLayout()
     line = 0
     sizer2.addWidget(win.lbl_parms, line, 0)
     sizer2.addWidget(win.txt_parms, line, 1)
     line += 1
     sizer2.addWidget(win.lbl_controls, line, 0)
-    sizer3 = gui.QHBoxLayout()
+    sizer3 = qtw.QHBoxLayout()
     sizer3.addWidget(win.cmb_controls)
     sizer3.addStretch()
     sizer2.addLayout(sizer3, line, 1)
     layout.addLayout(sizer2, 1)
+
 
 def captions_extra_fields(win):
     """to be called on changing the language
     """
     win.lbl_parms.setText(win.captions['C_PARMS'])
     win.lbl_controls.setText(win.captions['C_CTRL'])
+
 
 def on_extra_selected(win, newdata):
     """callback on selection of an item
@@ -504,12 +522,15 @@ def on_extra_selected(win, newdata):
     win._origdata[win.ix_parms] = newdata[win.ix_parms]
     win._origdata[win.ix_controls] = newdata[win.ix_controls]
 
+
 def vul_extra_details(win, indx, item):
+    """refresh nonstandard fileds on details screen
+    """
     if win.column_info[indx][0] == 'C_PARMS':
         win.txt_parms.setText(item)
         win._origdata[win.ix_parms] = item
     elif win.parent.column_info[indx][0] == 'C_CTRL':
-        ix = win.controlslist.index(item) # TODO: adapt for multiple values
+        ix = win.controlslist.index(item)  # TODO: adapt for multiple values
         win.cmb_controls.setCurrentIndex(ix)
         win._origdata[win.ix_controls] = item
 

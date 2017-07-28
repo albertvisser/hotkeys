@@ -1,12 +1,15 @@
 # -*- coding: UTF-8 -*-
-import sys
+"""HotKeys plugin for Audacity
+"""
+## import sys
 import shutil
 import xml.etree.ElementTree as ET
 import collections
-import functools
-import string
-import PyQt4.QtGui as gui
-import PyQt4.QtCore as core
+## import functools
+## import string
+import PyQt5.QtWidgets as qtw
+## import PyQt5.QtGui as gui
+## import PyQt5.QtCore as core
 
 instructions = """\
 Instructions for rebuilding the key binding definitions
@@ -26,14 +29,18 @@ You can now take the time to perform step 1.
 Press "OK" to continue with step 2 or "Cancel" to return to the main program.
 """
 
+
 def _translate_keyname(inp):
+    """map key names in settings file to key names in HotKeys
+    """
     convert = {'Escape': 'Esc', 'Delete': 'Del', 'Return': 'Enter',
-        'Page_up': 'PgUp', 'Page_down': 'PgDn', 'NUMPAD_ENTER': 'NumEnter'}
+               'Page_up': 'PgUp', 'Page_down': 'PgDn', 'NUMPAD_ENTER': 'NumEnter'}
     if inp in convert:
         out = convert[inp]
     else:
         out = inp
     return out
+
 
 def buildcsv(parent, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
@@ -43,18 +50,18 @@ def buildcsv(parent, showinfo=True):
     otherstuff = {}
 
     try:
-        initial = parent.page.settings['AC_KEYS'][0]
+        initial = parent.page.settings['AC_KEYS']
     except KeyError:
         initial = ''
 
     if showinfo:
-        ok = gui.QMessageBox.information(parent, parent.captions['000'],
-            instructions, gui.QMessageBox.Ok | gui.QMessageBox.Cancel)
-        if ok == gui.QMessageBox.Cancel:
+        ok = qtw.QMessageBox.information(parent, parent.title, instructions,
+                                         qtw.QMessageBox.Ok | qtw.QMessageBox.Cancel)
+        if ok == qtw.QMessageBox.Cancel:
             return
 
-        gui.QFileDialog.getOpenFileName(parent, parent.captions['059'],
-                directory=initial, filter='XML files (*.xml)')
+        qtw.QFileDialog.getOpenFileName(parent, parent.captions['C_SELFIL'],
+                                        directory=initial, filter='XML files (*.xml)')
 
     else:
         kbfile = initial
@@ -64,12 +71,12 @@ def buildcsv(parent, showinfo=True):
 
     tree = ET.parse(kbfile)
     root = tree.getroot()
-    data = []
+    ## data = []
     key = 0
     commandlist = {}
     for item in root.findall('command'):
-        line = []
-        keydef = item.get('key', default = '')
+        ## line = []
+        keydef = item.get('key', default='')
         if keydef.endswith('+'):
             parts = keydef[:-1].split('+')
             parts[-1] += '+'
@@ -84,7 +91,7 @@ def buildcsv(parent, showinfo=True):
         if keyname:
             key += 1
             shortcuts[key] = (_translate_keyname(keyname), keymods, cmd_name,
-                cmd_label)
+                              cmd_label)
         commandlist[cmd_name] = cmd_label
     otherstuff['commands'] = commandlist
     return shortcuts, otherstuff
@@ -103,18 +110,20 @@ Now press "OK" to build and save the keyboard definitions file
 or "Cancel" to return to the main program.
 """
 
-def savekeys(parent):
 
-    ok = gui.QMessageBox.information(parent, parent.captions['000'], how_to_save,
-        gui.QMessageBox.Ok | gui.QMessageBox.Cancel)
-    if ok == gui.QMessageBox.Cancel:
+def savekeys(parent):
+    """schrijf de gegevens terug
+    """
+    ok = qtw.QMessageBox.information(parent, parent.title, how_to_save,
+                                     qtw.QMessageBox.Ok | qtw.QMessageBox.Cancel)
+    if ok == qtw.QMessageBox.Cancel:
         return
 
     try:
-        kbfile = parent.settings['AC_KEYS'][0]
+        kbfile = parent.settings['AC_KEYS']
     except KeyError:
-        kbfile = gui.QFileDialog.getSaveFileName(parent, parent.captions['059'],
-            filter='XML files (*.xml)')
+        kbfile = qtw.QFileDialog.getSaveFileName(parent, parent.captions['C_SELFIL'],
+                                                 filter='XML files (*.xml)')
 
     root = ET.Element('audacitykeyboard')
     root.set('audacityversion', "2.0.5")
@@ -122,15 +131,21 @@ def savekeys(parent):
         new = ET.SubElement(root, 'command')
         new.set('name', name)
         new.set('label', label)
-        if 'S' in mods: key = 'Shift+' + key
-        if 'A' in mods: key = 'Alt+' + key
-        if 'C' in mods: key = 'Ctrl+' + key
+        if 'S' in mods:
+            key = 'Shift+' + key
+        if 'A' in mods:
+            key = 'Alt+' + key
+        if 'C' in mods:
+            key = 'Ctrl+' + key
         new.set('key', key)
 
     shutil.copyfile(kbfile, kbfile + '.bak')
     ET.ElementTree(root).write(kbfile, encoding="UTF-8")
 
+
 def add_extra_attributes(win):
+    """specifics for extra panel
+    """
     win.keylist.append('NumEnter')
     win.descriptions = win.otherstuff['commands']
     win.commandslist = sorted(win.descriptions.keys())

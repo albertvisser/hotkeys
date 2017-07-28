@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
-
+"""HotKeys: non-gui and csv related functions
+"""
 import os
 import sys
 import shutil
@@ -19,7 +20,7 @@ csv_linetypes = ['Setting', 'Title', 'Width', 'is_type', 'Keydef']
 csv_settingtype, csv_keydeftype = csv_linetypes[0], csv_linetypes[-1]
 csv_titletype, csv_widthtype, csv_istypetype = csv_linetypes[1:-1]
 csv_settingnames = ['PluginName', 'PanelName', 'RebuildCSV', 'ShowDetails',
-    'RedefineKeys']
+                    'RedefineKeys']
 csv_plgsett, csv_pnlsett, csv_rbldsett, csv_detsett, csv_redefsett = csv_settingnames
 plugin_skeleton = '''# -*- coding: UTF-8 -*-\n
 """
@@ -31,22 +32,24 @@ the default code in the main program will be used.
 '''
 mode_f, mode_r = 'Fixed', 'Remember'
 named_keys = ['Insert', 'Del', 'Home', 'End', 'PgUp', 'PgDn', 'Space', 'Backspace',
-    'Tab', 'Num+', 'Num-', 'Num*', 'Num/', 'Enter', 'Esc', 'Left', 'Right', 'Up',
-    'Down', 'Letter', 'Letter(s)']
-#
-# non-gui and csv related functions
-#
+              'Tab', 'Num+', 'Num-', 'Num*', 'Num/', 'Enter', 'Esc', 'Left', 'Right',
+              'Up', 'Down', 'Letter', 'Letter(s)']
+
+
 def readlang(lang):
+    "get captions from language file"
     captions = {}
     with open(os.path.join(HERELANG, lang)) as f_in:
         for x in f_in:
             if x[0] == '#' or x.strip() == "":
                 continue
-            key, value = x.strip().split(None,1)
+            key, value = x.strip().split(None, 1)
             captions[key] = value
         return captions
 
+
 def get_csv_oms(lang):
+    "build descriptions for csv file"
     captions = readlang(lang)
     csv_oms = dict(zip(csv_settingnames + csv_linetypes[1: -1], (
         captions['T_NAMOF'].format(captions['S_PLGNAM'], captions['T_NOPY']),
@@ -56,17 +59,17 @@ def get_csv_oms(lang):
         captions['T_BOOL'].format(captions['S_RSAV']),
         captions['T_COLTTL'],
         captions['T_COLWID'],
-        captions['T_BOOL'].format(captions['T_COLIND']),
-        )))
+        captions['T_BOOL'].format(captions['T_COLIND']))))
     return csv_oms
 
+
 def build_csv_sample_data(lang):
+    "create default data lines in the csv file"
     csv_sample_data = []
     csv_oms = get_csv_oms(lang)
-    for indx, data in enumerate((
-            ['C_KEY', 'C_MODS', 'C_DESC'],
-            [120, 90, 292],
-            [0, 0, 0],)):
+    for indx, data in enumerate((['C_KEY', 'C_MODS', 'C_DESC'],
+                                 [120, 90, 292],
+                                 [0, 0, 0],)):
         name = csv_linetypes[indx + 1]
         oms = csv_oms[name]
         data.insert(0, name)
@@ -74,7 +77,9 @@ def build_csv_sample_data(lang):
         csv_sample_data.append(data)
     return csv_sample_data
 
+
 def get_pluginname(csvname):
+    "return the plugin's filename from the plugin's module name"
     with open(csvname) as _in:
         for line in _in:
             test = line.split(',')
@@ -84,8 +89,9 @@ def get_pluginname(csvname):
     # ideally we should import the given module to determine the actual file name
     return pl_name.replace('.', '/') + '.py'
 
-def read_settings(ini):
 
+def read_settings(ini):
+    "get application settings from a given location"
     settings = {}
     try:
         sett = importlib.import_module(ini)
@@ -110,8 +116,9 @@ def read_settings(ini):
         pass
     return settings
 
+
 def modify_settings(ini):
-    # modify the settings file
+    "modify the settings file at the given location"
     inifile = ini['filename']
     shutil.copyfile(inifile, inifile + '.bak')
     data = []
@@ -132,7 +139,9 @@ def modify_settings(ini):
         for line in data:
             _out.write(line)
 
+
 def change_setting(setting, old, new, inifile):
+    "change a setting and write it immediately"
     setting = setting.upper()
     shutil.copyfile(inifile, inifile + '.bak')
     with open(inifile + '.bak') as _in:
@@ -155,6 +164,7 @@ def change_setting(setting, old, new, inifile):
     with open(inifile, 'w') as _out:
         _out.writelines(lines)
 
+
 def read_columntitledata(self):
     """read the current language file and extract the already defined column headers
     """
@@ -176,18 +186,19 @@ def read_columntitledata(self):
                 continue
             test = line.split()
             if test[0] > last_textid and test[0] < '100':
-                    last_textid = test[0]
+                last_textid = test[0]
             if in_section:
                 column_textids.append(test[0])
                 column_names.append(test[1])
     return column_textids, column_names, last_textid
+
 
 def add_columntitledata(newdata):
     """add the new column title(s) to all language files
 
     input is a list of tuples (textid, text)"""
     choices = [os.path.join(HERELANG, x) for x in os.listdir(HERELANG)
-        if os.path.splitext(x)[1] == ".lng"]
+               if os.path.splitext(x)[1] == ".lng"]
     for choice in choices:
         choice_o = choice + '~'
         shutil.copyfile(choice, choice_o)
@@ -202,6 +213,7 @@ def add_columntitledata(newdata):
                     in_section = False
                 f_out.write(line)
 
+
 def update_paths(paths, pathdata, lang):
     """read the paths to the csv files from the data returned by the dialog
     if applicable also write a skeleton plugin file
@@ -215,12 +227,14 @@ def update_paths(paths, pathdata, lang):
         if name in pathdata:
             data = pathdata[name]       # bv. ['editor.plugins.gitrefs_keys', 'gitrefs hotkeys', 0, 0, 0]
             parts = data[0].split('.')
-            if parts[0] == '': parts = parts[1:]
+            if parts[0] == '':
+                parts = parts[1:]
             newfile = os.path.join(updir, *parts) + '.py'
             with open(newfile, 'w') as _out:
                 _out.write(plugin_skeleton)
             initcsv(os.path.join(updir, loc), data, lang)
     return newpaths
+
 
 def initcsv(loc, data, lang):
     """Initialize csv file
@@ -235,6 +249,7 @@ def initcsv(loc, data, lang):
         for row in build_csv_sample_data(lang):
             wrt.writerow(row)
 
+
 def readcsv(pad):
     """lees het csv bestand op het aangegeven pad en geeft de inhoud terug
 
@@ -246,7 +261,7 @@ def readcsv(pad):
     with open(pad, 'r') as _in:
         rdr = csv.reader(_in)
         key = 0
-        first = True
+        ## first = True
         for row in rdr:
             rowtype, rowdata = row[0], row[1:]
             if rowtype == csv_settingtype:
@@ -272,7 +287,10 @@ def readcsv(pad):
                 raise ValueError(rowtype)
     return settings, coldata, data
 
+
 def writecsv(pad, settings, coldata, data, lang):
+    """schrijf de meegegeven data als csv bestand naar de aangegeven locatie
+    """
     csvoms = get_csv_oms(lang)
     if os.path.exists(pad):
         shutil.copyfile(pad, pad + '~')
@@ -289,10 +307,11 @@ def writecsv(pad, settings, coldata, data, lang):
             row += [x[ix] for x in coldata] + [csvoms[row[0]]]
             wrt.writerow(row)
         wrt.writerow([csv_istypetype] + [int(x[2]) for x in coldata] +
-            [csvoms[csv_istypetype]])
+                     [csvoms[csv_istypetype]])
         for keydef in data.values():
             row = [csv_keydeftype] + [x for x in keydef]
             wrt.writerow(row)
+
 
 def quick_check(filename):
     """quick and dirty function for checking a csv file outside of the application
@@ -308,9 +327,9 @@ def quick_check(filename):
     for key, data in items:
         try:
             for indx, col in enumerate(column_info):
-                is_soort = col[2]
-                value = data[indx]
-        except Exception as e:
+                ## is_soort = col[2]
+                data[indx]
+        except Exception:
             print(key, data)
             raise
     print('{}: No errors found'.format(filename))

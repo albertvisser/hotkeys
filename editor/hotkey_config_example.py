@@ -10,7 +10,7 @@ PLUGINS = [
     ]
 # interface language
 # name (not full path) of the current language file
-LANG='english.lng'
+LANG = 'english.lng'
 # application to show: selected or remember on closing
 STARTUP = 'Remember'
 # application to show on startup

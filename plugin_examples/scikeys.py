@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
-usage: scikeys.py <csvfile>
+"""Hotkeys plugin for SciTE
 """
 from __future__ import print_function
 import os
 import sys
 import collections                  # tbv defaultdict
-import bs4 as bs                    # import BeautifulSoup for html parsing
 import tarfile                      # t.b.v. read_source
-
+## import xml.etree.ElementTree as et  # for xml parsing
+import bs4 as bs                  # import BeautifulSoup for html parsing
 
 
 def nicefy_props(data):
@@ -41,6 +40,7 @@ def nicefy_source(data):
         mods += 'S'
     return key, mods
 
+
 def read_commands(path):
     """read names/ids of menu commands and internal commands from Commandvalues.html
 
@@ -51,7 +51,7 @@ def read_commands(path):
 
     menus, internals = soup.find_all('table')
 
-    menu_commands, keydefs = {}, {}
+    menu_commands = {}
     for row in menus.find_all('tr'):
         command, text = [tag.string for tag in row.find_all('td')]
         menu_commands[command] = text
@@ -109,11 +109,14 @@ def read_source_gtk(fname):
             menu_keys.append((key, mods, command))
         else:
             in_menu = 'menuItems[] =' in line
-            if in_menu: continue
+            if in_menu:
+                continue
             in_menu = 'menuItemsOptions[] =' in line
-            if in_menu: continue
+            if in_menu:
+                continue
             in_menu = 'menuItemsBuffer[] =' in line
-            if in_menu: continue
+            if in_menu:
+                continue
             in_menu = 'menuItemsHelp[] =' in line
     return menu_keys
 
@@ -122,7 +125,7 @@ def read_source_win(fname=''):
     """get keydefs from a given SciTE source file (Windows version)
 
     definitions are like
-    	MENUITEM "Open Selected &Filename\tCtrl+Shift+O",	IDM_OPENSELECTED
+    MENUITEM "Open Selected &Filename\tCtrl+Shift+O",	IDM_OPENSELECTED
     """
     menu_keys = []
     # TODO: finish this method
@@ -140,14 +143,14 @@ class PropertiesFile():
         self._continue_assignment = False
         self._platform = self._default_platform
         self._fnaam = fnaam
-        self._acceptable_combinations = (
-            ('PLAT_WIN', 'PLAT_WIN_GTK'),
-            ('PLAT_GTK', 'PLAT_WIN_GTK'),
-            ('PLAT_GTK', 'PLAT_UNIX'),
-            ('PLAT_MAC', 'PLAT_UNIX'),
-            )
+        self._acceptable_combinations = (('PLAT_WIN', 'PLAT_WIN_GTK'),
+                                         ('PLAT_GTK', 'PLAT_WIN_GTK'),
+                                         ('PLAT_GTK', 'PLAT_UNIX'),
+                                         ('PLAT_MAC', 'PLAT_UNIX'))
 
     def _determine_platform(self, line):
+        """check if definition is meant for a specific platform (e.g. win, gtk)
+        """
         skip_line = False
         # reset platform on unindent
         if self._platform != self._default_platform and line.lstrip() == line:
@@ -176,6 +179,8 @@ class PropertiesFile():
         return result
 
     def read_props(self):
+        """read a properties file
+        """
         try:
             with open(self._fnaam) as _in:
                 self._data = _in.read()
@@ -214,55 +219,59 @@ class PropertiesFile():
                 self.properties[prop][self._platform] = value
 
     def get_keydef_props(self):
-        self.data = [] # platgeslagen versie van self.properties
+        """extract the keydef properties from the file data
+        """
+        self.data = []  # platgeslagen versie van self.properties
         number_commands = collections.defaultdict(list)
         number_shortcuts = collections.defaultdict(list)
         number_descriptions = collections.defaultdict(list)
 
         for platform, data in self.properties['user.shortcuts'].items():
             test = data.split('|')
-            for x in range(0, len(test)-1, 2):
+            for x in range(0, len(test) - 1, 2):
                 key, mods = nicefy_props(test[x])
                 self.data.append((key, mods, '*', platform, test[x + 1], ''))
 
         for platform, data in self.properties['menu.language'].items():
             test = data.split('|')
-            for x in range(0, len(test)-1, 3):
+            for x in range(0, len(test) - 1, 3):
                 if test[x + 2]:
                     test[x] = test[x].replace('&', '')
                     key, mods = nicefy_props(test[x + 2])
-                    self.data.append((key, mods, '*', platform, '',
-                        'Show as {} (*.{})'.format(test[x], test[x + 1])))
+                    self.data.append((key, mods, '*', platform, '', 'Show as '
+                                      '{} (*.{})'.format(test[x], test[x + 1])))
 
         namedkeys = {'help': 'F1', 'compile': 'Ctrl+F7', 'build': 'F7',
-                'clean': 'Shift+F7', 'go': 'F5', 'print': 'Ctrl+P'}
+                     'clean': 'Shift+F7', 'go': 'F5', 'print': 'Ctrl+P'}
         for name, value in self.properties.items():
             if name.startswith('command.'):
                 test = name.split('.', 3)
                 # namedkeys helemaal overslaan?
                 if test[1].isdigit() or test[1] in namedkeys:
-                    if test[2] in ('subsystem', 'needs'): continue
+                    if test[2] in ('subsystem', 'needs'):
+                        continue
                     context = name.split('.', 2)[-1]
                 else:
-                    if test[1] not in ('shortcut', 'name'): continue
+                    if test[1] not in ('shortcut', 'name'):
+                        continue
                     context = test[3]
                 for platform, data in value.items():
                     if test[1] in namedkeys:
                         key, mods = nicefy_props(namedkeys[test[1]])
                         self.data.append((key, mods, context, platform,
-                            data, test[1]))
+                                          data, test[1]))
                     elif test[1] == 'shortcut':
                         number_shortcuts['11' + test[2]].append((context, platform,
-                            data))
+                                                                 data))
                     elif test[1] == 'name':
                         number_descriptions['11' + test[2]].append((context, platform,
-                            data))
+                                                                    data))
                     # Ctrl-1 (command & name) hier net zo afhandelen als de andere
                     ## elif len(test[1]) == 1:
                         ## self.data.append((test[1], 'C', context, platform, data))
                     else:
                         number_commands['11' + test[1]].append((context, platform,
-                            data))
+                                                                data))
 
         data = []
         for ix, item in enumerate(self.data):
@@ -299,13 +308,15 @@ class PropertiesFile():
                             found = True
                             data.append(nicefy_props(defkey[2]) + defitem)
                             break
+                    if found:
+                        break
         for key, value in number_shortcuts.items():
             if key in number_descriptions:
                 for defkey in value:
                     found = False
                     for defitem in number_descriptions[key]:
                         if defkey[:2] == defitem[:2]:
-                            found = True
+                            ## found = True
                             test = nicefy_props(defkey[2]) + defitem[:2]
                             for ix, item in enumerate(data):
                                 if item[:len(test)] == test:
@@ -313,25 +324,35 @@ class PropertiesFile():
                                     data[ix] = list(item)
                                     data[ix].append(defitem[-1])
                                     break
+                            if found:
+                                break
+                        if found:
+                            break
+                    if found:
+                        break
 
         for key, value in number_commands.items():
             if len(key) != 3:
                 continue
             if key in number_descriptions:
                 for defkey in value:
-                    found = False
+                    ## found = False
                     for defitem in number_descriptions[key]:
                         if defkey[:2] == defitem[:2]:
-                            found = True
-                            data.append([key[2], 'C'] + list(defkey) + list(defitem[-1:]))
+                            ## found = True
+                            data.append(
+                                [key[2], 'C'] + list(defkey) + list(defitem[-1:]))
                             break
             else:
                 for defkey in value:
                     data.append([key[2], 'C'] + list(defkey) + [''])
 
-        for item in data: self.data.append(tuple(item))
+        for item in data:
+            self.data.append(tuple(item))
 
     def _do_substitutions(self, prop, value):
+        """helper method to substitute symbols by values definied earlies in the file
+        """
         # start variable substitution in prop
         regel = ""
         test = prop.split(self._var_start)
@@ -373,7 +394,7 @@ class PropertiesFile():
                 print('no substitution possible for', varnaam, '->', regel)
                 continue
             # current platform is not defined for this property
-            if variants: # can't work with  regel  anymore
+            if variants:  # can't work with  regel  anymore
                 for platform, data in variants.items():
                     try:
                         data += self.properties[varnaam][platform] + eind
@@ -402,18 +423,22 @@ class PropertiesFile():
         return returnvalues
 
     def _create_variants(self, varnaam, regel, eind):
+        """helper method to create multiple definitions for a property if applicable
+        """
         returnvalues = []
         # create variants for defined substitutions
         for defined_platform in self.properties[varnaam]:
-            returnvalues.append((defined_platform,
-                regel + self.properties[varnaam][defined_platform] + eind))
+            returnvalues.append((defined_platform, regel +
+                                 self.properties[varnaam][defined_platform] + eind))
         return returnvalues
 
     def _expand_from_other(self, varnaam, regel, eind):
+        """helper method to expand definition if applicable
+        """
         found = False
         for defined_platform, definition in self.properties[varnaam].items():
-            if defined_platform == self._default_platform or (self._platform,
-                    defined_platform) in self._acceptable_combinations:
+            if defined_platform == self._default_platform or \
+                    (self._platform, defined_platform) in self._acceptable_combinations:
                 found = True
                 break
         if found:
@@ -421,6 +446,7 @@ class PropertiesFile():
         else:
             regel = ''
         return regel
+
 
 def buildcsv(parent, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
@@ -441,20 +467,19 @@ def buildcsv(parent, showinfo=True):
         ## 'SCI_SRCE': ('/home/albert/Downloads/SciTE/scite353.tgz', '')
         ## }
     special_keys = ('help', 'go', 'build', 'compile', 'clean')
-    menu_commands, command_list, command_names = read_commands(
-        settings['SCI_CMDS'][0])
+    menu_commands, command_list, command_names = read_commands(settings['SCI_CMDS'])
 
-    data = tarfile.open(settings['SCI_SRCE'][0])
+    data = tarfile.open(settings['SCI_SRCE'])
     data.extractall(path='/tmp')
     if sys.platform.startswith('linux'):
         menu_keys = read_source_gtk('/tmp/scite/gtk/SciTEGTK.cxx')
     elif sys.platform.startswith('win32'):
         menu_keys = read_source_win('/tmp/scite/win32/SciTERes.rc')
 
-    keydefs = read_docs(settings['SCI_DOCS'][0]) # non menu keyboard bindings
+    keydefs = read_docs(settings['SCI_DOCS'])  # non menu keyboard bindings
 
     global_keys = []
-    root = os.path.dirname(settings['SCI_GLBL'][0])
+    root = os.path.dirname(settings['SCI_GLBL'])
     for path in os.listdir(root):
         fname = os.path.join(root, path)
         name, ext = os.path.splitext(path)
@@ -464,10 +489,10 @@ def buildcsv(parent, showinfo=True):
             globals.read_props()
             globals.get_keydef_props()
             global_keys += [x for x in globals.data
-                if x[4] and x[5] not in special_keys]
+                            if x[4] and x[5] not in special_keys]
 
     user_keys = []
-    root = os.path.dirname(settings['SCI_USER'][0])
+    root = os.path.dirname(settings['SCI_USER'])
     for path in os.listdir(root):
         fname = os.path.join(root, path)
         _, ext = os.path.splitext(path)
@@ -476,7 +501,7 @@ def buildcsv(parent, showinfo=True):
             user_.read_props()
             user_.get_keydef_props()
             user_keys += [x for x in user_.data
-                if x[4] and x[5] not in special_keys]
+                          if x[4] and x[5] not in special_keys]
 
     # now put the above stuff together
     # menu_commands - dict: map command naam op omschrijving
@@ -493,17 +518,25 @@ def buildcsv(parent, showinfo=True):
 
     sentinel = (chr(255), '', '', '')
     gen_def = (x for x in sorted(default_keys))
+
     def get_next_defitem():
+        """next item from generator or None
+        """
         try:
             return next(gen_def)
         except StopIteration:
             return
+
     user_def = (x for x in sorted(userdef_keys))
+
     def get_next_useritem():
+        """next item from generator or None
+        """
         try:
             return next(user_def)
         except StopIteration:
             return
+
     num = 0
     shortcuts = collections.OrderedDict()
     def_item = get_next_defitem()
@@ -534,8 +567,9 @@ def buildcsv(parent, showinfo=True):
             new_item[-1] = "Switch to buffer " + str(int(test[-1]) + 1)
         shortcuts[num] = new_item
     return shortcuts, {'menucommands': menu_commands, 'commandlist': command_list,
-        'command_names': command_names, 'menukeys': menu_keys, 'keydefs': keydefs,
-        'default_keys': global_keys}
+                       'command_names': command_names, 'menukeys': menu_keys,
+                       'keydefs': keydefs, 'default_keys': global_keys}
+
 
 def savekeys(parent):
     """schrijf de gegevens terug
@@ -546,4 +580,3 @@ def savekeys(parent):
     waren er niet nog meer mogelijkheden? Ja: menu.language en command.shortcut
     """
     pass
-

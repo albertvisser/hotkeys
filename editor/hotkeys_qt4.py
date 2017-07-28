@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-"""hotkeys.py
+"""hotkeys.py PyQt4 version - currently unmaintained
 
     main gui (choicebook)
     importeert de verschillende applicatiemodules
