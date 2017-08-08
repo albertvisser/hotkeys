@@ -217,7 +217,7 @@ def m_col(self):
         self.page.p0list.setHeaderLabels([self.captions[col[0]] for col in
                                           self.page.column_info])
         hdr = self.page.p0list.header()
-        hdr.setClickable(True)
+        hdr.setSectionsClickable(True)
         for indx, col in enumerate(self.page.column_info):
             hdr.resizeSection(indx, col[1])
         hdr.setStretchLastSection(True)
@@ -1468,7 +1468,7 @@ class HotkeyPanel(qtw.QFrame):
         if 'C_MODS' in self.fields:
             self.init_origdata += [False, False, False, False]
             self.ix_mods = []
-            for _ in self.init_origdata:  # for i in range(4):
+            for _ in range(4):
                 self.ix_mods.append(ix_item)
                 ix_item += 1
         if 'C_CNTXT' in self.fields:
@@ -2097,7 +2097,6 @@ class MainFrame(qtw.QMainWindow):
             start = [x for x, y in self.ini['plugins']].index(self.ini['initial'])
         self.book.sel.setCurrentIndex(start)
         self.setcaptions()
-        self.show()
 
     def show_empty_screen(self):
         """what to do when there's no data to show
@@ -2230,7 +2229,8 @@ def main(args=None):
     """launch the application
     """
     app = qtw.QApplication(sys.argv)
-    MainFrame(args)
+    win = MainFrame(args)
+    win.show()
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
