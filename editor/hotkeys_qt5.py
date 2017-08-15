@@ -151,7 +151,7 @@ def m_rebuild(self):
         ## raise
         show_message(self, 'I_DEFRBLD')
         return
-    if newdata:
+    if newdata[0]:
         self.page.data = newdata[0]
         self.page.otherstuff = newdata[1]
         hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
