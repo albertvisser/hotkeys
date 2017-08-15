@@ -9,6 +9,7 @@ T_HELLO Welkom bij {}
 C_KEY Toets
 C_TYPE Soort
 C_CMD Commando
+C_ABBR Afkorting
 C_DESC Omschrijving
 C_MODS Modifier(s)
 C_CODE Code

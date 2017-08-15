@@ -9,6 +9,7 @@ T_HELLO Welcome to
 C_KEY Key
 C_TYPE Type
 C_CMD Command
+C_ABBR Abbreviation
 C_DESC Description
 C_MODS Modifier(s)
 C_CODE Code

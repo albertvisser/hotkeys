@@ -597,7 +597,7 @@ class ColumnSettingsDialog(qtw.QDialog):
         old_colno = "new" if colno == '' else colno
         self.data.append((w_name, w_width, w_colno, w_flag, old_colno))
         vbar = self.scrl.verticalScrollBar()
-        vbar.setMaximum(vbar.maximum() + 31)
+        vbar.setMaximum(vbar.maximum() + 62)
         vbar.setValue(vbar.maximum())
 
     def delete_row(self, rownum):
@@ -743,9 +743,10 @@ class ExtraSettingsDialog(qtw.QDialog):
         rownum = 0
         self.rownum = rownum
         self.data, self.checks = [], []
+        print([x for x in self.parent.page.settings.keys()])
         for name, value in self.parent.page.settings.items():
-            if name not in hkc.csv_settingnames:
-                desc = self.parent.page.data[name]
+            if name not in hkc.csv_settingnames and name != 'extra':
+                desc = self.parent.page.settings['extra'][name]
                 self.add_row(name, value, desc)
         pnl2.setLayout(self.gsizer)
         pnl.setFrameStyle(qtw.QFrame.Box)
@@ -839,11 +840,11 @@ class ExtraSettingsDialog(qtw.QDialog):
         self.parent.page.settings[hkc.csv_pnlsett] = self.t_title.text()
         value = '1' if self.c_rebuild.isChecked() else '0'
         self.parent.page.settings[hkc.csv_rbldsett] = value
-        try:
-            oms = self.parent.page.settings[hkc.csv_detsett]    # oms variable not used?
-        except KeyError:
-            oms = self.parent.captions['T_BOOL'].format(
-                self.parent.captions['S_DETS'])
+        ## try:
+            ## oms = self.parent.page.settings[hkc.csv_detsett]    # oms variable not used?
+        ## except KeyError:
+            ## oms = self.parent.captions['T_BOOL'].format(
+                ## self.parent.captions['S_DETS'])
         value = '1' if self.c_showdet.isChecked() else '0'
         self.parent.page.settings[hkc.csv_detsett] = value
         value = '1' if self.c_redef.isChecked() else '0'
@@ -861,7 +862,7 @@ class ExtraSettingsDialog(qtw.QDialog):
         for setting in todelete:
             del self.parent.page.settings[setting]
         self.parent.page.settings.update(settingsdict)
-        self.parent.page.data.update(settdescdict)
+        self.parent.page.settings['extra'] = settdescdict
 
         super().accept()
 
@@ -1023,7 +1024,7 @@ class FilesDialog(qtw.QDialog):
             self.loc = ""
             if ask_question(self.parent, 'P_INICSV'):
                 ok = SetupDialog(self, newtool).exec_()
-                print(self.data)
+                ## print(self.data)
             self.add_row(newtool, path=self.loc)
 
     def remove_programs(self):
@@ -1127,6 +1128,8 @@ class EntryDialog(qtw.QDialog):
             new_item.setText("")
             self.p0list.setItem(self.numrows, i, new_item)
         self.numrows += 1
+        ## self.p0list.scrollToItem(new_item)
+        self.p0list.scrollToBottom()
 
     def delete_key(self):
         "remove selected line(s) from the grid"
