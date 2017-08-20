@@ -308,7 +308,7 @@ def buildcsv(parent, showinfo=True):
             return
         kbfile = qtw.QFileDialog.getOpenFileName(parent, parent.captions['C_SELFIL'],
                                                  directory=initial,
-                                                 filter='SCF files (*.scf)')
+                                                 filter='SCF files (*.scf)')[0]
     else:
         kbfile = initial
     if not kbfile:

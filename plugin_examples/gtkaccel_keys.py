@@ -38,7 +38,7 @@ def buildcsv(settname, parent, showinfo=True):
         initial = ''
     if showinfo:
         kbfile = qtw.QFileDialog.getOpenFileName(parent, parent.captions['C_SELFIL'],
-                                                 directory=initial)
+                                                 directory=initial)[0]
     else:
         kbfile = initial
     if not kbfile:

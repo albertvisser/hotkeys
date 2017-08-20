@@ -54,20 +54,18 @@ def buildcsv(parent, showinfo=True):
     except KeyError:
         initial = ''
 
+    kbfile = ''
     if showinfo:
         ok = qtw.QMessageBox.information(parent, parent.title, instructions,
                                          qtw.QMessageBox.Ok | qtw.QMessageBox.Cancel)
-        if ok == qtw.QMessageBox.Cancel:
-            return
-
-        qtw.QFileDialog.getOpenFileName(parent, parent.captions['C_SELFIL'],
-                                        directory=initial, filter='XML files (*.xml)')
-
+        if ok == qtw.QMessageBox.Ok:
+            kbfile = qtw.QFileDialog.getOpenFileName(
+                parent, parent.captions['C_SELFIL'], directory=initial,
+                filter='XML files (*.xml)')[0]
     else:
         kbfile = initial
-
     if not kbfile:
-        return
+        return [], []
 
     tree = ET.parse(kbfile)
     root = tree.getroot()

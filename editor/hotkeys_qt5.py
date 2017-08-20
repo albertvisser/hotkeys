@@ -1384,7 +1384,7 @@ class HotkeyPanel(qtw.QFrame):
     def savekeys(self):
         """save modified keydef back
 
-        allows saving back to csv without saving to the tool settings
+        allows saving back to csv without (?) saving to the tool settings
         """
         self.parent.data = self.data
         try:
