@@ -17,6 +17,7 @@ import sys
 import string
 import functools
 import importlib
+import logging
 import PyQt5.QtWidgets as qtw
 ## import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
@@ -25,9 +26,8 @@ import editor.hotkeys_constants as hkc
 CONF = 'editor.hotkey_config'  # default configuration file
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+
 # shared (menu) functions
-
-
 def show_message(win, message_id='', text=''):
     """toon de boodschap geïdentificeerd door <message_id> in een dialoog
     met als titel aangegeven door <caption_id>
@@ -289,9 +289,10 @@ def m_exit(self):
     self.exit()
 
 
+
+
 # application classes (dialog)
-
-
+# TODO: Als redefine keys is aangevinkt moet show keydef details ook aangevinkt worden
 class InitialToolDialog(qtw.QDialog):
     """dialog to define which tool to show on startup
     """
@@ -1156,9 +1157,9 @@ class EntryDialog(qtw.QDialog):
         self.parent.page.data = new_values
         super().accept()
 
+
+
 # general callbacks (I think)
-
-
 def on_text(self, ted, text):
     """on changing a text entry
     """
@@ -1274,9 +1275,9 @@ def on_checkbox(self, cb, state):
             if 'C_CMD' in self.fields:
                 self.b_save.setEnabled(False)
 
+
+
 # application classes (main screen and subscreens)
-
-
 class HotkeyPanel(qtw.QFrame):
     """base class voor het gedeelte van het hoofdscherm met de listcontrol erin
 
@@ -1302,8 +1303,10 @@ class HotkeyPanel(qtw.QFrame):
         try:
             self.settings, self.column_info, self.data = hkc.readcsv(self.pad)
         except ValueError as e:
+            logging.exception('')
             nodata = self.captions['I_NOSET'].format(e, self.pad)
         except FileNotFoundError:
+            logging.exception('')
             nodata = self.captions['I_NOSETFIL'].format(self.pad)
         if nodata:
             self.settings, self.column_info, self.data = {}, [], {}
@@ -1317,6 +1320,7 @@ class HotkeyPanel(qtw.QFrame):
             try:
                 self._keys = importlib.import_module(modulename)
             except ImportError:
+                logging.exception('')
                 nodata = self.captions['I_NODATA'].replace('data', 'plugin code')
         if nodata:
             _sizer = qtw.QVBoxLayout()

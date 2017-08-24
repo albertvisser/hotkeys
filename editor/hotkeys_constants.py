@@ -7,6 +7,7 @@ import shutil
 import collections
 import csv
 import importlib
+import logging
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 HERELANG = os.path.join(HERE, 'languages')
@@ -15,6 +16,17 @@ AUTH = "(C) 2008-today Albert Visser"
 WIN = True if sys.platform == "win32" else False
 ## LIN = True if sys.platform == 'linux2' else False
 LIN = True if os.name == 'posix' else False
+
+logging.basicConfig(
+    filename=os.path.join(HERE, 'logs', 'hotkeys.log'),
+    level=logging.DEBUG,
+    format='%(asctime)s %(message)s')
+
+
+def log(message, always=False):
+    "output to log"
+    if always or os.environ.get("DEBUG", '') not in ('',  "0"):
+        logging.info(message)
 
 csv_linetypes = ['Setting', 'Title', 'Width', 'is_type', 'Keydef']
 csv_settingtype, csv_keydeftype = csv_linetypes[0], csv_linetypes[-1]
@@ -184,7 +196,7 @@ def read_columntitledata(self):
                 elif 'Keyboard mapping' in line:
                     in_section = True
                 continue
-            test = line.split()
+            test = line.split(None, 1)
             if test[0] > last_textid and test[0] < '100':
                 last_textid = test[0]
             if in_section:
@@ -295,11 +307,15 @@ def writecsv(pad, settings, coldata, data, lang):
     """schrijf de meegegeven data als csv bestand naar de aangegeven locatie
     """
     csvoms = get_csv_oms(lang)
+    extrasettoms = ''
     if os.path.exists(pad):
         shutil.copyfile(pad, pad + '~')
+    try:
+        extrasettoms = settings.pop('extra')
+    except KeyError:
+        logging.exception('')
     with open(pad, "w") as _out:
         wrt = csv.writer(_out)
-        extrasettoms = settings.pop('extra')
         for name, value in settings.items():
             try:
                 settdesc = csvoms[name]
@@ -315,6 +331,8 @@ def writecsv(pad, settings, coldata, data, lang):
         for keydef in data.values():
             row = [csv_keydeftype] + [x for x in keydef]
             wrt.writerow(row)
+    if extrasettoms:
+        settings['extra'] = extrasettoms
 
 
 def quick_check(filename):
