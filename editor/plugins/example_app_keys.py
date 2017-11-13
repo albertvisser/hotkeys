@@ -2,8 +2,9 @@
 
 # uncomment these where appropriate
 # import collections
-# import PyQt4.QtGui as gui
-# import PyQt4.QtCore as core
+# import PyQt5.QtWidgets as qtw
+# import PyQt5.QtGui as gui
+# import PyQt5.QtCore as core
 
 # uncomment this to define a routine to (re)build the csv file from source data
 # showinfo is a switch for in case you want to show instructions
@@ -33,7 +34,7 @@
 # box is a reference to the screen layout
 # def layout_extra_fields(win, box):
 #     "add the specific fields to the layout"
-#     sizer = gui.QBoxLayout()
+#     sizer = qtw.QBoxLayout()
 #     sizer.addWidget(win.fieldname)
 #     box.addLayout(sizer)
 # cb refers to the widget, text to the choice made

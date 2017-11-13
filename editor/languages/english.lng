@@ -56,13 +56,13 @@ C_REMKEY &Delete selected keydef(s)
 C_KTXT Key:
 C_CTXT Map key to:
 C_SELPRG Select tool:
-C_FIND Find tekst in description:
+C_FIND Find text in description:
 C_SELFIL Choose a file
 C_PRGNAM Program
 C_CSVLOC Location of the CSV-file
 T_TOOLS Using this dialog you can determine for which programs keyboard definitions will be shown / and where these are located (in the form of csv files)
 T_SHORT A hotkey viewer/editor
-T_LONG originally built for Total Commander / extended for use with / all your favourite applications
+T_LONG Originally built for Total Commander / extended for use with / all your favourite applications
 T_XTRASET Define extra settings (e.g. location of keyboard config files) for {}
 C_NAM Name
 C_VAL Value / Description
