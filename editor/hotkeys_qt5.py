@@ -24,7 +24,7 @@ import PyQt5.QtCore as core
 
 import editor.hotkeys_constants as hkc
 CONF = 'editor.hotkey_config'  # default configuration file
-BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE = str(hkc.HERE.parent)
 
 
 # shared (menu) functions
@@ -129,7 +129,10 @@ def m_loc(self):
                 else:  # take data from different location
                     win = HotkeyPanel(self.book, new_loc)
             else:  # new entry
-                win = HotkeyPanel(self.book, new_paths[indx])
+                loc = new_paths[indx]
+                if not os.path.exists(loc):
+                    loc = os.path.join(BASE, loc)
+                win = HotkeyPanel(self.book, loc)
             self.book.sel.addItem(program)
             self.book.pnl.addWidget(win)
         if self.last_added:
@@ -1038,8 +1041,30 @@ class FilesDialog(qtw.QDialog):
                 for row, name in reversed(checked):
                     try:
                         csv_name, prg_name = self.parent.pluginfiles[name]
+                        # bestaande plugin: csv naam kan bepaald worden, prg naam niet
                     except KeyError:
+                        logging.exception('')
                         csv_name, prg_name = self.parent.ini['plugins'], None
+                        # zojuist opgevoerde plugin wordt weer verwijderd
+                        # doorgeven hele ini verzameling slaat nergens op
+                        # prg naam staat hier niet in
+                        # om het navolgende te voorkomen moet pluginfiles ook zsm
+                        # worden bijgewerkt
+                        for key, value in self.parent.ini['plugins']:
+                            if key == name:
+                                csv_name = value
+                                break
+                        try:
+                            _csv = open(csv_name)
+                        except FileNotFoundError:
+                            _csv = open(os.path.join(BASE, csv_name)
+                        with _csv:
+                            w = csv.reader(_csv)
+                            for row in reader:
+                                if row[0] == 'Setting' and row[1] == 'PluginName':
+                                    prg_name = row[2]
+                    logging.info('csv name is {}'.format(csv_name))
+                    logging.info('prg name is {}'.format(prg_name))
                     if self.remove_data:
                         if csv_name:
                             self.data_to_remove.append(csv_name)
@@ -1913,6 +1938,7 @@ class ChoiceBook(qtw.QFrame):
                 fl = ''
             else:
                 fl = win._keys.__file__
+            # blijkbaar levert dit altijd een lege fl op? Of alleen als er geen data is?
             self.parent.pluginfiles[txt] = (loc, fl)
             self.sel.addItem(txt)
         self.b_exit = qtw.QPushButton(self.parent.captions['C_EXIT'], self)

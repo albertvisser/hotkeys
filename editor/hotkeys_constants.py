@@ -3,14 +3,15 @@
 """
 import os
 import sys
+import pathlib
 import shutil
 import collections
 import csv
 import importlib
 import logging
 
-HERE = os.path.abspath(os.path.dirname(__file__))
-HERELANG = os.path.join(HERE, 'languages')
+HERE = pathlib.Path(__file__).parent.resolve()  # os.path.abspath(os.path.dirname(__file__))
+HERELANG = HERE / 'languages'    # os.path.join(HERE, 'languages')
 VRS = "2.1.x"
 AUTH = "(C) 2008-today Albert Visser"
 WIN = True if sys.platform == "win32" else False
@@ -18,7 +19,7 @@ WIN = True if sys.platform == "win32" else False
 LIN = True if os.name == 'posix' else False
 
 logging.basicConfig(
-    filename=os.path.join(HERE, 'logs', 'hotkeys.log'),
+    filename=str(HERE / 'logs' / 'hotkeys.log'),
     level=logging.DEBUG,
     format='%(asctime)s %(message)s')
 
@@ -51,7 +52,7 @@ named_keys = ['Insert', 'Del', 'Home', 'End', 'PgUp', 'PgDn', 'Space', 'Backspac
 def readlang(lang):
     "get captions from language file"
     captions = {}
-    with open(os.path.join(HERELANG, lang)) as f_in:
+    with (HERELANG / lang).open() as f_in:
         for x in f_in:
             if x[0] == '#' or x.strip() == "":
                 continue
@@ -185,7 +186,7 @@ def read_columntitledata(self):
     last_textid = ''
     in_section = False
 
-    with open(os.path.join(HERELANG, self.parent.ini["lang"])) as f_in:
+    with (HERELANG / self.parent.ini["lang"]).open() as f_in:
         for line in f_in:
             line = line.strip()
             if line == '':
@@ -209,13 +210,16 @@ def add_columntitledata(newdata):
     """add the new column title(s) to all language files
 
     input is a list of tuples (textid, text)"""
-    choices = [os.path.join(HERELANG, x) for x in os.listdir(HERELANG)
-               if os.path.splitext(x)[1] == ".lng"]
+    ## with os.scandir(HERELANG) as choices:
+    choices =  os.scandir(HERELANG)
     for choice in choices:
-        choice_o = choice + '~'
-        shutil.copyfile(choice, choice_o)
+        choice_file = pathlib.Path(choice.path)
+        if choice_file.suffix != '.lng':
+            continue
+        choice_o = pathlib.Path(choice.path + '~')
+        shutil.copyfile(str(choice), str(choice_o))
         in_section = False
-        with open(choice_o) as f_in, open(choice, 'w') as f_out:
+        with choice_o.open() as f_in, choice.open('w') as f_out:
             for line in f_in:
                 if line.startswith('# Keyboard mapping'):
                     in_section = True
@@ -230,7 +234,7 @@ def update_paths(paths, pathdata, lang):
     """read the paths to the csv files from the data returned by the dialog
     if applicable also write a skeleton plugin file
     """
-    updir = os.path.dirname(HERE)
+    updir = HERE.parent
     newpaths = []
     for name, path in paths:
         loc = path.input.text()         # bv editor/plugins/gitrefs_hotkeys.csv
@@ -241,10 +245,10 @@ def update_paths(paths, pathdata, lang):
             parts = data[0].split('.')
             if parts[0] == '':
                 parts = parts[1:]
-            newfile = os.path.join(updir, *parts) + '.py'
-            with open(newfile, 'w') as _out:
+            newfile = updir /  ('/'.join(parts) + '.py')
+            with newfile.open('w') as _out:
                 _out.write(plugin_skeleton)
-            initcsv(os.path.join(updir, loc), data, lang)
+            initcsv(updir / loc, data, lang)
     return newpaths
 
 
@@ -254,7 +258,7 @@ def initcsv(loc, data, lang):
     save some basic settings to a csv file together with some sample data
     """
     csv_oms = get_csv_oms(lang)
-    with open(loc, "w") as _out:
+    with loc.open("w") as _out:
         wrt = csv.writer(_out)
         for indx, sett in enumerate(csv_settingnames):
             wrt.writerow([csv_linetypes[0], sett, data[indx], csv_oms[sett]])
