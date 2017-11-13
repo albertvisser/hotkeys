@@ -1028,7 +1028,6 @@ class FilesDialog(qtw.QDialog):
             self.loc = ""
             if ask_question(self.parent, 'P_INICSV'):
                 ok = SetupDialog(self, newtool).exec_()
-                ## print(self.data)
             self.add_row(newtool, path=self.loc)
 
     def remove_programs(self):
@@ -1039,30 +1038,12 @@ class FilesDialog(qtw.QDialog):
             dlg = DeleteDialog(self).exec_()
             if dlg == qtw.QDialog.Accepted:
                 for row, name in reversed(checked):
+                    print(self.parent.pluginfiles)
                     try:
                         csv_name, prg_name = self.parent.pluginfiles[name]
-                        # bestaande plugin: csv naam kan bepaald worden, prg naam niet
                     except KeyError:
                         logging.exception('')
-                        csv_name, prg_name = self.parent.ini['plugins'], None
-                        # zojuist opgevoerde plugin wordt weer verwijderd
-                        # doorgeven hele ini verzameling slaat nergens op
-                        # prg naam staat hier niet in
-                        # om het navolgende te voorkomen moet pluginfiles ook zsm
-                        # worden bijgewerkt
-                        for key, value in self.parent.ini['plugins']:
-                            if key == name:
-                                csv_name = value
-                                break
-                        try:
-                            _csv = open(csv_name)
-                        except FileNotFoundError:
-                            _csv = open(os.path.join(BASE, csv_name)
-                        with _csv:
-                            w = csv.reader(_csv)
-                            for row in reader:
-                                if row[0] == 'Setting' and row[1] == 'PluginName':
-                                    prg_name = row[2]
+                        csv_name, prg_name = '', ''
                     logging.info('csv name is {}'.format(csv_name))
                     logging.info('prg name is {}'.format(prg_name))
                     if self.remove_data:
@@ -1070,7 +1051,8 @@ class FilesDialog(qtw.QDialog):
                             self.data_to_remove.append(csv_name)
                     if self.remove_code:
                         if prg_name:
-                            self.code_to_remove.append(prg_name)
+                            self.code_to_remove.append(
+                                prg_name.replace('.', '/') + '.py')
                     self.delete_row(row)
 
     def accept(self):
@@ -1079,10 +1061,13 @@ class FilesDialog(qtw.QDialog):
         if self.last_added not in [x[0] for x in self.paths]:
             self.last_added = ''
         self.parent.last_added = self.last_added
-        for filename in self.code_to_remove:
+        for filename in self.code_to_remove + self.data_to_remove:
+            print(filename)
             os.remove(filename)
-        for filename in self.data_to_remove:
-            os.remove(filename)
+        for name, path in self.paths:
+            if name not in [x for x, y in self.parent.ini['plugins']]:
+                csvname, prgname = path.input.text(), self.pathdata[name][0]
+                self.parent.pluginfiles[name] = (csvname, prgname)
         self.parent.ini["plugins"] = hkc.update_paths(self.paths, self.pathdata,
                                                       self.parent.ini["lang"])
         super().accept()
@@ -1934,11 +1919,7 @@ class ChoiceBook(qtw.QFrame):
                 loc = os.path.join(BASE, loc)
             win = HotkeyPanel(self, loc)
             self.pnl.addWidget(win)
-            if not all((win.settings, win.column_info, win.data)):
-                fl = ''
-            else:
-                fl = win._keys.__file__
-            # blijkbaar levert dit altijd een lege fl op? Of alleen als er geen data is?
+            fl = win.settings[hkc.csv_plgsett]
             self.parent.pluginfiles[txt] = (loc, fl)
             self.sel.addItem(txt)
         self.b_exit = qtw.QPushButton(self.parent.captions['C_EXIT'], self)
