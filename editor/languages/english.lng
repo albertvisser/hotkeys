@@ -17,7 +17,7 @@ C_CNTXT Context
 C_PLAT Platform
 C_FEAT Feature
 C_PARMS Parameter(s)
-C_CTRL Controls
+C_CTRL Only for control
 C_MNU Menu
 C_MNUSEL Menu Option
 
