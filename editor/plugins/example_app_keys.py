@@ -11,7 +11,7 @@
 # otherstuff can be used to pass on things like a list of unassigned commands
 # ** corresponds to the RebuildCSV setting **
 # def buildcsv(parent, showinfo=True):
-#     shortcuts = collections.defaultdict
+#     shortcuts = collections.defaultdict()
 #     otherstuff = {}
 #     ...implement some logic here...
 #     return shortcuts, otherstuff
