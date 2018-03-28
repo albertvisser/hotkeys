@@ -247,8 +247,9 @@ def m_lang(self):
     past de settings aan en leest het geselecteerde language file
     """
     # bepaal welke language files er beschikbaar zijn
-    choices = [x for x in os.listdir(hkc.HERELANG)
-               if os.path.splitext(x)[1] == ".lng"]
+    ## choices = [x for x in os.listdir(hkc.HERELANG)
+               ## if os.path.splitext(x)[1] == ".lng"]
+    choices = [x.name for x in hkc.HERELANG.iterdir() if x.suffix == ".lng"]
     # bepaal welke er momenteel geactiveerd is
     oldlang = self.ini['lang']
     indx = choices.index(oldlang) if oldlang in choices else 0
@@ -1309,6 +1310,7 @@ class HotkeyPanel(qtw.QFrame):
         self.captions = self.parent.parent.captions
         self.has_extrapanel = False
 
+        logging.info(self.pad)
         nodata = ''
         try:
             self.settings, self.column_info, self.data = hkc.readcsv(self.pad)
@@ -1362,6 +1364,7 @@ class HotkeyPanel(qtw.QFrame):
         # van de eerste rij in de listbox, daarom moet deze het laatst
         # self.otherstuff = self._keys.getotherstuff()
         if self.has_extrapanel:
+            logging.info('extrapanel: {}'.format(self.has_extrapanel))
             self.fields = [x[0] for x in self.column_info]
             self.add_extra_attributes()
             self.add_extra_fields()
@@ -1390,6 +1393,7 @@ class HotkeyPanel(qtw.QFrame):
         self.setLayout(self._sizer)
         self._initializing_screen = False
         self.filtertext = ''
+        logging.info(self.otherstuff)
 
     def readkeys(self):
         "(re)read the data for the keydef list"
