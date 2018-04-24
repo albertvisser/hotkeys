@@ -1334,6 +1334,18 @@ class HotkeyPanel(qtw.QFrame):
             except ImportError:
                 logging.exception('')
                 nodata = self.captions['I_NODATA'].replace('data', 'plugin code')
+
+        if not nodata:
+            self.p0list = qtw.QTreeWidget(self)
+            try:
+                self.parent.page = self
+                try:
+                    self.otherstuff = self._keys.buildcsv(parent, showinfo=False)[1]
+                except FileNotFoundError:
+                    nodata = "Can't build settings for {}".format(modulename)
+            except AttributeError:
+                pass
+
         if nodata:
             _sizer = qtw.QVBoxLayout()
             hsizer = qtw.QHBoxLayout()
@@ -1344,13 +1356,6 @@ class HotkeyPanel(qtw.QFrame):
             self.setLayout(_sizer)
             self.title = self.parent.parent.title
             return
-
-        self.p0list = qtw.QTreeWidget(self)
-        try:
-            self.parent.page = self
-            self.otherstuff = self._keys.buildcsv(parent, showinfo=False)[1]
-        except AttributeError:
-            pass
 
         try:
             self.has_extrapanel = bool(int(self.settings[hkc.csv_detsett]))
