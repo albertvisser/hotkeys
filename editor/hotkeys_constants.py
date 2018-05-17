@@ -26,7 +26,7 @@ logging.basicConfig(
 
 def log(message, always=False):
     "output to log"
-    if always or os.environ.get("DEBUG", '') not in ('',  "0"):
+    if always or os.environ.get("DEBUG", '') not in ('', "0"):
         logging.info(message)
 
 csv_linetypes = ['Setting', 'Title', 'Width', 'is_type', 'Keydef']
@@ -211,7 +211,7 @@ def add_columntitledata(newdata):
 
     input is a list of tuples (textid, text)"""
     ## with os.scandir(HERELANG) as choices:
-    choices =  os.scandir(HERELANG)
+    choices = os.scandir(HERELANG)
     for choice in choices:
         choice_file = pathlib.Path(choice.path)
         if choice_file.suffix != '.lng':
@@ -353,8 +353,7 @@ def quick_check(filename):
     for key, data in items:
         try:
             for indx, col in enumerate(column_info):
-                ## is_soort = col[2]
-                data[indx]
+                _ = data[indx]
         except Exception:
             print(key, data)
             raise
