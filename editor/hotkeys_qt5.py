@@ -149,17 +149,23 @@ def m_rebuild(self):
         show_message(self, 'I_ADDSET')
         return
     try:
-        newdata = self.page._keys.buildcsv(self)
+        test = self.page._keys.buildcsv
     except AttributeError:
-        ## raise
         show_message(self, 'I_DEFRBLD')
         return
+    newdata = test(self)
     if newdata[0]:
         self.page.data = newdata[0]
         self.page.otherstuff = newdata[1]
         hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
                      self.page.data, self.ini['lang'])
         self.page.populate_list()
+    else:
+        try:
+            mld = newdata[1]
+        except IndexError:
+            mld = 'No data returned, keyboard settings file unknown or nonexistant'
+        show_message(self, text=mld)
 
 
 def m_tool(self):
@@ -247,8 +253,6 @@ def m_lang(self):
     past de settings aan en leest het geselecteerde language file
     """
     # bepaal welke language files er beschikbaar zijn
-    ## choices = [x for x in os.listdir(hkc.HERELANG)
-               ## if os.path.splitext(x)[1] == ".lng"]
     choices = [x.name for x in hkc.HERELANG.iterdir() if x.suffix == ".lng"]
     # bepaal welke er momenteel geactiveerd is
     oldlang = self.ini['lang']
@@ -291,8 +295,6 @@ def m_pref(self):
 def m_exit(self):
     """(menu) callback om het programma direct af te sluiten"""
     self.exit()
-
-
 
 
 # application classes (dialog)
@@ -923,6 +925,7 @@ class FilesDialog(qtw.QDialog):
     """
     def __init__(self, parent):
         self.parent = parent
+        self.title = self.parent.title
         self.last_added = ''
         self.code_to_remove = []
         self.data_to_remove = []
@@ -958,8 +961,6 @@ class FilesDialog(qtw.QDialog):
         self.rownum = rownum
         self.checks = []
         self.paths = []
-        self.data = []
-        self.pathdata = {}
         for name, path in self.parent.ini["plugins"]:
             self.add_row(name, path)
         box = qtw.QVBoxLayout()
@@ -998,8 +999,6 @@ class FilesDialog(qtw.QDialog):
         browse = FileBrowseButton(self, text=path)
         self.gsizer.addWidget(browse, self.rownum, colnum)
         self.paths.append((name, browse))
-        if self.data:
-            self.pathdata[name] = self.data
         vbar = self.scrl.verticalScrollBar()
         vbar.setMaximum(vbar.maximum() + 52)
         vbar.setValue(vbar.maximum())
@@ -1018,7 +1017,6 @@ class FilesDialog(qtw.QDialog):
 
     def add_program(self):
         """nieuwe rij aanmaken in self.gsizer"""
-        self.data = []
         newtool, ok = qtw.QInputDialog.getText(self, self.parent.title,
                                                self.parent.captions['P_NEWPRG'])
         if ok:
@@ -1039,14 +1037,13 @@ class FilesDialog(qtw.QDialog):
             dlg = DeleteDialog(self).exec_()
             if dlg == qtw.QDialog.Accepted:
                 for row, name in reversed(checked):
-                    print(self.parent.pluginfiles)
                     try:
                         csv_name, prg_name = self.parent.pluginfiles[name]
                     except KeyError:
                         logging.exception('')
                         csv_name, prg_name = '', ''
-                    logging.info('csv name is {}'.format(csv_name))
-                    logging.info('prg name is {}'.format(prg_name))
+                    logging.info('csv name is %s', csv_name)
+                    logging.info('prg name is %s', prg_name)
                     if self.remove_data:
                         if csv_name:
                             self.data_to_remove.append(csv_name)
@@ -1065,10 +1062,22 @@ class FilesDialog(qtw.QDialog):
         for filename in self.code_to_remove + self.data_to_remove:
             print(filename)
             os.remove(filename)
+
         for name, path in self.paths:
             if name not in [x for x, y in self.parent.ini['plugins']]:
-                csvname, prgname = path.input.text(), self.pathdata[name][0]
+                csvname = path.input.text()
+                if not csvname:
+                    show_message(self, text='Please fill out all filenames')
+                    return
+                data = hkc.readcsv(csvname)
+                try:
+                    prgname = data[0][hkc.csv_plgsett]
+                except KeyError:
+                    show_message(self, text='{} does not contain a reference to the '
+                                            'plugin (PluginName setting)'.format(csvname))
+                    return
                 self.parent.pluginfiles[name] = (csvname, prgname)
+
         self.parent.ini["plugins"] = hkc.update_paths(self.paths, self.pathdata,
                                                       self.parent.ini["lang"])
         super().accept()
@@ -1167,7 +1176,6 @@ class EntryDialog(qtw.QDialog):
                 new_values[len(new_values)] = value
         self.parent.page.data = new_values
         super().accept()
-
 
 
 # general callbacks (I think)
@@ -1287,8 +1295,7 @@ def on_checkbox(self, cb, state):
                 self.b_save.setEnabled(False)
 
 
-
-# application classes (main screen and subscreens)
+# main screen and subscreens
 class HotkeyPanel(qtw.QFrame):
     """base class voor het gedeelte van het hoofdscherm met de listcontrol erin
 
@@ -1369,7 +1376,7 @@ class HotkeyPanel(qtw.QFrame):
         # van de eerste rij in de listbox, daarom moet deze het laatst
         # self.otherstuff = self._keys.getotherstuff()
         if self.has_extrapanel:
-            logging.info('extrapanel: {}'.format(self.has_extrapanel))
+            logging.info('extrapanel: %s', self.has_extrapanel)
             self.fields = [x[0] for x in self.column_info]
             self.add_extra_attributes()
             self.add_extra_fields()
@@ -1699,6 +1706,8 @@ class HotkeyPanel(qtw.QFrame):
         velden op het hoofdscherm worden bijgewerkt vanuit de selectie"""
         if not self.has_extrapanel:
             return
+        if not int(self.parent.page.settings[hkc.csv_redefsett]):
+            return
         if not newitem:  # bv. bij p0list.clear()
             return
         self.initializing_keydef = True
@@ -1887,6 +1896,7 @@ class HotkeyPanel(qtw.QFrame):
                         oms = self.omsdict[cmnd]
                     else:
                         oms, cmnd = cmnd, ""
+                    key = self.data[indx][0]                 #  is this correct?
                     self.data[indx] = (key, 'S', cmnd, oms)  # key UNDEF
                 else:
                     del self.data[indx]
