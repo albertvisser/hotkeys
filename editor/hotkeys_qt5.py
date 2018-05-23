@@ -1,4 +1,3 @@
-# -*- coding: UTF-8 -*-
 """hotkeys.py - PyQt5 version
 
     main gui (choicebook)
@@ -24,281 +23,10 @@ import PyQt5.QtCore as core
 
 import editor.hotkeys_constants as hkc
 import editor.hotkeys_dialogs_qt5 as hkd
-CONF = 'editor.hotkey_config'  # default configuration file
-BASE = str(hkc.HERE.parent)
+import editor.hotkeys_menus_qt5 as hkm
 
 
-# shared (menu) functions
-def show_message(win, message_id='', text=''):
-    """toon de boodschap geïdentificeerd door <message_id> in een dialoog
-    met als titel aangegeven door <caption_id>
-    """
-    if message_id:
-        text = win.captions[message_id]
-    elif not text:
-        text = win.captions['I_NOMSG']
-    qtw.QMessageBox.information(win, win.title, text)
-    return
-
-
-def ask_question(win, message_id='', text=''):
-    """toon de vraag geïdentificeerd door <message_id> in een dialoog
-    met als titel aangegeven door <caption_id> en retourneer het antwoord
-    (Yes als True, No als False) na sluiten van de dialoog
-    """
-    if message_id:
-        text = win.captions[message_id]
-    elif not text:
-        text = win.captions['I_NOMSG']
-    ok = qtw.QMessageBox.question(win, win.title, text,
-                                  qtw.QMessageBox.Yes | qtw.QMessageBox.No,
-                                  qtw.QMessageBox.Yes)
-    return ok == qtw.QMessageBox.Yes
-
-
-def m_read(self):
-    """(menu) callback voor het lezen van de hotkeys
-
-    vraagt eerst of het ok is om de hotkeys (opnieuw) te lezen
-    zet de gelezen keys daarna ook in de gui
-    """
-    if not self.page.settings:
-        show_message(self, 'I_ADDSET')
-        return
-    if not self.page.modified:
-        if not ask_question(self, 'Q_NOCHG'):
-            return
-    self.page.readkeys()
-    self.page.populate_list()
-
-
-def m_save(self):
-    """(menu) callback voor het terugschrijven van de hotkeys
-
-    vraagt eerst of het ok is om de hotkeys weg te schrijven
-    vraagt daarna eventueel of de betreffende applicatie geherstart moet worden
-    """
-    if not self.page.modified:
-        if not ask_question(self, 'Q_NOCHG'):
-            return
-    try:
-        self.page.savekeys()
-    except AttributeError:
-        show_message(self, 'I_DEFSAV')
-        return
-    show_message(self, 'I_RSTRT')
-
-
-def m_loc(self):
-    """(menu) callback voor aanpassen van de bestandslocaties
-
-    vraagt bij wijzigingen eerst of ze moeten worden opgeslagen
-    toont dialoog met bestandslocaties en controleert de gemaakte wijzigingen
-    (met name of de opgegeven paden kloppen)
-    """
-    # self.ini["plugins"] bevat de lijst met tools en csv locaties
-    current_programs = [x for x, y in self.ini["plugins"]]
-    current_paths = [y for x, y in self.ini["plugins"]]
-    ok = hkd.FilesDialog(self).exec_()
-    if ok == qtw.QDialog.Accepted:
-        selection = self.book.sel.currentIndex()
-        hkc.modify_settings(self.ini)
-
-        # update the screen(s)
-        # clear the selector and the stackedwidget while pairing up programs and windows
-        # that need to be kept or replaced
-        hlpdict = {}
-        self.book.sel.clear()
-        current_items = reversed([(x, y) for x, y in enumerate(current_programs)])
-        new_programs = [x for x, y in self.ini["plugins"]]
-        new_paths = [y for x, y in self.ini["plugins"]]
-        for indx, program in current_items:  # we need to do this in reverse
-            win = self.book.pnl.widget(indx)
-            self.book.pnl.removeWidget(win)
-            if program in new_programs:
-                hlpdict[program] = win  # keep the widget
-            else:
-                win.close()  # lose the widget
-        # add new ones, modify existing or leave them alone
-        for indx, program in enumerate(new_programs):
-            if program in current_programs:
-                # compare the new and the existing path
-                old_loc = current_paths[current_programs.index(program)]
-                new_loc = new_paths[new_programs.index(program)]
-                if new_loc == old_loc:  # unchanged
-                    win = hlpdict[program]
-                else:  # take data from different location
-                    win = HotkeyPanel(self.book, new_loc)
-            else:  # new entry
-                loc = new_paths[indx]
-                if not os.path.exists(loc):
-                    loc = os.path.join(BASE, loc)
-                win = HotkeyPanel(self.book, loc)
-            self.book.sel.addItem(program)
-            self.book.pnl.addWidget(win)
-        if self.last_added:
-            selection = self.book.sel.findText(self.last_added)
-        if selection > len(self.ini['plugins']) - 1:
-            selection -= 1
-        self.book.sel.setCurrentIndex(selection)
-
-
-def m_rebuild(self):
-    """rebuild csv data from (updated) settings
-    """
-    if not self.page.settings:
-        show_message(self, 'I_ADDSET')
-        return
-    try:
-        test = self.page._keys.buildcsv
-    except AttributeError:
-        show_message(self, 'I_DEFRBLD')
-        return
-    newdata = test(self)
-    if newdata[0]:
-        self.page.data = newdata[0]
-        self.page.otherstuff = newdata[1]
-        hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
-                     self.page.data, self.ini['lang'])
-        self.page.populate_list()
-    else:
-        try:
-            mld = newdata[1]
-        except IndexError:
-            mld = 'No data returned, keyboard settings file unknown or nonexistant'
-        show_message(self, text=mld)
-
-
-def m_tool(self):
-    """define tool-specific settings
-    """
-    if not self.page.settings:
-        self.page.settings = {x: '' for x in hkc.csv_settingnames}
-    old_redef = bool(int(self.page.settings[hkc.csv_redefsett]))
-    dlg = hkd.ExtraSettingsDialog(self).exec_()
-    if dlg == qtw.QDialog.Accepted:
-        hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
-                     self.page.data, self.ini['lang'])
-        test_redef = bool(int(self.page.settings[hkc.csv_redefsett]))
-        test_dets = bool(int(self.page.settings[hkc.csv_detsett]))
-        test_rbld = bool(int(self.page.settings[hkc.csv_rbldsett]))
-        self._menuitems['M_SAVE'].setEnabled(test_redef)
-        self._menuitems['M_RBLD'].setEnabled(test_rbld)
-        indx = self.book.sel.currentIndex()
-        win = self.book.pnl.widget(indx)
-        if test_dets != self.page.has_extrapanel:
-            self.page.has_extrapanel = test_dets
-            newwin = HotkeyPanel(self.book, self.book.plugins[indx][1])
-            self.book.pnl.insertWidget(indx, newwin)
-            self.book.pnl.setCurrentIndex(indx)
-            self.book.pnl.removeWidget(win)
-        elif test_redef != old_redef and test_dets:
-            win = self.book.pnl.currentWidget()
-            win.set_extrascreen_editable(test_redef)
-
-
-def m_col(self):
-    """define tool-specific settings: column properties
-    """
-    if not self.page.settings:
-        show_message(self, 'I_ADDSET')
-        return
-    dlg = hkd.ColumnSettingsDialog(self).exec_()
-    if dlg == qtw.QDialog.Accepted:
-        new_pagedata = {}
-        for key, value in self.page.data.items():
-            newvalue = []
-            for colinf in self.page.column_info:
-                test = colinf[-1]
-                if test == 'new':
-                    newvalue.append('')
-                else:
-                    newvalue.append(value[test])
-            new_pagedata[key] = newvalue
-        self.page.data = new_pagedata
-        self.page.column_info = [x[:-1] for x in self.page.column_info]
-
-        hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
-                     self.page.data, self.ini['lang'])
-        if not self.page.data:
-            return
-        hdr = qtw.QTreeWidgetItem()
-        self.page.p0list.setHeaderItem(hdr)
-        self.page.p0list.setHeaderLabels([self.captions[col[0]] for col in
-                                          self.page.column_info])
-        hdr = self.page.p0list.header()
-        hdr.setSectionsClickable(True)
-        for indx, col in enumerate(self.page.column_info):
-            hdr.resizeSection(indx, col[1])
-        hdr.setStretchLastSection(True)
-        self.page.populate_list()
-
-
-def m_entry(self):
-    """manual entry of keyboard shortcuts
-    """
-    if not all((self.page.settings, self.page.column_info)):
-        show_message(self, 'I_ADDCOL')
-        return
-    dlg = hkd.EntryDialog(self).exec_()
-    if dlg == qtw.QDialog.Accepted:
-        if self.page.data:
-            hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
-                         self.page.data, self.ini['lang'])
-            self.page.populate_list()
-
-
-def m_lang(self):
-    """(menu) callback voor taalkeuze
-
-    past de settings aan en leest het geselecteerde language file
-    """
-    # bepaal welke language files er beschikbaar zijn
-    choices = [x.name for x in hkc.HERELANG.iterdir() if x.suffix == ".lng"]
-    # bepaal welke er momenteel geactiveerd is
-    oldlang = self.ini['lang']
-    indx = choices.index(oldlang) if oldlang in choices else 0
-    lang, ok = qtw.QInputDialog.getItem(self, self.title, self.captions["P_SELLNG"],
-                                        choices, current=indx, editable=False)
-    if ok:
-        hkc.change_setting('lang', oldlang, lang, self.ini['filename'])
-        self.ini['lang'] = lang
-        self.readcaptions(lang)
-        self.setcaptions()
-
-
-def m_about(self):
-    """(menu) callback voor het tonen van de "about" dialoog
-    """
-    show_message(self, text='\n'.join(self.captions['T_ABOUT'].format(
-        self.captions['T_SHORT'], hkc.VRS, hkc.AUTH,
-        self.captions['T_LONG']).split(' / ')))
-
-
-def m_pref(self):
-    """mogelijkheid bieden om een tool op te geven dat default getoond wordt
-    """
-    oldpref = self.ini.get("initial", None)
-    oldmode = self.ini.get("startup", None)
-    self.prefs = oldmode, oldpref
-    ok = hkd.InitialToolDialog(self).exec_()
-    if ok == qtw.QDialog.Accepted:
-        mode, pref = self.prefs
-        print('in m_pref: {}, {}'.format(mode, pref))
-        if mode:
-            self.ini['startup'] = mode
-            hkc.change_setting('startup', oldmode, mode, self.ini['filename'])
-        if mode == 'Fixed':
-            self.ini['initial'] = pref
-            hkc.change_setting('initial', oldpref, pref, self.ini['filename'])
-
-
-def m_exit(self):
-    """(menu) callback om het programma direct af te sluiten"""
-    self.exit()
-
-
-# shared callbacks (I think)
+# callbacks for fields in details panel (can be redefined in plugin program)
 def on_text(self, ted, text):
     """on changing a text entry
     """
@@ -393,6 +121,8 @@ def on_combobox(self, cb, text):
 
 def on_checkbox(self, cb, state):
     """callback op het gebruik van een checkbox
+
+    voorlopig alleen voor de modifiers
     """
     if self._initializing_screen:
         return
@@ -406,7 +136,8 @@ def on_checkbox(self, cb, state):
                 self.defchanged = True
                 if 'C_CMD' in self.fields:
                     self.b_save.setEnabled(True)
-    else:   # else without break statement
+            break
+    else:
         states = [self.cb_shift.isChecked(), self.cb_ctrl.isChecked(),
                   self.cb_alt.isChecked(), self.cb_win.isChecked()]
         if states == [self._origdata[x] for x in self.ix_mods]:
@@ -823,7 +554,13 @@ class HotkeyPanel(qtw.QFrame):
     def on_item_selected(self, newitem, olditem):
         """callback on selection of an item
 
-        velden op het hoofdscherm worden bijgewerkt vanuit de selectie"""
+        velden op het hoofdscherm worden bijgewerkt vanuit de selectie
+
+        bevat een soort detectie of de definitie gewijzigd is die rekening probeerteditor/hotkeys_dialogs_gt5.py
+        te houden met of een nieuwe keydef wordt aangemaakt die een kopie is van de
+        oude voor een andere keycombo - alleen die triggert ook bij opbouwen van
+        het scherm
+        """
         if not self.has_extrapanel:
             return
         if not int(self.parent.page.settings[hkc.csv_redefsett]):
@@ -872,10 +609,10 @@ class HotkeyPanel(qtw.QFrame):
         make_change = False
         if any_change:
             if cursor_moved:
-                make_change = ask_question(self, "Q_SAVCHG")
+                make_change = hkd.ask_question(self, "Q_SAVCHG")
             elif other_item:
                 if found:
-                    make_change = ask_question(self, "Q_DPLKEY")
+                    make_change = hkd.ask_question(self, "Q_DPLKEY")
                 else:
                     make_change = True
             else:
@@ -1007,7 +744,7 @@ class HotkeyPanel(qtw.QFrame):
                 indx = int(indx.toPyObject())
             if self.captions["{:03}".format(indx)] == 'C_TYPE':
                 if self.data[indx][1] == "S":  # can't delete standard key
-                    show_message(self.parent, 'I_STDDEF')
+                    hkd.show_message(self.parent, 'I_STDDEF')
                     return
             elif self.captions["{:03}".format(indx)] == 'C_KEY':
                 if self.data[indx][0] in self.defkeys:  # restore standard if any
@@ -1055,7 +792,7 @@ class ChoiceBook(qtw.QFrame):
         self.pnl = qtw.QStackedWidget(self)
         for txt, loc in self.plugins:
             if not os.path.exists(loc):
-                loc = os.path.join(BASE, loc)
+                loc = os.path.join(hkc.BASE, loc)
             win = HotkeyPanel(self, loc)
             self.pnl.addWidget(win)
             fl = win.settings[hkc.csv_plgsett]
@@ -1231,7 +968,7 @@ class MainFrame(qtw.QMainWindow):
         self.sb = self.statusBar()
 
         self.menu_bar = self.menuBar()
-        ini = args.conf or CONF
+        ini = args.conf or hkc.CONF
         self.ini = hkc.read_settings(ini)
         self.readcaptions(self.ini['lang'])  # set up defaults
         if self.ini['plugins'] == []:
@@ -1263,72 +1000,7 @@ class MainFrame(qtw.QMainWindow):
         """build menus and actions
         """
         self.menu_bar.clear()
-        self._menus = (
-            ('M_APP', (
-                ('M_SETT', ((
-                    ('M_LOC', (m_loc, 'Ctrl+F')),
-                    ('M_LANG', (m_lang, 'Ctrl+L')),
-                    ('M_PREF', (m_pref, ''))
-                ), '')),
-                ('M_EXIT', (m_exit, 'Ctrl+Q')),
-            )),
-            ('M_TOOL', (
-                ('M_SETT', ((
-                    ('M_COL', (m_col, '')),
-                    ('M_MISC', (m_tool, '')),
-                    ('M_ENTR', (m_entry, '')),
-                ), '')),
-                ('M_READ', (m_read, 'Ctrl+R')),
-                ('M_RBLD', (m_rebuild, 'Ctrl+B')),
-                ('M_SAVE', (m_save, 'Ctrl+S')),
-            )),
-            ('M_HELP', (
-                ('M_ABOUT', (m_about, 'Ctrl+H')),
-            )))
-        self._menuitems = {}  # []
-        for title, items in self._menus:
-            menu = self.menu_bar.addMenu(self.captions[title])
-            self._menuitems[title] = menu
-            for sel in items:
-                if sel == -1:
-                    menu.addSeparator()
-                    continue
-                else:
-                    sel, values = sel
-                    callback, shortcut = values
-                    if callable(callback):
-                        act = self.create_menuaction(sel, callback, shortcut)
-                        menu.addAction(act)
-                        self._menuitems[sel] = act
-                    else:
-                        submenu = menu.addMenu(self.captions[sel])
-                        self._menuitems[sel] = submenu
-                        for sel, values in callback:
-                            callback, shortcut = values
-                            act = self.create_menuaction(sel, callback, shortcut)
-                            submenu.addAction(act)
-                            self._menuitems[sel] = act
-
-    def create_menuaction(self, sel, callback, shortcut):
-        """return created action w. some special cases
-        """
-        act = qtw.QAction(self.captions[sel], self)
-        act.triggered.connect(functools.partial(callback, self))
-        act.setShortcut(shortcut)
-        if sel == 'M_READ':
-            if not self.page.data:
-                act.setEnabled(False)
-        if sel == 'M_RBLD':
-            try:
-                act.setEnabled(bool(int(self.page.settings[hkc.csv_rbldsett])))
-            except KeyError:
-                act.setEnabled(False)
-        elif sel == 'M_SAVE':
-            try:
-                act.setEnabled(bool(int(self.page.settings[hkc.csv_redefsett])))
-            except KeyError:
-                act.setEnabled(False)
-        return act
+        hkm.setup_menu(self)
 
     def exit(self):  # , e=None):
         """quit the application
@@ -1340,16 +1012,6 @@ class MainFrame(qtw.QMainWindow):
     def close(self):
         """extra actions to perfrom on closing
         """
-        ## print(self.ini)
-        ## if 'initial' in self.ini and self.ini['initial'] not in self.ini['plugins']:
-            ## if self.ini.get("startup", None) == hkc.mode_f:
-                ## oldpref = self.ini["startup"]
-                ## pref = self.ini['startup'] = hkc.mode_r
-                ## hkc.change_setting('startup', oldpref, pref, self.ini['filename'])
-        ## if self.ini.get("startup", None) == hkc.mode_r:
-            ## oldpref = self.ini.get('initial', None)
-            ## pref = self.book.sel.currentText()
-            ## hkc.change_setting('initial', oldpref, pref, self.ini['filename'])
         super().close()
 
     def readcaptions(self, lang):

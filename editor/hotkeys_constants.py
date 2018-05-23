@@ -17,6 +17,8 @@ AUTH = "(C) 2008-today Albert Visser"
 WIN = True if sys.platform == "win32" else False
 ## LIN = True if sys.platform == 'linux2' else False
 LIN = True if os.name == 'posix' else False
+CONF = 'editor.hotkey_config'  # default configuration file
+BASE = str(HERE.parent)
 
 logging.basicConfig(
     filename=str(HERE / 'logs' / 'hotkeys.log'),

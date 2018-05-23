@@ -8,6 +8,7 @@ from editor.hotkeys_qt5 import main
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('-c', '--config', dest='conf',
-                    help='name of module with config parameters (without .py extension)')
+                    help='name of module with config parameters (without .py'
+                         ' extension)')
 args = parser.parse_args()
 main(args)

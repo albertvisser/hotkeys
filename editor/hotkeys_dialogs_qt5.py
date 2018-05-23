@@ -1,5 +1,41 @@
-# application classes (dialog)
+"""Dialog classes for hotkeys
+"""
+import os
+import logging
+import PyQt5.QtWidgets as qtw
+## import PyQt5.QtGui as gui
+import PyQt5.QtCore as core
+import editor.hotkeys_constants as hkc
 # TODO: Als redefine keys is aangevinkt moet show keydef details ook aangevinkt worden
+
+
+def show_message(win, message_id='', text=''):
+    """toon de boodschap geïdentificeerd door <message_id> in een dialoog
+    met als titel aangegeven door <caption_id>
+    """
+    if message_id:
+        text = win.captions[message_id]
+    elif not text:
+        text = win.captions['I_NOMSG']
+    qtw.QMessageBox.information(win, win.title, text)
+    return
+
+
+def ask_question(win, message_id='', text=''):
+    """toon de vraag geïdentificeerd door <message_id> in een dialoog
+    met als titel aangegeven door <caption_id> en retourneer het antwoord
+    (Yes als True, No als False) na sluiten van de dialoog
+    """
+    if message_id:
+        text = win.captions[message_id]
+    elif not text:
+        text = win.captions['I_NOMSG']
+    ok = qtw.QMessageBox.question(win, win.title, text,
+                                  qtw.QMessageBox.Yes | qtw.QMessageBox.No,
+                                  qtw.QMessageBox.Yes)
+    return ok == qtw.QMessageBox.Yes
+
+
 class InitialToolDialog(qtw.QDialog):
     """dialog to define which tool to show on startup
     """
@@ -490,10 +526,6 @@ class ExtraSettingsDialog(qtw.QDialog):
     def add_row(self, name='', value='', desc=''):
         """add a row for defining a setting (name, value)
         """
-        ## if value:
-            ## value, desc = value
-        ## else:
-            ## desc = ''
         self.rownum += 1
         colnum = 0
         check = qtw.QCheckBox(self)
@@ -548,11 +580,6 @@ class ExtraSettingsDialog(qtw.QDialog):
         self.parent.page.settings[hkc.csv_pnlsett] = self.t_title.text()
         value = '1' if self.c_rebuild.isChecked() else '0'
         self.parent.page.settings[hkc.csv_rbldsett] = value
-        ## try:
-            ## oms = self.parent.page.settings[hkc.csv_detsett]    # oms variable not used?
-        ## except KeyError:
-            ## oms = self.parent.captions['T_BOOL'].format(
-                ## self.parent.captions['S_DETS'])
         value = '1' if self.c_showdet.isChecked() else '0'
         self.parent.page.settings[hkc.csv_detsett] = value
         value = '1' if self.c_redef.isChecked() else '0'
@@ -560,7 +587,6 @@ class ExtraSettingsDialog(qtw.QDialog):
 
         settingsdict, settdescdict = {}, {}
         for w_name, w_value, w_desc in self.data:
-            ## settingsdict[w_name.text()] = (w_value.text(), w_desc.text())
             settingsdict[w_name.text()] = w_value.text()
             settdescdict[w_name.text()] = w_desc.text()
         todelete = []
@@ -660,10 +686,16 @@ class FilesDialog(qtw.QDialog):
         self.gsizer = qtw.QGridLayout()
         rownum = 0
         self.rownum = rownum
+        self.plugindata = []
         self.checks = []
         self.paths = []
-        for name, path in self.parent.ini["plugins"]:
-            self.add_row(name, path)
+        self.progs = []
+        self.pathdata = {}
+        ## for name, path in self.parent.ini["plugins"]:
+            ## self.add_row(name, path)
+        for name, paths in self.parent.pluginfiles.items():
+            self.add_row(name, paths[0])
+            self.pathdata[name] = paths[1]
         box = qtw.QVBoxLayout()
         box.addLayout(self.gsizer)
         box.addStretch()
@@ -693,6 +725,7 @@ class FilesDialog(qtw.QDialog):
         """
         self.rownum += 1
         colnum = 0
+        line_data = []
         check = qtw.QCheckBox(name, self)
         self.gsizer.addWidget(check, self.rownum, colnum)
         self.checks.append(check)
@@ -708,13 +741,14 @@ class FilesDialog(qtw.QDialog):
         """remove a tool location definition row
         """
         check = self.checks[rownum]
-        _, win = self.paths[rownum]
+        name, win = self.paths[rownum]
         self.gsizer.removeWidget(check)
         check.close()
         self.gsizer.removeWidget(win)
         win.close()
         self.checks.pop(rownum)
         self.paths.pop(rownum)
+        self.pathdata.pop(name)
 
     def add_program(self):
         """nieuwe rij aanmaken in self.gsizer"""
@@ -725,10 +759,12 @@ class FilesDialog(qtw.QDialog):
                 show_message(self.parent, 'I_NEEDNAME')
                 return
             self.last_added = newtool
-            self.loc = ""
+            self.loc = prgloc = ""
             if ask_question(self.parent, 'P_INICSV'):
                 ok = SetupDialog(self, newtool).exec_()
+                prgloc = self.data[0]
             self.add_row(newtool, path=self.loc)
+            self.pathdata[newtool] = prgloc
 
     def remove_programs(self):
         """alle aangevinkte items verwijderen uit self.gsizer"""
@@ -763,26 +799,28 @@ class FilesDialog(qtw.QDialog):
         for filename in self.code_to_remove + self.data_to_remove:
             print(filename)
             os.remove(filename)
-
-        for name, path in self.paths:
+        for ix, entry in enumerate(self.paths):
+            name, path = entry
             if name not in [x for x, y in self.parent.ini['plugins']]:
                 csvname = path.input.text()
                 if not csvname:
                     show_message(self, text='Please fill out all filenames')
                     return
-                data = hkc.readcsv(csvname)
-                try:
-                    prgname = data[0][hkc.csv_plgsett]
-                except KeyError:
-                    show_message(self, text='{} does not contain a reference to the '
-                                            'plugin (PluginName setting)'.format(csvname))
-                    return
+                prgname = self.pathdata[name]
+                ## if not prgname:
+                    ## data = hkc.readcsv(csvname)
+                    ## try:
+                        ## prgname = data[0][hkc.csv_plgsett]
+                    ## except KeyError:
+                        ## show_message(self, text='{} does not contain a reference to the '
+                                                ## 'plugin (PluginName setting)'.format(csvname))
+                        ## return
                 self.parent.pluginfiles[name] = (csvname, prgname)
 
         self.parent.ini["plugins"] = hkc.update_paths(self.paths, self.pathdata,
                                                       self.parent.ini["lang"])
-        super().accept()
 
+        super().accept()
 
 class EntryDialog(qtw.QDialog):
     """Dialog for Manual Entry
