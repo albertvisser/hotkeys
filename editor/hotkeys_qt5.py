@@ -23,130 +23,8 @@ import PyQt5.QtCore as core
 
 import editor.hotkeys_constants as hkc
 import editor.hotkeys_dialogs_qt5 as hkd
-import editor.hotkeys_menus_qt5 as hkm
 
 
-# callbacks for fields in details panel (can be redefined in plugin program)
-def on_text(self, ted, text):
-    """on changing a text entry
-    """
-    if self._initializing_screen:
-        return
-    text = str(text)    # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan de
-                        # callback soms fout? Of is het Py3 vs Py2?
-    hlp = ted.text()
-    if text != hlp:
-        text = hlp
-    if 'C_KEY' in self.fields:
-        if text == self._origdata[self.ix_key]:
-            self.defchanged = True
-            self.b_save.setEnabled(True)
-        elif ted.text() == self._origdata[self.ix_key]:
-            self.defchanged = False
-            self.b_save.setEnabled(False)
-
-
-def on_combobox(self, cb, text):
-    """callback op het gebruik van een combobox
-
-    zorgt ervoor dat de buttons ge(de)activeerd worden
-    """
-    if self._initializing_screen:
-        return
-    text = str(text)    # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan de
-                        # callback soms fout? Of is het Py3 vs Py2?
-    hlp = cb.currentText()
-    if text != hlp:
-        text = hlp
-    self.defchanged = False
-    try:
-        test_key = bool(self.cmb_key)
-    except AttributeError:
-        test_key = False
-    try:
-        test_cmd = bool(self.cmb_commando)
-    except AttributeError:
-        test_cmd = False
-    try:
-        test_cnx = bool(self.cmb_context)
-    except AttributeError:
-        test_cnx = False
-    if test_key and cb == self.cmb_key:
-        keyitemindex = self.ix_key
-        if text != self._origdata[keyitemindex]:
-            self._newdata[keyitemindex] = text
-            if not self.initializing_keydef:
-                self.defchanged = True
-                if 'C_CMD' in self.fields:
-                    self.b_save.setEnabled(True)
-        elif str(self.cmb_commando.currentText()) == self._origdata[cmditemindex]:  # UNDEF
-            self.defchanged = False
-            if 'C_CMD' in self.fields:
-                self.b_save.setEnabled(False)
-    elif test_cnx and cb == self.cmb_context:
-        if text != self._origdata[self.ix_cntxt]:
-            context = self._origdata[self.ix_cntxt] = self.cmb_context.currentText()
-            self.cmb_commando.clear()
-            actionslist = self.contextactionsdict[context]
-            self.cmb_commando.addItems(actionslist)
-            if not self.initializing_keydef:
-                self.defchanged = True
-                if 'C_CMD' in self.fields:
-                    self.b_save.setEnabled(True)
-        elif str(self.cmb_commando.currentText()) == self._origdata[self.ix_cntxt]:
-            self.defchanged = False
-            if 'C_CMD' in self.fields:
-                self.b_save.setEnabled(False)
-    elif test_cmd and cb == self.cmb_commando:
-        cmditemindex = self.ix_cmd
-        if text != self._origdata[cmditemindex]:
-            self._newdata[cmditemindex] = text
-            try:
-                self.txt_oms.setText(self.descriptions[text])
-            except KeyError:
-                self.txt_oms.setText(self.captions['M_NODESC'])
-            if not self.initializing_keydef:
-                self.defchanged = True
-                if 'C_CMD' in self.fields:
-                    self.b_save.setEnabled(True)
-        elif str(self.cmb_key.currentText()) == self._origdata[cmditemindex]:
-            if 'C_CMD' in self.fields:
-                self.b_save.setEnabled(False)
-    else:
-        try:
-            self._keys.on_combobox(self, cb, text)  # user exit
-        except AttributeError:
-            pass
-
-
-def on_checkbox(self, cb, state):
-    """callback op het gebruik van een checkbox
-
-    voorlopig alleen voor de modifiers
-    """
-    if self._initializing_screen:
-        return
-    ## state = bool(state)
-    for win, indx in zip(
-            (self.cb_shift, self.cb_ctrl, self.cb_alt, self.cb_win),
-            self.ix_mods):
-        if cb == win and state != self._origdata[indx]:
-            self._newdata[indx] = state
-            if not self.initializing_keydef:
-                self.defchanged = True
-                if 'C_CMD' in self.fields:
-                    self.b_save.setEnabled(True)
-            break
-    else:
-        states = [self.cb_shift.isChecked(), self.cb_ctrl.isChecked(),
-                  self.cb_alt.isChecked(), self.cb_win.isChecked()]
-        if states == [self._origdata[x] for x in self.ix_mods]:
-            self.defchanged = False
-            if 'C_CMD' in self.fields:
-                self.b_save.setEnabled(False)
-
-
-# main screen and subscreens
 class HotkeyPanel(qtw.QFrame):
     """base class voor het gedeelte van het hoofdscherm met de listcontrol erin
 
@@ -389,15 +267,15 @@ class HotkeyPanel(qtw.QFrame):
             if self.keylist is None:
                 ted = qtw.QLineEdit(box)
                 ted.setMaximumWidth(90)
-                ted.textChanged[str].connect(functools.partial(on_text, self, ted, str))
+                ted.textChanged[str].connect(functools.partial(self.on_text, ted, str))
                 self.screenfields.append(ted)
                 self.txt_key = ted
             else:
                 cb = qtw.QComboBox(box)
                 cb.setMaximumWidth(90)
                 cb.addItems(self.keylist)  # niet sorteren
-                cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
-                                                                      self, cb, str))
+                cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox,
+                                                                      cb, str))
                 self.screenfields.append(cb)
                 self.cmb_key = cb
 
@@ -406,7 +284,7 @@ class HotkeyPanel(qtw.QFrame):
                 cb = qtw.QCheckBox(self.captions[x].join(("+ ", "")), box)
                 cb.setChecked(False)
                 self.screenfields.append(cb)
-                cb.stateChanged.connect(functools.partial(on_checkbox, self, cb))
+                cb.stateChanged.connect(functools.partial(self.on_checkbox, cb))
                 if ix == 0:
                     self.cb_ctrl = cb
                 elif ix == 1:
@@ -421,8 +299,8 @@ class HotkeyPanel(qtw.QFrame):
             cb = qtw.QComboBox(box)
             cb.addItems(self.contextslist)
             cb.setMaximumWidth(110)
-            cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
-                                                                  self, cb, str))
+            cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox,
+                                                                  cb, str))
             self.screenfields.append(cb)
             self.cmb_context = cb
 
@@ -432,8 +310,8 @@ class HotkeyPanel(qtw.QFrame):
             cb.setMaximumWidth(150)
             if 'C_CNTXT' not in self.fields:  # load on choosing context
                 cb.addItems(self.commandslist)
-            cb.currentIndexChanged[str].connect(functools.partial(on_combobox,
-                                                                  self, cb, str))
+            cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox,
+                                                                  cb, str))
             self.screenfields.append(cb)
             self.cmb_commando = cb
 
@@ -551,7 +429,125 @@ class HotkeyPanel(qtw.QFrame):
         except AttributeError:
             pass
 
-    def on_item_selected(self, newitem, olditem):
+    def on_text(self, ted, text):
+        """on changing a text entry
+        """
+        if self._initializing_screen:
+            return
+        text = str(text)    # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan de
+                            # callback soms fout? Of is het Py3 vs Py2?
+        hlp = ted.text()
+        if text != hlp:
+            text = hlp
+        if 'C_KEY' in self.fields:
+            if text == self._origdata[self.ix_key]:
+                self.defchanged = True
+                self.b_save.setEnabled(True)
+            elif ted.text() == self._origdata[self.ix_key]:
+                self.defchanged = False
+                self.b_save.setEnabled(False)
+
+
+    def on_combobox(self, cb, text):
+        """callback op het gebruik van een combobox
+
+        zorgt ervoor dat de buttons ge(de)activeerd worden
+        """
+        if self._initializing_screen:
+            return
+        text = str(text)    # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan de
+                            # callback soms fout? Of is het Py3 vs Py2?
+        hlp = cb.currentText()
+        if text != hlp:
+            text = hlp
+        self.defchanged = False
+        try:
+            test_key = bool(self.cmb_key)
+        except AttributeError:
+            test_key = False
+        try:
+            test_cmd = bool(self.cmb_commando)
+        except AttributeError:
+            test_cmd = False
+        try:
+            test_cnx = bool(self.cmb_context)
+        except AttributeError:
+            test_cnx = False
+        if test_key and cb == self.cmb_key:
+            keyitemindex = self.ix_key
+            if text != self._origdata[keyitemindex]:
+                self._newdata[keyitemindex] = text
+                if not self.initializing_keydef:
+                    self.defchanged = True
+                    if 'C_CMD' in self.fields:
+                        self.b_save.setEnabled(True)
+            elif str(self.cmb_commando.currentText()) == self._origdata[cmditemindex]:  # UNDEF
+                self.defchanged = False
+                if 'C_CMD' in self.fields:
+                    self.b_save.setEnabled(False)
+        elif test_cnx and cb == self.cmb_context:
+            if text != self._origdata[self.ix_cntxt]:
+                context = self._origdata[self.ix_cntxt] = self.cmb_context.currentText()
+                self.cmb_commando.clear()
+                actionslist = self.contextactionsdict[context]
+                self.cmb_commando.addItems(actionslist)
+                if not self.initializing_keydef:
+                    self.defchanged = True
+                    if 'C_CMD' in self.fields:
+                        self.b_save.setEnabled(True)
+            elif str(self.cmb_commando.currentText()) == self._origdata[self.ix_cntxt]:
+                self.defchanged = False
+                if 'C_CMD' in self.fields:
+                    self.b_save.setEnabled(False)
+        elif test_cmd and cb == self.cmb_commando:
+            cmditemindex = self.ix_cmd
+            if text != self._origdata[cmditemindex]:
+                self._newdata[cmditemindex] = text
+                try:
+                    self.txt_oms.setText(self.descriptions[text])
+                except KeyError:
+                    self.txt_oms.setText(self.captions['M_NODESC'])
+                if not self.initializing_keydef:
+                    self.defchanged = True
+                    if 'C_CMD' in self.fields:
+                        self.b_save.setEnabled(True)
+            elif str(self.cmb_key.currentText()) == self._origdata[cmditemindex]:
+                if 'C_CMD' in self.fields:
+                    self.b_save.setEnabled(False)
+        else:
+            try:
+                self._keys.on_combobox(self, cb, text)  # user exit
+            except AttributeError:
+                pass
+
+
+    def on_checkbox(self, cb, state):
+        """callback op het gebruik van een checkbox
+
+        voorlopig alleen voor de modifiers
+        """
+        if self._initializing_screen:
+            return
+        ## state = bool(state)
+        for win, indx in zip(
+                (self.cb_shift, self.cb_ctrl, self.cb_alt, self.cb_win),
+                self.ix_mods):
+            if cb == win and state != self._origdata[indx]:
+                self._newdata[indx] = state
+                if not self.initializing_keydef:
+                    self.defchanged = True
+                    if 'C_CMD' in self.fields:
+                        self.b_save.setEnabled(True)
+                break
+        else:
+            states = [self.cb_shift.isChecked(), self.cb_ctrl.isChecked(),
+                      self.cb_alt.isChecked(), self.cb_win.isChecked()]
+            if states == [self._origdata[x] for x in self.ix_mods]:
+                self.defchanged = False
+                if 'C_CMD' in self.fields:
+                    self.b_save.setEnabled(False)
+
+    def on_item_selected(self, newitem, olditem):  # TODO
         """callback on selection of an item
 
         velden op het hoofdscherm worden bijgewerkt vanuit de selectie
@@ -1000,8 +996,312 @@ class MainFrame(qtw.QMainWindow):
         """build menus and actions
         """
         self.menu_bar.clear()
-        hkm.setup_menu(self)
+        self._menuitems = {}  # []
+        for title, items in (('M_APP', (
+                             ('M_SETT', ((
+                                 ('M_LOC', (self.m_loc, 'Ctrl+F')),
+                                 ('M_LANG', (self.m_lang, 'Ctrl+L')),
+                                 ('M_PREF', (self.m_pref, ''))), '')),
+                             ('M_EXIT', (self.m_exit, 'Ctrl+Q')), )),
+                             ('M_TOOL', (
+                                 ('M_SETT', ((
+                                     ('M_COL', (self.m_col, '')),
+                                     ('M_MISC', (self.m_tool, '')),
+                                     ('M_ENTR', (self.m_entry, '')), ), '')),
+                                 ('M_READ', (self.m_read, 'Ctrl+R')),
+                                 ('M_RBLD', (self.m_rebuild, 'Ctrl+B')),
+                                 ('M_SAVE', (self.m_save, 'Ctrl+S')), )),
+                             ('M_HELP', (
+                                 ('M_ABOUT', (self.m_about, 'Ctrl+H')), ))):
+            menu = self.menu_bar.addMenu(self.captions[title])
+            self._menuitems[title] = menu
+            for sel in items:
+                if sel == -1:
+                    menu.addSeparator()
+                    continue
+                else:
+                    sel, values = sel
+                    callback, shortcut = values
+                    if callable(callback):
+                        act = self.create_menuaction(sel, callback, shortcut)
+                        menu.addAction(act)
+                        self._menuitems[sel] = act
+                    else:
+                        submenu = menu.addMenu(self.captions[sel])
+                        self._menuitems[sel] = submenu
+                        for sel, values in callback:
+                            callback, shortcut = values
+                            act = self.create_menuaction(sel, callback, shortcut)
+                            submenu.addAction(act)
+                            self._menuitems[sel] = act
 
+
+    def create_menuaction(self, sel, callback, shortcut):
+        """return created action w. some special cases
+        """
+        act = qtw.QAction(self.captions[sel], self)
+        ## act.triggered.connect(functools.partial(callback, self))
+        act.triggered.connect(callback)
+        act.setShortcut(shortcut)
+        if sel == 'M_READ':
+            if not self.page.data:
+                act.setEnabled(False)
+        if sel == 'M_RBLD':
+            try:
+                act.setEnabled(bool(int(self.page.settings[hkc.csv_rbldsett])))
+            except KeyError:
+                act.setEnabled(False)
+        elif sel == 'M_SAVE':
+            try:
+                act.setEnabled(bool(int(self.page.settings[hkc.csv_redefsett])))
+            except KeyError:
+                act.setEnabled(False)
+        return act
+
+    # menu callbacks
+    def m_read(self):
+        """(menu) callback voor het lezen van de hotkeys
+
+        vraagt eerst of het ok is om de hotkeys (opnieuw) te lezen
+        zet de gelezen keys daarna ook in de gui
+        """
+        if not self.page.settings:
+            hkd.show_message(self, 'I_ADDSET')
+            return
+        if not self.page.modified:
+            if not hkd.ask_question(self, 'Q_NOCHG'):
+                return
+        self.page.readkeys()
+        self.page.populate_list()
+
+
+    def m_save(self):
+        """(menu) callback voor het terugschrijven van de hotkeys
+
+        vraagt eerst of het ok is om de hotkeys weg te schrijven
+        vraagt daarna eventueel of de betreffende applicatie geherstart moet worden
+        """
+        if not self.page.modified:
+            if not hkd.ask_question(self, 'Q_NOCHG'):
+                return
+        try:
+            self.page.savekeys()
+        except AttributeError:
+            hkd.show_message(self, 'I_DEFSAV')
+            return
+        hkd.show_message(self, 'I_RSTRT')
+
+
+    def m_loc(self):
+        """(menu) callback voor aanpassen van de bestandslocaties
+
+        vraagt bij wijzigingen eerst of ze moeten worden opgeslagen
+        toont dialoog met bestandslocaties en controleert de gemaakte wijzigingen
+        (met name of de opgegeven paden kloppen)
+        """
+        # self.ini["plugins"] bevat de lijst met tools en csv locaties
+        current_programs = [x for x, y in self.ini["plugins"]]
+        current_paths = [y for x, y in self.ini["plugins"]]
+        ok = hkd.FilesDialog(self).exec_()
+        if ok == qtw.QDialog.Accepted:
+            selection = self.book.sel.currentIndex()
+            hkc.modify_settings(self.ini)
+
+            # update the screen(s)
+            # clear the selector and the stackedwidget while pairing up programs and windows
+            # that need to be kept or replaced
+            hlpdict = {}
+            self.book.sel.clear()
+            current_items = reversed([(x, y) for x, y in enumerate(current_programs)])
+            new_programs = [x for x, y in self.ini["plugins"]]
+            new_paths = [y for x, y in self.ini["plugins"]]
+            for indx, program in current_items:  # we need to do this in reverse
+                win = self.book.pnl.widget(indx)
+                self.book.pnl.removeWidget(win)
+                if program in new_programs:
+                    hlpdict[program] = win  # keep the widget
+                else:
+                    win.close()  # lose the widget
+            # add new ones, modify existing or leave them alone
+            for indx, program in enumerate(new_programs):
+                if program in current_programs:
+                    # compare the new and the existing path
+                    old_loc = current_paths[current_programs.index(program)]
+                    new_loc = new_paths[new_programs.index(program)]
+                    if new_loc == old_loc:  # unchanged
+                        win = hlpdict[program]
+                    else:  # take data from different location
+                        win = HotkeyPanel(self.book, new_loc)
+                else:  # new entry
+                    loc = new_paths[indx]
+                    if not os.path.exists(loc):
+                        loc = os.path.join(hkc.BASE, loc)
+                    win = HotkeyPanel(self.book, loc)
+                self.book.sel.addItem(program)
+                self.book.pnl.addWidget(win)
+            if self.last_added:
+                selection = self.book.sel.findText(self.last_added)
+            if selection > len(self.ini['plugins']) - 1:
+                selection -= 1
+            self.book.sel.setCurrentIndex(selection)
+
+
+    def m_rebuild(self):
+        """rebuild csv data from (updated) settings
+        """
+        if not self.page.settings:
+            hkd.show_message(self, 'I_ADDSET')
+            return
+        try:
+            test = self.page._keys.buildcsv
+        except AttributeError:
+            hkd.show_message(self, 'I_DEFRBLD')
+            return
+        newdata = test(self)
+        if newdata[0]:
+            self.page.data = newdata[0]
+            self.page.otherstuff = newdata[1]
+            hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
+                         self.page.data, self.ini['lang'])
+            self.page.populate_list()
+        else:
+            try:
+                mld = newdata[1]
+            except IndexError:
+                mld = 'No data returned, keyboard settings file unknown or nonexistant'
+            hkd.show_message(self, text=mld)
+
+
+    def m_tool(self):
+        """define tool-specific settings
+        """
+        if not self.page.settings:
+            self.page.settings = {x: '' for x in hkc.csv_settingnames}
+        old_redef = bool(int(self.page.settings[hkc.csv_redefsett]))
+        dlg = hkd.ExtraSettingsDialog(self).exec_()
+        if dlg == qtw.QDialog.Accepted:
+            hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
+                         self.page.data, self.ini['lang'])
+            test_redef = bool(int(self.page.settings[hkc.csv_redefsett]))
+            test_dets = bool(int(self.page.settings[hkc.csv_detsett]))
+            test_rbld = bool(int(self.page.settings[hkc.csv_rbldsett]))
+            self._menuitems['M_SAVE'].setEnabled(test_redef)
+            self._menuitems['M_RBLD'].setEnabled(test_rbld)
+            indx = self.book.sel.currentIndex()
+            win = self.book.pnl.widget(indx)
+            if test_dets != self.page.has_extrapanel:
+                self.page.has_extrapanel = test_dets
+                newwin = HotkeyPanel(self.book, self.book.plugins[indx][1])
+                self.book.pnl.insertWidget(indx, newwin)
+                self.book.pnl.setCurrentIndex(indx)
+                self.book.pnl.removeWidget(win)
+            elif test_redef != old_redef and test_dets:
+                win = self.book.pnl.currentWidget()
+                win.set_extrascreen_editable(test_redef)
+
+
+    def m_col(self):
+        """define tool-specific settings: column properties
+        """
+        if not self.page.settings:
+            hkd.show_message(self, 'I_ADDSET')
+            return
+        dlg = hkd.ColumnSettingsDialog(self).exec_()
+        if dlg == qtw.QDialog.Accepted:
+            new_pagedata = {}
+            for key, value in self.page.data.items():
+                newvalue = []
+                for colinf in self.page.column_info:
+                    test = colinf[-1]
+                    if test == 'new':
+                        newvalue.append('')
+                    else:
+                        newvalue.append(value[test])
+                new_pagedata[key] = newvalue
+            self.page.data = new_pagedata
+            self.page.column_info = [x[:-1] for x in self.page.column_info]
+
+            hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
+                         self.page.data, self.ini['lang'])
+            if not self.page.data:
+                return
+            hdr = qtw.QTreeWidgetItem()
+            self.page.p0list.setHeaderItem(hdr)
+            self.page.p0list.setHeaderLabels([self.captions[col[0]] for col in
+                                              self.page.column_info])
+            hdr = self.page.p0list.header()
+            hdr.setSectionsClickable(True)
+            for indx, col in enumerate(self.page.column_info):
+                hdr.resizeSection(indx, col[1])
+            hdr.setStretchLastSection(True)
+            self.page.populate_list()
+
+
+    def m_entry(self):
+        """manual entry of keyboard shortcuts
+        """
+        if not all((self.page.settings, self.page.column_info)):
+            hkd.show_message(self, 'I_ADDCOL')
+            return
+        dlg = hkd.EntryDialog(self).exec_()
+        if dlg == qtw.QDialog.Accepted:
+            if self.page.data:
+                hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
+                             self.page.data, self.ini['lang'])
+                self.page.populate_list()
+
+
+    def m_lang(self):
+        """(menu) callback voor taalkeuze
+
+        past de settings aan en leest het geselecteerde language file
+        """
+        # bepaal welke language files er beschikbaar zijn
+        choices = [x.name for x in hkc.HERELANG.iterdir() if x.suffix == ".lng"]
+        # bepaal welke er momenteel geactiveerd is
+        oldlang = self.ini['lang']
+        indx = choices.index(oldlang) if oldlang in choices else 0
+        lang, ok = qtw.QInputDialog.getItem(self, self.title, self.captions["P_SELLNG"],
+                                            choices, current=indx, editable=False)
+        if ok:
+            hkc.change_setting('lang', oldlang, lang, self.ini['filename'])
+            self.ini['lang'] = lang
+            self.readcaptions(lang)
+            self.setcaptions()
+
+
+    def m_about(self):
+        """(menu) callback voor het tonen van de "about" dialoog
+        """
+        hkd.show_message(self, text='\n'.join(self.captions['T_ABOUT'].format(
+            self.captions['T_SHORT'], hkc.VRS, hkc.AUTH,
+            self.captions['T_LONG']).split(' / ')))
+
+
+    def m_pref(self):
+        """mogelijkheid bieden om een tool op te geven dat default getoond wordt
+        """
+        oldpref = self.ini.get("initial", None)
+        oldmode = self.ini.get("startup", None)
+        self.prefs = oldmode, oldpref
+        ok = hkd.InitialToolDialog(self).exec_()
+        if ok == qtw.QDialog.Accepted:
+            mode, pref = self.prefs
+            print('in m_pref: {}, {}'.format(mode, pref))
+            if mode:
+                self.ini['startup'] = mode
+                hkc.change_setting('startup', oldmode, mode, self.ini['filename'])
+            if mode == 'Fixed':
+                self.ini['initial'] = pref
+                hkc.change_setting('initial', oldpref, pref, self.ini['filename'])
+
+
+    def m_exit(self):
+        """(menu) callback om het programma direct af te sluiten
+        """
+        self.exit()
+
+    # other methods
     def exit(self):  # , e=None):
         """quit the application
         """
@@ -1010,7 +1310,7 @@ class MainFrame(qtw.QMainWindow):
         self.close()
 
     def close(self):
-        """extra actions to perfrom on closing
+        """extra actions to perform on closing
         """
         super().close()
 
