@@ -1,6 +1,7 @@
 """Dialog classes for hotkeys
 """
 import os
+import importlib
 import logging
 import PyQt5.QtWidgets as qtw
 ## import PyQt5.QtGui as gui
@@ -88,7 +89,6 @@ class InitialToolDialog(qtw.QDialog):
             mode = None
         pref = self.sel_fixed.currentText()
         self.parent.prefs = mode, pref
-        print('in initialtooldialog: {}, {}'.format(mode, pref))
         super().accept()
 
 
@@ -190,15 +190,17 @@ class SetupDialog(qtw.QDialog):
     def accept(self):
         """
         set self.parent.loc to the chosen filename
-        write the settings to this file along with some sample data
+        write the settings to this file along with some sample data - deferred to
+        confirmation of the filesdialog
         """
         loc = self.t_loc.input.text()
         if loc == "":
             show_message(self.parent, 'I_NEEDNAME')
             return
-        self.parent.loc = loc
+        self.parent.loc = os.path.abspath(loc)
         self.parent.data = [self.t_program.text(), self.t_title.text(),
-                            int(self.c_rebuild.isChecked()), int(self.c_details.isChecked()),
+                            int(self.c_rebuild.isChecked()),
+                            int(self.c_details.isChecked()),
                             int(self.c_redef.isChecked())]
         super().accept()
 
@@ -487,7 +489,6 @@ class ExtraSettingsDialog(qtw.QDialog):
         rownum = 0
         self.rownum = rownum
         self.data, self.checks = [], []
-        print([x for x in self.parent.page.settings.keys()])
         for name, value in self.parent.page.settings.items():
             if name not in hkc.csv_settingnames and name != 'extra':
                 desc = self.parent.page.settings['extra'][name]
@@ -690,12 +691,12 @@ class FilesDialog(qtw.QDialog):
         self.checks = []
         self.paths = []
         self.progs = []
-        self.pathdata = {}
-        ## for name, path in self.parent.ini["plugins"]:
-            ## self.add_row(name, path)
-        for name, paths in self.parent.pluginfiles.items():
-            self.add_row(name, paths[0])
-            self.pathdata[name] = paths[1]
+        self.settingsdata = {}
+        # settingsdata is een mapping van pluginnaam op een tuple van programmanaam en
+        # andere settings (alleen als er een nieuw csv file voor moet worden aangemaakt)
+        for name, path in self.parent.ini["plugins"]:
+            self.add_row(name, path)
+            self.settingsdata[name] = (self.parent.pluginfiles[name],)
         box = qtw.QVBoxLayout()
         box.addLayout(self.gsizer)
         box.addStretch()
@@ -748,7 +749,7 @@ class FilesDialog(qtw.QDialog):
         win.close()
         self.checks.pop(rownum)
         self.paths.pop(rownum)
-        self.pathdata.pop(name)
+        self.settingsdata.pop(name)
 
     def add_program(self):
         """nieuwe rij aanmaken in self.gsizer"""
@@ -760,11 +761,12 @@ class FilesDialog(qtw.QDialog):
                 return
             self.last_added = newtool
             self.loc = prgloc = ""
+            self.settingsdata[newtool] = (prgloc,)
             if ask_question(self.parent, 'P_INICSV'):
                 ok = SetupDialog(self, newtool).exec_()
+                self.settingsdata[newtool] = self.data
                 prgloc = self.data[0]
             self.add_row(newtool, path=self.loc)
-            self.pathdata[newtool] = prgloc
 
     def remove_programs(self):
         """alle aangevinkte items verwijderen uit self.gsizer"""
@@ -774,11 +776,12 @@ class FilesDialog(qtw.QDialog):
             dlg = DeleteDialog(self).exec_()
             if dlg == qtw.QDialog.Accepted:
                 for row, name in reversed(checked):
+                    csv_name, prg_name = '', ''
                     try:
-                        csv_name, prg_name = self.parent.pluginfiles[name]
+                        csv_name = self.paths[row][1].input.text()
+                        prg_name = self.settingsdata[name][0]
                     except KeyError:
                         logging.exception('')
-                        csv_name, prg_name = '', ''
                     logging.info('csv name is {}'.format(csv_name))
                     logging.info('prg name is {}'.format(prg_name))
                     if self.remove_data:
@@ -796,9 +799,6 @@ class FilesDialog(qtw.QDialog):
         if self.last_added not in [x[0] for x in self.paths]:
             self.last_added = ''
         self.parent.last_added = self.last_added
-        for filename in self.code_to_remove + self.data_to_remove:
-            print(filename)
-            os.remove(filename)
         for ix, entry in enumerate(self.paths):
             name, path = entry
             if name not in [x for x, y in self.parent.ini['plugins']]:
@@ -806,20 +806,40 @@ class FilesDialog(qtw.QDialog):
                 if not csvname:
                     show_message(self, text='Please fill out all filenames')
                     return
-                prgname = self.pathdata[name]
-                ## if not prgname:
-                    ## data = hkc.readcsv(csvname)
-                    ## try:
-                        ## prgname = data[0][hkc.csv_plgsett]
-                    ## except KeyError:
-                        ## show_message(self, text='{} does not contain a reference to the '
-                                                ## 'plugin (PluginName setting)'.format(csvname))
-                        ## return
-                self.parent.pluginfiles[name] = (csvname, prgname)
+                prgname = self.settingsdata[name][0]
+                if not prgname:
+                    # try to get the plugin name from the csv file
+                    try:
+                        data = hkc.readcsv(csvname)
+                    except (FileNotFoundError, IsADirectoryError, ValueError):
+                        show_message(self, text='{} does not seem to be a usable '
+                                                'csv file'.format(csvname))
+                        return
+                    try:
+                        prgname = data[0][hkc.csv_plgsett]
+                    except KeyError:
+                        show_message(self,
+                                     text='{} does not contain a reference to a '
+                                          'plugin (PluginName setting)'.format(csvname))
+                        return
+                if len(self.settingsdata[name]) == 1: # existing plugin
+                    try:
+                        _ = importlib.import_module(prgname)
+                    except ImportError:
+                        show_message(self,
+                                     text='{} does not contain a reference to a '
+                                          'valid plugin'.format(csvname))
+                        return
 
-        self.parent.ini["plugins"] = hkc.update_paths(self.paths, self.pathdata,
+                self.parent.pluginfiles[name] = prgname
+        for filename in self.code_to_remove + self.data_to_remove:
+            os.remove(filename)
+        self.newpathdata = {}
+        for name, entry in self.settingsdata.items():
+            if len(entry) > 1:
+                self.newpathdata[name] = entry
+        self.parent.ini["plugins"] = hkc.update_paths(self.paths, self.newpathdata,
                                                       self.parent.ini["lang"])
-
         super().accept()
 
 class EntryDialog(qtw.QDialog):

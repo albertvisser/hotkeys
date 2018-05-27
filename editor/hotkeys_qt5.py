@@ -48,13 +48,16 @@ class HotkeyPanel(qtw.QFrame):
 
         logging.info(self.pad)
         nodata = ''
-        try:
-            self.settings, self.column_info, self.data = hkc.readcsv(self.pad)
-        except ValueError as e:
-            logging.exception('')
-            nodata = self.captions['I_NOSET'].format(e, self.pad)
-        except FileNotFoundError:
-            logging.exception('')
+        if self.pad:
+            try:
+                self.settings, self.column_info, self.data = hkc.readcsv(self.pad)
+            except ValueError as e:
+                logging.exception('')
+                nodata = self.captions['I_NOSET'].format(e, self.pad)
+            except FileNotFoundError:
+                logging.exception('')
+                nodata = self.captions['I_NOSETFIL'].format(self.pad)
+        else:
             nodata = self.captions['I_NOSETFIL'].format(self.pad)
         if nodata:
             self.settings, self.column_info, self.data = {}, [], {}
@@ -64,11 +67,18 @@ class HotkeyPanel(qtw.QFrame):
             tmp = ":\n\n" + nodata if nodata else ""
             nodata = self.captions['I_NODATA'] + tmp
         else:
-            modulename = self.settings[hkc.csv_plgsett]
             try:
-                self._keys = importlib.import_module(modulename)
-            except ImportError:
+                modulename = self.settings[hkc.csv_plgsett]
+            except KeyError:
                 logging.exception('')
+                nodata = True
+            else:
+                try:
+                    self._keys = importlib.import_module(modulename)
+                except ImportError:
+                    logging.exception('')
+                    nodata = True
+            if nodata:
                 nodata = self.captions['I_NODATA'].replace('data', 'plugin code')
 
         if not nodata:
@@ -728,7 +738,7 @@ class HotkeyPanel(qtw.QFrame):
         self._newdata = self._origdata[:]
 
     def do_modification(self, delete=False):  # TODO
-        """currently this only works for tcmdrkys
+        """currently this only works for tcmdrkys - or does it?
         """
         print("Aanpassen uitgezet, werkt nog niet voor alles")
         return
@@ -787,12 +797,16 @@ class ChoiceBook(qtw.QFrame):
         self.filter_on = False
         self.pnl = qtw.QStackedWidget(self)
         for txt, loc in self.plugins:
-            if not os.path.exists(loc):
+            if loc and not os.path.exists(loc):
                 loc = os.path.join(hkc.BASE, loc)
             win = HotkeyPanel(self, loc)
             self.pnl.addWidget(win)
-            fl = win.settings[hkc.csv_plgsett]
-            self.parent.pluginfiles[txt] = (loc, fl)
+            try:
+                fl = win.settings[hkc.csv_plgsett]
+            except KeyError:
+                pass # error is handled elsewhere
+                fl = ''
+            self.parent.pluginfiles[txt] = fl
             self.sel.addItem(txt)
         self.b_exit = qtw.QPushButton(self.parent.captions['C_EXIT'], self)
         self.b_exit.clicked.connect(self.parent.exit)
@@ -1287,7 +1301,6 @@ class MainFrame(qtw.QMainWindow):
         ok = hkd.InitialToolDialog(self).exec_()
         if ok == qtw.QDialog.Accepted:
             mode, pref = self.prefs
-            print('in m_pref: {}, {}'.format(mode, pref))
             if mode:
                 self.ini['startup'] = mode
                 hkc.change_setting('startup', oldmode, mode, self.ini['filename'])

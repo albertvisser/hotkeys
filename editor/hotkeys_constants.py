@@ -20,10 +20,9 @@ LIN = True if os.name == 'posix' else False
 CONF = 'editor.hotkey_config'  # default configuration file
 BASE = str(HERE.parent)
 
-logging.basicConfig(
-    filename=str(HERE / 'logs' / 'hotkeys.log'),
-    level=logging.DEBUG,
-    format='%(asctime)s %(message)s')
+logging.basicConfig(filename=str(HERE / 'logs' / 'hotkeys.log'),
+                    level=logging.DEBUG,
+                    format='%(asctime)s %(message)s')
 
 
 def log(message, always=False):
@@ -240,7 +239,6 @@ def update_paths(paths, pathdata, lang):
     newpaths = []
     for name, path in paths:
         loc = path.input.text()         # bv editor/plugins/gitrefs_hotkeys.csv
-        print(name, loc)
         newpaths.append((name, loc))
         if name in pathdata:
             data = pathdata[name]       # bv. ['editor.plugins.gitrefs_keys', 'gitrefs hotkeys', 0, 0, 0]
@@ -276,36 +274,40 @@ def readcsv(pad):
     data = collections.OrderedDict()
     coldata = []
     settings = collections.OrderedDict()
-    with open(pad, 'r') as _in:
-        rdr = csv.reader(_in)
-        key = 0
-        ## first = True
-        extrasettings = {}
-        for row in rdr:
-            rowtype, rowdata = row[0], row[1:]
-            if rowtype == csv_settingtype:
-                name, value, desc = rowdata
-                settings[name] = value
-                if name not in csv_settingnames:
-                    extrasettings[name] = desc
-            elif rowtype == csv_titletype:
-                for item in rowdata[:-1]:
-                    coldata_item = ['', '', '']
-                    coldata_item[0] = item
-                    coldata.append(coldata_item)
-            elif rowtype == csv_widthtype:
-                for ix, item in enumerate(rowdata[:-1]):
-                    coldata[ix][1] = int(item)
-            elif rowtype == csv_istypetype:
-                for ix, item in enumerate(rowdata[:-1]):
-                    coldata[ix][2] = bool(int(item))
-            elif rowtype == csv_keydeftype:
-                key += 1
-                data[key] = ([x.strip() for x in rowdata])
-            elif not rowtype.startswith('#'):
-                raise ValueError(rowtype)
-        if extrasettings:
-            settings['extra'] = extrasettings
+    try:
+        with open(pad, 'r') as _in:
+            rdr = csv.reader(_in)
+            rdrdata = [row for row in rdr]
+    except (FileNotFoundError, IsADirectoryError):
+        raise
+    key = 0
+    ## first = True
+    extrasettings = {}
+    for row in rdrdata:
+        rowtype, rowdata = row[0], row[1:]
+        if rowtype == csv_settingtype:
+            name, value, desc = rowdata
+            settings[name] = value
+            if name not in csv_settingnames:
+                extrasettings[name] = desc
+        elif rowtype == csv_titletype:
+            for item in rowdata[:-1]:
+                coldata_item = ['', '', '']
+                coldata_item[0] = item
+                coldata.append(coldata_item)
+        elif rowtype == csv_widthtype:
+            for ix, item in enumerate(rowdata[:-1]):
+                coldata[ix][1] = int(item)
+        elif rowtype == csv_istypetype:
+            for ix, item in enumerate(rowdata[:-1]):
+                coldata[ix][2] = bool(int(item))
+        elif rowtype == csv_keydeftype:
+            key += 1
+            data[key] = ([x.strip() for x in rowdata])
+        elif not rowtype.startswith('#'):
+            raise ValueError(rowtype)
+    if extrasettings:
+        settings['extra'] = extrasettings
     return settings, coldata, data
 
 
