@@ -52,7 +52,9 @@ def get_keydefs(doc, soort, keydefs=None):
 
 
 def writecsv():
-    """implemntation of standard function to build the csvfile
+    """implementation of standard function to build the csvfile
+
+    i.v.m. obsolete raken niet buildcsv genoemd zodat ik me niet kan vergissen
     """
     ini = Settings('/home/albert/tcmdrkeys/tcmdrkeys/opkey_config.py')
     ## ini_pad = '/home/albert/tcmdrkeys/opera'

@@ -1,4 +1,17 @@
 """basic plugin for tool using a gtkaccel_map - gui independent stuff
+
+delivers:
+actions: mapping van een volgnummer/code op een tuple van "sectie" en "commando"
+actionscontext: mapping van een sectie op een list van commando's
+contexts: list van mogelijke contexts (keys van actionscontext)
+descriptions: mapping van een volgnummer/code keys van actions) op een omschrijving
+-- dit is de tabel die ik niet uit de tool settings kan afleiden en dus apart moet opslaan
+keydefs: list van tuples bestaande uit key, modifiers, commando (key van actions)
+
+extra bij Dia:
+others: mapping van volgnummer/code op ebuilden tuple van type contextmenu (?) en actie
+otherkeys: list van tuples a la keydefs
+othercontext: mapping a la actioncontext (mag nog een keer onderverdeeld)
 """
 import collections
 
@@ -19,18 +32,6 @@ conversion_map = (('bracketright', ']'),
                   ('Subtract', '-'))
 
 
-def convert_key(inp):
-    """map gtk key name to HotKeys key name
-    """
-    return out
-
-
-def build_mods(inp):
-    """Um...
-    """
-    return out
-
-
 def read_keydefs_and_stuff(filename):
     """Get data from file
     """
@@ -38,8 +39,8 @@ def read_keydefs_and_stuff(filename):
     result = {'keydefs': keydefs}
 
     actiondict = collections.defaultdict(list)
-    new_actions = {}
-    descriptions = {}
+    new_actions = collections.OrderedDict()
+    descriptions = collections.OrderedDict()
     for key, value in actions.items():
         context, action = value.lstrip('/').split('/', 1)
         actiondict[context].append(action)
@@ -62,7 +63,7 @@ def read_keydefs_and_stuff(filename):
             otheractions[keyval] = (context, action)
             if value:
                 otherkeys.append((value, keyval))
-        result.update({'others': others, 'othercontext': othersdict,
+        result.update({'others': otheractions, 'othercontext': othersdict,
                        'otherkeys': otherkeys})
 
     return result
@@ -118,29 +119,3 @@ def readfile(filename):
     return keydefs, actions, others
 
 
-def build_extended_keydefs(keydefs, actions):  # the old version
-    """create lines for csv file
-    """
-    keydefs_full, used = [], {}
-    for key, mods, command in keydefs:
-        keydefs_full.append('Keydef,{},{},{}'.format(key, mods, actions[command]))
-        used[command] = ''  # can't pop these from actions because the may have been reused
-    for key in actions:
-        if key in used:
-            continue
-        keydefs_full.append('Keydef,,,{}'.format(actions[key]))
-    return keydefs_full
-
-
-def main():
-    """test function
-    """
-    import pprint
-    for item in ('/home/albert/.gimp-2.8/menurc',
-                 '/home/albert/.config/banshee-1/gtk_accel_map',
-                 '/home/albert/.dia/menurc'):
-        stuff = read_keydefs_and_stuff(item)
-        pprint.pprint(stuff)
-
-if __name__ == "__main__":
-    main()

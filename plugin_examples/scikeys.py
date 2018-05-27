@@ -4,10 +4,17 @@
 from __future__ import print_function
 import os
 import sys
+import logging
 import collections                  # tbv defaultdict
 import tarfile                      # t.b.v. read_source
 ## import xml.etree.ElementTree as et  # for xml parsing
 import bs4 as bs                  # import BeautifulSoup for html parsing
+logging.basicConfig(filename='/home/albert/projects/hotkeys/editor/logs/scikeys.log',
+                    format='%(asctime)s %(message)s',
+                    datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG)
+
+
+log = logging.info
 
 
 def nicefy_props(data):
@@ -207,7 +214,7 @@ class PropertiesFile():
                 prop, value = line.split('=', 1)
             except ValueError:
                 # ignore non-assignments
-                print('Not an assignment: {}'.format(line))
+                log('Not an assignment: %s', line)
                 prop = value = ''
             # add definition to dictionary
             if self._var_start in prop or self._var_start in value:
@@ -363,11 +370,11 @@ class PropertiesFile():
                 varnaam, eind = item.split(self._var_end)
             except ValueError:
                 regel += self._var_start + item
-                print('no variable found ->', regel)
+                log('no variable found -> %s', regel)
                 continue
             if varnaam not in self.properties:
                 regel += self._var_start + item
-                print('no substitution possible for', varnaam, '->', regel)
+                log('no substitution possible for %s -> %s', varnaam, regel)
                 continue
             # don't care about platform here; just take first value
             regel += list(self.properties[varnaam].values())[0] + eind
@@ -386,12 +393,12 @@ class PropertiesFile():
                 varnaam, eind = item.split(self._var_end)
             except ValueError:
                 regel += self._var_start + item
-                print('no variable found ->', regel)
+                log('no variable found -> %s', regel)
                 continue
             # check if setting exists at all
             if varnaam not in self.properties:
                 regel += self._var_start + item
-                print('no substitution possible for', varnaam, '->', regel)
+                log('no substitution possible for %s-> %s', varnaam , regel)
                 continue
             # current platform is not defined for this property
             if variants:  # can't work with  regel  anymore
@@ -399,7 +406,7 @@ class PropertiesFile():
                     try:
                         data += self.properties[varnaam][platform] + eind
                     except KeyError:
-                        print('need to create another variant')
+                        log('need to create another variant')
                     else:
                         variants[platform] = data
             elif self._platform == self._default_platform:
@@ -412,8 +419,8 @@ class PropertiesFile():
                 if test:
                     regel = test
                 else:
-                    print('property {} substitution failed for platform {}'.format(
-                        prop, self._platform))
+                    log('property %s substitution failed for platform %s',
+                        prop, self._platform)
                     regel += self._var_start + item
         if variants:
             for platform, data in variants.items():

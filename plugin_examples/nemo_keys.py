@@ -44,16 +44,21 @@ F1;;Help;All Topics
 """
 
 
-def read_data():
+def buildcsv(parent, showinfo=True):
     """read keydefs from input
     """
+    keydefs = {}
     defaultkeys = {}
     commands = collections.defaultdict(list)
+    count = 0
     for line in data.split('\n'):
-        if line.startswith('#'):
+        if not line or line.startswith('#'):
             continue
         section, key, mods, command = line.split(';')
         if key:
             defaultkeys[(key, mods)] = command
         commands[section].append(command)
-    return {}, {'commands': commands, 'defaultkeys': defaultkeys}
+        count += 1
+        keydefs[count] = (section, key, mods, command, '')
+
+    return keydefs, {'commands': commands, 'defaultkeys': defaultkeys}

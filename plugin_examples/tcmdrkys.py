@@ -14,7 +14,8 @@ import logging
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
-logging.basicConfig(filename='/tmp/tcmdrkeys.log', format='%(asctime)s %(message)s',
+logging.basicConfig(filename='/home/albert/projects/hotkeys/editor/logs/tcmdrkeys.log',
+                    format='%(asctime)s %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG)
 DFLT_TCLOC = "C:/totalcmd"
 PATHS = ('TC_PAD', 'UC_PAD', 'CI_PAD', 'KB_PAD', 'HK_PAD')
@@ -398,9 +399,10 @@ def _translate_keyname(inp):
     """helper function to convert text from settings into text for this app
     """
     convert = {'Pgup': 'PgUp', 'Pgdn': 'PgDn', 'Period': '.', 'Comma': ',',
-               'Plus': '+', 'Minus': '-', 'Backtick/Tilde': '`', 'Brackets open': '[',
-               'Brackets close': ']', 'Backslash/Pipe': '\\', 'Semicolon/colon': ';',
-               'Apostrophe/Quote': "'", 'Slash/Questionmark': '/'}
+               'Plus': '+', 'Minus': '-', 'Backtick/Tilde': '`',
+               'Brackets open': '[', 'Brackets close': ']', 'Backslash/Pipe': '\\',
+               'Semicolon/colon': ';', 'Apostrophe/Quote': "'",
+               'Slash/Questionmark': '/', 'OEM_US\|': '\\'}
     if inp in convert:
         out = convert[inp]
     else:
