@@ -7,6 +7,7 @@ import pathlib
 import shutil
 import collections
 import csv
+import enum
 import importlib
 import logging
 
@@ -30,12 +31,27 @@ def log(message, always=False):
     if always or os.environ.get("DEBUG", '') not in ('', "0"):
         logging.info(message)
 
-csv_linetypes = ['Setting', 'Title', 'Width', 'is_type', 'Keydef']
-csv_settingtype, csv_keydeftype = csv_linetypes[0], csv_linetypes[-1]
-csv_titletype, csv_widthtype, csv_istypetype = csv_linetypes[1:-1]
-csv_settingnames = ['PluginName', 'PanelName', 'RebuildCSV', 'ShowDetails',
-                    'RedefineKeys']
-csv_plgsett, csv_pnlsett, csv_rbldsett, csv_detsett, csv_redefsett = csv_settingnames
+
+class LineType(enum.Enum):
+    """Types of lines in the csv file (first value)
+    """
+    SETT = 'Setting'
+    CAPT = 'Title'
+    WID = 'Width'
+    ORIG = 'is_type'
+    KEY = 'Keydef'
+csv_linetypes = [x.value for x in LineType.__members__.values()]
+
+
+class SettType(enum.Enum):
+    """Types of settings (second value on line with first value = setting
+    """
+    PLG = 'PluginName'
+    PNL = 'PanelName'
+    RBLD = 'RebuildCSV'
+    DETS = 'ShowDetails'
+    RDEF = 'RedefineKeys'
+csv_settingnames = [x.value for x in SettType.__members__.values()]
 plugin_skeleton = '''# -*- coding: UTF-8 -*-\n
 """
 See example_app_keys.py for a description of the plugin API.
@@ -65,15 +81,15 @@ def readlang(lang):
 def get_csv_oms(lang):
     "build descriptions for csv file"
     captions = readlang(lang)
-    csv_oms = dict(zip(csv_settingnames + csv_linetypes[1: -1], (
-        captions['T_NAMOF'].format(captions['S_PLGNAM'], captions['T_NOPY']),
-        captions['T_INSEL'].format(captions['S_PNLNAM']),
-        captions['T_BOOL'].format(captions['S_RBLD']),
-        captions['T_BOOL'].format(captions['S_DETS']),
-        captions['T_BOOL'].format(captions['S_RSAV']),
-        captions['T_COLTTL'],
-        captions['T_COLWID'],
-        captions['T_BOOL'].format(captions['T_COLIND']))))
+    csv_oms = {SettType.PLG.value: captions['T_NAMOF'].format(captions['S_PLGNAM'],
+                                                              captions['T_NOPY']),
+               SettType.PNL.value: captions['T_INSEL'].format(captions['S_PNLNAM']),
+               SettType.RBLD.value: captions['T_BOOL'].format(captions['S_RBLD']),
+               SettType.DETS.value: captions['T_BOOL'].format(captions['S_DETS']),
+               SettType.RDEF.value: captions['T_BOOL'].format(captions['S_RSAV']),
+               LineType.CAPT.value: captions['T_COLTTL'],
+               LineType.WID.value: captions['T_COLWID'],
+               LineType.ORIG.value: captions['T_BOOL'].format(captions['T_COLIND'])}
     return csv_oms
 
 
@@ -97,7 +113,7 @@ def get_pluginname(csvname):
     with open(csvname) as _in:
         for line in _in:
             test = line.split(',')
-            if test[:2] == [csv_settingtype, csv_settingnames[0]]:
+            if test[:2] == [LineType.SETT.value, SettType.PLG.value]:
                 pl_name = test[2]
                 break
     # ideally we should import the given module to determine the actual file name
@@ -245,7 +261,7 @@ def update_paths(paths, pathdata, lang):
             parts = data[0].split('.')
             if parts[0] == '':
                 parts = parts[1:]
-            newfile = updir /  ('/'.join(parts) + '.py')
+            newfile = updir / ('/'.join(parts) + '.py')
             with newfile.open('w') as _out:
                 _out.write(plugin_skeleton)
             initcsv(updir / loc, data, lang)
@@ -261,7 +277,7 @@ def initcsv(loc, data, lang):
     with loc.open("w") as _out:
         wrt = csv.writer(_out)
         for indx, sett in enumerate(csv_settingnames):
-            wrt.writerow([csv_linetypes[0], sett, data[indx], csv_oms[sett]])
+            wrt.writerow([LineType.SETT.value, sett, data[indx], csv_oms[sett]])
         for row in build_csv_sample_data(lang):
             wrt.writerow(row)
 
@@ -285,23 +301,23 @@ def readcsv(pad):
     extrasettings = {}
     for row in rdrdata:
         rowtype, rowdata = row[0], row[1:]
-        if rowtype == csv_settingtype:
+        if rowtype == LineType.SETT.value:
             name, value, desc = rowdata
             settings[name] = value
             if name not in csv_settingnames:
                 extrasettings[name] = desc
-        elif rowtype == csv_titletype:
+        elif rowtype == LineType.CAPT.value:
             for item in rowdata[:-1]:
                 coldata_item = ['', '', '']
                 coldata_item[0] = item
                 coldata.append(coldata_item)
-        elif rowtype == csv_widthtype:
+        elif rowtype == LineType.WID.value:
             for ix, item in enumerate(rowdata[:-1]):
                 coldata[ix][1] = int(item)
-        elif rowtype == csv_istypetype:
+        elif rowtype == LineType.ORIG.value:
             for ix, item in enumerate(rowdata[:-1]):
                 coldata[ix][2] = bool(int(item))
-        elif rowtype == csv_keydeftype:
+        elif rowtype == LineType.KEY.value:
             key += 1
             data[key] = ([x.strip() for x in rowdata])
         elif not rowtype.startswith('#'):
@@ -329,15 +345,15 @@ def writecsv(pad, settings, coldata, data, lang):
                 settdesc = csvoms[name]
             except KeyError:
                 settdesc = extrasettoms[name]
-            rowdata = csv_settingtype, name, value, settdesc
+            rowdata = LineType.SETT.value, name, value, settdesc
             wrt.writerow(rowdata)
-        for ix, row in enumerate([[csv_titletype], [csv_widthtype]]):
+        for ix, row in enumerate([[LineType.CAPT.value], [LineType.WID.value]]):
             row += [x[ix] for x in coldata] + [csvoms[row[0]]]
             wrt.writerow(row)
-        wrt.writerow([csv_istypetype] + [int(x[2]) for x in coldata] +
-                     [csvoms[csv_istypetype]])
+        wrt.writerow([LineType.ORIG.value] + [int(x[2]) for x in coldata] +
+                     [csvoms[LineType.ORIG.value]])
         for keydef in data.values():
-            row = [csv_keydeftype] + [x for x in keydef]
+            row = [LineType.KEY.value] + [x for x in keydef]
             wrt.writerow(row)
     if extrasettoms:
         settings['extra'] = extrasettoms

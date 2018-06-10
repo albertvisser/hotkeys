@@ -68,7 +68,7 @@ class HotkeyPanel(qtw.QFrame):
             nodata = self.captions['I_NODATA'] + tmp
         else:
             try:
-                modulename = self.settings[hkc.csv_plgsett]
+                modulename = self.settings[hkc.SettType.PLG.value]
             except KeyError:
                 logging.exception('')
                 nodata = True
@@ -104,14 +104,14 @@ class HotkeyPanel(qtw.QFrame):
             return
 
         try:
-            self.has_extrapanel = bool(int(self.settings[hkc.csv_detsett]))
+            self.has_extrapanel = bool(int(self.settings[hkc.SettType.DETS.value]))
         except KeyError:
             pass
 
         self.title = self.settings["PanelName"]
 
-        # self.has_extrapanel controleert extra initialisaties en het opbouwen van de rest van de GUI
-        # het vullen van veldwaarden hierin gebeurt als gevolg van het vullen
+        # self.has_extrapanel controleert extra initialisaties en het opbouwen van het extra
+        # schermdeel - het vullen van veldwaarden hierin gebeurt als gevolg van het vullen
         # van de eerste rij in de listbox, daarom moet deze het laatst
         # self.otherstuff = self._keys.getotherstuff()
         if self.has_extrapanel:
@@ -444,8 +444,8 @@ class HotkeyPanel(qtw.QFrame):
         """
         if self._initializing_screen:
             return
-        text = str(text)    # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan de
-                            # callback soms fout? Of is het Py3 vs Py2?
+        text = str(text)    # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan
+                            # de callback soms fout? Of is het Py3 vs Py2?
         hlp = ted.text()
         if text != hlp:
             text = hlp
@@ -457,7 +457,6 @@ class HotkeyPanel(qtw.QFrame):
                 self.defchanged = False
                 self.b_save.setEnabled(False)
 
-
     def on_combobox(self, cb, text):
         """callback op het gebruik van een combobox
 
@@ -465,8 +464,8 @@ class HotkeyPanel(qtw.QFrame):
         """
         if self._initializing_screen:
             return
-        text = str(text)    # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan de
-                            # callback soms fout? Of is het Py3 vs Py2?
+        text = str(text)    # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan
+                            # de callback soms fout? Of is het Py3 vs Py2?
         hlp = cb.currentText()
         if text != hlp:
             text = hlp
@@ -491,7 +490,7 @@ class HotkeyPanel(qtw.QFrame):
                     self.defchanged = True
                     if 'C_CMD' in self.fields:
                         self.b_save.setEnabled(True)
-            elif str(self.cmb_commando.currentText()) == self._origdata[cmditemindex]:  # UNDEF
+            elif str(self.cmb_commando.currentText()) == self._origdata[keyitemindex]:  # UNDEF
                 self.defchanged = False
                 if 'C_CMD' in self.fields:
                     self.b_save.setEnabled(False)
@@ -530,7 +529,6 @@ class HotkeyPanel(qtw.QFrame):
             except AttributeError:
                 pass
 
-
     def on_checkbox(self, cb, state):
         """callback op het gebruik van een checkbox
 
@@ -562,14 +560,14 @@ class HotkeyPanel(qtw.QFrame):
 
         velden op het hoofdscherm worden bijgewerkt vanuit de selectie
 
-        bevat een soort detectie of de definitie gewijzigd is die rekening probeerteditor/hotkeys_dialogs_gt5.py
+        bevat een soort detectie of de definitie gewijzigd is die rekening probeert
         te houden met of een nieuwe keydef wordt aangemaakt die een kopie is van de
         oude voor een andere keycombo - alleen die triggert ook bij opbouwen van
         het scherm
         """
         if not self.has_extrapanel:
             return
-        if not int(self.parent.page.settings[hkc.csv_redefsett]):
+        if not int(self.parent.page.settings[hkc.SettType.RDEF.value]):
             return
         if not newitem:  # bv. bij p0list.clear()
             return
@@ -802,10 +800,9 @@ class ChoiceBook(qtw.QFrame):
             win = HotkeyPanel(self, loc)
             self.pnl.addWidget(win)
             try:
-                fl = win.settings[hkc.csv_plgsett]
+                fl = win.settings[hkc.SettType.PLG.value]
             except KeyError:
-                pass # error is handled elsewhere
-                fl = ''
+                fl = ''  # error is handled elsewhere
             self.parent.pluginfiles[txt] = fl
             self.sel.addItem(txt)
         self.b_exit = qtw.QPushButton(self.parent.captions['C_EXIT'], self)
@@ -1012,11 +1009,11 @@ class MainFrame(qtw.QMainWindow):
         self.menu_bar.clear()
         self._menuitems = {}  # []
         for title, items in (('M_APP', (
-                             ('M_SETT', ((
-                                 ('M_LOC', (self.m_loc, 'Ctrl+F')),
-                                 ('M_LANG', (self.m_lang, 'Ctrl+L')),
-                                 ('M_PREF', (self.m_pref, ''))), '')),
-                             ('M_EXIT', (self.m_exit, 'Ctrl+Q')), )),
+                                 ('M_SETT', ((
+                                     ('M_LOC', (self.m_loc, 'Ctrl+F')),
+                                     ('M_LANG', (self.m_lang, 'Ctrl+L')),
+                                     ('M_PREF', (self.m_pref, ''))), '')),
+                                 ('M_EXIT', (self.m_exit, 'Ctrl+Q')), )),
                              ('M_TOOL', (
                                  ('M_SETT', ((
                                      ('M_COL', (self.m_col, '')),
@@ -1049,7 +1046,6 @@ class MainFrame(qtw.QMainWindow):
                             submenu.addAction(act)
                             self._menuitems[sel] = act
 
-
     def create_menuaction(self, sel, callback, shortcut):
         """return created action w. some special cases
         """
@@ -1062,12 +1058,12 @@ class MainFrame(qtw.QMainWindow):
                 act.setEnabled(False)
         if sel == 'M_RBLD':
             try:
-                act.setEnabled(bool(int(self.page.settings[hkc.csv_rbldsett])))
+                act.setEnabled(bool(int(self.page.settings[hkc.SettType.RBLD.value])))
             except KeyError:
                 act.setEnabled(False)
         elif sel == 'M_SAVE':
             try:
-                act.setEnabled(bool(int(self.page.settings[hkc.csv_redefsett])))
+                act.setEnabled(bool(int(self.page.settings[hkc.SettType.RDEF.value])))
             except KeyError:
                 act.setEnabled(False)
         return act
@@ -1088,7 +1084,6 @@ class MainFrame(qtw.QMainWindow):
         self.page.readkeys()
         self.page.populate_list()
 
-
     def m_save(self):
         """(menu) callback voor het terugschrijven van de hotkeys
 
@@ -1104,7 +1099,6 @@ class MainFrame(qtw.QMainWindow):
             hkd.show_message(self, 'I_DEFSAV')
             return
         hkd.show_message(self, 'I_RSTRT')
-
 
     def m_loc(self):
         """(menu) callback voor aanpassen van de bestandslocaties
@@ -1159,7 +1153,6 @@ class MainFrame(qtw.QMainWindow):
                 selection -= 1
             self.book.sel.setCurrentIndex(selection)
 
-
     def m_rebuild(self):
         """rebuild csv data from (updated) settings
         """
@@ -1185,20 +1178,19 @@ class MainFrame(qtw.QMainWindow):
                 mld = 'No data returned, keyboard settings file unknown or nonexistant'
             hkd.show_message(self, text=mld)
 
-
     def m_tool(self):
         """define tool-specific settings
         """
         if not self.page.settings:
             self.page.settings = {x: '' for x in hkc.csv_settingnames}
-        old_redef = bool(int(self.page.settings[hkc.csv_redefsett]))
+        old_redef = bool(int(self.page.settings[hkc.SettType.RDEF.value]))
         dlg = hkd.ExtraSettingsDialog(self).exec_()
         if dlg == qtw.QDialog.Accepted:
             hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
                          self.page.data, self.ini['lang'])
-            test_redef = bool(int(self.page.settings[hkc.csv_redefsett]))
-            test_dets = bool(int(self.page.settings[hkc.csv_detsett]))
-            test_rbld = bool(int(self.page.settings[hkc.csv_rbldsett]))
+            test_redef = bool(int(self.page.settings[hkc.SettType.RDEF.value]))
+            test_dets = bool(int(self.page.settings[hkc.SettType.DETS.value]))
+            test_rbld = bool(int(self.page.settings[hkc.csv_SettType.RBLD.value]))
             self._menuitems['M_SAVE'].setEnabled(test_redef)
             self._menuitems['M_RBLD'].setEnabled(test_rbld)
             indx = self.book.sel.currentIndex()
@@ -1212,7 +1204,6 @@ class MainFrame(qtw.QMainWindow):
             elif test_redef != old_redef and test_dets:
                 win = self.book.pnl.currentWidget()
                 win.set_extrascreen_editable(test_redef)
-
 
     def m_col(self):
         """define tool-specific settings: column properties
@@ -1250,7 +1241,6 @@ class MainFrame(qtw.QMainWindow):
             hdr.setStretchLastSection(True)
             self.page.populate_list()
 
-
     def m_entry(self):
         """manual entry of keyboard shortcuts
         """
@@ -1263,7 +1253,6 @@ class MainFrame(qtw.QMainWindow):
                 hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
                              self.page.data, self.ini['lang'])
                 self.page.populate_list()
-
 
     def m_lang(self):
         """(menu) callback voor taalkeuze
@@ -1283,14 +1272,12 @@ class MainFrame(qtw.QMainWindow):
             self.readcaptions(lang)
             self.setcaptions()
 
-
     def m_about(self):
         """(menu) callback voor het tonen van de "about" dialoog
         """
         hkd.show_message(self, text='\n'.join(self.captions['T_ABOUT'].format(
             self.captions['T_SHORT'], hkc.VRS, hkc.AUTH,
             self.captions['T_LONG']).split(' / ')))
-
 
     def m_pref(self):
         """mogelijkheid bieden om een tool op te geven dat default getoond wordt
@@ -1307,7 +1294,6 @@ class MainFrame(qtw.QMainWindow):
             if mode == 'Fixed':
                 self.ini['initial'] = pref
                 hkc.change_setting('initial', oldpref, pref, self.ini['filename'])
-
 
     def m_exit(self):
         """(menu) callback om het programma direct af te sluiten

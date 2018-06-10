@@ -161,8 +161,9 @@ class SetupDialog(qtw.QDialog):
         grid.addWidget(self.c_redef, 5, 0, 1, 4)
         text = qtw.QLabel(self.parent.parent.captions['Q_SAVLOC'], self)
         grid.addWidget(text, 6, 0, 1, 2)
-        self.t_loc = FileBrowseButton(self, text=os.path.join(
-                                      'editor', 'plugins', name + "_hotkeys.csv"),
+        self.t_loc = FileBrowseButton(self,
+                                      text=os.path.join('editor', 'plugins',
+                                                        name + "_hotkeys.csv"),
                                       level_down=True)
         grid.addWidget(self.t_loc, 6, 2, 1, 3)
 
@@ -215,7 +216,7 @@ class ColumnSettingsDialog(qtw.QDialog):
 
         self.sizer = qtw.QVBoxLayout()
         text = self.parent.captions['T_COLSET'].format(
-            self.parent.page.settings[hkc.csv_pnlsett])
+            self.parent.page.settings[hkc.SettType.PNL.value])
         hsizer = qtw.QHBoxLayout()
         label = qtw.QLabel(text, self)
         hsizer.addStretch()
@@ -420,28 +421,30 @@ class ExtraSettingsDialog(qtw.QDialog):
 
         hsizer = qtw.QHBoxLayout()
         text = qtw.QLabel(self.parent.captions['S_PLGNAM'], self)
-        self.t_program = qtw.QLineEdit(self.parent.page.settings[hkc.csv_plgsett], self)
+        self.t_program = qtw.QLineEdit(self.parent.page.settings[hkc.SettType.PLG.value],
+                                       self)
         hsizer.addWidget(text)
         hsizer.addWidget(self.t_program)
         vsizer.addLayout(hsizer)
 
         hsizer = qtw.QHBoxLayout()
         text = qtw.QLabel(self.parent.captions['S_PNLNAM'], self)
-        self.t_title = qtw.QLineEdit(self.parent.page.settings[hkc.csv_pnlsett], self)
+        self.t_title = qtw.QLineEdit(self.parent.page.settings[hkc.SettType.PNL.value],
+                                     self)
         hsizer.addWidget(text)
         hsizer.addWidget(self.t_title)
         vsizer.addLayout(hsizer)
         hsizer = qtw.QHBoxLayout()
         self.c_rebuild = qtw.QCheckBox(self.parent.captions['T_MAKE'].format(
             self.parent.captions['S_RBLD']), self)
-        if self.parent.page.settings[hkc.csv_rbldsett] == '1':
+        if self.parent.page.settings[hkc.SettType.RBLD.value] == '1':
             self.c_rebuild.toggle()
         hsizer.addWidget(self.c_rebuild)
         vsizer.addLayout(hsizer)
         hsizer = qtw.QHBoxLayout()
         self.c_showdet = qtw.QCheckBox(self.parent.captions['S_DETS'], self)
         try:
-            if self.parent.page.settings[hkc.csv_detsett] == '1':
+            if self.parent.page.settings[hkc.SettType.DETS.value] == '1':
                 self.c_showdet.toggle()
         except KeyError:
             pass
@@ -450,7 +453,7 @@ class ExtraSettingsDialog(qtw.QDialog):
         hsizer = qtw.QHBoxLayout()
         self.c_redef = qtw.QCheckBox(self.parent.captions['T_MAKE'].format(
             self.parent.captions['S_RSAV']), self)
-        if self.parent.page.settings[hkc.csv_redefsett] == '1':
+        if self.parent.page.settings[hkc.SettType.RDEF.value] == '1':
             self.c_redef.toggle()
         hsizer.addWidget(self.c_redef)
         vsizer.addLayout(hsizer)
@@ -461,7 +464,7 @@ class ExtraSettingsDialog(qtw.QDialog):
         pnl = qtw.QFrame(self)
         vsizer = qtw.QVBoxLayout()
         text = self.parent.captions['T_XTRASET'].format(
-            self.parent.page.settings[hkc.csv_pnlsett])
+            self.parent.page.settings[hkc.SettType.PNL.value])
         hsizer = qtw.QHBoxLayout()
         label = qtw.QLabel(text, self)
         hsizer.addStretch()
@@ -577,14 +580,14 @@ class ExtraSettingsDialog(qtw.QDialog):
     def accept(self):
         """update settings and leave
         """
-        self.parent.page.settings[hkc.csv_plgsett] = self.t_program.text()
-        self.parent.page.settings[hkc.csv_pnlsett] = self.t_title.text()
+        self.parent.page.settings[hkc.SettType.PLG.value] = self.t_program.text()
+        self.parent.page.settings[hkc.SettType.PNL.value] = self.t_title.text()
         value = '1' if self.c_rebuild.isChecked() else '0'
-        self.parent.page.settings[hkc.csv_rbldsett] = value
+        self.parent.page.settings[hkc.SettType.RBLD.value] = value
         value = '1' if self.c_showdet.isChecked() else '0'
-        self.parent.page.settings[hkc.csv_detsett] = value
+        self.parent.page.settings[hkc.SettType.DETS.value] = value
         value = '1' if self.c_redef.isChecked() else '0'
-        self.parent.page.settings[hkc.csv_redefsett] = value
+        self.parent.page.settings[hkc.SettType.RDEF.value] = value
 
         settingsdict, settdescdict = {}, {}
         for w_name, w_value, w_desc in self.data:
@@ -726,7 +729,6 @@ class FilesDialog(qtw.QDialog):
         """
         self.rownum += 1
         colnum = 0
-        line_data = []
         check = qtw.QCheckBox(name, self)
         self.gsizer.addWidget(check, self.rownum, colnum)
         self.checks.append(check)
@@ -782,8 +784,8 @@ class FilesDialog(qtw.QDialog):
                         prg_name = self.settingsdata[name][0]
                     except KeyError:
                         logging.exception('')
-                    logging.info('csv name is {}'.format(csv_name))
-                    logging.info('prg name is {}'.format(prg_name))
+                    logging.info('csv name is %s', csv_name)
+                    logging.info('prg name is %s', prg_name)
                     if self.remove_data:
                         if csv_name:
                             self.data_to_remove.append(csv_name)
@@ -816,13 +818,13 @@ class FilesDialog(qtw.QDialog):
                                                 'csv file'.format(csvname))
                         return
                     try:
-                        prgname = data[0][hkc.csv_plgsett]
+                        prgname = data[0][hkc.SettType.PLG.value]
                     except KeyError:
                         show_message(self,
                                      text='{} does not contain a reference to a '
                                           'plugin (PluginName setting)'.format(csvname))
                         return
-                if len(self.settingsdata[name]) == 1: # existing plugin
+                if len(self.settingsdata[name]) == 1:  # existing plugin
                     try:
                         _ = importlib.import_module(prgname)
                     except ImportError:
@@ -841,6 +843,7 @@ class FilesDialog(qtw.QDialog):
         self.parent.ini["plugins"] = hkc.update_paths(self.paths, self.newpathdata,
                                                       self.parent.ini["lang"])
         super().accept()
+
 
 class EntryDialog(qtw.QDialog):
     """Dialog for Manual Entry
