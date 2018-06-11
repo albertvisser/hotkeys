@@ -1190,7 +1190,7 @@ class MainFrame(qtw.QMainWindow):
                          self.page.data, self.ini['lang'])
             test_redef = bool(int(self.page.settings[hkc.SettType.RDEF.value]))
             test_dets = bool(int(self.page.settings[hkc.SettType.DETS.value]))
-            test_rbld = bool(int(self.page.settings[hkc.csv_SettType.RBLD.value]))
+            test_rbld = bool(int(self.page.settings[hkc.SettType.RBLD.value]))
             self._menuitems['M_SAVE'].setEnabled(test_redef)
             self._menuitems['M_RBLD'].setEnabled(test_rbld)
             indx = self.book.sel.currentIndex()
