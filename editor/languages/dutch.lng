@@ -94,7 +94,7 @@ T_INSEL {} in de selector
 S_RBLD mogelijk dit bestand opnieuw op te bouwen vanuit de instellingen van het tool
 T_MAKE Maak het {}
 T_BOOL 1 = {}; anders 0
-S_RSAV mogelijk om de defiities aan te passen en terug te schrijven naar de tool instellingen
+S_RSAV mogelijk om de definities aan te passen en terug te schrijven naar de tool instellingen
 S_DETS Toon keydef details in een apart deel van het scherm
 Q_SAVLOC Waar zullen we dit bestand opslaan?
 I_RSTRT De nieuwe definities werken mogelijk pas als het andere programma opnieuw gestart wordt
