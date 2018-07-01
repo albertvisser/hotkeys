@@ -422,7 +422,7 @@ def buildcsv(parent, showinfo=True):
     #     ## for key, value in shortcuts
 
     ## print("vóór dialoog:\n", tobecompleted)
-    print(dc_desc)
+    ## print(dc_desc)
     # stuur dialoog aan om beschrijvingen aan te vullen
     descfile = dc_desc
     omsdict = tobecompleted
