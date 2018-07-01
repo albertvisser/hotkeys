@@ -18,6 +18,7 @@ def show_message(win, message_id='', text=''):
         text = win.captions[message_id]
     elif not text:
         text = win.captions['I_NOMSG']
+        raise ValueError(text)
     qtw.QMessageBox.information(win, win.title, text)
     return
 
@@ -31,6 +32,7 @@ def ask_question(win, message_id='', text=''):
         text = win.captions[message_id]
     elif not text:
         text = win.captions['I_NOMSG']
+        raise ValueError(text)
     ok = qtw.QMessageBox.question(win, win.title, text,
                                   qtw.QMessageBox.Yes | qtw.QMessageBox.No,
                                   qtw.QMessageBox.Yes)

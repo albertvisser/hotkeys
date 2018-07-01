@@ -1171,12 +1171,15 @@ class MainFrame(qtw.QMainWindow):
             hkc.writecsv(self.page.pad, self.page.settings, self.page.column_info,
                          self.page.data, self.ini['lang'])
             self.page.populate_list()
+            mld = 'keyboard definitions rebuilt'
         else:
+            mld = 'No definition data'
             try:
-                mld = newdata[1]
+                test = newdata[1]
             except IndexError:
-                mld = 'No data returned, keyboard settings file unknown or nonexistant'
-            hkd.show_message(self, text=mld)
+                mld = 'No extra definition'
+            mld = self.captions['I_#FOUND'].format(mld)
+        hkd.show_message(self, text=mld)
 
     def m_tool(self):
         """define tool-specific settings
