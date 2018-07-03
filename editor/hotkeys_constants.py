@@ -337,7 +337,7 @@ def writecsv(pad, settings, coldata, data, lang):
     try:
         extrasettoms = settings.pop('extra')
     except KeyError:
-        logging.exception('')
+        extrasettoms = ''
     with open(pad, "w") as _out:
         wrt = csv.writer(_out)
         for name, value in settings.items():

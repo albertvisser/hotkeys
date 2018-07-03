@@ -496,7 +496,10 @@ class ExtraSettingsDialog(qtw.QDialog):
         self.data, self.checks = [], []
         for name, value in self.parent.page.settings.items():
             if name not in hkc.csv_settingnames and name != 'extra':
-                desc = self.parent.page.settings['extra'][name]
+                try:
+                    desc = self.parent.page.settings['extra'][name]
+                except KeyError:
+                    desc = ''
                 self.add_row(name, value, desc)
         pnl2.setLayout(self.gsizer)
         pnl.setFrameStyle(qtw.QFrame.Box)

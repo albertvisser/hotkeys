@@ -236,9 +236,12 @@ class DefaultKeys:
 def buildcsv(parent, showinfo=True):
     """build the datastructures for constructing the CSV file
     """
-    if 'VI_CMDREF' not in parent.page.settings:
-        parent.page.settings['VI_CMDREF'] = '/usr/share/vim/vim74/doc/index.txt'
-    path = pathlib.Path(parent.page.settings['VI_CMDREF'])
+    settname = 'VI_CMDREF'
+    if settname not in parent.page.settings:
+        parent.page.settings[settname] = '/usr/share/vim/vim74/doc/index.txt'
+        oms = 'Name of file containing setting names and descriptions'
+        parent.page.settings['extra'] = {settname: oms}
+    path = pathlib.Path(parent.page.settings[settname])
     keyclass = DefaultKeys(path)
     keydefs = keyclass.keydefs
     kinds = keyclass.kinds
