@@ -35,7 +35,6 @@ class HotkeyPanel(qtw.QFrame):
     _keys: de module om de settings te lezen
     """
     def __init__(self, parent, pad):
-
         self.pad = pad
         # switch om het gedrag van bepaalde routines tijdens initialisatie te beïnvloeden
         self._initializing_screen = True
@@ -967,7 +966,6 @@ class MainFrame(qtw.QMainWindow):
     """Hoofdscherm van de applicatie
     """
     def __init__(self, args):
-
         wid = 860 if hkc.LIN else 688
         hig = 594
         super().__init__()
@@ -1233,8 +1231,9 @@ class MainFrame(qtw.QMainWindow):
                          self.page.data, self.ini['lang'])
             if not self.page.data:
                 return
-            hdr = qtw.QTreeWidgetItem()
-            self.page.p0list.setHeaderItem(hdr)
+            # FIXME: apparently refreshing just the header doesn't do the trick
+            # hdr = qtw.QTreeWidgetItem()
+            # self.page.p0list.setHeaderItem(hdr)
             self.page.p0list.setHeaderLabels([self.captions[col[0]] for col in
                                               self.page.column_info])
             hdr = self.page.p0list.header()
