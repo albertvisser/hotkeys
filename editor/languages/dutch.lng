@@ -101,6 +101,8 @@ I_RSTRT De nieuwe definities werken mogelijk pas als het andere programma opnieu
 I_NEEDNAME Sorry, zonder een naam kunnen we niet verder - geef er een op of breek af
 P_INICSV Nieuw CSV bestand initialiseren voor deze applicatie?
 I_NOSETFIL CSV bestand {} niet gevonden
+I_GOTSETFIL CSV bestand {} bestaat al
+I_GOTPLGFIL plugin module {} bestaat al
 I_NOSET Onbekend soort instelling `{}` in CSV bestand {}
 Q_NOCHG Je hebt niks gewijzigd. Weet je zeker dat je dit wilt doen?
 I_NODATA Geen data voor dit programma

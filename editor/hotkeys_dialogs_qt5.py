@@ -2,6 +2,7 @@
 """
 import os
 import importlib
+import importlib.util
 import logging
 import PyQt5.QtWidgets as qtw
 ## import PyQt5.QtGui as gui
@@ -10,29 +11,34 @@ import editor.hotkeys_constants as hkc
 # TODO: Als redefine keys is aangevinkt moet show keydef details ook aangevinkt worden
 
 
-def show_message(win, message_id='', text=''):
-    """toon de boodschap geïdentificeerd door <message_id> in een dialoog
-    met als titel aangegeven door <caption_id>
+def get_text(win, message_id, text, args):
+    """retourneer de tekst geïdentificeerd door <message_id>
+    als <text> is opgegeven wordt die gebruikt
+    <args> bevat een list van waarden die in de tekst kunnen worden ingevuld
     """
     if message_id:
         text = win.captions[message_id]
     elif not text:
         text = win.captions['I_NOMSG']
         raise ValueError(text)
+    if args:
+        text = text.format(*args)
+    return text
+
+
+def show_message(win, message_id='', text='', args=None):
+    """toon een boodschap in een dialoog
+    """
+    text = get_text(win, message_id, text, args)
     qtw.QMessageBox.information(win, win.title, text)
     return
 
 
-def ask_question(win, message_id='', text=''):
-    """toon de vraag geïdentificeerd door <message_id> in een dialoog
-    met als titel aangegeven door <caption_id> en retourneer het antwoord
-    (Yes als True, No als False) na sluiten van de dialoog
+def ask_question(win, message_id='', text='', args=None):
+    """toon een vraag in een dialoog en retourneer het antwoord (Yes als True, No als False)
+    na sluiten van de dialoog
     """
-    if message_id:
-        text = win.captions[message_id]
-    elif not text:
-        text = win.captions['I_NOMSG']
-        raise ValueError(text)
+    text = get_text(win, message_id, text, args)
     ok = qtw.QMessageBox.question(win, win.title, text,
                                   qtw.QMessageBox.Yes | qtw.QMessageBox.No,
                                   qtw.QMessageBox.Yes)
@@ -137,6 +143,7 @@ class SetupDialog(qtw.QDialog):
     """
     def __init__(self, parent, name):
         self.parent = parent
+        self.parent.data = []
         super().__init__()
         self.setWindowTitle(self.parent.parent.captions['T_INICSV'])
 
@@ -196,12 +203,20 @@ class SetupDialog(qtw.QDialog):
         write the settings to this file along with some sample data - deferred to
         confirmation of the filesdialog
         """
-        loc = self.t_loc.input.text()
-        if loc == "":
-            show_message(self.parent, 'I_NEEDNAME')
+        cloc = self.t_loc.input.text()
+        ploc = self.t_program.text()
+        if cloc == "":
+            show_message(self.parent.parent, 'I_NEEDNAME')
             return
-        self.parent.loc = os.path.abspath(loc)
-        self.parent.data = [self.t_program.text(), self.t_title.text(),
+        cloc = os.path.abspath(cloc)
+        if os.path.exists(cloc):
+            show_message(self.parent.parent, 'I_GOTSETFIL', args=[cloc])
+            return
+        if importlib.util.find_spec(ploc):
+            show_message(self.parent.parent, 'I_GOTPLGFIL', args=[ploc])
+            return
+        self.parent.loc = cloc
+        self.parent.data = [ploc, self.t_title.text(),
                             int(self.c_rebuild.isChecked()),
                             int(self.c_details.isChecked()),
                             int(self.c_redef.isChecked())]
@@ -771,8 +786,9 @@ class FilesDialog(qtw.QDialog):
             self.settingsdata[newtool] = (prgloc,)
             if ask_question(self.parent, 'P_INICSV'):
                 ok = SetupDialog(self, newtool).exec_()
-                self.settingsdata[newtool] = self.data
-                prgloc = self.data[0]
+                if ok:
+                    self.settingsdata[newtool] = self.data
+                    prgloc = self.data[0]
             self.add_row(newtool, path=self.loc)
 
     def remove_programs(self):
