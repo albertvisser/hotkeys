@@ -778,6 +778,9 @@ class ChoiceBook(qtw.QFrame):
         super().__init__(parent)
         self.sel = qtw.QComboBox(self)
         self.sel.currentIndexChanged.connect(self.on_page_changed)
+        self.find_loc = qtw.QComboBox(self)
+        self.find_loc.setMinimumContentsLength(5)
+        self.find_loc.setEditable(False)
         self.find = qtw.QComboBox(self)
         self.find.setMinimumContentsLength(20)
         self.find.setEditable(True)
@@ -817,6 +820,8 @@ class ChoiceBook(qtw.QFrame):
         hbox.addStretch()
         self.find_text = qtw.QLabel("", self)
         hbox.addWidget(self.find_text)
+        hbox.addWidget(self.find_loc)
+        hbox.addWidget(qtw.QLabel(":", self))
         hbox.addWidget(self.find)
         hbox.addWidget(self.b_filter)
         hbox.addWidget(self.b_next)
@@ -868,6 +873,10 @@ class ChoiceBook(qtw.QFrame):
         if not all((self.parent.page.settings, self.parent.page.column_info,
                     self.parent.page.data)):
             return
+        items = [self.parent.captions[x[0]] for x in self.parent.page.column_info]
+        self.find_loc.clear()
+        self.find_loc.addItems(items)
+        self.find_loc.setCurrentText(items[-1])
         if self.parent.page.filtertext:
             self.find.setEditText(self.parent.page.filtertext)
             self.b_filter.setText(self.parent.captions['C_FLTOFF'])
@@ -884,10 +893,10 @@ class ChoiceBook(qtw.QFrame):
         """
         page = self.parent.page  # self.pnl.currentWidget()
         for ix, item in enumerate(page.column_info):
-            if item[0] == 'C_DESC':
-                col = ix
+            if self.page.captions[item[0]] == self.find_loc.currentText():
+                self.zoekcol = ix
                 break
-        self.items_found = page.p0list.findItems(text, core.Qt.MatchContains, col)
+        self.items_found = page.p0list.findItems(text, core.Qt.MatchContains, self.zoekcol)
         self.b_next.setEnabled(False)
         self.b_prev.setEnabled(False)
         self.b_filter.setEnabled(False)
@@ -939,7 +948,7 @@ class ChoiceBook(qtw.QFrame):
             self.parent.page.filtertext = text
             self.parent.page.olddata = self.parent.page.data
             self.parent.page.data = {ix: item for ix, item in enumerate(
-                self.parent.page.data.values()) if text.upper() in item[-1].upper()}
+                self.parent.page.data.values()) if text.upper() in item[self.zoekcol].upper()}
             self.b_next.setEnabled(False)
             self.b_prev.setEnabled(False)
             self.find.setEnabled(False)

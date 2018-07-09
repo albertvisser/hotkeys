@@ -56,7 +56,7 @@ C_REMKEY &Delete selected keydef(s)
 C_KTXT Key:
 C_CTXT Map key to:
 C_SELPRG Select tool:
-C_FIND Find text in description:
+C_FIND Find text in 
 C_SELFIL Choose a file
 C_PRGNAM Program
 C_CSVLOC Location of the CSV-file
