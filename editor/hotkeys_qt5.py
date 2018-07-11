@@ -82,14 +82,19 @@ class HotkeyPanel(qtw.QFrame):
 
         if not nodata:
             self.p0list = qtw.QTreeWidget(self)
+            self.parent.page = self
             try:
-                self.parent.page = self
+                test = self._keys.buildcsv
+            except AttributeError:
+                pass
+            else:
                 try:
                     self.otherstuff = self._keys.buildcsv(parent, showinfo=False)[1]
                 except FileNotFoundError:
                     nodata = "Can't build settings for {}".format(modulename)
-            except AttributeError:
-                pass
+                #except AttributeError:
+                #    print('Got AttributeError for {}'.format(modulename))
+                #    raise
 
         if nodata:
             _sizer = qtw.QVBoxLayout()
@@ -251,6 +256,7 @@ class HotkeyPanel(qtw.QFrame):
             self.ix_cmd = ix_item
             ix_item += 1
         self.contextslist = []
+        self.contextsactionsdict = {}
         self.commandslist = []
         try:
             self._keys.add_extra_attributes(self)  # user exit
@@ -262,6 +268,7 @@ class HotkeyPanel(qtw.QFrame):
     def add_extra_fields(self):
         """fields showing details for selected keydef, to make editing possible
         """
+        # print(self.keylist)
         self.screenfields = []
         self._box = box = qtw.QFrame(self)
         frameheight = 90
@@ -566,8 +573,8 @@ class HotkeyPanel(qtw.QFrame):
         """
         if not self.has_extrapanel:
             return
-        if not int(self.parent.page.settings[hkc.SettType.RDEF.value]):
-            return
+        # if not int(self.parent.page.settings[hkc.SettType.RDEF.value]):
+        #     return
         if not newitem:  # bv. bij p0list.clear()
             return
         self.initializing_keydef = True
