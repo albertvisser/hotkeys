@@ -8,7 +8,6 @@ import PyQt5.QtWidgets as qtw
 ## import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
 import editor.hotkeys_constants as hkc
-# TODO: Als redefine keys is aangevinkt moet show keydef details ook aangevinkt worden
 
 
 def get_text(win, message_id, text, args):
@@ -17,7 +16,7 @@ def get_text(win, message_id, text, args):
     <args> bevat een list van waarden die in de tekst kunnen worden ingevuld
     """
     if message_id:
-        text = win.captions[message_id]
+        text = win.captions[message_id].replace(' / ', '\n')
     elif not text:
         text = win.captions['I_NOMSG']
         raise ValueError(text)
@@ -428,6 +427,8 @@ class ExtraSettingsDialog(qtw.QDialog):
     """
     def __init__(self, parent):
         self.parent = parent
+        self.title = self.parent.title
+        self.captions = self.parent.captions
         super().__init__(parent)
         ## self.resize(680, 400)
 
@@ -600,6 +601,17 @@ class ExtraSettingsDialog(qtw.QDialog):
     def accept(self):
         """update settings and leave
         """
+        if self.c_redef.isChecked() and not self.c_showdet.isChecked():
+            show_message(self, "I_NODET")
+            return
+        if self.c_showdet.isChecked():
+            try:
+                test = self.parent.page._keys.add_extra_attributes
+            except AttributeError:
+                self.c_showdet.setChecked(False)
+                self.c_redef.setChecked(False)
+                show_message(self, "I_IMPLXTRA")
+                return
         self.parent.page.settings[hkc.SettType.PLG.value] = self.t_program.text()
         self.parent.page.settings[hkc.SettType.PNL.value] = self.t_title.text()
         value = '1' if self.c_rebuild.isChecked() else '0'

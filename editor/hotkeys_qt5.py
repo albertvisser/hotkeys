@@ -92,7 +92,7 @@ class HotkeyPanel(qtw.QFrame):
                     self.otherstuff = self._keys.buildcsv(parent, showinfo=False)[1]
                 except FileNotFoundError:
                     nodata = "Can't build settings for {}".format(modulename)
-                #except AttributeError:
+                # except AttributeError:
                 #    print('Got AttributeError for {}'.format(modulename))
                 #    raise
 
@@ -504,7 +504,10 @@ class HotkeyPanel(qtw.QFrame):
             if text != self._origdata[self.ix_cntxt]:
                 context = self._origdata[self.ix_cntxt] = self.cmb_context.currentText()
                 self.cmb_commando.clear()
-                actionslist = self.contextactionsdict[context]
+                if self.contextactionsdict:
+                    actionslist = self.contextactionsdict[context]
+                else:
+                    actionslist = self.commandslist
                 self.cmb_commando.addItems(actionslist)
                 if not self.initializing_keydef:
                     self.defchanged = True
@@ -561,7 +564,7 @@ class HotkeyPanel(qtw.QFrame):
                 if 'C_CMD' in self.fields:
                     self.b_save.setEnabled(False)
 
-    def on_item_selected(self, newitem, olditem):  # TODO
+    def on_item_selected(self, newitem, olditem):
         """callback on selection of an item
 
         velden op het hoofdscherm worden bijgewerkt vanuit de selectie
@@ -627,7 +630,7 @@ class HotkeyPanel(qtw.QFrame):
                     make_change = True
             else:
                 make_change = True
-        # note this only works for one specific plugin (tcmdrkys) I think
+        # TODO note this only works for one specific plugin (tcmdrkys) I think
         # which is no problem as long as I don't modify keydefs
         if make_change:
             item = self.p0list.currentItem()
@@ -714,22 +717,29 @@ class HotkeyPanel(qtw.QFrame):
                 soort = item
                 if soort == 'U':
                     self.b_del.setEnabled(True)
-            elif self.column_info[indx][0] == 'C_CNTXT':
+            elif self.column_info[indx][0] == 'C_CNTXT' and self.contextslist:
                 context = item
                 ix = self.contextslist.index(context)
                 self.cmb_context.setCurrentIndex(ix)
                 self._origdata[self.ix_cntxt] = context
-            elif self.column_info[indx][0] == 'C_CMD':
+            elif self.column_info[indx][0] == 'C_CMD' and self.commandslist:
                 command = item
                 if 'C_CNTXT' in self.fields:
                     self.cmb_commando.clear()
                     context = self.cmb_context.currentText()
-                    actionslist = self.contextactionsdict[context]
+                    if self.contextactionsdict:
+                        actionslist = self.contextactionsdict[context]
+                    else:
+                        actionslist = self.commandslist
                     self.cmb_commando.addItems(actionslist)
-                    ix = actionslist.index(command)
+                    try:
+                        ix = actionslist.index(command)
+                    except ValueError:
+                        ix = -1
                 else:
                     ix = self.commandslist.index(command)
-                self.cmb_commando.setCurrentIndex(ix)
+                if ix >= 0:
+                    self.cmb_commando.setCurrentIndex(ix)
                 self._origdata[self.ix_cmd] = command
             elif self.column_info[indx][0] == 'C_DESC':
                 oms = item
@@ -741,9 +751,10 @@ class HotkeyPanel(qtw.QFrame):
                     pass
         self._newdata = self._origdata[:]
 
-    def do_modification(self, delete=False):  # TODO
+    def do_modification(self, delete=False):
         """currently this only works for tcmdrkys - or does it?
         """
+        # TODO uitzetten overbodig maken
         print("Aanpassen uitgezet, werkt nog niet voor alles")
         return
         item = self.p0list.currentItem()

@@ -49,16 +49,25 @@ def buildcsv(parent, showinfo=True):
     """
     keydefs = {}
     defaultkeys = {}
+    sections = set()
     commands = collections.defaultdict(list)
     count = 0
     for line in data.split('\n'):
         if not line or line.startswith('#'):
             continue
-        section, key, mods, command = line.split(';')
+        key, mods, section, command = line.split(';')
         if key:
             defaultkeys[(key, mods)] = command
         commands[section].append(command)
+        sections.add(section)
         count += 1
         keydefs[count] = (section, key, mods, command, '')
 
-    return keydefs, {'commands': commands, 'defaultkeys': defaultkeys}
+    return keydefs, {'commands': commands, 'defaultkeys': defaultkeys, 'sections': list(sections)}
+
+
+def add_extra_attributes(win):
+    """add attributes specific to this plugin
+    """
+    win.contextslist = win.otherstuff['sections']
+    win.contextactionsdict = win.otherstuff['commands']

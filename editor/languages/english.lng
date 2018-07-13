@@ -127,7 +127,9 @@ M_NODESC (No description available)
 T_COLTTL Titles of the columns in the display; refer to keys in the language file
 T_COLWID Column widths
 T_COLIND column indicates if keydef is original or (re)defined
-
+I_NODET For `redefine`, `show details` needs to be checked as well
+I_IMPLXTRA Please implement extra functions in plugin to make this work / you need at least `add_extra_attributes / and maybe `translate_keyname` as well
+ 
 # menus/options
 M_APP &Application
 M_READ (re)&Read definitions

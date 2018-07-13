@@ -17,6 +17,19 @@ logging.basicConfig(filename='/home/albert/projects/hotkeys/editor/logs/scikeys.
 log = logging.info
 
 
+def _translate_keyname(inp):
+    """map key names in settings file to key names in HotKeys
+    """
+    convert = {'Equal': '=', 'Escape': 'Esc', 'Delete': 'Del', 'Return': 'Enter',
+               'BackSpace': 'Backspace', 'PageUp': 'PgUp', 'PageDown': 'PgDn', 'space': 'Space',
+               'Keypad*': 'Num*', 'Keypad+': 'Num+', 'Keypad-': 'Num-', 'Keypad/': 'Num/', }
+    if inp in convert:
+        out = convert[inp]
+    else:
+        out = inp
+    return out
+
+
 def nicefy_props(data):
     """split keydef into key and modifiers
     """
@@ -59,17 +72,19 @@ def read_commands(path):
     menus, internals = soup.find_all('table')
 
     menu_commands = {}
+    count = 0
     for row in menus.find_all('tr'):
         command, text = [tag.string for tag in row.find_all('td')]
-        menu_commands[command] = text
+        count += 1
+        menu_commands["{:0>4}".format(count)] = (command, text)
 
-    command_list, command_names = {}, {}
+    internal_commands = {}
     for row in internals.find_all('tr'):
-        command, text, description = [tag.string for tag in row.find_all('td')]
-        command_list[command] = (text, description)
-        command_names[text] = (command, description)
+        key, command, text = [tag.string for tag in row.find_all('td')]
+        internal_commands[key] = (command, text)
+        # command_names[text] = (key, command)
 
-    return menu_commands, command_list, command_names
+    return menu_commands, internal_commands
 
 
 def read_docs(path):
@@ -398,7 +413,7 @@ class PropertiesFile():
             # check if setting exists at all
             if varnaam not in self.properties:
                 regel += self._var_start + item
-                log('no substitution possible for %s-> %s', varnaam , regel)
+                log('no substitution possible for %s-> %s', varnaam, regel)
                 continue
             # current platform is not defined for this property
             if variants:  # can't work with  regel  anymore
@@ -465,7 +480,7 @@ def buildcsv(parent, showinfo=True):
     # - Directory properties file called "SciTEDirectory.properties" which may be present
     #   in the same or in a parent directory as the file being edited.
 
-    settings = parent.settings
+    settings = parent.page.settings
     ## settings = {
         ## 'SCI_GLBL': ('/etc/scite/SciTEGlobal.properties', ''),
         ## 'SCI_USER': ('/home/albert/.SciTEUser.properties', ''),
@@ -474,7 +489,7 @@ def buildcsv(parent, showinfo=True):
         ## 'SCI_SRCE': ('/home/albert/Downloads/SciTE/scite353.tgz', '')
         ## }
     special_keys = ('help', 'go', 'build', 'compile', 'clean')
-    menu_commands, command_list, command_names = read_commands(settings['SCI_CMDS'])
+    menu_commands, internal_commands = read_commands(settings['SCI_CMDS'])
 
     data = tarfile.open(settings['SCI_SRCE'])
     data.extractall(path='/tmp')
@@ -492,10 +507,10 @@ def buildcsv(parent, showinfo=True):
         name, ext = os.path.splitext(path)
         if os.path.isfile(fname) and ext == '.properties' and name not in (
                 'SciTE', 'Embedded'):
-            globals = PropertiesFile(fname)
-            globals.read_props()
-            globals.get_keydef_props()
-            global_keys += [x for x in globals.data
+            global_stuff = PropertiesFile(fname)
+            global_stuff.read_props()
+            global_stuff.get_keydef_props()
+            global_keys += [x for x in global_stuff.data
                             if x[4] and x[5] not in special_keys]
 
     user_keys = []
@@ -504,24 +519,24 @@ def buildcsv(parent, showinfo=True):
         fname = os.path.join(root, path)
         _, ext = os.path.splitext(path)
         if os.path.isfile(fname) and ext == '.properties':
-            user_ = PropertiesFile(fname)
-            user_.read_props()
-            user_.get_keydef_props()
-            user_keys += [x for x in user_.data
+            user_stuff = PropertiesFile(fname)
+            user_stuff.read_props()
+            user_stuff.get_keydef_props()
+            user_keys += [x for x in user_stuff.data
                           if x[4] and x[5] not in special_keys]
 
     # now put the above stuff together
-    # menu_commands - dict: map command naam op omschrijving
-    #   name: oms
+    # menu_commands - dict: map volgnummer op (commandonaam, omschrijving)
     # command_list: dict: map command nummer op (naam, omschrijving)
-    #   num: (name, oms)
     # menu_keys: list of (key, modifiers, command)
-    # keydefs: dict: map keycombo op (?, omschrijving)
-    # global_keys, user_keys: list of (key, modifiers, context, platform, omschrijving_of_commando) items
-    default_keys = [(x, y, '*', '*', 'S', z, "") for x, y, z in menu_keys]
-    default_keys += [(x, y, '*', '*', 'S', "", z) for x, y, z in keydefs]
-    default_keys += [(x, y, z, q, 'S', r, s) for x, y, z, q, r, s in global_keys]
-    userdef_keys = [(x, y, z, q, 'U', r, s) for x, y, z, q, r, s in user_keys]
+    # keydefs: list of (key. modifiers, omschrijving))
+    # global_keys, user_keys: list of (key, modifiers, context, platform, command, omschrijving)
+    #   commando kan een menu commando zijn of een intern commando of een tool aanroep of een
+    #   lua functie gedefinieerd in luastartup
+    default_keys = [(_translate_keyname(x), y, '*', '*', 'S', z, "") for x, y, z in menu_keys]
+    default_keys += [(_translate_keyname(x), y, '*', '*', 'S', "", z) for x, y, z in keydefs]
+    default_keys += [(_translate_keyname(x), y, z, q, 'S', r, s) for x, y, z, q, r, s in global_keys]
+    userdef_keys = [(_translate_keyname(x), y, z, q, 'U', r, s) for x, y, z, q, r, s in user_keys]
 
     sentinel = (chr(255), '', '', '')
     gen_def = (x for x in sorted(default_keys))
@@ -548,9 +563,18 @@ def buildcsv(parent, showinfo=True):
     shortcuts = collections.OrderedDict()
     def_item = get_next_defitem()
     user_item = get_next_useritem()
+    contexts_list = set()
     while def_item or user_item:
-        test_def = def_item[:4] if def_item else sentinel
-        test_user = user_item[:4] if user_item else sentinel
+        if def_item:
+            test_def = def_item[:4]
+            contexts_list.add(def_item[2])
+        else:
+            test_def = sentinel
+        if user_item:
+            test_user = user_item[:4]
+            contexts_list.add(user_item[2])
+        else:
+            test_user = sentinel
         num += 1
         if test_def < test_user:
             new_item = list(def_item)
@@ -563,19 +587,32 @@ def buildcsv(parent, showinfo=True):
         # the last item can be a command; if so, get the description
         # add the description as a new last item; if not present, add an empty string
         # so now we get one column more
+        menu_desc = {x: y for x, y in menu_commands.values()}
+        int_desc = {x: y for x, y in internal_commands.values()}
         test = new_item[-2]
-        if test in menu_commands:
-            new_item[-1] = menu_commands[test]
-        elif test in command_list:
-            new_item[-1] = new_item.append(command_list[test])
-        elif test in command_names:
-            new_item[-1] = new_item.append(command_names[test])
+        if test in menu_desc:
+            new_item[-1] = menu_desc[test]
+        elif test in int_desc:
+            new_item[-1] = new_item.append(int_desc[test])
         elif test.startswith('IDM_BUFFER'):
             new_item[-1] = "Switch to buffer " + str(int(test[-1]) + 1)
         shortcuts[num] = new_item
-    return shortcuts, {'menucommands': menu_commands, 'commandlist': command_list,
-                       'command_names': command_names, 'menukeys': menu_keys,
-                       'keydefs': keydefs, 'default_keys': global_keys}
+    return shortcuts, {'menucommands': menu_commands, 'internal_commands': internal_commands,
+                       'contexts': list(contexts_list)}
+
+
+def add_extra_attributes(win):
+    """define plugin-specific variables
+    """
+    # context en commando hebben hier geen relatie
+    win.contextslist = win.otherstuff['contexts']
+    actionslist = [(x, y[0], y[1]) for x, y in win.otherstuff['menucommands'].items()]
+    actionslist += [(x, y[0], y[1]) for x, y in win.otherstuff['internal_commands'].items()]
+    win.commandskeys = [x for x, y, z in actionslist]
+    win.commandslist = [y for x, y, z in actionslist]
+    win.contextactionsdict = {}
+    win.descriptions = {y: z for x, y, z in actionslist}
+    win.keylist.append('Movement')
 
 
 def savekeys(parent):

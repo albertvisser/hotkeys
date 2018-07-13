@@ -245,4 +245,11 @@ def buildcsv(parent, showinfo=True):
     keyclass = DefaultKeys(path)
     keydefs = keyclass.keydefs
     kinds = keyclass.kinds
-    return keydefs, {'types': kinds}
+    keylist = list(set(x[0] for x in keydefs.values()))
+    return keydefs, {'types': kinds, 'keylist': keylist}
+
+
+def add_extra_attributes(win):
+    """define plugin-specific variables
+    """
+    win.keylist = win.otherstuff['keylist']
