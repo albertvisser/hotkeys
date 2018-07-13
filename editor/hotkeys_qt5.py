@@ -1353,6 +1353,20 @@ class MainFrame(qtw.QMainWindow):
     def close(self):
         """extra actions to perform on closing
         """
+        mode = self.ini.get("startup", '')
+        pref = self.ini.get("initial", '')
+        print(mode, pref)
+        # when setting is 'fixed', don't remember a startup tool that is removed from the config
+        # TODO: should actually be handled in the files definition dialog
+        if mode == hkc.mode_f and pref not in [x[0] for x in self.ini['plugins']]:
+            oldmode, mode = mode, hkc.mode_r
+            print(oldmode, mode)
+            self.ini['startup'] = mode
+            hkc.change_setting('startup', oldmode, mode, self.ini['filename'])
+        # when setting is 'remember', set the remembered tool to the current one
+        if mode == hkc.mode_r:
+            oldpref, pref = pref, self.book.sel.currentText()
+            hkc.change_setting('initial', oldpref, pref, self.ini['filename'])
         super().close()
 
     def readcaptions(self, lang):
