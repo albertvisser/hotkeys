@@ -30,13 +30,30 @@
 # def add_extra_fields(win, box):
 #     """add fields specific to this plugin
 #     """
-#     win.fieldname = gui.QFieldType(box)
+#     win.fieldname = qtw.QFieldType(box)
 # def get_frameheight():
 #     "return the height for the descriptions field"
 #     return x
+# def layout_extra_fields_topline(win, box):
+#     """add the specific fields to the layout
+#     use this if you want to use the screen line the `keys` field is on
+#     """
+#     sizer = qtw.QHBoxLayout()
+#     sizer.addWidget(win.fieldname)
+#     box.addLayout(sizer)
+# def layout_extra_fields_nextline(win, box):
+#     """add the specific fields to the layout
+#     use this if you want to make a new line above the description field
+#     """
+#     sizer = qtw.QHBoxLayout()
+#     sizer.addWidget(win.fieldname)
+#     box.addLayout(sizer)
 # def layout_extra_fields(win, box):
-#     "add the specific fields to the layout"
-#     sizer = qtw.QBoxLayout()
+#     """add the specific fields to the layout
+#     use this if you want to put them next to the description field
+#     adjust the desc field's height accordingly using `get_frameheight`
+#     """
+#     sizer = qtw.QVBoxLayout()
 #     sizer.addWidget(win.fieldname)
 #     box.addLayout(sizer)
 # def on_combobox(self, cb, text):

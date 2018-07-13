@@ -43,6 +43,7 @@ class HotkeyPanel(qtw.QFrame):
         super().__init__(parent)
         self.parent = parent  # .parent()
         self.captions = self.parent.parent.captions
+        self.filtertext = ''
         self.has_extrapanel = False
 
         logging.info(self.pad)
@@ -147,7 +148,6 @@ class HotkeyPanel(qtw.QFrame):
 
         self.setLayout(self._sizer)
         self._initializing_screen = False
-        self.filtertext = ''
         logging.info(self.otherstuff)
 
     def readkeys(self):
@@ -404,10 +404,24 @@ class HotkeyPanel(qtw.QFrame):
             sizer2.addWidget(self.cmb_commando)
             sizer1.addLayout(sizer2)
 
+        try:
+            self._keys.layout_extra_fields_topline(self, sizer1)  # user exit
+        except AttributeError:
+            pass
+
         sizer1.addWidget(self.b_save)
         sizer1.addWidget(self.b_del)
-
         bsizer.addLayout(sizer1)
+
+        try:
+            test = self._keys.layout_extra_fields_nextline
+        except AttributeError:
+            pass
+        else:
+            sizer1 = qtw.QHBoxLayout()
+            self._keys.layout_extra_fields_nextline(self, sizer1)  # user exit
+            bsizer.addLayout(sizer1)
+
         sizer1 = qtw.QHBoxLayout()
         if 'C_DESC' in self.fields:
             sizer2 = qtw.QVBoxLayout()
@@ -1258,11 +1272,10 @@ class MainFrame(qtw.QMainWindow):
                          self.page.data, self.ini['lang'])
             if not self.page.data:
                 return
-            # FIXME: apparently refreshing just the header doesn't do the trick
-            # hdr = qtw.QTreeWidgetItem()
-            # self.page.p0list.setHeaderItem(hdr)
-            self.page.p0list.setHeaderLabels([self.captions[col[0]] for col in
-                                              self.page.column_info])
+            headers = [self.captions[col[0]] for col in self.page.column_info]
+            self.page.p0list.setHeaderLabels(headers)
+            self.book.find_loc.clear()
+            self.book.find_loc.addItems(headers)
             hdr = self.page.p0list.header()
             hdr.setSectionsClickable(True)
             for indx, col in enumerate(self.page.column_info):
