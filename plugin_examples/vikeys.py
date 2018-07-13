@@ -6,6 +6,7 @@ redefined keys are in ~/.vim/vimrc (map commands)
 import string
 import pathlib
 import collections
+import PyQt5.QtWidgets as qtw
 
 
 def convert_key(value):
@@ -253,3 +254,65 @@ def add_extra_attributes(win):
     """define plugin-specific variables
     """
     win.keylist = win.otherstuff['keylist']
+    win.featurelist = sorted(win.otherstuff['types'])
+
+
+def add_extra_fields(win, box):
+    """add fields specific to this plugin
+    """
+    win.pre_parms_label = qtw.QLabel(box)
+    win.pre_parms_text = qtw.QLineEdit(box)
+    win.screenfields.append(win.pre_parms_text)
+    win.post_parms_label = qtw.QLabel(box)
+    win.post_parms_text = qtw.QLineEdit(box)
+    win.screenfields.append(win.post_parms_text)
+    win.feature_label = qtw.QLabel(box)
+    win.feature_select = qtw.QComboBox(box)
+    win.feature_select.addItems(win.featurelist)
+    win.screenfields.append(win.feature_select)
+
+
+# def get_frameheight():
+#     "return the height for the descriptions field"
+#     return x
+def layout_extra_fields_topline(win, box):
+    "add the specific fields to the layout"
+    sizer = qtw.QHBoxLayout()
+    sizer.addWidget(win.pre_parms_label)
+    sizer.addWidget(win.pre_parms_text)
+    sizer.addWidget(win.post_parms_label)
+    sizer.addWidget(win.post_parms_text)
+    sizer.addWidget(win.feature_label)
+    sizer.addWidget(win.feature_select)
+    box.addLayout(sizer)
+
+
+# def on_combobox(self, cb, text):
+#     """handle a specific field in case it's a combobox
+#     cb refers to the widget, text to the choice made
+#     """
+def captions_extra_fields(win):
+    "for plugin-specific fields, change the captions according to the language setting"
+    # win.fieldname.setText(win.captions['some_value'])
+    win.pre_parms_label.setText(win.captions['C_BPARMS'])
+    win.post_parms_label.setText(win.captions['C_APARMS'])
+    win.feature_label.setText(win.captions['C_FEAT'])
+
+
+# newdata is a tuple of values from a line in the screen table
+# def on_extra_selected(win, newdata):
+#     "callback on selection of an item - update specific field"
+#     win._origdata[win.fieldindex] = newdata[win.fieldindex]
+def vul_extra_details(win, indx, item):
+    """fill value for extra field (plugin-specific)
+    index refers to the sequence of the field in the screen table, item is the value contained
+    """
+    if win.column_info[indx][0] == 'C_BPARMS':
+        win.pre_parms_text.setText(item)
+        win._origdata[win.fieldindex] = item
+    if win.column_info[indx][0] == 'C_APARMS':
+        win.post_parms_text.setText(item)
+        win._origdata[win.fieldindex] = item
+    if win.column_info[indx][0] == 'C_FEAT':
+        win.feature_select.setCurrentIndex(win.featurelist.index(item))
+        win._origdata[win.fieldindex] = item
