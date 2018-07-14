@@ -332,8 +332,8 @@ def buildcsv(parent, showinfo=True):
         if ok == qtw.QMessageBox.Cancel:
             return {}, {}
         dc_desc = qtw.QFileDialog.getOpenFileName(parent, parent.captions['C_SELFIL'],
-                                                 directory=initial,
-                                                 filter='CSV files (*.csv)')[0]
+                                                  directory=initial,
+                                                  filter='CSV files (*.csv)')[0]
         if dc_desc:
             parent.page.settings['DC_DESC'] = dc_desc
             parent.page.settings['extra']['DC_DESC'] = 'path to descriptions file'
@@ -553,12 +553,12 @@ def on_combobox(win, cb, text):
 def add_extra_fields(win, box):
     """fields showing details for selected keydef, to make editing possible
     """
-    win.lbl_parms = qtw.QLabel(win.captions['C_PARMS'], box)
+    win.lbl_parms = qtw.QLabel(box)
     win.txt_parms = qtw.QLineEdit(box)
     win.txt_parms.setMaximumWidth(280)
     win.screenfields.append(win.txt_parms)
     win.ix_parms = 7
-    win.lbl_controls = qtw.QLabel(win.captions['C_CTRL'], box)
+    win.lbl_controls = qtw.QLabel(box)
     cb = qtw.QComboBox(box)
     cb.addItems(win.controlslist)
     cb.currentIndexChanged[str].connect(functools.partial(on_combobox, win, cb, str))
@@ -586,8 +586,8 @@ def layout_extra_fields(win, layout):
 def captions_extra_fields(win):
     """to be called on changing the language
     """
-    win.lbl_parms.setText(win.captions['C_PARMS'])
-    win.lbl_controls.setText(win.captions['C_CTRL'])
+    win.lbl_parms.setText(win.captions['C_PARMS'] + ':')
+    win.lbl_controls.setText(win.captions['C_CTRL'] + ':')
 
 
 def on_extra_selected(win, newdata):
@@ -599,7 +599,7 @@ def on_extra_selected(win, newdata):
 
 
 def vul_extra_details(win, indx, item):
-    """refresh nonstandard fileds on details screen
+    """refresh nonstandard fields on details screen
     """
     if win.column_info[indx][0] == 'C_PARMS':
         win.txt_parms.setText(item)

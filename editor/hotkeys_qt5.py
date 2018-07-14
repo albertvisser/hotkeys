@@ -135,7 +135,8 @@ class HotkeyPanel(qtw.QFrame):
             hdr = self.p0list.header()
             hdr.setSectionsClickable(True)
             for indx, col in enumerate(self.column_info):
-                hdr.resizeSection(indx, col[1])
+                if indx <= len(self.column_info):
+                    hdr.resizeSection(indx, col[1])
             hdr.setStretchLastSection(True)
             self.populate_list()
             sizer1 = qtw.QHBoxLayout()
@@ -449,7 +450,7 @@ class HotkeyPanel(qtw.QFrame):
             self.cb_alt.setText(self.captions['M_ALT'].join(("+", "  ")))
             self.cb_shift.setText(self.captions['M_SHFT'].join(("+", "  ")))
         if 'C_CNTXT' in self.fields:
-            self.lbl_context.setText(self.captions['C_CNTXT'])
+            self.lbl_context.setText(self.captions['C_CNTXT'] + ':')
         if 'C_CMD' in self.fields:
             self.txt_cmd.setText(self.captions['C_CTXT'])
         self.b_save.setText(self.captions['C_SAVE'])
@@ -905,6 +906,7 @@ class ChoiceBook(qtw.QFrame):
         if not all((self.parent.page.settings, self.parent.page.column_info,
                     self.parent.page.data)):
             return
+        self.parent.page.setcaptions()
         items = [self.parent.captions[x[0]] for x in self.parent.page.column_info]
         self.find_loc.clear()
         self.find_loc.addItems(items)
@@ -1007,7 +1009,7 @@ class MainFrame(qtw.QMainWindow):
     """Hoofdscherm van de applicatie
     """
     def __init__(self, args):
-        wid = 860 if hkc.LIN else 688
+        wid = 1140 if hkc.LIN else 688
         hig = 594
         super().__init__()
         self.resize(wid, hig)
