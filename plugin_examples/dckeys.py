@@ -1,12 +1,11 @@
 """HotKeys plugin for Double Commander PyQt5 version
 
-gebaseerd op versie 0.7
-matcht met de .1 versies n de dc_data directory
+gebaseerd op versie 0.8
 """
 from __future__ import print_function
 
 import os
-## import sys
+import sys
 ## import string
 import collections
 import functools
@@ -73,7 +72,7 @@ def parse_keytext(text):
     for sc in shortcuts:
         # split for modifiers
         test = sc.split('+')
-        keyname = test[-1]
+        keyname = test[-1].title()
         modifiers = test[:-1]
         # correct for + key
         if keyname == '':
@@ -97,11 +96,10 @@ def get_keydefs(path):
             modifiers, context, command, parameter en controls
         een mapping met key = een tuple van keyname, modifiers en value = een tuple
             van context en command
+
     """
-    # read the key definitions file
     data = ET.parse(path)
 
-    # (re)build the definitions for the csv file
     keydata = collections.OrderedDict()
     keydata_2 = collections.defaultdict(list)
     ## all_contexts = set()
@@ -142,15 +140,11 @@ def get_keydefs(path):
             keydata[key] = (keyname, modifiers, context, command, parameter, controls)
             keydata_2[(keyname, modifiers)].append((context, command))
 
-    return keydata, keydata_2   # , all_contexts, all_controls
+    return keydata, keydata_2
 
 
 def get_stdkeys(path):
     """determine standard keys
-
-    keyname moet nog verder opgesplitst worden, in elk geval de modifiers nog apart
-    en sommige kunnen meer combo's (gescheiden door komma's) bevatten
-    NB splitsen op + geeft soms onjuist resultaat (bv bij Num +)
 
     input:
         pad (zoals opgegeven in DC_KEYS -- shortcuts.html in de docs directory)
@@ -158,32 +152,14 @@ def get_stdkeys(path):
         een mapping met key = een tuple van keyname, modifiers en value = een tuple
             van context en omschrijving
         een list met mogelijke contexts
-
-    NB onderstaande staan vermeld in docs/shortcuts.html en komen toch niet in het
-    csv file terecht - vermoedelijk omdat hier geen commando bij vermeld staat2
-    waardoor ze niet gekoppeld worden
-        Keydef,Backspace, , ,Main, , , ,Go to parent directory
-        Keydef,Enter,S, ,Main, , , ,execute command in terminal (choose in options)
-        Keydef,F4,A, ,Main, , , ,Exit
-        Keydef,Insert, , ,Main, , , ,Select item
-        Keydef,Left, , ,Main, , , ,Go to parent directory
-        Keydef,Right, , ,Main, , , ,Go into directory
-        Keydef,Space, , ,Main, , , ,Select item
-        Keydef,Tab, , ,Main, , , ,switch between panels
-        Keydef,Tab,S, ,Main, , , ,"switch between panels, other way"
-         (deze heb ik zelf toegevoegd
-         raar overigens dat ik die key wel in het nieuwe file krijg:
-        Keydef,Tab,S, ,Main,cm_NextGroup, , ,
-         maar dat deze in de preferences niet is terug te vinden)
     """
-    try:
-        with open(path) as doc:
-            soup = bs.BeautifulSoup(doc)
-    except FileNotFoundError:
-        raise
+    with open(path) as doc:
+        soup = bs.BeautifulSoup(doc, 'lxml')
 
     stdkeys = collections.defaultdict(list)
-    sections = soup.find_all('div', class_='SECT1')
+    # newsoup = soup.find('div', class_='dchelpage')
+    sections = soup.find_all('div')
+    contexts_list = []
     for div in sections:
 
         context = div.select("h2 a")
@@ -191,20 +167,34 @@ def get_stdkeys(path):
             continue
 
         context = context[0]['name']
+        if context in ("warning", "options"):
+            continue
+        contexts_list.append(context)
 
-        tbody = div.select('table tbody tr')
+        tbody = div.select('table tr')
 
         for row in tbody:
+            if 'class' in row.attrs:
+                continue
+            keynames = ()
             for col in row.select('td'):
-                test = col.select('tt')
-                if test:
-                    keynames = parse_keytext(test[0].text)  # kan meer dan 1 key / keycombo bevatten
+                ## if col['class'] == 'varcell':
+                if 'class' in col.attrs and 'varcell' in col['class']:
+                    keynames = parse_keytext(col.div.text)  # kan meer dan 1 key / keycombo bevatten
+                ## elif 'hintcell' in col['class']:
+                    ## print('hintcell')
                 else:
-                    oms = col.text  # zelfde omschrijving als uit cmd's ? Heb ik deze nodig?
+                    oms = col.get_text()
+                ## test = col.select('tt')
+                ## if test:
+                    ## keynames = parse_keytext(test[0].text)  # kan meer dan 1 key / keycombo bevatten
+                ## else:
+                    ## oms = col.text  # zelfde omschrijving als uit cmd's ? Heb ik deze nodig?
+        if keynames:
             for name, mods in keynames:
                 stdkeys[(_translate_keynames(name), mods)].append((context, oms))
 
-    return stdkeys
+    return stdkeys, contexts_list
 
 
 def get_cmddict(path, stdkeys):
@@ -220,50 +210,121 @@ def get_cmddict(path, stdkeys):
             naam, waardebereik en omschrijving
         een mapping met key = categorie en value = een list van commandonamen
     """
-    cmddict = {}
-    dflt_assign = collections.defaultdict(list)  # kan wrschl een gewone dict zijn?
-
     with open(path) as doc:
-        soup = bs.BeautifulSoup(doc)
+        soup = bs.BeautifulSoup(doc, 'lxml')
 
-    div = soup.find_all('div', class_='CHAPTER')[0]
-    tbody = div.select('div > table > tbody > tr')
+    ## newsoup = soup.find('div', class_='dchelpage')
+    newsoup = soup.select('div[class="dchelpage"]')[0]
 
-    for row in tbody:
-        command = defkey = oms = ''
-        for col in row.find_all('td', recursive=False):
-            ## test = col.select('tt > div > a')
-            test = col.select('tt > div')
-            if test:
-                command = test[0].a.text
-                defkey = test[1].text
-            else:
-                # I could use the entire text and pass everything to an editing screen
-                # but for now just split off the first part
-                oms = col.get_text().split('\n')[0]
-                ## oms = ''
-                ## for item in col.contents:
-                    ## if isinstance(item, bs.Tag):
-                        ## if item.name == 'br':
-                            ## break
+    categories = {}
+    cmddict, dflt_assign, cmdparms = {}, {}, {}
+    for div in newsoup.children:
+        if not div.name or div.name != 'div':
+            continue
+        for hx in div.children:
+            if not hx.name or hx.name != 'h2':
+                continue
+            for a in hx.children:
+                if a.name == 'a':
+                    cat = a['name']
+                    if cat.startswith('cat'):
+                        cat = cat[3:]
+                        cd, da, cp, cl = analyze_keydefs(div, cat)
+                        cmddict.update(cd)
+                        dflt_assign.update(da)
+                        cmdparms.update(cp)
+                        categories[cat] = cl
+    return cmddict, dflt_assign, cmdparms, categories
+
+
+def analyze_keydefs(root, cat_name):
+    """build the data for a specific category (corresponds with a section in the
+    html)
+    """
+    cmddict, cmdparms = {}, {}
+    dflt_assign = collections.defaultdict(set)
+    command_list = []
+
+    for tbl in root.children:
+        if not tbl.name or tbl.name != 'table':
+            continue
+        for row in tbl.children:
+            if not row.name or row.name != 'tr':
+                continue
+            if 'class' in row.attrs and row['class'] in ('rowcategorytitle',
+                                                         'rowsubtitle'):
+                continue
+            command, defkey, params, desctable = '', '', [], []
+
+            for col in row.children:
+                if not col.name or col.name != 'td':
+                    continue
+                if 'class' not in col.attrs:
+                    continue
+
+                if "cmdcell" in col['class']:
+                    ## print([x.name for x in col.children])
+                    ## for item in col.findall('div', recursive=False):
+                    for item in col.children:
+                        if not item.name or item.name != 'div':
+                            continue
+                        if 'cmdname' in item['class']:
+                            command = item.a.text
+                        elif 'longcmdname' in item['class']:
+                            command = item.a.text
+                        elif 'shrtctkey' in item['class']:
+                            defkey = item.text
+                elif "cmdhintcell" in col['class']:
+                    desctable = []
+                    for item in col.children:
+                        ## if command == 'cm_DirHistory':
+                            ## print(item.name, end=', ')
+                        if not item.name:
+                            desctable.append(item)
+                        elif item.name != 'table':
+                            desctable.append(item.get_text())
+                        elif "innercmddesc" in item['class']:
+                            for line in item.children:
+                                if line.name != 'tr': continue
+                                name = value = desc = ''
+                                for cell in line.children:
+                                    if cell.name != 'td': continue
+                                    if 'class' not in cell.attrs:
+                                        desctable.append(cell.text)
+                                        continue
+                                    if "innerdescparamcell" in cell['class']:
+                                        name = cell.get_text()
+                                    elif "innerdescvaluecell" in cell['class']:
+                                        value = cell.get_text()
+                                    elif "innerdescdesccell" in cell['class']:
+                                        desc = cell.get_text()
+                                params.append((name, value, desc))
                         ## else:
-                            ## oms += item.text
-                    ## else:
-                        ## oms += str(item)
-        if defkey:
-            allkeys = parse_keytext(defkey)
-            for key, mods in allkeys:
-                test = (_translate_keynames(key), mods)
-                dflt_assign[test].append((command, oms))  # command)
-                if oms == '':
-                    for context, desc in stdkeys[test]:
-                        if context == 'main window':
-                            oms = desc
-                            break
+                            ## print(item)
 
-        cmddict[command] = oms
+            cmddesc = ' '.join([x.strip() for x in desctable if x.strip()])
+            ## print('command:', command, defkey, params)
+            ## print('oms:', cmddesc)
+            ## print('---')
+            if defkey:
+                allkeys = parse_keytext(defkey)
+                ## print(allkeys)
+                for key, mods in allkeys:
+                    test = (_translate_keynames(key), mods)
+                    dflt_assign[test].add(command)  # command, cmddesc)
+                    ## if cmddesc == '':
+                        ## for context, desc in stdkeys[test]:
+                            ## if context == 'main window':
+                                ## oms = desc
+                                ## break
 
-    return cmddict, dflt_assign
+            if command:
+                command_list.append(command)
+                cmddict[command] = cmddesc   # .replace('\n', '')
+                if params:
+                    cmdparms[command] = params
+
+    return cmddict, dflt_assign, cmdparms, command_list
 
 
 def buildcsv(parent, showinfo=True):
@@ -272,130 +333,72 @@ def buildcsv(parent, showinfo=True):
 
     input: het door de plugin gegenereerde scherm en een indicatie of het getoond
         moet worden
-    returns: een mapping voor het csv file en een dict met aantal hulptabellen
-        of bij een fout een toepasselijke foutmelding (1 parameter ipv 2)
+    returns: een mapping voor het csv file en een aantal hulptabellen
 
-    # parse shortcuts.scf into keydata and definedkeys:
-    #   keydata[key] = (keyname, modifiers, context, command, parameter, controls)
-    #   definedkeys[(keyname, modifiers)].append((context, command))
-    # parse shortcuts.html into stdkeys
-    #   # stdkeys[(_translate_keynames(name), mods)].append((context, oms))
-    # use stdkeys to parse cmds.html into cmddict and defaults
-    #   # cmddict[command] = oms
-    #   # defaults[(_translate_keynames(key), mods)].append((command, oms))
-    # use keydata and cmddict to create shortcuts dict
     """
-    try:
-        parent.page
-    except AttributeError:
-        has_page = False
-    else:
-        has_page = True
-
     initial = '/home/albert/.config/doublecmd/shortcuts.scf'
     dc_keys = '/usr/share/doublecmd/doc/en/shortcuts.html'
+    # or http://doublecmd.github.io/doc/en/shortcuts.html
     dc_cmds = '/usr/share/doublecmd/doc/en/cmds.html'
-    dc_desc = ''
+    # or http://doublecmd.github.io/doc/en/cmds.html
+    dc_desc = os.path.join(os.path.dirname(__file__), 'descs.csv')
+    dc_desc_h = ''
 
     shortcuts = collections.OrderedDict()
     has_path = False
-    has_descpath = os.path.exists(dc_desc)
-    if has_page:
+    try:
+        test = parent.page
+    except AttributeError:
+        # pass   # TODO: handle failure in GUI instead of ignoring it here
+        # raise
+        return {}, {}
+    else:
         try:
-            initial = parent.page.settings['DC_PATH']
+            initial = test.settings['DC_PATH']
             has_path = True
-            dc_keys = parent.page.settings['DC_KEYS']
-            dc_cmds = parent.page.settings['DC_CMDS']
-            dc_desc = parent.page.settings['DC_DESC']
-            has_descpath = True
-        except KeyError:
+            dc_keys = test.settings['DC_KEYS']
+            dc_cmds = test.settings['DC_CMDS']
+            dc_desc_h = test.settings['DC_DESC']
+        except KeyError:    # TODO: save defaults as settings
             pass
-
+        if dc_desc_h:
+            dc_desc = dc_desc_h
     if showinfo and not has_path:
         ok = qtw.QMessageBox.information(parent, parent.title, instructions,
                                          qtw.QMessageBox.Ok | qtw.QMessageBox.Cancel)
         if ok == qtw.QMessageBox.Cancel:
-            return {}, {}
+            # geeft (soms) segfault
+            return
         kbfile = qtw.QFileDialog.getOpenFileName(parent, parent.captions['C_SELFIL'],
                                                  directory=initial,
                                                  filter='SCF files (*.scf)')[0]
     else:
         kbfile = initial
     if not kbfile:
-        return 'No path to shortcut definitions given'
+        return
 
-    initial = os.path.dirname(__file__)
-    if showinfo and not has_descpath:
-        message = 'Descriptions file `{}` does not exist, redefine?'.format(dc_desc)
-        ok = qtw.QMessageBox.information(parent, parent.title, message,
-                                         qtw.QMessageBox.Ok | qtw.QMessageBox.Cancel)
-        if ok == qtw.QMessageBox.Cancel:
-            return {}, {}
-        dc_desc = qtw.QFileDialog.getOpenFileName(parent, parent.captions['C_SELFIL'],
-                                                  directory=initial,
-                                                  filter='CSV files (*.csv)')[0]
-        if dc_desc:
-            parent.page.settings['DC_DESC'] = dc_desc
-            parent.page.settings['extra']['DC_DESC'] = 'path to descriptions file'
-    ## else:
-        ## kbfile = initial
-    ## if not dc_desc:
-        ## return {}, {}
+    if dc_keys.startswith('http'):
+        if not os.path.exists('/tmp/dc_files/shortcuts.html'):
+            import subprocess
+            subprocess.run(['wget', '-i', dc_keys, '-P', '/tmp/dc_files', '-nc'])
+        dc_keys = os.path.join('/tmp/dc_files', os.path.split(dc_keys)[-1])
+        dc_cmds = os.path.join('/tmp/dc_files', os.path.split(dc_cmds)[-1])
 
     # map toetscombinatie, context, commandonaam, argumenten en venster op een
     # gezamenlijke sleutel (volgnummer)
     # map tevens context + commando op een toetscombinatie
-    ## keydata, definedkeys, contexts, controls = get_keydefs(kbfile)            # alles
     keydata, definedkeys = get_keydefs(kbfile)            # alles
 
     # map omschrijvingen op standaard toets definities
-    stdkeys = get_stdkeys(dc_keys)
+    stdkeys, context_list = get_stdkeys(dc_keys)
 
     # map omschrijvingen op commandonamen door de toets definities waar deze op gemapt
     # zijn te vergelijken
-    # ## cmddict, defaults, params, catdict = get_cmddict(dc_cmds, stdkeys) ##
-    # ## dit /\ is een 0.8 wijziging, werkt die misschien nu ook al?                   ##
-    cmddict, defaults = get_cmddict(dc_cmds, stdkeys)
-    ## return keydata, {'stdkeys': stdkeys, 'defaults': defaults,
-                       ## 'cmddict': cmddict, 'definedkeys': definedkeys}
+    cmddict, defaults, params, catdict = get_cmddict(dc_cmds, stdkeys)
     tobecompleted = {}
-    # WIP: complete this stuff (commented out for now).
-    # alternatively, we can do this /after/ building the shortcuts list
-    # But I think this is a better place
-    # compare mappings in stdkeys and defaults to see if any are missing
-    # stdkeys: maps key + mods to context + description
-    # defaults: maps key+mods to cm_code _ description
-    # but stdkeys is input for getting defaults??
-    # ## # if descriptions are missing, simply add them; otherwise we need to choose which one
-    # ## # to use (the longest?)
-    # ## with open('dc_cmddict_before', 'w') as _o:
-    #     ## for x, y in sorted(cmddict.items()):
-    #         ## print(x, y, file=_o)
-    # ## # if any empty ones are left, feed them to the dialog
-    # ## tobecompleted = {x: y for x, y in cmddict.items() if y == ''}
-    # ## with open('tobecompleted', 'w') as _o:
-    #     ## for x, y in sorted(tobecompleted.items()):
-    #         ## print(x, y, file=_o)
-    # ## cmddocsfile = '/home/albert/.config/doublecmd/extratexts'
-    # ## if has_page:
-    #     ## try:
-    #         ## cmddocsfile = parent.page.settings['DC_DESC']
-    #     ## except KeyError:
-    #         ## pass
-    # ## if showinfo:
-    #     ## parent.complete_data = {'data': tobecompleted, 'dc_text': cmddocsfile}
-    #     ## dlg = CompleteDialog(parent).exec_()
-    #     ## if dlg == qtw.QDialog.accepted:
-    #         ## tobecompleted = parent.complete_data['data']
-    #         ## cmddocsfile = parent.complete_data['dc_text']
-    #         ## parent.page.settings['DC_DESC'] = (cmddocsfile,
-    #             ## "File containing command descriptions that aren't in cmds.html")
     for key, value in keydata.items():
         templist = list(value)
-        val = ''  # standard / customized
-        # if keydef_from_keydata != keydef_from_stdkeys:
-        #     value = 'X'
-        templist.insert(2, val)
+        templist.insert(2, ('X' if value != stdkeys[key] else ''))  # standard / customized
         try:
             oms = cmddict[value[3]]
         except KeyError:
@@ -404,36 +407,16 @@ def buildcsv(parent, showinfo=True):
         templist.append(oms)
         shortcuts[key] = tuple(templist)
 
-    """een probleempje (iets om iets aan te doen in elk geval):
-    in de interne aanpas dialoog en in het shift F12 tool heb ik drie commando's
-    cm_CloseTab, cm_CloseAllTabs en cm_CloseDuplicateTabs. In de html zitten alleen
-    de eerste twee en heten ze Remove... in plaats van Close...
-    """
-    # # hier zijn pas entries ontstaan zonder omschrijving
-    # #mogelijk omdat commando's in het scf file en de html niet overeenkoen
-    #
-    # ## if tobecompleted:
-    #
-    #     ## # open dialog to complete missing descriptions (as above)
-    #     ## # afterwards: fill in completed descriptions
-    #     ## for key, value in tobecompleted:
-    #         ## if value:
-    #             ## cmddict[key] = tobecompleted[key]
-    #     ## for key, value in shortcuts
-
-    ## print("vóór dialoog:\n", tobecompleted)
-    ## print(dc_desc)
     # stuur dialoog aan om beschrijvingen aan te vullen
     descfile = dc_desc
     omsdict = tobecompleted
-    if showinfo and dc_desc:
+    if showinfo:
         dlg = DcCompleteDialog(parent, descfile, omsdict).exec_()
         if dlg == qtw.QDialog.Accepted:
             # opslaan vindt plaats in de dialoog, maar de data teruggeven scheelt weer I/O
-            # zoals de dialoog nu aangestuurd wordt worden de omschrijcingen opgeslagen
+            # zoals de dialoog nu aangestuurd wordt worden de omschrijvingen opgeslagen
             #   met volgnummers in plaats van commandonaam als key
             omsdict = parent.dialog_data
-    ## print('resultaat na dialoog:\n', omsdict)
     # invullen in shortcuts en cmddict
     for key, value in shortcuts.items():
         for cmnd, desc in omsdict.items():
@@ -444,13 +427,22 @@ def buildcsv(parent, showinfo=True):
                 cmddict.update(omsdict)
 
     only_for = ['', 'Command Line', 'Files Panel', 'Quick Search']
+    # geen idee waar die extra "control"s vandaan komen - oh wacht het zijn de
+    # extra vermeldingen in de definitie dialoog (titel: "only for these controls").
+    # een betere benaming zou dus zijn `only_for`
+
+    # context entries worden gebruikt in keydefs (de dict voor de gui)
+    # context list entries worden gebruikt in stdkeys (de dict met veronderstelde standaard waarden)
     contexts = ['Main', 'Copy/Move Dialog', 'Differ', 'Edit Comment Dialog',
                 'Viewer']
+
     return shortcuts, {'stdkeys': stdkeys, 'defaults': defaults,
                        'cmddict': cmddict, 'restrictions': only_for,
-                       'contexts': contexts, 'definedkeys': definedkeys}
-                       # , 'manual_cmdoms': tobecompleted}
+                       'contexts': contexts, 'definedkeys': definedkeys,
+                       'context_list': context_list, 'cmdparms': params,
+                       'catdict': catdict}
 # omschrijvingen o.m. in cmddict? Maar wel iets bijhouden voor het geval niet aanwezig
+
 
 how_to_save = """\
 Instructions to load the changed definitions back into Double Commander.
@@ -510,9 +502,10 @@ def savekeys(parent):
     shutil.copyfile(kbfile, kbfile + '.bak')
     ET.ElementTree(root).write(kbfile, encoding="UTF-8", xml_declaration=True)
 
+
+#
 # stuff for gui elements
-
-
+#
 def add_extra_attributes(win):
     """stuff needed for redefining keyboard combos
 
@@ -553,12 +546,12 @@ def on_combobox(win, cb, text):
 def add_extra_fields(win, box):
     """fields showing details for selected keydef, to make editing possible
     """
-    win.lbl_parms = qtw.QLabel(box)
+    win.lbl_parms = qtw.QLabel(win.captions['C_PARMS'], box)
     win.txt_parms = qtw.QLineEdit(box)
     win.txt_parms.setMaximumWidth(280)
     win.screenfields.append(win.txt_parms)
     win.ix_parms = 7
-    win.lbl_controls = qtw.QLabel(box)
+    win.lbl_controls = qtw.QLabel(win.captions['C_CTRL'], box)
     cb = qtw.QComboBox(box)
     cb.addItems(win.controlslist)
     cb.currentIndexChanged[str].connect(functools.partial(on_combobox, win, cb, str))
@@ -586,8 +579,8 @@ def layout_extra_fields(win, layout):
 def captions_extra_fields(win):
     """to be called on changing the language
     """
-    win.lbl_parms.setText(win.captions['C_PARMS'] + ':')
-    win.lbl_controls.setText(win.captions['C_CTRL'] + ':')
+    win.lbl_parms.setText(win.captions['C_PARMS'])
+    win.lbl_controls.setText(win.captions['C_CTRL'])
 
 
 def on_extra_selected(win, newdata):
@@ -608,5 +601,3 @@ def vul_extra_details(win, indx, item):
         ix = win.controlslist.index(item)  # TODO: adapt for multiple values
         win.cmb_controls.setCurrentIndex(ix)
         win._origdata[win.ix_controls] = item
-
-#
