@@ -67,7 +67,7 @@ def read_commands(path):
     """
     with open(path) as doc:
 
-        soup = bs.BeautifulSoup(doc)
+        soup = bs.BeautifulSoup(doc, 'lxml')
 
     menus, internals = soup.find_all('table')
 
@@ -92,13 +92,15 @@ def read_docs(path):
     """
     with open(path) as doc:
 
-        soup = bs.BeautifulSoup(doc)
+        soup = bs.BeautifulSoup(doc, 'lxml')
 
     keyboard_commands = soup.find('table', summary="Keyboard commands")
 
     keydefs = []
     for row in keyboard_commands.find_all('tr'):
-        description, shortcut = [tag.string for tag in row.find_all('td')]
+        if not row.find_all('td'):
+            continue
+        description, shortcut = [tag.string for tag in row.find_all('td')][:2]
         key, mods = nicefy_props(shortcut)
         keydefs.append((key, mods, description))
 
