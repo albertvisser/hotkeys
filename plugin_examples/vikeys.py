@@ -1,12 +1,13 @@
 """HotKeys plugin voor VI
 
-standard keys can be parsed in from /usr/share/vim/vim74/doc/index.txt
+standard keys can be parsed in from /usr/share/vim/vim##/doc/index.txt
 redefined keys are in ~/.vim/vimrc (map commands)
 """
 import string
 import pathlib
 import collections
 import PyQt5.QtWidgets as qtw
+VI_VER = (pathlib.Path(__file__).parent / 'VI_VER').read_text().strip()
 
 
 def convert_key(value):
@@ -239,7 +240,7 @@ def buildcsv(parent, showinfo=True):
     """
     settname = 'VI_CMDREF'
     if settname not in parent.page.settings:
-        parent.page.settings[settname] = '/usr/share/vim/vim74/doc/index.txt'
+        parent.page.settings[settname] = '/usr/share/vim/vim{}/doc/index.txt'.format(VI_VER)
         oms = 'Name of file containing setting names and descriptions'
         parent.page.settings['extra'] = {settname: oms}
     path = pathlib.Path(parent.page.settings[settname])
