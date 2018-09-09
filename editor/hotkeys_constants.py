@@ -40,7 +40,6 @@ class LineType(enum.Enum):
     WID = 'Width'
     ORIG = 'is_type'
     KEY = 'Keydef'
-csv_linetypes = [x.value for x in LineType.__members__.values()]
 
 
 class SettType(enum.Enum):
@@ -51,6 +50,9 @@ class SettType(enum.Enum):
     RBLD = 'RebuildCSV'
     DETS = 'ShowDetails'
     RDEF = 'RedefineKeys'
+
+
+csv_linetypes = [x.value for x in LineType.__members__.values()]
 csv_settingnames = [x.value for x in SettType.__members__.values()]
 plugin_skeleton = '''# -*- coding: UTF-8 -*-\n
 """
@@ -144,6 +146,10 @@ def read_settings(ini):
         settings['startup'] = sett.STARTUP
     except AttributeError:
         pass
+    try:
+        settings['title'] = sett.TITLE
+    except AttributeError:
+        pass
     return settings
 
 
@@ -182,6 +188,8 @@ def change_setting(setting, old, new, inifile):
                 lines[ix] = line.replace("''", "'{}'".format(new))
             elif not new:
                 lines[ix] = line.replace("'{}'".format(old), "''")
+                if setting == 'TITLE':
+                    lines[ix - 2: ix + 1] = [lines[ix - 2]]
             else:
                 lines[ix] = line.replace(old, new)
             break
@@ -190,6 +198,8 @@ def change_setting(setting, old, new, inifile):
             lines.append('# application to show on startup\n')
         elif setting == 'STARTUP':
             lines.append('# application to show: selected or remember on closing\n')
+        elif setting == 'TITLE':
+            lines.append('# screen title (not needed if default)\n')
         lines.append("{} = '{}'\n".format(setting, new))
     with open(inifile, 'w') as _out:
         _out.writelines(lines)
@@ -367,7 +377,7 @@ def quick_check(filename):
     """
     _, column_info, data = readcsv(filename)
     items = data.items()
-    if items is None or len(items) == 0:
+    if not items:   # if items is None or len(items) == 0:
         print('No keydefs found in this file')
         return
     for key, data in items:

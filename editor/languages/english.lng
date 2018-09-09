@@ -73,6 +73,7 @@ C_TTL Title
 C_WID Width
 C_IND "Is Redefined" Indicator
 C_SEQ Sequence on screen
+T_TITLE Enter screen title (clear to use default)
 
 # save dialog
 Q_SAVCHG Previously selected definition was changed - save now?
@@ -131,6 +132,8 @@ T_COLWID Column widths
 T_COLIND column indicates if keydef is original or (re)defined
 I_NODET For `redefine`, `show details` needs to be checked as well
 I_IMPLXTRA Please implement extra functions in plugin to make this work / you need at least `add_extra_attributes / and maybe `translate_keyname` as well
+I_TITLE Please enter a title
+I_STITLE Using standard title
  
 # menus/options
 M_APP &Application
@@ -139,12 +142,13 @@ M_SAVE &Save definitions
 M_RBLD Re&build definitions file
 M_EXIT e&Xit
 M_SETT &Settings
+M_TITLE &Screen Title
 M_LOC &File locations
 M_LANG &Language
+M_PREF Set &Preferred Tool
 M_TOOL &Tool Specific
 M_COL &Columns
 M_MISC &Misc
 M_ENTR Manual &Entry
-M_PREF Set Preferred Tool
 M_HELP &Help
 M_ABOUT &About

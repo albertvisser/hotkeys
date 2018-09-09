@@ -195,8 +195,8 @@ class HotkeyPanel(qtw.QFrame):
         """
         self.p0list.clear()
         items = self.data.items()
-        if items is None or len(items) == 0:
-            return
+        # if not items:  # if items is None or len(items) == 0:
+        #     return
 
         for key, data in items:
             try:
@@ -1031,6 +1031,8 @@ class MainFrame(qtw.QMainWindow):
         self.setCentralWidget(self.book)
         self.page = self.book.pnl.currentWidget()
         start = 0
+        if 'title' in self.ini and self.ini['title']:
+            self.title = self.ini['title']
         if 'initial' in self.ini and self.ini['initial'] != '':
             start = [x for x, y in self.ini['plugins']].index(self.ini['initial'])
         self.book.sel.setCurrentIndex(start)
@@ -1063,6 +1065,7 @@ class MainFrame(qtw.QMainWindow):
         self._menuitems = {}  # []
         for title, items in (('M_APP', (
                                  ('M_SETT', ((
+                                     ('M_TITLE', (self.m_title, '')),
                                      ('M_LOC', (self.m_loc, 'Ctrl+F')),
                                      ('M_LANG', (self.m_lang, 'Ctrl+L')),
                                      ('M_PREF', (self.m_pref, ''))), '')),
@@ -1152,6 +1155,21 @@ class MainFrame(qtw.QMainWindow):
             hkd.show_message(self, 'I_DEFSAV')
             return
         hkd.show_message(self, 'I_RSTRT')
+
+    def m_title(self):
+        """menu callback voor het aanpassen van de schermtitel
+        """
+        oldtitle = self.title
+        newtitle, ok = qtw.QInputDialog.getText(self, oldtitle, self.captions["T_TITLE"],
+                                                text=oldtitle)
+        if ok == qtw.QDialog.Accepted:
+            if newtitle != oldtitle:
+                self.title = self.ini['title'] = newtitle
+                hkc.change_setting('title', oldtitle, newtitle, self.ini['filename'])
+                if not newtitle:
+                    hkd.show_message(self, 'I_STITLE')
+                    self.title = self.captions["T_MAIN"]
+                self.set_title()
 
     def m_loc(self):
         """(menu) callback voor aanpassen van de bestandslocaties
@@ -1415,6 +1433,7 @@ def main(args=None):
     win = MainFrame(args)
     win.show()
     sys.exit(app.exec_())
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
