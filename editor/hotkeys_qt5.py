@@ -1039,8 +1039,20 @@ class MainFrame(qtw.QMainWindow):
     def show_empty_screen(self):
         """what to do when there's no data to show
         """
+        frm = qtw.QFrame(self)
+        vbox = qtw.QVBoxLayout()
         text = qtw.QLabel(self.captions["EMPTY_CONFIG_TEXT"], self)
-        self.setCentralWidget(text)
+        vbox.addWidget(text)
+        hbox = qtw.QHBoxLayout()
+        hbox.addStretch()
+        btn = qtw.QPushButton('Ok', self)
+        btn.clicked.connect(self.close)
+        btn.setDefault(True)
+        hbox.addWidget(btn)
+        hbox.addStretch()
+        vbox.addLayout(hbox)
+        frm.setLayout(vbox)
+        self.setCentralWidget(frm)
         self.resize(640, 80)
         self.show()
 
@@ -1357,7 +1369,6 @@ class MainFrame(qtw.QMainWindow):
         """
         mode = self.ini.get("startup", '')
         pref = self.ini.get("initial", '')
-        print(mode, pref)
         # when setting is 'fixed', don't remember a startup tool that is removed from the config
         # TODO: should actually be handled in the files definition dialog
         if mode == hkc.mode_f and pref not in [x[0] for x in self.ini['plugins']]:
