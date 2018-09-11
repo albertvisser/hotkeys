@@ -1235,7 +1235,11 @@ class MainFrame(qtw.QMainWindow):
         except AttributeError:
             hkd.show_message(self, 'I_DEFRBLD')
             return
-        newdata = test(self)
+        try:
+            newdata = test(self)
+        except FileNotFoundError:
+            hkd.show_message(self, 'I_ERRRBLD')
+            return
         if newdata[0]:
             self.page.data = newdata[0]
             self.page.otherstuff = newdata[1]

@@ -125,6 +125,7 @@ I_ADDSET  Eerst settings informatie aan csv bestand toevoegen
 I_ADDCOL  Eerst settings en kolom informatie aan csv bestand toevoegen
 I_DEFSAV  Eerst savekeys functie in plugin definiëren of deze keuze deactiveren
 I_DEFRBLD Eerst rebuild functie in plugin definiëren of deze keuze deactiveren
+I_ERRRBLD Fout bij opbouwen csv file (controleer bestandsnamen in plugin settings)
 I_DPLCOL  Opslaan niet mogelijk: gelijke waarden voor kolomnummers
 M_NODESC (Geen omschrijving beschikbaar)
 T_COLTTL Titels van de kolommen; zie de sleutels in het taalbestand

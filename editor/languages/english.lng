@@ -125,6 +125,7 @@ I_ADDSET Please add settings information to csv file first
 I_ADDCOL Please add settings and column information to csv file first
 I_DEFSAV Please define savekeys function in plugin or disable this option
 I_DEFRBLD Please define rebuild function in plugin or disable this option
+I_ERRRBLD Error rebuilding csv file (check filenames in plugin settings)
 I_DPLCOL Can't save this: identical values for column numbers
 M_NODESC (No description available)
 T_COLTTL Titles of the columns in the display; refer to keys in the language file
