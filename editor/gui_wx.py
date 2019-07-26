@@ -14,7 +14,7 @@ import os
 import sys
 import wx
 import wx.adv
-import editor.hotkeys_constants as hkc
+import editor.shared as shared
 ## sys.path.append('plugins')
 ## import editor.plugins.vikey_wxgui
 
@@ -122,7 +122,7 @@ class VIPanel(wx.Panel, listmix.ColumnSorterMixin):
     def readcaptions(self):
         self.captions = {}
         # with open(os.path.join(HERE, self.ini.lang)) as f_in:
-        with open(os.path.join(hkc.HERE, 'languages', 'english.lng')) as f_in:
+        with open(os.path.join(shared.HERE, 'languages', 'english.lng')) as f_in:
             for x in f_in:
                 if x[0] == '#' or x.strip() == "":
                     continue
@@ -314,11 +314,53 @@ class VIPanel(wx.Panel, listmix.ColumnSorterMixin):
 
 pagetexts = [ "VI", "Total Commander", "Double Commander", "And", "Many", "More"]
 
+class Gui(wx.Frame):
+    """Hoofdscherm van de applicatie"""
+    def __init__(self, parent=None):
+        self.editor = parent
+        self.app = wx.App()  # redirect=True, filename="hotkeys.log")
+        wid = 860 if shared.LIN else 688
+        hig = 594
+        super().__init__(None, size=(wid, hig),
+                          style=wx.DEFAULT_FRAME_STYLE |  ## wx.BORDER_SIMPLE |
+                                wx.NO_FULL_REPAINT_ON_RESIZE)
+        self.sb = self.CreateStatusBar()
+        self.menuBar = wx.MenuBar()
+
+    def show_empty_screen(self):
+        """what to do when there's no data to show
+        """
+        self.mainwidget = wx.StaticText(self, label=self.editor.captions["EMPTY_CONFIG_TEXT"])
+        self.SetSize(640, 80)
+
+    def go(self):
+        sizer0 = wx.BoxSizer(wx.VERTICAL)
+        sizer0.Add(self.mainwidget, 1, wx.EXPAND | wx.ALL, 5)
+        self.b_exit = wx.Button(self, label=self.editor.captions['C_EXIT'])
+        self.b_exit.Bind(wx.EVT_BUTTON, self.exit)  # moet eigenlijk self.editor.exit zijn
+        sizer0.Add(self.b_exit, 0, wx.ALIGN_CENTER_HORIZONTAL)
+        self.SetSizer(sizer0)
+        self.SetAutoLayout(True)
+        sizer0.Fit(self)
+        sizer0.SetSizeHints(self)
+        self.Show(True)
+        self.app.MainLoop()
+
+    def set_window_title(self, title):
+        self.SetTitle(title)
+
+    def statusbar_message(self, message):
+        self.sb.SetStatusText(message)
+
+    def exit(self, event=None):
+        self.Close(True)
+
+
 class MainWindow(wx.Frame):
     """Hoofdscherm van de applicatie"""
     def __init__(self,parent, id, args):
         # args can contain an alternate tool configuration but we ignore that for now
-        wid = 860 if hkc.LIN else 688
+        wid = 860 if shared.LIN else 688
         hig = 594
         wx.Frame.__init__(self,parent, wx.ID_ANY, "HotKeys!!!", size=(wid, hig),
                           style=wx.DEFAULT_FRAME_STYLE |  ## wx.BORDER_SIMPLE |
@@ -414,7 +456,7 @@ class MainWindow(wx.Frame):
         vraagt eerst of het ok is om de hotkeys weg te schrijven
         vraagt daarna eventueel of de betreffende applicatie geherstart moet worden
         """
-        wx.MessageBox('Opslaan gekozen', self.captions['T_MAIN']) #hkc.NOT_IMPLEMENTED)
+        wx.MessageBox('Opslaan gekozen', self.captions['T_MAIN']) #shared.NOT_IMPLEMENTED)
         return
         if not self.modified:
             h = show_message(self, '041')
@@ -431,7 +473,7 @@ class MainWindow(wx.Frame):
 
     def m_user(self, event):
         """(menu) callback voor een nog niet geïmplementeerde actie"""
-        return self.captions[hkc.NOT_IMPLEMENTED]
+        return self.captions[shared.NOT_IMPLEMENTED]
 
     def m_loc(self, event):
         """(menu) callback voor aanpassen van de bestandslocaties
@@ -440,7 +482,7 @@ class MainWindow(wx.Frame):
         toont dialoog met bestandslocaties en controleert de gemaakte wijzigingen
         (met name of de opgegeven paden kloppen)
         """
-        wx.MessageBox('paden gekozen', self.captions['T_MAIN']) #hkc.NOT_IMPLEMENTED)
+        wx.MessageBox('paden gekozen', self.captions['T_MAIN']) #shared.NOT_IMPLEMENTED)
         return
         if self.modified:
             h = show_message(self, '025')
@@ -489,7 +531,7 @@ class MainWindow(wx.Frame):
 
         past de settings aan en leest het geselecteerde language file
         """
-        choices = [x for x in os.listdir(os.path.join(hkc.HERE, 'languages'))
+        choices = [x for x in os.listdir(os.path.join(shared.HERE, 'languages'))
                    if os.path.splitext(x)[1] == ".lng"]
         with wx.SingleChoiceDialog(self, self.captions['P_SELLNG'], self.captions['T_MAIN'], choices,
                                    wx.CHOICEDLG_STYLE) as dlg:
@@ -512,9 +554,9 @@ class MainWindow(wx.Frame):
         """
         info = wx.adv.AboutDialogInfo()
         info.Name = self.captions['T_MAIN']
-        info.Version = hkc.VRS
-        info.Copyright = hkc.AUTH
-        ## info.Description = hkc.TTL, 350, wx.ClientDC(self)
+        info.Version = shared.VRS
+        info.Copyright = shared.AUTH
+        ## info.Description = shared.TTL, 350, wx.ClientDC(self)
         ## info.WebSite = ("http://en.wikipedia.org/wiki/Hello_world", "Hello World home page")
         ## info.Developers = [ "Joe Programmer",
                             ## "Jane Coder",
@@ -531,7 +573,7 @@ class MainWindow(wx.Frame):
 
     def readcaptions(self, lang):
         self.captions = {}
-        with open(os.path.join(hkc.HERE, 'languages', lang)) as f_in:
+        with open(os.path.join(shared.HERE, 'languages', lang)) as f_in:
             for x in f_in:
                 if x[0] == '#' or x.strip() == "":
                     continue
