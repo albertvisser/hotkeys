@@ -11,7 +11,7 @@
 """
 from __future__ import print_function
 import os
-import sys
+# import sys
 import string
 import importlib
 ## import shutil
@@ -137,7 +137,7 @@ class HotkeyPanel:
         except AttributeError:
             pass
         shared.writecsv(self.pad, self.settings, self.column_info, self.data,
-                     self.parent.parent.ini['lang'])
+                        self.parent.parent.ini['lang'])
         self.gui.set_title(modified=False)
 
     def setcaptions(self):
@@ -217,6 +217,7 @@ class ChoiceBook:
     """
     def __init__(self, parent):
         self.parent = parent
+        self.page = None
 
         self.gui = TabbedInterface(self.parent.gui, self)
         self.gui.setup_selector()
@@ -227,7 +228,6 @@ class ChoiceBook:
                 loc = os.path.join(shared.BASE, loc)
             win = HotkeyPanel(self, loc)
             self.gui.add_subscreen(win)
-            # self.parent.gui.page = DummyPage()
             try:
                 fl = win.settings[shared.SettType.PLG.value]
             except KeyError:
@@ -265,6 +265,8 @@ class Editor:
         self.gui.go()
 
     def setup_tabs(self):
+        """add the tabbed window to the inteface
+        """
         start = 0
         if 'title' in self.ini and self.ini['title']:
             self.title = self.ini['title']
@@ -274,6 +276,8 @@ class Editor:
         self.gui.setup_tabs(start)
 
     def get_menudata(self):
+        """provide the application's menu definition to the program
+        """
         return (('M_APP', (('M_SETT', ((('M_TITLE', (self.m_title, '')),
                                         ('M_LOC', (self.m_loc, 'Ctrl+F')),
                                         ('M_LANG', (self.m_lang, 'Ctrl+L')),
@@ -294,14 +298,14 @@ class Editor:
         vraagt eerst of het ok is om de hotkeys (opnieuw) te lezen
         zet de gelezen keys daarna ook in de gui
         """
-        if not self.gui.page.settings:
+        if not self.book.page.settings:
             self.gui.show_message('I_ADDSET')
             return
-        if not self.gui.page.modified:
+        if not self.book.page.modified:
             if not self.gui.ask_question('Q_NOCHG'):
                 return
-        self.gui.page.readkeys()
-        self.gui.page.populate_list()
+        self.book.page.readkeys()
+        self.book.page.populate_list()
 
     def m_save(self):
         """(menu) callback voor het terugschrijven van de hotkeys
@@ -309,28 +313,27 @@ class Editor:
         vraagt eerst of het ok is om de hotkeys weg te schrijven
         vraagt daarna eventueel of de betreffende applicatie geherstart moet worden
         """
-        if not self.gui.page.modified:
-            if not hkd.ask_question(self, 'Q_NOCHG'):
+        if not self.book.page.modified:
+            if not self.gui.ask_question('Q_NOCHG'):
                 return
         try:
-            self.gui.page.savekeys()
+            self.book.page.savekeys()
         except AttributeError:
-            hkd.show_message(self, 'I_DEFSAV')
+            self.gui.show_message('I_DEFSAV')
             return
-        hkd.show_message(self, 'I_RSTRT')
+        self.gui.show_message('I_RSTRT')
 
     def m_title(self):
         """menu callback voor het aanpassen van de schermtitel
         """
         oldtitle = self.title
-        newtitle, ok = qtw.QInputDialog.getText(self, oldtitle, self.captions["T_TITLE"],
-                                                text=oldtitle)
-        if ok == qtw.QDialog.Accepted:
+        newtitle, ok = self.gui.get_textinput(self, oldtitle, self.captions["T_TITLE"])
+        if ok:
             if newtitle != oldtitle:
                 self.title = self.ini['title'] = newtitle
                 shared.change_setting('title', oldtitle, newtitle, self.ini['filename'])
                 if not newtitle:
-                    hkd.show_message(self, 'I_STITLE')
+                    self.gui.show_message('I_STITLE')
                     self.title = self.captions["T_MAIN"]
                 self.set_title()
 
@@ -344,22 +347,23 @@ class Editor:
         # self.ini["plugins"] bevat de lijst met tools en csv locaties
         current_programs = [x for x, y in self.ini["plugins"]]
         current_paths = [y for x, y in self.ini["plugins"]]
-        ok = hkd.FilesDialog(self).exec_()
-        if ok == qtw.QDialog.Accepted:
-            selection = self.book.sel.currentIndex()
+        ok = self.gui.manage_filesettings()
+        if ok:
+            # TODO gui specific stuff verplaatsen
+            selection = self.book.gui.sel.currentIndex()
             shared.modify_settings(self.ini)
 
             # update the screen(s)
             # clear the selector and the stackedwidget while pairing up programs and windows
             # that need to be kept or replaced
             hlpdict = {}
-            self.book.sel.clear()
+            self.book.gui.sel.clear()
             current_items = reversed([(x, y) for x, y in enumerate(current_programs)])
             new_programs = [x for x, y in self.ini["plugins"]]
             new_paths = [y for x, y in self.ini["plugins"]]
             for indx, program in current_items:  # we need to do this in reverse
-                win = self.book.pnl.widget(indx)
-                self.book.pnl.removeWidget(win)
+                win = self.book.gui.pnl.widget(indx)
+                self.book.gui.pnl.removeWidget(win)
                 if program in new_programs:
                     hlpdict[program] = win  # keep the widget
                 else:
@@ -379,36 +383,36 @@ class Editor:
                     if not os.path.exists(loc):
                         loc = os.path.join(shared.BASE, loc)
                     win = HotkeyPanel(self.book, loc)
-                self.book.sel.addItem(program)
-                self.book.pnl.addWidget(win)
+                self.book.gui.sel.addItem(program)
+                self.book.gui.pnl.addWidget(win)
             if self.last_added:
-                selection = self.book.sel.findText(self.last_added)
+                selection = self.book.gui.sel.findText(self.last_added)
             if selection > len(self.ini['plugins']) - 1:
                 selection -= 1
-            self.book.sel.setCurrentIndex(selection)
+            self.book.gui.sel.setCurrentIndex(selection)
 
     def m_rebuild(self):
         """rebuild csv data from (updated) settings
         """
-        if not self.page.settings:
-            hkd.show_message(self, 'I_ADDSET')
+        if not self.book.page.settings:
+            self.gui.show_message('I_ADDSET')
             return
         try:
-            test = self.page.reader.buildcsv
+            test = self.book.page.reader.buildcsv
         except AttributeError:
-            hkd.show_message(self, 'I_DEFRBLD')
+            self.gui.show_message('I_DEFRBLD')
             return
         try:
             newdata = test(self)
         except FileNotFoundError:
-            hkd.show_message(self, 'I_ERRRBLD')
+            self.gui.show_message('I_ERRRBLD')
             return
         if newdata[0]:
-            self.page.data = newdata[0]
-            self.page.otherstuff = newdata[1]
-            shared.writecsv(self.page.pad, self.page.settings, self.page.column_info,
-                         self.page.data, self.ini['lang'])
-            self.page.populate_list()
+            self.book.page.data = newdata[0]
+            self.book.page.otherstuff = newdata[1]
+            shared.writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
+                            self.book.page.data, self.ini['lang'])
+            self.book.page.populate_list()
             mld = 'keyboard definitions rebuilt'
         else:
             mld = 'No definition data'
@@ -417,83 +421,85 @@ class Editor:
             except IndexError:
                 mld = 'No extra definition'
             mld = self.captions['I_#FOUND'].format(mld)
-        hkd.show_message(self, text=mld)
+        self.gui.show_message(text=mld)
 
     def m_tool(self):
         """define tool-specific settings
         """
-        if not self.gui.page.settings:
-            self.gui.page.settings = {x: '' for x in shared.csv_settingnames}
-        old_redef = bool(int(self.gui.page.settings[shared.SettType.RDEF.value]))
-        dlg = hkd.ExtraSettingsDialog(self).exec_()
-        if dlg == qtw.QDialog.Accepted:
-            shared.writecsv(self.page.pad, self.page.settings, self.page.column_info,
-                         self.page.data, self.ini['lang'])
-            test_redef = bool(int(self.page.settings[shared.SettType.RDEF.value]))
-            test_dets = bool(int(self.page.settings[shared.SettType.DETS.value]))
-            test_rbld = bool(int(self.page.settings[shared.SettType.RBLD.value]))
+        if not self.book.page.settings:
+            self.book.page.settings = {x: '' for x in shared.csv_settingnames}
+        old_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
+        ok = self.gui.manage_extrasettings()
+        if ok:
+            # TODO gui specific stuff verplaatsen
+            shared.writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
+                            self.book.page.data, self.ini['lang'])
+            test_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
+            test_dets = bool(int(self.book.page.settings[shared.SettType.DETS.value]))
+            test_rbld = bool(int(self.book.page.settings[shared.SettType.RBLD.value]))
             self.gui.menuitems['M_SAVE'].setEnabled(test_redef)
             self.gui.menuitems['M_RBLD'].setEnabled(test_rbld)
-            indx = self.book.sel.currentIndex()
-            win = self.book.pnl.widget(indx)
-            if test_dets != self.page.has_extrapanel:
-                self.page.has_extrapanel = test_dets
+            indx = self.book.gui.sel.currentIndex()
+            win = self.book.gui.pnl.widget(indx)
+            if test_dets != self.book.page.has_extrapanel:
+                self.book.page.has_extrapanel = test_dets
                 newwin = HotkeyPanel(self.book, self.book.plugins[indx][1])
-                self.book.pnl.insertWidget(indx, newwin)
-                self.book.pnl.setCurrentIndex(indx)
-                self.book.pnl.removeWidget(win)
+                self.book.gui.pnl.insertWidget(indx, newwin)
+                self.book.gui.pnl.setCurrentIndex(indx)
+                self.book.gui.pnl.removeWidget(win)
             elif test_redef != old_redef and test_dets:
-                win = self.gui.book.pnl.currentWidget()
+                win = self.book.gui.pnl.currentWidget()
                 win.set_extrascreen_editable(test_redef)
 
     def m_col(self):
         """define tool-specific settings: column properties
         """
-        if not self.page.settings:
-            hkd.show_message(self, 'I_ADDSET')
+        if not self.book.page.settings:
+            self.gui.show_message('I_ADDSET')
             return
-        dlg = hkd.ColumnSettingsDialog(self).exec_()
-        if dlg == qtw.QDialog.Accepted:
+        ok = self.gui.manage_columnsettings()
+        if ok:
+            # TODO gui specific stuff verplaatsen
             new_pagedata = {}
-            for key, value in self.page.data.items():
+            for key, value in self.book.page.data.items():
                 newvalue = []
-                for colinf in self.page.column_info:
+                for colinf in self.book.page.column_info:
                     test = colinf[-1]
                     if test == 'new':
                         newvalue.append('')
                     else:
                         newvalue.append(value[test])
                 new_pagedata[key] = newvalue
-            self.page.data = new_pagedata
-            self.page.column_info = [x[:-1] for x in self.page.column_info]
+            self.book.page.data = new_pagedata
+            self.book.page.column_info = [x[:-1] for x in self.book.page.column_info]
 
-            shared.writecsv(self.page.pad, self.page.settings, self.page.column_info,
-                         self.page.data, self.ini['lang'])
-            if not self.page.data:
+            shared.writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
+                            self.book.page.data, self.ini['lang'])
+            if not self.book.page.data:
                 return
-            headers = [self.captions[col[0]] for col in self.page.column_info]
-            self.page.gui.p0list.setHeaderLabels(headers)
-            self.book.find_loc.clear()
-            self.book.find_loc.addItems(headers)
-            hdr = self.page.gui.p0list.header()
+            headers = [self.captions[col[0]] for col in self.book.page.column_info]
+            self.book.page.gui.p0list.setHeaderLabels(headers)
+            self.book.gui.find_loc.clear()
+            self.book.gui.find_loc.addItems(headers)
+            hdr = self.book.page.gui.p0list.header()
             hdr.setSectionsClickable(True)
-            for indx, col in enumerate(self.page.column_info):
+            for indx, col in enumerate(self.book.page.column_info):
                 hdr.resizeSection(indx, col[1])
             hdr.setStretchLastSection(True)
-            self.page.populate_list()
+            self.book.page.populate_list()
 
     def m_entry(self):
         """manual entry of keyboard shortcuts
         """
-        if not all((self.page.settings, self.page.column_info)):
-            hkd.show_message(self, 'I_ADDCOL')
+        if not all((self.book.page.settings, self.book.page.column_info)):
+            self.gui.show_message('I_ADDCOL')
             return
-        dlg = hkd.EntryDialog(self).exec_()
-        if dlg == qtw.QDialog.Accepted:
-            if self.page.data:
-                shared.writecsv(self.page.pad, self.page.settings, self.page.column_info,
-                             self.page.data, self.ini['lang'])
-                self.page.populate_list()
+        ok = self.gui.manual_entry()
+        if ok:
+            if self.book.page.data:
+                shared.writecsv(self.book.page.pad, self.book.page.settings,
+                                self.book.page.column_info, self.book.page.data, self.ini['lang'])
+                self.book.page.populate_list()
 
     def m_lang(self):
         """(menu) callback voor taalkeuze
@@ -505,8 +511,8 @@ class Editor:
         # bepaal welke er momenteel geactiveerd is
         oldlang = self.ini['lang']
         indx = choices.index(oldlang) if oldlang in choices else 0
-        lang, ok = qtw.QInputDialog.getItem(self, self.title, self.captions["P_SELLNG"],
-                                            choices, current=indx, editable=False)
+        lang, ok = self.gui.get_choice(self, self.title, self.captions["P_SELLNG"], choices,
+                                       current=indx)
         if ok:
             shared.change_setting('lang', oldlang, lang, self.ini['filename'])
             self.ini['lang'] = lang
@@ -516,9 +522,10 @@ class Editor:
     def m_about(self):
         """(menu) callback voor het tonen van de "about" dialoog
         """
-        hkd.show_message(self, text='\n'.join(self.captions['T_ABOUT'].format(
-            self.captions['T_SHORT'], shared.VRS, shared.AUTH,
-            self.captions['T_LONG']).split(' / ')))
+        self.gui.show_message(
+            text='\n'.join(self.captions['T_ABOUT'].format(self.captions['T_SHORT'], shared.VRS,
+                                                           shared.AUTH,
+                                                           self.captions['T_LONG']).split(' / ')))
 
     def m_pref(self):
         """mogelijkheid bieden om een tool op te geven dat default getoond wordt
@@ -526,8 +533,8 @@ class Editor:
         oldpref = self.ini.get("initial", None)
         oldmode = self.ini.get("startup", None)
         self.prefs = oldmode, oldpref
-        ok = hkd.InitialToolDialog(self).exec_()
-        if ok == qtw.QDialog.Accepted:
+        ok = self.gui.manage_startupsettings()
+        if ok:
             mode, pref = self.prefs
             if mode:
                 self.ini['startup'] = mode
@@ -565,7 +572,7 @@ class Editor:
         # when setting is 'remember', set the remembered tool to the current one
         if mode == shared.mode_r:
             try:
-                oldpref, pref = pref, self.gui.book.sel.currentText()
+                oldpref, pref = pref, self.book.gui.sel.currentText()
                 shared.change_setting('initial', oldpref, pref, self.ini['filename'])
             except AttributeError:  # sel bestaat niet als er geen tool pages zijn
                 pass
@@ -581,7 +588,7 @@ class Editor:
         """adjust title and modified flag
         """
         title = self.title
-        # if self.gui.page.modified:
+        # if self.book.page.modified:
         #     title += ' ' + self.captions["T_MOD"]
         self.gui.set_window_title(title)
 
@@ -594,5 +601,5 @@ class Editor:
         #         item.setTitle(self.captions[menu])
         #     except AttributeError:
         #         item.setText(self.captions[menu])
-        # self.gui.book.setcaptions()
-        # self.gui.page.setcaptions()
+        # self.book.gui.setcaptions()
+        # self.book.page.setcaptions()

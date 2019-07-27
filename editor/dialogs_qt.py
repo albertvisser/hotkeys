@@ -29,8 +29,8 @@ def ask_question(win, message_id='', text='', args=None):
     return ok == qtw.QMessageBox.Yes
 
 
-def ask_question(win, message_id='', text='', args=None):
-    """toon een vraag in een dialoogi ,met drie mogelijkheden en retourneer het antwoord
+def ask_ync_question(win, message_id='', text='', args=None):
+    """toon een vraag in een dialoog met drie mogelijkheden en retourneer het antwoord
     (Yes als (True, False), No als (False, False) en Cancel als (False, True)
     na sluiten van de dialoog
     """
@@ -299,8 +299,7 @@ class ColumnSettingsDialog(qtw.QDialog):
             show_message(self.parent, text="Can't perform this function: "
                                            "no language text identifiers below 100 left")
             self.reject()
-        else:
-            return super().exec_()
+        return super().exec_()
 
     def add_row(self, name='', width='', is_flag=False, colno=''):
         """create a row for defining column settings
@@ -874,7 +873,7 @@ class FilesDialog(qtw.QDialog):
             if len(entry) > 1:
                 self.newpathdata[name] = entry
         self.parent.ini["plugins"] = shared.update_paths(self.paths, self.newpathdata,
-                                                      self.parent.ini["lang"])
+                                                         self.parent.ini["lang"])
         super().accept()
 
 

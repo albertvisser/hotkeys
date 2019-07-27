@@ -1,7 +1,7 @@
 """gui specific code
 """
 import sys
-import os
+# import os
 import functools
 from types import SimpleNamespace
 import PyQt5.QtWidgets as qtw
@@ -24,7 +24,10 @@ class DummyPage(qtw.QFrame):
         self.setLayout(sizer)
 
     def exit(self):
+        """simulate processing triggered by exit button
+        """
         return True
+
 
 class SingleDataInterface(qtw.QFrame):
     """base class voor het gedeelte van het hoofdscherm met de listcontrol erin
@@ -38,6 +41,8 @@ class SingleDataInterface(qtw.QFrame):
         self.modified = False
 
     def setup_empty_screen(self, nodata, title):
+        """build a subscreen with only a message
+        """
         sizer = qtw.QVBoxLayout()
         hsizer = qtw.QHBoxLayout()
         hsizer.addStretch()
@@ -51,16 +56,18 @@ class SingleDataInterface(qtw.QFrame):
         """processing triggered by exit button
         """
         if self.modified:
-            ok, quit = hkd.AskYncQuestion(self, 'Q_SAVXIT')
+            ok, noexit = hkd.ask_ync_question(self, 'Q_SAVXIT')
             if ok:
                 self.savekeys()
-            if quit:
+            if noexit:
                 return False
         return True
 
     def setup_list(self):
+        """add the list widget to the interface
+        """
         self.p0list = qtw.QTreeWidget(self)
-        self._sizer = qtw.QVBoxLayout()
+        sizer = qtw.QVBoxLayout()
         if self.master.column_info:
             self.p0list.setSortingEnabled(True)
             self.p0list.setHeaderLabels([self.master.captions[col[0]] for col in
@@ -76,13 +83,13 @@ class SingleDataInterface(qtw.QFrame):
             self.master.populate_list()
             sizer1 = qtw.QHBoxLayout()
             sizer1.addWidget(self.p0list)
-            self._sizer.addLayout(sizer1)
+            sizer.addLayout(sizer1)
 
         # indien van toepassing: toevoegen van de rest van de GUI aan de layout
         if self.master.has_extrapanel:
-            self.layout_extra_fields(self._sizer)
+            self.layout_extra_fields(sizer)
 
-        self.setLayout(self._sizer)
+        self.setLayout(sizer)
         shared.log(self.master.otherstuff)
 
     def set_title(self, modified=None):
@@ -144,8 +151,7 @@ class SingleDataInterface(qtw.QFrame):
                 cb = qtw.QComboBox(box)
                 cb.setMaximumWidth(90)
                 cb.addItems(self.master.keylist)  # niet sorteren
-                cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox,
-                                                                      cb, str))
+                cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox, cb, str))
                 self.screenfields.append(cb)
                 self.cmb_key = cb
 
@@ -169,8 +175,7 @@ class SingleDataInterface(qtw.QFrame):
             cb = qtw.QComboBox(box)
             cb.addItems(self.master.contextslist)
             cb.setMaximumWidth(110)
-            cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox,
-                                                                  cb, str))
+            cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox, cb, str))
             self.screenfields.append(cb)
             self.cmb_context = cb
 
@@ -180,8 +185,7 @@ class SingleDataInterface(qtw.QFrame):
             cb.setMaximumWidth(150)
             if 'C_CNTXT' not in self.master.fields:  # load on choosing context
                 cb.addItems(self.master.commandslist)
-            cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox,
-                                                                  cb, str))
+            cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox, cb, str))
             self.screenfields.append(cb)
             self.cmb_commando = cb
 
@@ -748,7 +752,7 @@ class TabbedInterface(qtw.QFrame):
         if self.parent.editor.book is None:
             return
         page = self.pnl.currentWidget()
-        if page is None:  #  or self.parent.editor.ini['plugins'] == []:
+        if page is None:  # or self.parent.editor.ini['plugins'] == []:
             return
         self.parent.sb.showMessage(self.parent.editor.captions["M_DESC"].format(
             self.sel.currentText()))
@@ -913,6 +917,7 @@ class Gui(qtw.QMainWindow):
     def setup_tabs(self, start):
         "add the tabbed widget to the interface"
         self.setCentralWidget(self.editor.book.gui)
+        # niet nodig omdat dit al in on_page_changed gebeurt(?):
         # self.page = self.editor.book.pnl.currentWidget()
         # self.editor.book.sel.setCurrentIndex(start)
         self.editor.setcaptions()
@@ -968,8 +973,43 @@ class Gui(qtw.QMainWindow):
         return act
 
     def show_message(self, text):
+        "relay"
         hkd.show_message(self, text)
 
     def ask_question(self, text):
+        "relay"
         hkd.ask_question(self, text)
 
+    def get_textinput(self, win, text, prompt):
+        "relay"
+        text, ok = qtw.QInputDialog.getText(win, text, prompt, text=text)
+        return text, ok == qtw.QDialog.Accepted
+
+    def get_choice(self, win, title, caption, choices, current):
+        "relay"
+        return qtw.QInputDialog.getItem(win, title, caption, choices, current, editable=False)
+
+    def manage_filesettings(self):
+        "relay"
+        ok = hkd.FilesDialog(self).exec_()
+        return ok == qtw.QDialog.Accepted
+
+    def manage_extrasettings(self):
+        "relay"
+        dlg = hkd.ExtraSettingsDialog(self).exec_()
+        return dlg == qtw.QDialog.Accepted
+
+    def manage_columnsettings():
+        "relay"
+        dlg = hkd.ColumnSettingsDialog(self).exec_()
+        return dlg == qtw.QDialog.Accepted
+
+    def manual_entry(self):
+        "relay"
+        dlg = hkd.EntryDialog(self).exec_()
+        return dlg == qtw.QDialog.Accepted
+
+    def manage_startupsettings(self):
+        "relay"
+        ok = hkd.InitialToolDialog(self).exec_()
+        return ok == qtw.QDialog.Accepted
