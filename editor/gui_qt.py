@@ -658,6 +658,17 @@ class SingleDataInterface(qtw.QFrame):
         else:
             self.on_item_selected(item, item)  # , from_update=True)
 
+    # hulproutine t.b.v. managen column properties
+
+    def refresh_headers(self, headers):
+        "apply changes in the column headers"
+        self.p0list.setHeaderLabels(headers)
+        hdr = self.p0list.header()
+        hdr.setSectionsClickable(True)
+        for indx, col in enumerate(self.master.column_info):
+            hdr.resizeSection(indx, col[1])
+        hdr.setStretchLastSection(True)
+
 
 class TabbedInterface(qtw.QFrame):
     """ Als QTabwidget, maar met selector in plaats van tabs
@@ -749,22 +760,27 @@ class TabbedInterface(qtw.QFrame):
         """callback for change in tool page
         """
         # no use finishing this method if certain conditions aren't met
+        print('in on_page_changed')
         if self.parent.editor.book is None:
+            print('    leaving: no choicebook setup yet')
             return
         page = self.pnl.currentWidget()
         if page is None:  # or self.parent.editor.ini['plugins'] == []:
+            print('    leaving: no page selected yet')
             return
         self.parent.sb.showMessage(self.parent.editor.captions["M_DESC"].format(
             self.sel.currentText()))
         if page.master.modified:
             ok = page.exit()
             if not ok:
+                print("leaving: can't exit modified page yet")
                 return
         self.pnl.setCurrentIndex(indx)
         self.master.page = page.master  # change to new selection
         self.parent.setup_menu()
         if not all((self.master.page.settings, self.master.page.column_info,
                     self.master.page.data)):
+            print('    leaving: not all data available')
             return
         self.master.page.setcaptions()
         items = [self.parent.editor.captions[x[0]] for x in self.master.page.column_info]
@@ -864,6 +880,70 @@ class TabbedInterface(qtw.QFrame):
         if self.master.page.data == self.master.page.olddata:
             self.on_text_changed(text)  # reselect items_found after setting filter to off
 
+    # hulproutines t.b.v. managen bestandslocaties
+
+    def get_selected_index(self):
+        "get index of selected item"
+        return self.sel.currentIndex()
+
+    def clear_selector(self):
+        "reset selctor"
+        self.sel.clear()
+
+    def remove_tool(self, indx, program, program_list):
+        """remove a tool from the confguration"""
+        win = self.pnl.widget(indx)
+        self.pnl.removeWidget(win)
+        if program in program_list:
+            return win  # keep the widget
+        win.close()  # lose the widget
+        return None
+
+    def add_tool(self, program, win):
+        "add a tool to the configuration"
+        self.sel.addItem(program)
+        self.pnl.addWidget(win.gui)
+
+    def get_new_selection(self, item):
+        "find the index to set the new selection to"
+        return self.sel.findText(item)
+
+    def set_selected(self, selection):
+        "set the new selection index"
+        self.sel.setCurrentIndex(selection)
+
+    # hulproutines t.b.v. managen tool specifieke settings
+
+    def get_selected_panel(self):
+        "return index and handle of the selected panel"
+        indx = self.sel.currentIndex()
+        win = self.pnl.widget(indx)
+        return indx, win
+
+    def replace_panel(self, indx, win, newwin):
+        "replace a panel with a modified version"
+        self.pnl.insertWidget(indx, newwin)
+        self.pnl.setCurrentIndex(indx)
+        self.pnl.removeWidget(win)
+
+    def set_panel_editable(self, test_redef):
+        "(re)set editability of the current panel"
+        win = self.pnl.currentWidget()
+        win.set_extrascreen_editable(test_redef)
+
+    # hulproutine t.b.v. managen column properties
+
+    def refresh_locs(self, headers):
+        "apply changes in the selector for `search in column`"
+        self.find_loc.clear()
+        self.find_loc.addItems(headers)
+
+    # hulpfunctie t.b.v. afsluiten: bepalen te onthouden tool
+
+    def get_selected_text(self):
+        "get text of selected item"
+        return self.sel.currentText()
+
 
 class Gui(qtw.QMainWindow):
     """Main GUI"""
@@ -877,6 +957,7 @@ class Gui(qtw.QMainWindow):
         self.resize(wid, hig)
         self.sb = self.statusBar()
         self.menu_bar = self.menuBar()
+        self.menuitems = {}  # []
 
     def show_empty_screen(self):
         """what to do when there's no data to show
@@ -926,7 +1007,7 @@ class Gui(qtw.QMainWindow):
         """build menus and actions
         """
         self.menu_bar.clear()
-        self.menuitems = {}  # []
+        # self.menuitems = {}  # []
         for title, items in self.editor.get_menudata():
             menu = self.menu_bar.addMenu(self.editor.captions[title])
             self.menuitems[title] = menu
@@ -972,44 +1053,58 @@ class Gui(qtw.QMainWindow):
                 act.setEnabled(False)
         return act
 
+    def setcaptions(self):
+        "set title for menuitem or action"
+        for menu, item in self.menuitems.items():
+            try:
+                item.setTitle(self.captions[menu])
+            except AttributeError:
+                item.setText(self.captions[menu])
+
     def show_message(self, text):
         "relay"
-        hkd.show_message(self, text)
+        hkd.show_message(self, text=text)
 
     def ask_question(self, text):
         "relay"
         hkd.ask_question(self, text)
 
-    def get_textinput(self, win, text, prompt):
+    def get_textinput(self, text, prompt):
         "relay"
-        text, ok = qtw.QInputDialog.getText(win, text, prompt, text=text)
+        text, ok = qtw.QInputDialog.getText(self, text, prompt, text=text)
         return text, ok == qtw.QDialog.Accepted
 
-    def get_choice(self, win, title, caption, choices, current):
+    def get_choice(self, title, caption, choices, current):
         "relay"
-        return qtw.QInputDialog.getItem(win, title, caption, choices, current, editable=False)
+        return qtw.QInputDialog.getItem(self, title, caption, choices, current, editable=False)
 
     def manage_filesettings(self):
         "relay"
-        ok = hkd.FilesDialog(self).exec_()
+        ok = hkd.FilesDialog(self, self.editor).exec_()
         return ok == qtw.QDialog.Accepted
 
     def manage_extrasettings(self):
         "relay"
-        dlg = hkd.ExtraSettingsDialog(self).exec_()
+        dlg = hkd.ExtraSettingsDialog(self, self.editor).exec_()
         return dlg == qtw.QDialog.Accepted
 
-    def manage_columnsettings():
+    def manage_columnsettings(self):
         "relay"
-        dlg = hkd.ColumnSettingsDialog(self).exec_()
+        dlg = hkd.ColumnSettingsDialog(self, self.editor).exec_()
         return dlg == qtw.QDialog.Accepted
 
     def manual_entry(self):
         "relay"
-        dlg = hkd.EntryDialog(self).exec_()
+        dlg = hkd.EntryDialog(self, self.editor).exec_()
         return dlg == qtw.QDialog.Accepted
 
     def manage_startupsettings(self):
         "relay"
-        ok = hkd.InitialToolDialog(self).exec_()
+        ok = hkd.InitialToolDialog(self, self.editor).exec_()
         return ok == qtw.QDialog.Accepted
+
+    # hulproutine t.b.v. managen tool specifieke settings
+
+    def modify_menuitem(self, caption, setting):
+        "enable/disable menu option identified by caption"
+        self.gui.menuitems[caption].setEnabled(setting)

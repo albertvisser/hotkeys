@@ -14,7 +14,7 @@ def show_message(win, message_id='', text='', args=None):
     """toon een boodschap in een dialoog
     """
     text = shared.get_text(win, message_id, text, args)
-    qtw.QMessageBox.information(win, win.title, text)
+    qtw.QMessageBox.information(win, shared.get_title(win), text)
     return
 
 
@@ -23,7 +23,7 @@ def ask_question(win, message_id='', text='', args=None):
     na sluiten van de dialoog
     """
     text = shared.get_text(win, message_id, text, args)
-    ok = qtw.QMessageBox.question(win, win.title, text,
+    ok = qtw.QMessageBox.question(win, shared.get_title(win), text,
                                   qtw.QMessageBox.Yes | qtw.QMessageBox.No,
                                   qtw.QMessageBox.Yes)
     return ok == qtw.QMessageBox.Yes
@@ -35,7 +35,7 @@ def ask_ync_question(win, message_id='', text='', args=None):
     na sluiten van de dialoog
     """
     text = shared.get_text(win, message_id, text, args)
-    ok = qtw.QMessageBox.question(win, win.title, text,
+    ok = qtw.QMessageBox.question(win, shared.get_title(win), text,
                                   qtw.QMessageBox.Yes | qtw.QMessageBox.No |
                                   qtw.QMessageBox.Cancel)
     return ok == qtw.QMessageBox.Yes, ok == qtw.QMessageBox.Cancel
@@ -44,17 +44,18 @@ def ask_ync_question(win, message_id='', text='', args=None):
 class InitialToolDialog(qtw.QDialog):
     """dialog to define which tool to show on startup
     """
-    def __init__(self, parent):
+    def __init__(self, parent, master):
         self.parent = parent
-        oldmode, oldpref = self.parent.prefs
-        choices = [x[0] for x in self.parent.ini["plugins"]]
+        self.master = master
+        oldmode, oldpref = self.master.prefs
+        choices = [x[0] for x in self.master.ini["plugins"]]
         indx = choices.index(oldpref) if oldpref in choices else 0
         super().__init__()
-        self.setWindowTitle(self.parent.title)
+        self.setWindowTitle(self.master.title)
         vbox = qtw.QVBoxLayout()
-        vbox.addWidget(qtw.QLabel(self.parent.captions["M_PREF"], self))
+        vbox.addWidget(qtw.QLabel(self.master.captions["M_PREF"], self))
         hbox = qtw.QHBoxLayout()
-        self.check_fixed = qtw.QRadioButton(self.parent.captions["T_FIXED"], self)
+        self.check_fixed = qtw.QRadioButton(self.master.captions["T_FIXED"], self)
         self.check_fixed.setChecked(oldmode == shared.mode_f)
         hbox.addWidget(self.check_fixed)
         self.sel_fixed = qtw.QComboBox(self)
@@ -65,7 +66,7 @@ class InitialToolDialog(qtw.QDialog):
         hbox.addStretch()
         vbox.addLayout(hbox)
         hbox = qtw.QHBoxLayout()
-        self.check_remember = qtw.QRadioButton(self.parent.captions["T_RMBR"], self)
+        self.check_remember = qtw.QRadioButton(self.master.captions["T_RMBR"], self)
         self.check_remember.setChecked(oldmode == shared.mode_r)
         hbox.addWidget(self.check_remember)
         hbox.addStretch()
@@ -92,7 +93,7 @@ class InitialToolDialog(qtw.QDialog):
         else:
             mode = None
         pref = self.sel_fixed.currentText()
-        self.parent.prefs = mode, pref
+        self.master.prefs = mode, pref
         super().accept()
 
 
@@ -102,9 +103,9 @@ class FileBrowseButton(qtw.QFrame):
     one using a FileDialog
     """
     def __init__(self, parent, text="", level_down=False):
-        self.parent = parent.parent
+        self.parent = parent.master
         if level_down:
-            self.parent = self.parent.parent
+            self.parent = self.parent.master
         self.startdir = ''
         if text:
             self.startdir = os.path.dirname(text)
@@ -125,8 +126,7 @@ class FileBrowseButton(qtw.QFrame):
         """callback for button
         """
         startdir = str(self.input.text()) or os.getcwd()
-        path = qtw.QFileDialog.getOpenFileName(self,
-                                               self.parent.captions['C_SELFIL'], startdir)
+        path = qtw.QFileDialog.getOpenFileName(self, self.parent.captions['C_SELFIL'], startdir)
         if path[0]:
             self.input.setText(path[0])
 
@@ -141,34 +141,32 @@ class SetupDialog(qtw.QDialog):
         self.parent = parent
         self.parent.data = []
         super().__init__()
-        self.setWindowTitle(self.parent.parent.captions['T_INICSV'])
+        self.setWindowTitle(self.parent.master.captions['T_INICSV'])
 
         grid = qtw.QGridLayout()
 
-        text = qtw.QLabel(self.parent.parent.captions['T_NAMOF'].format(
-            self.parent.parent.captions['S_PLGNAM'].lower(),
-            self.parent.parent.captions['T_ISMADE']), self)
-        self.t_program = qtw.QLineEdit('editor.plugins.{}_keys'.format(
-            name.lower()), self)
+        text = qtw.QLabel(self.parent.master.captions['T_NAMOF'].format(
+            self.parent.master.captions['S_PLGNAM'].lower(),
+            self.parent.master.captions['T_ISMADE']), self)
+        self.t_program = qtw.QLineEdit('editor.plugins.{}_keys'.format(name.lower()), self)
         grid.addWidget(text, 1, 0, 1, 3)
         grid.addWidget(self.t_program, 1, 3)  # , 1, 1)
-        text = qtw.QLabel(self.parent.parent.captions['S_PNLNAM'], self)
+        text = qtw.QLabel(self.parent.master.captions['S_PNLNAM'], self)
         self.t_title = qtw.QLineEdit(name + ' hotkeys', self)
         grid.addWidget(text, 2, 0, 1, 3)
         grid.addWidget(self.t_title, 2, 3)  # , 1, 1)
-        self.c_rebuild = qtw.QCheckBox(self.parent.parent.captions['T_MAKE'].format(
+        self.c_rebuild = qtw.QCheckBox(self.parent.master.captions['T_MAKE'].format(
             self.parent.parent.captions['S_RBLD']), self)
         grid.addWidget(self.c_rebuild, 3, 0, 1, 4)
-        self.c_details = qtw.QCheckBox(self.parent.parent.captions['S_DETS'])
+        self.c_details = qtw.QCheckBox(self.parent.master.captions['S_DETS'])
         grid.addWidget(self.c_details, 4, 0, 1, 4)
-        self.c_redef = qtw.QCheckBox(self.parent.parent.captions['T_MAKE'].format(
+        self.c_redef = qtw.QCheckBox(self.parent.master.captions['T_MAKE'].format(
             self.parent.parent.captions['S_RSAV']), self)
         grid.addWidget(self.c_redef, 5, 0, 1, 4)
-        text = qtw.QLabel(self.parent.parent.captions['Q_SAVLOC'], self)
+        text = qtw.QLabel(self.parent.master.captions['Q_SAVLOC'], self)
         grid.addWidget(text, 6, 0, 1, 2)
         self.t_loc = FileBrowseButton(self,
-                                      text=os.path.join('editor', 'plugins',
-                                                        name + "_hotkeys.csv"),
+                                      text=os.path.join('editor', 'plugins', name + "_hotkeys.csv"),
                                       level_down=True)
         grid.addWidget(self.t_loc, 6, 2, 1, 3)
 
@@ -202,14 +200,14 @@ class SetupDialog(qtw.QDialog):
         cloc = self.t_loc.input.text()
         ploc = self.t_program.text()
         if cloc == "":
-            show_message(self.parent.parent, 'I_NEEDNAME')
+            show_message(self.parent.master, 'I_NEEDNAME')
             return
         cloc = os.path.abspath(cloc)
         if os.path.exists(cloc):
-            show_message(self.parent.parent, 'I_GOTSETFIL', args=[cloc])
+            show_message(self.parent.master, 'I_GOTSETFIL', args=[cloc])
             return
         if importlib.util.find_spec(ploc):
-            show_message(self.parent.parent, 'I_GOTPLGFIL', args=[ploc])
+            show_message(self.parent.master, 'I_GOTPLGFIL', args=[ploc])
             return
         self.parent.loc = cloc
         self.parent.data = [ploc, self.t_title.text(),
@@ -222,14 +220,15 @@ class SetupDialog(qtw.QDialog):
 class ColumnSettingsDialog(qtw.QDialog):
     """dialoog voor invullen tool specifieke instellingen
     """
-    def __init__(self, parent):
+    def __init__(self, parent, master):
         self.parent = parent
+        self.master = master
         self.initializing = True
         super().__init__(parent)
 
         self.sizer = qtw.QVBoxLayout()
-        text = self.parent.captions['T_COLSET'].format(
-            self.parent.page.settings[shared.SettType.PNL.value])
+        text = self.master.captions['T_COLSET'].format(
+            self.master.book.page.settings[shared.SettType.PNL.value])
         hsizer = qtw.QHBoxLayout()
         label = qtw.QLabel(text, self)
         hsizer.addStretch()
@@ -239,15 +238,15 @@ class ColumnSettingsDialog(qtw.QDialog):
 
         hsizer = qtw.QHBoxLayout()
         hsizer.addSpacing(41)
-        hsizer.addWidget(qtw.QLabel(self.parent.captions['C_TTL'], self),
+        hsizer.addWidget(qtw.QLabel(self.master.captions['C_TTL'], self),
                          alignment=core.Qt.AlignHCenter | core.Qt.AlignVCenter)
         hsizer.addSpacing(102)  # 82)
-        hsizer.addWidget(qtw.QLabel(self.parent.captions['C_WID'], self),
+        hsizer.addWidget(qtw.QLabel(self.master.captions['C_WID'], self),
                          alignment=core.Qt.AlignVCenter)
         hsizer.addSpacing(8)  # 84)
-        hsizer.addWidget(qtw.QLabel(self.parent.captions['C_IND'], self),
+        hsizer.addWidget(qtw.QLabel(self.master.captions['C_IND'], self),
                          alignment=core.Qt.AlignVCenter)
-        hsizer.addWidget(qtw.QLabel(self.parent.captions['C_SEQ'], self),
+        hsizer.addWidget(qtw.QLabel(self.master.captions['C_SEQ'], self),
                          alignment=core.Qt.AlignVCenter)
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
@@ -262,8 +261,8 @@ class ColumnSettingsDialog(qtw.QDialog):
         self.rownum = 0  # indicates the number of rows in the gridlayout
         self.data, self.checks = [], []
         self.col_textids, self.col_names, self.last_textid = \
-            shared.read_columntitledata(self)
-        for ix, item in enumerate(self.parent.page.column_info):
+            shared.read_columntitledata(self.master)
+        for ix, item in enumerate(self.master.book.page.column_info):
             item.append(ix)
             self.add_row(*item)
         box = qtw.QVBoxLayout()
@@ -273,10 +272,10 @@ class ColumnSettingsDialog(qtw.QDialog):
         self.sizer.addWidget(self.scrl)
 
         buttonbox = qtw.QDialogButtonBox()
-        btn = buttonbox.addButton(self.parent.captions['C_ADDCOL'],
+        btn = buttonbox.addButton(self.master.captions['C_ADDCOL'],
                                   qtw.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.add_column)
-        btn = buttonbox.addButton(self.parent.captions['C_REMCOL'],
+        btn = buttonbox.addButton(self.master.captions['C_REMCOL'],
                                   qtw.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.remove_columns)
         buttonbox.addButton(qtw.QDialogButtonBox.Ok)
@@ -412,20 +411,21 @@ class ColumnSettingsDialog(qtw.QDialog):
                                 old_colno])
         if new_titles:
             shared.add_columntitledata(new_titles)
-        self.parent.page.column_info = column_info
+        self.master.book.page.column_info = column_info
         for id_, name in new_titles:
-            self.parent.captions[id_] = name
-            self.parent.page.captions[id_] = name
+            self.master.captions[id_] = name
+            self.master.book.page.captions[id_] = name
         super().accept()
 
 
 class ExtraSettingsDialog(qtw.QDialog):
     """dialoog voor invullen tool specifieke instellingen
     """
-    def __init__(self, parent):
+    def __init__(self, parent, master):
         self.parent = parent
-        self.title = self.parent.title
-        self.captions = self.parent.captions
+        self.master = master
+        self.title = self.master.title
+        self.captions = self.master.captions
         super().__init__(parent)
         ## self.resize(680, 400)
 
@@ -435,40 +435,40 @@ class ExtraSettingsDialog(qtw.QDialog):
         vsizer = qtw.QVBoxLayout()
 
         hsizer = qtw.QHBoxLayout()
-        text = qtw.QLabel(self.parent.captions['S_PLGNAM'], self)
-        self.t_program = qtw.QLineEdit(self.parent.page.settings[shared.SettType.PLG.value],
+        text = qtw.QLabel(self.master.captions['S_PLGNAM'], self)
+        self.t_program = qtw.QLineEdit(self.master.book.page.settings[shared.SettType.PLG.value],
                                        self)
         hsizer.addWidget(text)
         hsizer.addWidget(self.t_program)
         vsizer.addLayout(hsizer)
 
         hsizer = qtw.QHBoxLayout()
-        text = qtw.QLabel(self.parent.captions['S_PNLNAM'], self)
-        self.t_title = qtw.QLineEdit(self.parent.page.settings[shared.SettType.PNL.value],
+        text = qtw.QLabel(self.master.captions['S_PNLNAM'], self)
+        self.t_title = qtw.QLineEdit(self.master.book.page.settings[shared.SettType.PNL.value],
                                      self)
         hsizer.addWidget(text)
         hsizer.addWidget(self.t_title)
         vsizer.addLayout(hsizer)
         hsizer = qtw.QHBoxLayout()
-        self.c_rebuild = qtw.QCheckBox(self.parent.captions['T_MAKE'].format(
-            self.parent.captions['S_RBLD']), self)
-        if self.parent.page.settings[shared.SettType.RBLD.value] == '1':
+        self.c_rebuild = qtw.QCheckBox(self.master.captions['T_MAKE'].format(
+            self.master.captions['S_RBLD']), self)
+        if self.master.book.page.settings[shared.SettType.RBLD.value] == '1':
             self.c_rebuild.toggle()
         hsizer.addWidget(self.c_rebuild)
         vsizer.addLayout(hsizer)
         hsizer = qtw.QHBoxLayout()
-        self.c_showdet = qtw.QCheckBox(self.parent.captions['S_DETS'], self)
+        self.c_showdet = qtw.QCheckBox(self.master.captions['S_DETS'], self)
         try:
-            if self.parent.page.settings[shared.SettType.DETS.value] == '1':
+            if self.master.book.page.settings[shared.SettType.DETS.value] == '1':
                 self.c_showdet.toggle()
         except KeyError:
             pass
         hsizer.addWidget(self.c_showdet)
         vsizer.addLayout(hsizer)
         hsizer = qtw.QHBoxLayout()
-        self.c_redef = qtw.QCheckBox(self.parent.captions['T_MAKE'].format(
-            self.parent.captions['S_RSAV']), self)
-        if self.parent.page.settings[shared.SettType.RDEF.value] == '1':
+        self.c_redef = qtw.QCheckBox(self.master.captions['T_MAKE'].format(
+            self.master.captions['S_RSAV']), self)
+        if self.master.book.page.settings[shared.SettType.RDEF.value] == '1':
             self.c_redef.toggle()
         hsizer.addWidget(self.c_redef)
         vsizer.addLayout(hsizer)
@@ -478,8 +478,8 @@ class ExtraSettingsDialog(qtw.QDialog):
 
         pnl = qtw.QFrame(self)
         vsizer = qtw.QVBoxLayout()
-        text = self.parent.captions['T_XTRASET'].format(
-            self.parent.page.settings[shared.SettType.PNL.value])
+        text = self.master.captions['T_XTRASET'].format(
+            self.master.book.page.settings[shared.SettType.PNL.value])
         hsizer = qtw.QHBoxLayout()
         label = qtw.QLabel(text, self)
         hsizer.addStretch()
@@ -489,10 +489,10 @@ class ExtraSettingsDialog(qtw.QDialog):
 
         hsizer = qtw.QHBoxLayout()
         hsizer.addSpacing(41)
-        hsizer.addWidget(qtw.QLabel(self.parent.captions['C_NAM'], self),
+        hsizer.addWidget(qtw.QLabel(self.master.captions['C_NAM'], self),
                          alignment=core.Qt.AlignHCenter)
         hsizer.addSpacing(52)
-        hsizer.addWidget(qtw.QLabel(self.parent.captions['C_VAL'], self),
+        hsizer.addWidget(qtw.QLabel(self.master.captions['C_VAL'], self),
                          alignment=core.Qt.AlignHCenter)
         hsizer.addStretch()
         vsizer.addLayout(hsizer)
@@ -507,10 +507,10 @@ class ExtraSettingsDialog(qtw.QDialog):
         rownum = 0
         self.rownum = rownum
         self.data, self.checks = [], []
-        for name, value in self.parent.page.settings.items():
+        for name, value in self.master.book.page.settings.items():
             if name not in shared.csv_settingnames and name != 'extra':
                 try:
-                    desc = self.parent.page.settings['extra'][name]
+                    desc = self.master.book.page.settings['extra'][name]
                 except KeyError:
                     desc = ''
                 self.add_row(name, value, desc)
@@ -521,10 +521,10 @@ class ExtraSettingsDialog(qtw.QDialog):
 
         hsizer = qtw.QHBoxLayout()
         hsizer.addStretch()
-        btn = qtw.QPushButton(self.parent.captions['C_ADDSET'], self)
+        btn = qtw.QPushButton(self.master.captions['C_ADDSET'], self)
         btn.clicked.connect(self.add_setting)
         hsizer.addWidget(btn)
-        btn = qtw.QPushButton(self.parent.captions['C_REMSET'], self)
+        btn = qtw.QPushButton(self.master.captions['C_REMSET'], self)
         btn.clicked.connect(self.remove_settings)
         hsizer.addWidget(btn)
         hsizer.addStretch()
@@ -604,33 +604,33 @@ class ExtraSettingsDialog(qtw.QDialog):
             return
         if self.c_showdet.isChecked():
             try:
-                test = self.parent.page.reader.add_extra_attributes
+                test = self.master.book.page.reader.add_extra_attributes
             except AttributeError:
                 self.c_showdet.setChecked(False)
                 self.c_redef.setChecked(False)
                 show_message(self, "I_IMPLXTRA")
                 return
-        self.parent.page.settings[shared.SettType.PLG.value] = self.t_program.text()
-        self.parent.page.settings[shared.SettType.PNL.value] = self.t_title.text()
+        self.master.book.page.settings[shared.SettType.PLG.value] = self.t_program.text()
+        self.master.book.page.settings[shared.SettType.PNL.value] = self.t_title.text()
         value = '1' if self.c_rebuild.isChecked() else '0'
-        self.parent.page.settings[shared.SettType.RBLD.value] = value
+        self.master.book.page.settings[shared.SettType.RBLD.value] = value
         value = '1' if self.c_showdet.isChecked() else '0'
-        self.parent.page.settings[shared.SettType.DETS.value] = value
+        self.master.book.page.settings[shared.SettType.DETS.value] = value
         value = '1' if self.c_redef.isChecked() else '0'
-        self.parent.page.settings[shared.SettType.RDEF.value] = value
+        self.master.book.page.settings[shared.SettType.RDEF.value] = value
 
         settingsdict, settdescdict = {}, {}
         for w_name, w_value, w_desc in self.data:
             settingsdict[w_name.text()] = w_value.text()
             settdescdict[w_name.text()] = w_desc.text()
         todelete = []
-        for setting in self.parent.page.settings:
+        for setting in self.master.book.page.settings:
             if setting not in shared.csv_settingnames:
                 todelete.append(setting)
         for setting in todelete:
-            del self.parent.page.settings[setting]
-        self.parent.page.settings.update(settingsdict)
-        self.parent.page.settings['extra'] = settdescdict
+            del self.master.book.page.settings[setting]
+        self.master.book.page.settings.update(settingsdict)
+        self.master.book.page.settings['extra'] = settdescdict
 
         super().accept()
 
@@ -640,24 +640,24 @@ class DeleteDialog(qtw.QDialog):
     """
     def __init__(self, parent):
         self.parent = parent
-        self.last_added = ''
+        self.last_added = ''  # TODO uitzoeken: kan dit wel altijd
         super().__init__(parent)
         self.sizer = qtw.QVBoxLayout()
         hsizer = qtw.QHBoxLayout()
-        label = qtw.QLabel(self.parent.parent.captions['Q_REMPRG'], self)
+        label = qtw.QLabel(self.parent.master.captions['Q_REMPRG'], self)
         hsizer.addWidget(label)
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
 
         hsizer = qtw.QHBoxLayout()
-        check = qtw.QCheckBox(self.parent.parent.captions['Q_REMCSV'], self)
+        check = qtw.QCheckBox(self.parent.master.captions['Q_REMCSV'], self)
         hsizer.addWidget(check)
         self.remove_keydefs = check
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
 
         hsizer = qtw.QHBoxLayout()
-        check = qtw.QCheckBox(self.parent.parent.captions['Q_REMPLG'], self)
+        check = qtw.QCheckBox(self.parent.master.captions['Q_REMPLG'], self)
         hsizer.addWidget(check)
         self.remove_plugin = check
         hsizer.addStretch()
@@ -684,9 +684,10 @@ class FilesDialog(qtw.QDialog):
 
     voor het instellen van de bestandslocaties
     """
-    def __init__(self, parent):
+    def __init__(self, parent, master):
         self.parent = parent
-        self.title = self.parent.title
+        self.master = master
+        self.title = self.master.title
         self.last_added = ''
         self.code_to_remove = []
         self.data_to_remove = []
@@ -694,7 +695,7 @@ class FilesDialog(qtw.QDialog):
         self.resize(680, 400)
 
         self.sizer = qtw.QVBoxLayout()
-        text = '\n'.join((self.parent.captions['T_TOOLS'].split(' / ')))
+        text = '\n'.join((self.master.captions['T_TOOLS'].split(' / ')))
         hsizer = qtw.QHBoxLayout()
         label = qtw.QLabel(text, self)
         hsizer.addStretch()
@@ -704,10 +705,10 @@ class FilesDialog(qtw.QDialog):
 
         hsizer = qtw.QHBoxLayout()
         hsizer.addSpacing(36)
-        hsizer.addWidget(qtw.QLabel(self.parent.captions['C_PRGNAM'], self),
+        hsizer.addWidget(qtw.QLabel(self.master.captions['C_PRGNAM'], self),
                          alignment=core.Qt.AlignHCenter | core.Qt.AlignVCenter)
         hsizer.addSpacing(84)
-        hsizer.addWidget(qtw.QLabel(self.parent.captions['C_CSVLOC'], self),
+        hsizer.addWidget(qtw.QLabel(self.master.captions['C_CSVLOC'], self),
                          alignment=core.Qt.AlignVCenter)
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
@@ -727,9 +728,9 @@ class FilesDialog(qtw.QDialog):
         self.settingsdata = {}
         # settingsdata is een mapping van pluginnaam op een tuple van programmanaam en
         # andere settings (alleen als er een nieuw csv file voor moet worden aangemaakt)
-        for name, path in self.parent.ini["plugins"]:
+        for name, path in self.master.ini["plugins"]:
             self.add_row(name, path)
-            self.settingsdata[name] = (self.parent.pluginfiles[name],)
+            self.settingsdata[name] = (self.master.pluginfiles[name],)
         box = qtw.QVBoxLayout()
         box.addLayout(self.gsizer)
         box.addStretch()
@@ -737,10 +738,10 @@ class FilesDialog(qtw.QDialog):
         self.sizer.addWidget(self.scrl)
 
         buttonbox = qtw.QDialogButtonBox()
-        btn = buttonbox.addButton(self.parent.captions['C_ADDPRG'],
+        btn = buttonbox.addButton(self.master.captions['C_ADDPRG'],
                                   qtw.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.add_program)
-        btn = buttonbox.addButton(self.parent.captions['C_REMPRG'],
+        btn = buttonbox.addButton(self.master.captions['C_REMPRG'],
                                   qtw.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.remove_programs)
         buttonbox.addButton(qtw.QDialogButtonBox.Ok)
@@ -785,8 +786,8 @@ class FilesDialog(qtw.QDialog):
 
     def add_program(self):
         """nieuwe rij aanmaken in self.gsizer"""
-        newtool, ok = qtw.QInputDialog.getText(self, self.parent.title,
-                                               self.parent.captions['P_NEWPRG'])
+        newtool, ok = qtw.QInputDialog.getText(self, self.master.title,
+                                               self.master.captions['P_NEWPRG'])
         if ok:
             if newtool == "":
                 show_message(self.parent, 'I_NEEDNAME')
@@ -803,8 +804,7 @@ class FilesDialog(qtw.QDialog):
 
     def remove_programs(self):
         """alle aangevinkte items verwijderen uit self.gsizer"""
-        checked = [(x, y.text()) for x, y in enumerate(self.checks)
-                   if y.isChecked()]
+        checked = [(x, y.text()) for x, y in enumerate(self.checks) if y.isChecked()]
         if checked:
             dlg = DeleteDialog(self).exec_()
             if dlg == qtw.QDialog.Accepted:
@@ -832,10 +832,10 @@ class FilesDialog(qtw.QDialog):
         # TODO onderbrengen in een gui onafhankeljke validatieroutine
         if self.last_added not in [x[0] for x in self.paths]:
             self.last_added = ''
-        self.parent.last_added = self.last_added
+        self.master.last_added = self.last_added
         for ix, entry in enumerate(self.paths):
             name, path = entry
-            if name not in [x for x, y in self.parent.ini['plugins']]:
+            if name not in [x for x, y in self.master.ini['plugins']]:
                 csvname = path.input.text()
                 if not csvname:
                     show_message(self, text='Please fill out all filenames')
@@ -852,49 +852,48 @@ class FilesDialog(qtw.QDialog):
                     try:
                         prgname = data[0][shared.SettType.PLG.value]
                     except KeyError:
-                        show_message(self,
-                                     text='{} does not contain a reference to a '
-                                          'plugin (PluginName setting)'.format(csvname))
+                        show_message(self, text='{} does not contain a reference to a '
+                                                'plugin (PluginName setting)'.format(csvname))
                         return
                 if len(self.settingsdata[name]) == 1:  # existing plugin
                     try:
                         _ = importlib.import_module(prgname)
                     except ImportError:
-                        show_message(self,
-                                     text='{} does not contain a reference to a '
-                                          'valid plugin'.format(csvname))
+                        show_message(self, text='{} does not contain a reference to a '
+                                                'valid plugin'.format(csvname))
                         return
 
-                self.parent.pluginfiles[name] = prgname
+                self.master.pluginfiles[name] = prgname
         for filename in self.code_to_remove + self.data_to_remove:
             os.remove(filename)
         self.newpathdata = {}
         for name, entry in self.settingsdata.items():
             if len(entry) > 1:
                 self.newpathdata[name] = entry
-        self.parent.ini["plugins"] = shared.update_paths(self.paths, self.newpathdata,
-                                                         self.parent.ini["lang"])
+        self.master.ini["plugins"] = shared.update_paths(self.paths, self.newpathdata,
+                                                         self.master.ini["lang"])
         super().accept()
 
 
 class EntryDialog(qtw.QDialog):
     """Dialog for Manual Entry
     """
-    def __init__(self, parent):
+    def __init__(self, parent, master):
         self.parent = parent
-        self.captions = self.parent.captions
+        self.master = master
+        self.captions = self.master.captions
 
         super().__init__(parent)
         self.resize(680, 400)
 
         # use self.parent.page.column_info to define grid
         names, widths = [], []
-        for row in self.parent.page.column_info:
+        for row in self.master.book.page.column_info:
             names.append(self.captions[row[0]])
             widths.append(row[1])
 
-        # use self.parent.page.data to populate grid
-        self.data = self.parent.page.data
+        # use self.master.page.data to populate grid
+        self.data = self.master.book.page.data
 
         self.p0list = qtw.QTableWidget(self)
         self.p0list.setColumnCount(len(names))
@@ -969,5 +968,5 @@ class EntryDialog(qtw.QDialog):
                     value.append('')
             if value != [''] * self.p0list.columnCount():
                 new_values[len(new_values)] = value
-        self.parent.page.data = new_values
+        self.master.book.page.data = new_values
         super().accept()

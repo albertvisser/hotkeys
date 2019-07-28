@@ -249,19 +249,13 @@ class Editor:
         self.pluginfiles = {}
         self.book = None
         self.gui = Gui(self)
-        # self.book.setup_gui()
         if self.ini['plugins'] == []:
-            # self.book.page = HotkeyPanel(self.book, NO_PATH)
-            # self.book.page.setup_gui()
             self.gui.show_empty_screen()
-            self.gui.go()
-            return
-
-        self.gui.set_window_title(self.title)
-        self.gui.statusbar_message(self.captions["T_HELLO"].format(self.captions["T_MAIN"]))
-
-        self.setup_tabs()
-        # self.gui.setup_menu()
+        else:
+            self.gui.set_window_title(self.title)
+            self.gui.statusbar_message(self.captions["T_HELLO"].format(self.captions["T_MAIN"]))
+            self.setup_tabs()
+            self.gui.setup_menu()
         self.gui.go()
 
     def setup_tabs(self):
@@ -327,7 +321,7 @@ class Editor:
         """menu callback voor het aanpassen van de schermtitel
         """
         oldtitle = self.title
-        newtitle, ok = self.gui.get_textinput(self, oldtitle, self.captions["T_TITLE"])
+        newtitle, ok = self.gui.get_textinput(oldtitle, self.captions["T_TITLE"])
         if ok:
             if newtitle != oldtitle:
                 self.title = self.ini['title'] = newtitle
@@ -347,27 +341,28 @@ class Editor:
         # self.ini["plugins"] bevat de lijst met tools en csv locaties
         current_programs = [x for x, y in self.ini["plugins"]]
         current_paths = [y for x, y in self.ini["plugins"]]
+
+        self.last_added = None  # wordt in de hierna volgende dialoog ingesteld
         ok = self.gui.manage_filesettings()
         if ok:
-            # TODO gui specific stuff verplaatsen
-            selection = self.book.gui.sel.currentIndex()
+            selection = self.book.gui.get_selected()
             shared.modify_settings(self.ini)
 
             # update the screen(s)
             # clear the selector and the stackedwidget while pairing up programs and windows
             # that need to be kept or replaced
             hlpdict = {}
-            self.book.gui.sel.clear()
+            self.book.gui.clear_selector()
+
             current_items = reversed([(x, y) for x, y in enumerate(current_programs)])
             new_programs = [x for x, y in self.ini["plugins"]]
             new_paths = [y for x, y in self.ini["plugins"]]
             for indx, program in current_items:  # we need to do this in reverse
-                win = self.book.gui.pnl.widget(indx)
-                self.book.gui.pnl.removeWidget(win)
-                if program in new_programs:
-                    hlpdict[program] = win  # keep the widget
-                else:
-                    win.close()  # lose the widget
+                # NB niet alleen de Gui, ook het HotkeyPanel verwijderen
+                test = self.book.gui.remove_tool(indx, program, new_programs)
+                if test:
+                    hlpdict[program] = test
+
             # add new ones, modify existing or leave them alone
             for indx, program in enumerate(new_programs):
                 if program in current_programs:
@@ -383,13 +378,13 @@ class Editor:
                     if not os.path.exists(loc):
                         loc = os.path.join(shared.BASE, loc)
                     win = HotkeyPanel(self.book, loc)
-                self.book.gui.sel.addItem(program)
-                self.book.gui.pnl.addWidget(win)
+                self.book.gui.add_tool(program, win)
+
             if self.last_added:
-                selection = self.book.gui.sel.findText(self.last_added)
+                selection = self.book.gui.get_new_selection(self.last_added)
             if selection > len(self.ini['plugins']) - 1:
                 selection -= 1
-            self.book.gui.sel.setCurrentIndex(selection)
+            self.book.gui.set_selected(selection)
 
     def m_rebuild(self):
         """rebuild csv data from (updated) settings
@@ -431,25 +426,20 @@ class Editor:
         old_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
         ok = self.gui.manage_extrasettings()
         if ok:
-            # TODO gui specific stuff verplaatsen
             shared.writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
                             self.book.page.data, self.ini['lang'])
             test_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
             test_dets = bool(int(self.book.page.settings[shared.SettType.DETS.value]))
             test_rbld = bool(int(self.book.page.settings[shared.SettType.RBLD.value]))
-            self.gui.menuitems['M_SAVE'].setEnabled(test_redef)
-            self.gui.menuitems['M_RBLD'].setEnabled(test_rbld)
-            indx = self.book.gui.sel.currentIndex()
-            win = self.book.gui.pnl.widget(indx)
+            self.gui.modify_menuitem('M_SAVE', test_redef)
+            self.gui.modify_menuitem('M_RBLD', test_rbld)
+            indx, win = self.book.gui.get_selected_panel()
             if test_dets != self.book.page.has_extrapanel:
                 self.book.page.has_extrapanel = test_dets
                 newwin = HotkeyPanel(self.book, self.book.plugins[indx][1])
-                self.book.gui.pnl.insertWidget(indx, newwin)
-                self.book.gui.pnl.setCurrentIndex(indx)
-                self.book.gui.pnl.removeWidget(win)
+                self.book.gui.replace_panel(indx, win, newwin)
             elif test_redef != old_redef and test_dets:
-                win = self.book.gui.pnl.currentWidget()
-                win.set_extrascreen_editable(test_redef)
+                self.book.gui.set_panel_editable(test_redef)
 
     def m_col(self):
         """define tool-specific settings: column properties
@@ -459,7 +449,6 @@ class Editor:
             return
         ok = self.gui.manage_columnsettings()
         if ok:
-            # TODO gui specific stuff verplaatsen
             new_pagedata = {}
             for key, value in self.book.page.data.items():
                 newvalue = []
@@ -478,14 +467,8 @@ class Editor:
             if not self.book.page.data:
                 return
             headers = [self.captions[col[0]] for col in self.book.page.column_info]
-            self.book.page.gui.p0list.setHeaderLabels(headers)
-            self.book.gui.find_loc.clear()
-            self.book.gui.find_loc.addItems(headers)
-            hdr = self.book.page.gui.p0list.header()
-            hdr.setSectionsClickable(True)
-            for indx, col in enumerate(self.book.page.column_info):
-                hdr.resizeSection(indx, col[1])
-            hdr.setStretchLastSection(True)
+            self.book.gui.refresh_locs(headers)
+            self.book.page.gui.refresh_headers(headers)
             self.book.page.populate_list()
 
     def m_entry(self):
@@ -511,7 +494,7 @@ class Editor:
         # bepaal welke er momenteel geactiveerd is
         oldlang = self.ini['lang']
         indx = choices.index(oldlang) if oldlang in choices else 0
-        lang, ok = self.gui.get_choice(self, self.title, self.captions["P_SELLNG"], choices,
+        lang, ok = self.gui.get_choice(self.title, self.captions["P_SELLNG"], choices,
                                        current=indx)
         if ok:
             shared.change_setting('lang', oldlang, lang, self.ini['filename'])
@@ -559,7 +542,6 @@ class Editor:
     def close(self):
         """extra actions to perform on closing
         """
-        # TODO bevat nog gui_specifieke zaken
         mode = self.ini.get("startup", '')
         pref = self.ini.get("initial", '')
         # when setting is 'fixed', don't remember a startup tool that is removed from the config
@@ -572,9 +554,9 @@ class Editor:
         # when setting is 'remember', set the remembered tool to the current one
         if mode == shared.mode_r:
             try:
-                oldpref, pref = pref, self.book.gui.sel.currentText()
+                oldpref, pref = pref, self.book.gui.get_selected_text()
                 shared.change_setting('initial', oldpref, pref, self.ini['filename'])
-            except AttributeError:  # sel bestaat niet als er geen tool pages zijn
+            except AttributeError:  # selector bestaat niet als er geen tool pages zijn
                 pass
         # super().close()
         self.gui.close()
@@ -596,10 +578,6 @@ class Editor:
         """propagate captions to other parts of the application
         """
         self.set_title()
-        # for menu, item in self.gui.menuitems.items():
-        #     try:
-        #         item.setTitle(self.captions[menu])
-        #     except AttributeError:
-        #         item.setText(self.captions[menu])
-        # self.book.gui.setcaptions()
-        # self.book.page.setcaptions()
+        self.gui.setcaptions()
+        self.book.gui.setcaptions()
+        self.book.page.setcaptions()
