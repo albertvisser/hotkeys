@@ -3,7 +3,7 @@ EMPTY_CONFIG_TEXT Copy or rename "hotkey_config_example.py" to "hotkey_config.py
 # application title
 T_MAIN All-in-one hotkeys
 T_MOD (modified)
-T_HELLO Welcome to
+T_HELLO Welcome to {}
 
 # Keyboard mapping table headers
 C_KEY Key
