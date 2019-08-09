@@ -103,9 +103,10 @@ class FileBrowseButton(qtw.QFrame):
     one using a FileDialog
     """
     def __init__(self, parent, text="", level_down=False):
-        self.parent = parent.master
         if level_down:
-            self.parent = self.parent.master
+            self.parent = parent.parent.master
+        else:
+            self.parent = parent.master
         self.startdir = ''
         if text:
             self.startdir = os.path.dirname(text)
@@ -156,12 +157,12 @@ class SetupDialog(qtw.QDialog):
         grid.addWidget(text, 2, 0, 1, 3)
         grid.addWidget(self.t_title, 2, 3)  # , 1, 1)
         self.c_rebuild = qtw.QCheckBox(self.parent.master.captions['T_MAKE'].format(
-            self.parent.parent.captions['S_RBLD']), self)
+            self.parent.master.captions['S_RBLD']), self)
         grid.addWidget(self.c_rebuild, 3, 0, 1, 4)
         self.c_details = qtw.QCheckBox(self.parent.master.captions['S_DETS'])
         grid.addWidget(self.c_details, 4, 0, 1, 4)
         self.c_redef = qtw.QCheckBox(self.parent.master.captions['T_MAKE'].format(
-            self.parent.parent.captions['S_RSAV']), self)
+            self.parent.master.captions['S_RSAV']), self)
         grid.addWidget(self.c_redef, 5, 0, 1, 4)
         text = qtw.QLabel(self.parent.master.captions['Q_SAVLOC'], self)
         grid.addWidget(text, 6, 0, 1, 2)

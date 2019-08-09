@@ -1,4 +1,4 @@
-"""gui specific code
+"""HotKeys main program - gui specific code - Qt5 version
 """
 import sys
 # import os
@@ -129,7 +129,6 @@ class SingleDataInterface(qtw.QFrame):
     def add_extra_fields(self):
         """fields showing details for selected keydef, to make editing possible
         """
-        # print(self.keylist)
         self.screenfields = []
         self._box = box = qtw.QFrame(self)
         frameheight = 90
@@ -331,7 +330,7 @@ class SingleDataInterface(qtw.QFrame):
             if text == self._origdata[self.master.ix_key]:
                 self.defchanged = True
                 self.b_save.setEnabled(True)
-            elif ted.text() == self._origdata[self.master.ix_key]:
+            elif text == self._origdata[self.master.ix_key]:  # was ted.text()
                 self.defchanged = False
                 self.b_save.setEnabled(False)
 
@@ -714,7 +713,6 @@ class TabbedInterface(qtw.QFrame):
 
     def format_screen(self):
         "realize the screen"
-        box = qtw.QVBoxLayout()
         vbox = qtw.QVBoxLayout()
         hbox = qtw.QHBoxLayout()
         hbox.addSpacing(10)
@@ -732,12 +730,11 @@ class TabbedInterface(qtw.QFrame):
         hbox.addWidget(self.b_prev)
         hbox.addSpacing(10)
         vbox.addLayout(hbox)
-        box.addLayout(vbox)
-        hbox = qtw.QVBoxLayout()
+        hbox = qtw.QHBoxLayout()
         hbox.addWidget(self.pnl)
-        box.addLayout(hbox)
+        vbox.addLayout(hbox)
 
-        self.setLayout(box)
+        self.setLayout(vbox)
         self.setcaptions()
 
     def setcaptions(self):
@@ -760,27 +757,22 @@ class TabbedInterface(qtw.QFrame):
         """callback for change in tool page
         """
         # no use finishing this method if certain conditions aren't met
-        print('in on_page_changed')
-        if self.parent.editor.book is None:
-            print('    leaving: no choicebook setup yet')
+        if self.parent.editor.book is None:  # leaving: no choicebook setup yet
             return
         page = self.pnl.currentWidget()
-        if page is None:  # or self.parent.editor.ini['plugins'] == []:
-            print('    leaving: no page selected yet')
+        if page is None:                     # leaving: no page selected yet
             return
-        self.parent.sb.showMessage(self.parent.editor.captions["M_DESC"].format(
-            self.sel.currentText()))
         if page.master.modified:
             ok = page.exit()
-            if not ok:
-                print("leaving: can't exit modified page yet")
+            if not ok:                       # leaving: can't exit modified page yet
                 return
+        self.parent.statusbar_message(self.parent.editor.captions["M_DESC"].format(
+            self.sel.currentText()))
         self.pnl.setCurrentIndex(indx)
-        self.master.page = page.master  # change to new selection
+        self.master.page = self.pnl.currentWidget().master  # change to new selection
         self.parent.setup_menu()
         if not all((self.master.page.settings, self.master.page.column_info,
-                    self.master.page.data)):
-            print('    leaving: not all data available')
+                    self.master.page.data)):  # leaving: page data incomplete (e.g. no keydefs)
             return
         self.master.page.setcaptions()
         items = [self.parent.editor.captions[x[0]] for x in self.master.page.column_info]
@@ -803,15 +795,15 @@ class TabbedInterface(qtw.QFrame):
         """
         page = self.master.page  # self.pnl.currentWidget()
         for ix, item in enumerate(page.column_info):
-            if self.page.captions[item[0]] == self.find_loc.currentText():
+            if page.captions[item[0]] == self.find_loc.currentText():
                 self.zoekcol = ix
                 break
-        self.items_found = page.p0list.findItems(text, core.Qt.MatchContains, self.zoekcol)
+        self.items_found = page.gui.p0list.findItems(text, core.Qt.MatchContains, self.zoekcol)
         self.b_next.setEnabled(False)
         self.b_prev.setEnabled(False)
         self.b_filter.setEnabled(False)
         if self.items_found:
-            page.p0list.setCurrentItem(self.items_found[0])
+            page.gui.p0list.setCurrentItem(self.items_found[0])
             self.founditem = 0
             if len(self.items_found) < len(self.master.page.data.items()):
                 self.b_next.setEnabled(True)
@@ -827,9 +819,9 @@ class TabbedInterface(qtw.QFrame):
         self.b_prev.setEnabled(True)
         if self.founditem < len(self.items_found) - 1:
             self.founditem += 1
-            self.master.page.p0list.gui.setCurrentItem(self.items_found[self.founditem])
+            self.master.page.gui.p0list.setCurrentItem(self.items_found[self.founditem])
         else:
-            self.parent.sb.showMessage(self.parent.captions["I_NONXT"])
+            self.parent.statusbar_message(self.parent.editor.captions["I_NONXT"])
             self.b_next.setEnabled(False)
 
     def find_prev(self):
@@ -837,11 +829,11 @@ class TabbedInterface(qtw.QFrame):
         """
         self.b_next.setEnabled(True)
         if self.founditem == 0:
-            self.parent.sb.showMessage(self.parent.captions["I_NOPRV"])
+            self.parent.statusbar_message(self.parent.editor.captions["I_NOPRV"])
             self.b_prev.setEnabled(False)
         else:
             self.founditem -= 1
-            self.master.page.p0list.gui.setCurrentItem(self.items_found[self.founditem])
+            self.master.page.gui.p0list.setCurrentItem(self.items_found[self.founditem])
 
     def filter(self):
         """filter shown items according to search text
@@ -852,8 +844,8 @@ class TabbedInterface(qtw.QFrame):
         text = str(self.find.currentText())
         item = self.master.page.gui.p0list.currentItem()
         self.reposition = item.text(0), item.text(1)
-        if state == self.parent.captions['C_FILTER']:
-            state = self.parent.captions['C_FLTOFF']
+        if state == self.parent.editor.captions['C_FILTER']:
+            state = self.parent.editor.captions['C_FLTOFF']
             self.filter_on = True
             self.master.page.filtertext = text
             self.master.page.olddata = self.master.page.data
@@ -863,7 +855,7 @@ class TabbedInterface(qtw.QFrame):
             self.b_prev.setEnabled(False)
             self.find.setEnabled(False)
         else:       # self.filter_on == True
-            state = self.parent.captions['C_FILTER']
+            state = self.parent.editor.captions['C_FILTER']
             self.filter_on = False
             self.master.page.filtertext = ''
             self.master.page.data = self.master.page.olddata
@@ -874,7 +866,7 @@ class TabbedInterface(qtw.QFrame):
         for ix in range(self.master.page.gui.p0list.topLevelItemCount()):
             item = self.master.page.gui.p0list.topLevelItem(ix)
             if (item.text(0), item.text(1)) == self.reposition:
-                self.master.page.p0list.gui.setCurrentItem(item)
+                self.master.page.gui.p0list.setCurrentItem(item)
                 break
         self.b_filter.setText(state)
         if self.master.page.data == self.master.page.olddata:
@@ -895,14 +887,14 @@ class TabbedInterface(qtw.QFrame):
         win = self.pnl.widget(indx)
         self.pnl.removeWidget(win)
         if program in program_list:
-            return win  # keep the widget
+            return win.master  # keep the widget (will be re-added)
         win.close()  # lose the widget
         return None
 
     def add_tool(self, program, win):
         "add a tool to the configuration"
-        self.sel.addItem(program)
-        self.pnl.addWidget(win.gui)
+        self.add_subscreen(win)
+        self.add_to_selector(program)
 
     def get_new_selection(self, item):
         "find the index to set the new selection to"
@@ -962,12 +954,12 @@ class Gui(qtw.QMainWindow):
     def show_empty_screen(self):
         """what to do when there's no data to show
         """
-        message = self.editor.captions["EMPTY_CONFIG_TEXT"]
-        self.editor.book = SimpleNamespace()
-        self.editor.book.gui = DummyPage(self, message)
-        self.editor.book.page = SimpleNamespace()
-        self.editor.book.page.gui = self.editor.book.gui
-        self.resize(640, 80)
+        # message = self.editor.captions["EMPTY_CONFIG_TEXT"]
+        # self.editor.book = SimpleNamespace()
+        # self.editor.book.gui = DummyPage(self, message)
+        # self.editor.book.page = SimpleNamespace()
+        # self.editor.book.page.gui = self.editor.book.gui
+        # self.resize(640, 80)
 
     def go(self):
         "build and show the interface"
@@ -995,13 +987,9 @@ class Gui(qtw.QMainWindow):
         "show a message in the statusbar"
         self.sb.showMessage(message)
 
-    def setup_tabs(self, start):
+    def setup_tabs(self):
         "add the tabbed widget to the interface"
         self.setCentralWidget(self.editor.book.gui)
-        # niet nodig omdat dit al in on_page_changed gebeurt(?):
-        # self.page = self.editor.book.pnl.currentWidget()
-        # self.editor.book.sel.setCurrentIndex(start)
-        self.editor.setcaptions()
 
     def setup_menu(self):
         """build menus and actions
@@ -1014,7 +1002,6 @@ class Gui(qtw.QMainWindow):
             for sel in items:
                 if sel == -1:
                     menu.addSeparator()
-                    continue
                 else:
                     sel, values = sel
                     callback, shortcut = values
@@ -1057,9 +1044,9 @@ class Gui(qtw.QMainWindow):
         "set title for menuitem or action"
         for menu, item in self.menuitems.items():
             try:
-                item.setTitle(self.captions[menu])
+                item.setTitle(self.editor.captions[menu])
             except AttributeError:
-                item.setText(self.captions[menu])
+                item.setText(self.editor.captions[menu])
 
     def show_message(self, text):
         "relay"
@@ -1107,4 +1094,4 @@ class Gui(qtw.QMainWindow):
 
     def modify_menuitem(self, caption, setting):
         "enable/disable menu option identified by caption"
-        self.gui.menuitems[caption].setEnabled(setting)
+        self.menuitems[caption].setEnabled(setting)

@@ -210,7 +210,7 @@ def change_setting(setting, old, new, inifile):
         _out.writelines(lines)
 
 
-def read_columntitledata(self):
+def read_columntitledata(editor):
     """read the current language file and extract the already defined column headers
     """
     column_textids = []
@@ -218,7 +218,7 @@ def read_columntitledata(self):
     last_textid = ''
     in_section = False
 
-    with (HERELANG / self.parent.ini["lang"]).open() as f_in:
+    with (HERELANG / editor.ini["lang"]).open() as f_in:
         for line in f_in:
             line = line.strip()
             if line == '':
@@ -396,11 +396,15 @@ def quick_check(filename):
 
 
 # geëxtraheerd uit dialogs_qt.py
-def get_text(win, message_id, text, args):
+def get_text(win, message_id='', text='', args=None):
     """retourneer de tekst geïdentificeerd door <message_id>
     als <text> is opgegeven wordt die gebruikt
     <args> bevat een list van waarden die in de tekst kunnen worden ingevuld
     """
+    try:
+        win = win.editor
+    except AttributeError:
+        win = win.master
     if message_id:
         text = win.captions[message_id].replace(' / ', '\n')
     elif not text:
@@ -409,3 +413,15 @@ def get_text(win, message_id, text, args):
     if args:
         text = text.format(*args)
     return text
+
+
+def get_title(win):
+    "retourneer de titel voor de te tonen pagina"
+    try:
+        title = win.title
+    except AttributeError:
+        try:
+            title = win.editor.title
+        except AttributeError:
+            title = win.master.title
+    return title
