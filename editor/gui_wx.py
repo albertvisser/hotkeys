@@ -1,244 +1,354 @@
-# -*- coding: UTF-8 -*-
-"""hotkeys.py wxPython version - currently unmaintained
-
-    main gui (choicebook)
-    importeert de verschillende applicatiemodules
-    hierin wordt het menu gedefinieerd en de functies die daarbij horen
-    het idee is dat de menuopties wanneer nodig uitgegrijsd zijn en dat
-        in de routines wordt uitgevraagd wat te doen bij welke applicatie
-    voor wat betreft de instellingen:
-        taalkeuze: op dit niveau
-        paden: op applicatie niveau
+"""HotKeys main program - gui specific code - wxPython version
 """
 import os
 import sys
+import functools
+from types import SimpleNamespace
 import wx
 import wx.adv
-import editor.shared as shared
-## sys.path.append('plugins')
-## import editor.plugins.vikey_wxgui
-
-#------------ start of code copied from vikey_wxgui.py -------------------------------
 import wx.lib.mixins.listctrl  as  listmix
-# import editor.images as images
-import editor.plugins.vikeys
-INI = "vikey_config.py"
-#------------ end of code copied from vikey_wxgui.py -------------------------------
+import editor.shared as shared
+import editor.dialogs_wx as hkd
 
-def show_message(self, message_id, caption_id='T_MAIN'):
-    """toon de boodschap geïdentificeerd door <message_id> in een dialoog
-    met als titel aangegeven door <caption_id> en retourneer het antwoord
-    na sluiten van de dialoog
-    """
-    with wx.MessageDialog(self, self.captions[message_id], self.captions[caption_id],
-                          wx.YES_NO | wx.CANCEL | wx.NO_DEFAULT | wx.ICON_INFORMATION) as dlg:
-        h = dlg.ShowModal()
-    ## dlg.Destroy()
-    return h
-
-# TODO: aanpassen aan nieuwe architectuur
-#------------ start of code copied from vikey_wxgui.py -------------------------------
 class MyListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
     """base class voor de listcontrol
 
     maakt het definiëren in de gui class wat eenvoudiger
     """
-    def __init__(self, parent, ID, pos=wx.DefaultPosition, size=wx.DefaultSize, style=0):
+    def __init__(self, parent, ID=-1, pos=wx.DefaultPosition, size=wx.DefaultSize, style=0):
         wx.ListCtrl.__init__(self, parent, ID, pos, size, style)
         listmix.ListCtrlAutoWidthMixin.__init__(self)
 
 
-class VIPanel(wx.Panel, listmix.ColumnSorterMixin):
+class DummyPage(wx.Panel):
+    "simulate some HotKeyPanel functionality"
+    def __init__(self, parent, message):
+        super().__init__(parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(wx.StaticText(self, label=message))
+        self.SetSizer(sizer)
+        sizer.Fit(self)
+
+    def exit(self):
+        """simulate processing triggered by exit button
+        """
+        return True
+
+
+class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
     """base class voor het gedeelte van het hoofdscherm met de listcontrol erin
 
     voornamelijk nodig om de specifieke verwerkingen met betrekking tot de lijst
     bij elkaar en apart van de rest te houden
     definieert feitelijk een "custom widget"
     """
-    def __init__(self, parent, id):
+    def __init__(self, parent, master):
+        super().__init__(parent.pnl)
         self.parent = parent
-        self.ini = INI # 1 pad + language instelling
-        #self.readkeys()
-        self.data = {0: ('i', 'action', 'enter insert mode'),
-                     1: ('Esc', 'action', 'cancel insert mode'),
-                     2: ('d + d', 'action', 'delete current line'),
-                     3: ('$', 'motion', 'to end of line')}
-        self.readcaptions()
-        wx.Panel.__init__(self, parent)  # , wx.ID_ANY,
-            ## style=wx.BORDER_SIMPLE
-            ## | wx.WANTS_CHARS
-        ## )
+        self.master = master
+        self.modified = False
+        self.defchanged = False
 
-        # self.il = wx.ImageList(16, 16)
+    def setup_empty_screen(self, nodata, title):
+        """build a subscreen with only a message
+        """
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(wx.StaticText(self, label=nodata))
+        self.SetSizer(sizer)
+        self.title = title
 
-        # self.idx1 = self.il.Add(images.getPtBitmap())
-        # self.sm_up = self.il.Add(images.getSmallUpArrowBitmap())
-        # self.sm_dn = self.il.Add(images.getSmallDnArrowBitmap())
+    def exit(self):
+        """processing triggered by exit button
+        """
+        if self.modified:
+            ok, noexit = hkd.ask_ync_question(self, 'Q_SAVXIT')
+            if ok:
+                self.savekeys()
+            if noexit:
+                return False
+        return True
 
-        self.p0list = MyListCtrl(self, -1,
-                                 ## size=(500,500),
-                                 style=wx.LC_REPORT
-                                 | wx.BORDER_SUNKEN
-                                 #~ | wx.LC_VRULES
-                                 | wx.LC_HRULES
-                                 | wx.LC_SINGLE_SEL
-                                 )
-        ## self.p0list.SetMinSize((440,444))
+    def setup_list(self):
+        """add the list widget to the interface
+        """
+        wid = 1140, 594
+        self.p0list = MyListCtrl(self, size=(1140, 594), style=wx.LC_REPORT | wx.BORDER_SUNKEN |
+                                             #~ wx.LC_VRULES |
+                                             wx.LC_HRULES | wx.LC_SINGLE_SEL)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        if self.master.column_info:
+            listmix.ColumnSorterMixin.__init__(self, 3) # 5)
+            for col, inf in enumerate(self.master.column_info):
+                title, width = inf[:2]
+                self.p0list.AppendColumn(self.master.captions[title])
+                if col <= len(self.master.column_info):
+                    self.p0list.SetColumnWidth(col, width)
 
-        # self.p0list.SetImageList(self.il, wx.IMAGE_LIST_SMALL)
+            self.master.populate_list()
 
-        self.populate_list()
+            # Now that the list exists we can init the other base class,
+            # see wx/lib/mixins/listctrl.py
+            self.itemDataMap = self.master.data  # nodig voor ColumnSorterMixin
+            # self.SortListItems(0, True)
 
-        # Now that the list exists we can init the other base class,
-        # see wx/lib/mixins/listctrl.py
-        self.itemdatamap = self.data
-        listmix.ColumnSorterMixin.__init__(self, 3) # 5)
-        #self.SortListItems(0, True)
+            self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_item_selected, self.p0list)
+            self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.on_item_deselected, self.p0list)
+            self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.on_item_activated, self.p0list)
+            self.Bind(wx.EVT_LIST_COL_CLICK, self.on_column_click, self.p0list)
+            self.p0list.Bind(wx.EVT_LEFT_DCLICK, self.on_doubleclick)
 
-        self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_item_selected, self.p0list)
-        self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.on_item_deselected, self.p0list)
-        self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.on_item_activated, self.p0list)
-        self.Bind(wx.EVT_LIST_COL_CLICK, self.on_column_click, self.p0list)
-        self.p0list.Bind(wx.EVT_LEFT_DCLICK, self.on_doubleclick)
-        self.p0list.Bind(wx.EVT_KEY_DOWN, self.on_keypress)
+        sizer.Add(self.p0list, 1, wx.EXPAND)
 
-    def doelayout(self):
-        sizer0 = wx.BoxSizer(wx.VERTICAL)
-        sizer0.Add(self.p0list, 1, wx.EXPAND)
+        if self.master.has_extrapanel:
+            self.layout_extra_fields(sizer)
+
         self.SetAutoLayout(True)
-        self.SetSizer(sizer0)
-        sizer0.Fit(self)
-        sizer0.SetSizeHints(self)
+        self.SetSizer(sizer)
+        sizer.Fit(self)
+        # sizer.SetSizeHints(self)
         ## self.Layout()
 
-    def readkeys(self):
-        self.data = vikeys.readkeys(self.ini.pad)
-
-    def savekeys(self):
-        vikeys.savekeys(self.ini.pad, self.data)
-        self.modified = False
-        self.SetTitle(self.captions['T_MAIN'])
-
-    def readcaptions(self):
-        self.captions = {}
-        # with open(os.path.join(HERE, self.ini.lang)) as f_in:
-        with open(os.path.join(shared.HERE, 'languages', 'english.lng')) as f_in:
-            for x in f_in:
-                if x[0] == '#' or x.strip() == "":
-                    continue
-                key, value = x.strip().split(None,1)
-                self.captions[key] = value
-        self.captions['T_MAIN'] = 'VI hotkeys'
-        return self.captions
-
-    def setcaptions(self):
-        title = self.captions['T_MAIN']
+    def set_title(self, modified=None):
+        """set title and adapt to modified flag
+        if modified flag is not supplied, use its current state
+        """
+        # is this of any use? does this window has its own title?
+        if modified is not None:
+            self.modified = False
+        title = self.master.title
         if self.modified:
-            title += ' ' + self.captions["017"]
-        self.SetTitle(title)
-        self.page.populate_list()
+            title += ' ' + self.captions["T_MOD"]
+        self.master.parent.parent.gui.SetTitle(title)
 
-    def on_keypress(self, evt):
-        """callback bij gebruik van een toets(encombinatie)
+    def clear_list(self):
+        "reset listcontrol"
+        self.p0list.DeleteAllItems()  # of ClearAll() - doet ook de kolommen
+        # self.p0list.DeleteAllColumns()  - maar moeten de kolommen wel weg?
+
+    def build_listitem(self, key):
+        "create a new item for the list"
+        # item = wx.ListItem()
+        # item.SetData(key)
+        itemlist = [key]  # item]
+        return itemlist  # "new_item" is in dit geval een list
+
+    def set_listitemtext(self, itemlist, indx, value):
+        "set the text for a list item"
+        # print('item', itemlist, 'index', indx, 'value', value)
+        # "new_item" is in dit geval een list die verderop wordt toegevoegd aan de control
+        # self.p0list.SetItem(item, indx, value)
+        # if indx == 0:
+        #     item = itemlist.pop()
+        # else:
+        #     item = wx.ListItem()
+        # item.SetColumn(indx)
+        # item.SetText(value)
+        itemlist.append(value)
+        return itemlist
+
+    def add_listitem(self, itemlist):
+        "add an item to the list"
+        # "new_item" is in dit geval een list die verderop wordt toegevoegd aan de control
+        key = itemlist.pop(0)
+        indx = self.p0list.Append(itemlist)
+        self.p0list.SetItemData(indx, key)
+
+    def set_listselection(self, pos):
+        "highlight the selected item in the list"
+        self.p0list.Select(pos)
+
+    def add_extra_fields(self):
+        """fields showing details for selected keydef, to make editing possible
         """
-        keycode = evt.GetKeyCode()
-        togo = keycode - 48
-        if evt.GetModifiers() == wx.MOD_ALT: # evt.AltDown()
-            if keycode == wx.WXK_LEFT or keycode == wx.WXK_NUMPAD_LEFT: #  keycode == 314
-                pass
-            elif keycode == wx.WXK_RIGHT or keycode == wx.WXK_NUMPAD_RIGHT: #  keycode == 316
-                pass
-            ## elif togo >= 0 and togo <= self.parent.pages: # Alt-0 t/m Alt-6
-                ## pass
-            elif keycode == 83: # Alt-S
-                pass
-            elif keycode == 70: # Alt-F
-                pass
-            elif keycode == 71: # Alt-G
-                pass
-        elif evt.GetModifiers() == wx.MOD_CONTROL: # evt.ControlDown()
-            if keycode == 81: # Ctrl-Q
-                pass
-            elif keycode == 80: # Ctrl-P
-                self.keyprint(evt)
-            elif keycode == 79: # Ctrl-O
-                pass
-            elif keycode == 78: # Ctrl-N
-                pass
-            elif keycode == 70: # Ctrl-H
-                pass
-            elif keycode == 90: # Ctrl-Z
-                pass
-        elif keycode == wx.WXK_RETURN or keycode == wx.WXK_NUMPAD_ENTER:# 13 or 372: # Enter
+        return  # voor nu even overslaan
+        self.screenfields = []
+        self._box = box = wx.Frame(self)
+        # frameheight = 90
+        # try:
+        #     frameheight = self.master.reader.get_frameheight()  # user exit
+        # except AttributeError:
+        #     pass
+        # box.setMaximumHeight(frameheight)
+
+        if 'C_KEY' in self.master.fields:
+            self.lbl_key = qtw.QLabel(self.master.captions['C_KTXT'] + " ", box)
+            if self.master.keylist is None:
+                ted = qtw.QLineEdit(box)
+                ted.setMaximumWidth(90)
+                ted.textChanged[str].connect(functools.partial(self.on_text, ted, str))
+                self.screenfields.append(ted)
+                self.txt_key = ted
+            else:
+                cb = qtw.QComboBox(box)
+                cb.setMaximumWidth(90)
+                cb.addItems(self.master.keylist)  # niet sorteren
+                cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox, cb, str))
+                self.screenfields.append(cb)
+                self.cmb_key = cb
+
+        if 'C_MODS' in self.master.fields:
+            for ix, x in enumerate(('M_CTRL', 'M_ALT', 'M_SHFT', 'M_WIN')):
+                cb = qtw.QCheckBox(self.master.captions[x].join(("+ ", "")), box)
+                cb.setChecked(False)
+                self.screenfields.append(cb)
+                cb.stateChanged.connect(functools.partial(self.on_checkbox, cb))
+                if ix == 0:
+                    self.cb_ctrl = cb
+                elif ix == 1:
+                    self.cb_alt = cb
+                elif ix == 2:
+                    self.cb_shift = cb
+                elif ix == 3:
+                    self.cb_win = cb
+
+        if 'C_CNTXT' in self.master.fields:
+            self.lbl_context = qtw.QLabel(self.master.captions['C_CNTXT'], box)
+            cb = qtw.QComboBox(box)
+            cb.addItems(self.master.contextslist)
+            cb.setMaximumWidth(110)
+            cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox, cb, str))
+            self.screenfields.append(cb)
+            self.cmb_context = cb
+
+        if 'C_CMD' in self.master.fields:
+            self.txt_cmd = qtw.QLabel(self.master.captions['C_CTXT'] + " ", box)
+            cb = qtw.QComboBox(self)
+            cb.setMaximumWidth(150)
+            if 'C_CNTXT' not in self.master.fields:  # load on choosing context
+                cb.addItems(self.master.commandslist)
+            cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox, cb, str))
+            self.screenfields.append(cb)
+            self.cmb_commando = cb
+
+        self.b_save = qtw.QPushButton(self.master.captions['C_SAVE'], box)
+        self.b_save.setEnabled(False)
+        self.b_save.clicked.connect(self.on_update)
+        self.b_del = qtw.QPushButton(self.master.captions['C_DEL'], box)
+        self.b_del.setEnabled(False)
+        self.b_del.clicked.connect(self.on_delete)
+        self._savestates = (False, False)
+
+        if 'C_DESC' in self.master.fields:
+            self.txt_oms = qtw.QTextEdit(box)
+            self.txt_oms.setReadOnly(True)
+
+        try:
+            self.master.reader.add_extra_fields(self, box)  # user exit
+        except AttributeError:
             pass
-        #~ else:
-            #~ evt.Skip()
-        evt.Skip()
 
-    def OnEvtText(self,evt):
-        """callback op het wijzigen van de tekst
+        self.set_extrascreen_editable(bool(int(self.master.settings['RedefineKeys'])))
 
-        zorgt ervoor dat de buttons ge(de)activeerd worden
+    def set_extrascreen_editable(self, switch):
+        """open up fields in extra screen when applicable
         """
-        #~ print "self.init is", self.init
-        if not self.init:
-            #~ print "ok, enabling buttons"
-            self.enable_buttons()
+        for widget in self.screenfields:
+            widget.Enable(switch)
+        ## if 'C_CMD' in self.fields:
+        if switch:
+            state_s, state_d = self._savestates
+        else:
+            self._savestates = (self.b_save.IsEnabled(), self.b_del.IsEnabled())
+            state_s, state_d = False, False
+        self.b_save.Enable(state_s)
+        self.b_del.Enable(state_d)
 
-    def OnEvtComboBox(self,evt):
-        """callback op het gebruik van een combobox
-
-        zorgt ervoor dat de buttons ge(de)activeerd worden
+    def layout_extra_fields(self, sizer):
+        """add the extra fields to the layout
         """
-        self.enable_buttons()
+        return  # voor nu even overslaan
+        bsizer = qtw.QVBoxLayout()
 
-    def populate_list(self):
-        """vullen van de list control
+        sizer1 = qtw.QHBoxLayout()
+        sizer2 = qtw.QHBoxLayout()
+        if 'C_KEY' in self.master.fields:
+            sizer3 = qtw.QHBoxLayout()
+            sizer3.addWidget(self.lbl_key)
+            if self.master.keylist is None:
+                sizer3.addWidget(self.txt_key)
+            else:
+                sizer3.addWidget(self.cmb_key)
+            sizer3.addStretch()
+            sizer2.addLayout(sizer3)
+
+        if 'C_MODS' in self.master.fields:
+            sizer3 = qtw.QHBoxLayout()
+            sizer3.addWidget(self.cb_ctrl)
+            sizer3.addWidget(self.cb_alt)
+            sizer3.addWidget(self.cb_shift)
+            sizer3.addWidget(self.cb_win)
+            sizer3.addStretch()
+            sizer2.addLayout(sizer3)
+
+        sizer1.addLayout(sizer2)
+        sizer1.addStretch()
+        if 'C_CNTXT' in self.master.fields:
+            sizer2 = qtw.QHBoxLayout()
+            sizer2.addWidget(self.lbl_context)
+            sizer2.addWidget(self.cmb_context)
+            sizer1.addLayout(sizer2)
+
+        if 'C_CMD' in self.master.fields:
+            sizer2 = qtw.QHBoxLayout()
+            sizer2.addWidget(self.txt_cmd)
+            sizer2.addWidget(self.cmb_commando)
+            sizer1.addLayout(sizer2)
+
+        try:
+            self.master.reader.layout_extra_fields_topline(self, sizer1)  # user exit
+        except AttributeError:
+            pass
+
+        sizer1.addWidget(self.b_save)
+        sizer1.addWidget(self.b_del)
+        bsizer.addLayout(sizer1)
+
+        try:
+            test = self.master.reader.layout_extra_fields_nextline
+        except AttributeError:
+            pass
+        else:
+            sizer1 = qtw.QHBoxLayout()
+            self.master.reader.layout_extra_fields_nextline(self, sizer1)  # user exit
+            bsizer.addLayout(sizer1)
+
+        sizer1 = qtw.QHBoxLayout()
+        if 'C_DESC' in self.master.fields:
+            sizer2 = qtw.QVBoxLayout()
+            sizer2.addWidget(self.txt_oms)
+            sizer1.addLayout(sizer2, 2)
+
+        try:
+            self.master.reader.layout_extra_fields(self, sizer1)  # user exit
+        except AttributeError:
+            pass
+
+        bsizer.addLayout(sizer1)
+
+        self._box.setLayout(bsizer)
+        sizer.addWidget(self._box)
+
+    def captions_extra_fields(self):
+        """to be called on changing the language
         """
-        self.p0list.DeleteAllItems()
-        self.p0list.DeleteAllColumns()
-        self.itemdatamap = self.data
-
-        # Adding columns with width and images on the column header
-        info = wx.ListItem()
-        info.m_mask = wx.LIST_MASK_TEXT | wx.LIST_MASK_FORMAT | wx.LIST_MASK_WIDTH
-        info.m_format = 0
-        ## info.m_width = 0
-        ## info.m_text = ""
-        ## self.p0list.InsertColumnInfo(0, info)
-
-        for col, inf in enumerate((('C_KEY',120),
-                                   ## ('C_MOD',70),
-                                   ('C_TYPE',120),
-                                   ## ('C_CMD',160),
-                                   ('C_DESC',292))):
-            title, width = inf
-            self.p0list.InsertColumn(col,  self.captions[title])
-            self.p0list.SetColumnWidth(col, width)
-
-        ## self.parent.rereadlist = False
-
-        items = self.data.items()
-        if items is None or len(items) == 0:
-            return
-
-        kleur = False
-        for key, data in items:
-            ## print data
-            index = self.p0list.InsertItem(sys.maxsize, data[0])
-            self.p0list.SetItem(index, 1, data[1])
-            self.p0list.SetItem(index, 2, data[2])
-            ## soort = C_DFLT if data[2] == "S" else C_RDEF
-            ## self.p0list.SetStringItem(index, 2, self.captions[soort])
-            ## self.p0list.SetStringItem(index, 3, data[3])
-            ## self.p0list.SetStringItem(index, 4, data[4])
-            self.p0list.SetItemData(index, key)
-            ## if kleur:
-                ## #~ self.p0list.SetItemBackgroundColour(key,wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENU))
-            ## #~ else:
-                ## self.p0list.SetItemBackgroundColour(key,wx.SystemSettings.GetColour(wx.SYS_COLOUR_INFOBK))
-            ## kleur = not kleur
-        self.defchanged = False
+        return  # voor nu even overslaan
+        if 'C_KEY' in self.master.fields:
+            self.lbl_key.setText(self.master.captions['C_KTXT'])
+        if 'C_MODS' in self.master.fields:
+            self.cb_win.setText(self.master.captions['M_WIN'].join(("+", "  ")))
+            self.cb_ctrl.setText(self.master.captions['M_CTRL'].join(("+", "  ")))
+            self.cb_alt.setText(self.master.captions['M_ALT'].join(("+", "  ")))
+            self.cb_shift.setText(self.master.captions['M_SHFT'].join(("+", "  ")))
+        if 'C_CNTXT' in self.master.fields:
+            self.lbl_context.setText(self.master.captions['C_CNTXT'] + ':')
+        if 'C_CMD' in self.master.fields:
+            self.txt_cmd.setText(self.master.captions['C_CTXT'])
+        self.b_save.setText(self.master.captions['C_SAVE'])
+        self.b_del.setText(self.master.captions['C_DEL'])
+        try:
+            self.master.reader.captions_extra_fields(self)  # user exit
+        except AttributeError:
+            pass
 
     def GetListCtrl(self):
         """ten behoeve van de columnsorter mixin"""
@@ -258,354 +368,797 @@ class VIPanel(wx.Panel, listmix.ColumnSorterMixin):
                 self.p0list.SetItemBackgroundColour(key,wx.SystemSettings.GetColour(wx.SYS_COLOUR_INFOBK))
             kleur = not kleur
 
-    def on_item_selected(self, event):
-        """callback op het selecteren van een item
-
-        velden op het hoofdscherm worden bijgewerkt vanuit de selectie"""
-        seli = self.p0list.GetItemData(event.m_itemIndex)
-        ## print "Itemselected",seli,self.data[seli]
-        self.vuldetails(seli)
-        event.Skip()
-
-    def on_item_deselected(self, event):
-        """callback op het niet meer geselecteerd zijn van een item
-
-        er wordt gevraagd of de key definitie moet worden bijgewerkt"""
-        seli = self.p0list.GetItemData(event.m_itemIndex)
-        ## print "ItemDeselected",seli,self.data[seli]
-        if self.defchanged:
-            self.defchanged = False
-            with wx.MessageDialog(self, self.parent.captions["020"], self.parent.captions['T_MAIN'],
-                                  wx.YES_NO | wx.NO_DEFAULT | wx.ICON_INFORMATION) as dlg:
-                h = dlg.ShowModal()
-            ## dlg.Destroy()
-            if h == wx.ID_YES:
-                ## print "OK gekozen"
-                self.aanpassen()
-
-    def on_item_activated(self, event):
-        """callback op het activeren van een item (onderdeel van het selecteren)
-        """
-        self.current_item = event.m_itemIndex
-
     def on_column_click(self, event):
         """callback op het klikken op een kolomtitel
         """
-        ## print "on_column_click: %d\n" % event.GetColumn()
+        print("on_column_click: %d\n" % event.GetColumn())
         ## self.parent.sorter = self.GetColumnSorter()
         event.Skip()
 
     def on_doubleclick(self, event):
         """callback op dubbelklikken op een kolomtitel
         """
-        pass
-        # self.log.WriteText("on_doubleclick item %s\n" % self.p0list.GetItemText(self.current_item))
+        print("on_doubleclick item %s\n" % self.p0list.GetItemText(self.current_item))
         event.Skip()
 
+    def on_text(self, event):  #, ted, text):
+        """on changing a text entry
+        """
+        ted = event.GetEventWidget()
+        text = ted.GetValue()
+        print('in on_text with', ted, text)
+        if self.master.initializing_screen:
+            return
+        # text = str(text)    # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan
+        #                     # de callback soms fout? Of is het Py3 vs Py2?
+        # hlp = ted.text()
+        # if text != hlp:
+        #     text = hlp
+        self.defchanged = False
+        if 'C_KEY' in self.master.fields:
+            if text == self._origdata[self.master.ix_key]:
+                self.defchanged = True
+                self.b_save.Enable(True)
+            elif text == self._origdata[self.master.ix_key]:
+                self.defchanged = False
+                self.b_save.Enable(False)
+
+    def on_combobox(self, event):  # , cb, text):
+        """callback op het gebruik van een combobox
+
+        zorgt ervoor dat de buttons ge(de)activeerd worden
+        """
+        cb = event.GetEventWidget()
+        text = cb.GetValue()
+        print('in on_combobox with', cb, text)
+        if self.master.initializing_screen:
+            return
+        # text = str(text)    # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan
+        #                     # de callback soms fout? Of is het Py3 vs Py2?
+        # hlp = cb.currentText()
+        # if text != hlp:
+        #     text = hlp
+        self.defchanged = False
+        try:
+            test_key = bool(self.cmb_key)  # moet/kan dit met GetValue?
+        except AttributeError:
+            test_key = False
+        try:
+            test_cmd = bool(self.cmb_commando)
+        except AttributeError:
+            test_cmd = False
+        try:
+            test_cnx = bool(self.cmb_context)
+        except AttributeError:
+            test_cnx = False
+        if test_key and cb == self.cmb_key:
+            keyitemindex = self.master.ix_key
+            if text != self._origdata[keyitemindex]:
+                self._newdata[keyitemindex] = text
+                if not self.initializing_keydef:
+                    self.defchanged = True
+                    if 'C_CMD' in self.fields:
+                        self.b_save.Enable(True)
+            elif str(self.cmb_commando.GetText()) == self._origdata[keyitemindex]:  # UNDEF
+                self.defchanged = False
+                if 'C_CMD' in self.fields:
+                    self.b_save.Enable(False)
+        elif test_cnx and cb == self.cmb_context:
+            if text != self._origdata[self.ix_cntxt]:
+                context = self._origdata[self.ix_cntxt] = self.cmb_context.GetText()
+                self.cmb_commando.clear()
+                # if self.master.contextactionsdict:
+                #     actionslist = self.master.contextactionsdict[context]
+                # else:
+                #     actionslist = self.master.commandslist
+                actionslist = self.master.contextactionsdict[context] or self.master.commandslist
+                self.cmb_commando.addItems(actionslist)
+                if not self.initializing_keydef:
+                    self.defchanged = True
+                    if 'C_CMD' in self.fields:
+                        self.b_save.Enable(True)
+            elif str(self.cmb_commando.GetText()) == self._origdata[self.ix_cntxt]:
+                self.defchanged = False
+                if 'C_CMD' in self.fields:
+                    self.b_save.Enable(False)
+        elif test_cmd and cb == self.cmb_commando:
+            cmditemindex = self.ix_cmd
+            if text != self._origdata[cmditemindex]:
+                self._newdata[cmditemindex] = text
+                try:
+                    self.txt_oms.SetText(self.master.descriptions[text])
+                except KeyError:
+                    self.txt_oms.SetText(self.captions['M_NODESC'])
+                if not self.initializing_keydef:
+                    self.defchanged = True
+                    if 'C_CMD' in self.fields:
+                        self.b_save.Enable(True)
+            elif str(self.cmb_key.currentText()) == self._origdata[cmditemindex]:
+                if 'C_CMD' in self.fields:
+                    self.b_save.Enable(False)
+        else:
+            try:
+                self.master.reader.on_combobox(self, cb, text)  # user exit
+            except AttributeError:
+                pass
+
+    def on_checkbox(self, event):  # cb, state):
+        """callback op het gebruik van een checkbox
+
+        voorlopig alleen voor de modifiers
+        """
+        cb = event.GetEventWidget()
+        state = cb.GetValue()
+        print('in on_checkbox', cb, state)
+        if self.master.initializing_screen:
+            return
+        ## state = bool(state)
+        for win, indx in zip((self.cb_shift, self.cb_ctrl, self.cb_alt, self.cb_win),
+                             self.master.ix_mods):
+            if cb == win and state != self._origdata[indx]:
+                self._newdata[indx] = state
+                if not self.initializing_keydef:
+                    self.defchanged = True
+                    if 'C_CMD' in self.fields:
+                        self.b_save.Enable(True)
+                break
+        else:
+            states = [self.cb_shift.isChecked(), self.cb_ctrl.isChecked(),
+                      self.cb_alt.isChecked(), self.cb_win.isChecked()]
+            if states == [self._origdata[x] for x in self.master.ix_mods]:
+                self.defchanged = False
+                if 'C_CMD' in self.fields:
+                    self.b_save.Enable(False)
+
+    def on_item_selected(self, event):  # LET OP: is hieronder nog een keer gedefinieerd
+        """callback op het selecteren van een item
+
+        velden op het hoofdscherm worden bijgewerkt vanuit de selectie"""
+        print('in on_item_selected', event)
+        seli = self.p0list.GetItemData(event.GetEventObject().GetFirstSelected())  # Index())
+        ## print "Itemselected",seli,self.data[seli]
+        # self.vuldetails(seli)
+        self.on_item_selected_2(seli)
+        event.Skip()
+
+    def on_item_deselected(self, event):    # zit ook in de on_item_selected hieronder
+        """callback op het niet meer geselecteerd zijn van een item
+
+        er wordt gevraagd of de key definitie moet worden bijgewerkt"""
+        indx = event.GetIndex()  # EventObject()
+        # if not test:
+        #     return
+        # print(test)
+        seli = self.p0list.GetItemData(indx)  # test.GetFirstSelected())  # Index())
+        ## print "ItemDeselected",seli,self.data[seli]
+        if self.defchanged:  # zie onder bij uitvraging op "make_change"
+            self.defchanged = False
+            ok, cancel = hkd.show_message(self, 'Q_SAVCHG')
+            if cancel:
+                return
+            if ok:
+                self.aanpassen()
+
+    def on_item_activated(self, event):
+        """callback op het activeren van een item (onderdeel van het selecteren)
+        """
+        print('in on_item_activated', event)
+        self.current_item = event.m_itemIndex  # GetEventIndex()
+
+    def on_item_selected_2(self, newitem, olditem=None):  # proberen deze te realiseren in de
+                                                          # callbacks hierboven
+        """callback on selection of an item
+
+        velden op het hoofdscherm worden bijgewerkt vanuit de selectie
+
+        bevat een soort detectie of de definitie gewijzigd is die rekening probeert
+        te houden met of een nieuwe keydef wordt aangemaakt die een kopie is van de
+        oude voor een andere keycombo - alleen die triggert ook bij opbouwen van
+        het scherm
+        """
+        print('in on_item_selected', newitem, olditem)
+        # TODO: kijken wat hiervan bij de gui-onafhankelijke code kan worden ondergebracht
+        if not self.master.has_extrapanel:
+            return
+        # if not int(self.parent.page.settings[shared.SettType.RDEF.value]):
+        #     return
+        if not newitem:  # bv. bij p0list.clear()
+            return
+        self.initializing_keydef = True
+        if self.master.initializing_screen:
+            self.refresh_extrascreen(newitem)
+            self.initializing_keydef = False
+            return
+        other_item = other_cntxt = other_cmd = False
+        if 'C_KEYS' in self.master.fields:
+            origkey = self._origdata[self.master.ix_key]
+            key = self._newdata[self.master.ix_key]
+            other_item = key != origkey
+        if 'C_MODS' in self.master.fields:
+            origmods = ''.join([y for x, y in zip(self.master.ix_mods, ('WCAS'))
+                if self._origdata[x]])
+            mods = ''.join([y for x, y in zip(self.master.ix_mods, ('WCAS'))
+                if self._newdata[x]])
+            other_item = other_item or mods != origmods
+        if 'C_CMD' in self.master.fields:
+            origcmd = self._origdata[self.ix_cmd]
+            cmnd = self._newdata[self.ix_cmd]
+            other_cmd = cmnd != origcmd
+        if 'C_CNTXT' in self.master.fields:
+            origcntxt = self._origdata[self.ix_cntxt]
+            context = self._newdata[self.ix_cntxt]
+            other_cntxt = context != origcntxt
+        cursor_moved = True if newitem != olditem and olditem is not None else False
+        any_change = other_item or other_cmd or other_cntxt
+        found = False
+        for number, item in self.master. data.items():
+            keymatch = modmatch = cntxtmatch = True
+            if 'C_KEYS' in self.master.fields and item[0] != key:
+                keymatch = False
+            if 'C_MODS' in self.master.fields and item[1] != mods:
+                modmatch = False
+            if 'C_CNTXT' in self.master.fields and item[2] != context:
+                cntxtmatch = False
+            if keymatch and modmatch and cntxtmatch:
+                found = True
+                indx = number
+                break
+        make_change = False
+        if any_change:
+            if cursor_moved:
+                make_change = hkd.ask_question(self, "Q_SAVCHG")
+            elif other_item:
+                if found:
+                    make_change = hkd.ask_question(self, "Q_DPLKEY")
+                else:
+                    make_change = True
+            else:
+                make_change = True
+        # TODO note this only works for one specific plugin (tcmdrkys) I think
+        # which is no problem as long as I don't modify keydefs
+        if make_change:
+            item = self.p0list.currentItem()
+            pos = self.p0list.indexOfTopLevelItem(item)
+            if found:
+                self.data[indx] = (key, mods, 'U', cmnd, self.omsdict[cmnd])
+            else:
+                newdata = [x for x in self.data.values()]
+                # TODO: fix error when modifying TC keydef
+                # UnboundLocalError: local variable 'key' referenced before assignment
+                newvalue = (key, mods, 'U', cmnd, self.omsdict[cmnd])
+                newdata.append(newvalue)
+                newdata.sort()
+                for x, y in enumerate(newdata):
+                    if y == newvalue:
+                        indx = x
+                    self.data[x] = y
+            self.modified = True
+            self._origdata = self.init_origdata
+            if 'C_KEY' in self.master.fields:
+                self._origdata[self.master.ix_key] = key
+            if 'C_MODS' in self.master.fields:
+                for mod, indx in zip(('WCAS'), self.master.ix_mods):
+                    self._origdata[indx] = mod in mods
+            if 'C_CMD' in self.master.fields:
+                self._origdata[self.ix_cmd] = cmnd
+            if 'C_CNTXT' in self.master.fields:
+                self._origdata[self.ix_cntxt] = context
+            try:
+                self.reader.on_extra_selected(self, item)  # user exit
+            except AttributeError:
+                pass
+            newitem = self.p0list.topLevelItem(pos)
+            self.populate_list(pos)    # refresh
+        self.refresh_extrascreen(newitem)
+        self.initializing_keydef = False
+
+    def on_update(self, event):
+        """callback for editing kb shortcut
+        """
+        print('in on_update', event)
+        self.do_modification()
+        self.p0list.SetFocus()
+
+    def on_delete(self, event):
+        """callback for deleting kb shortcut
+        """
+        print('in on_delete', event)
+        self.do_modification(delete=True)
+        self.p0list.SetFocus()
+
+    def refresh_extrascreen(self, selitem):
+        """show new values after changing kb shortcut
+        """
+        print('in refresh_extrascreen', selitem)
+        if not selitem:  # bv. bij p0list.clear()
+            return
+        seli = selitem.data(0, core.Qt.UserRole)
+        if sys.version < '3':
+            seli = seli.toPyObject()
+        keydefdata = self.master.data[seli]
+        if 'C_CMD' in self.master.fields:
+            self.b_save.setEnabled(False)
+            self.b_del.setEnabled(False)
+        self._origdata = self.master.init_origdata[:]
+        for indx, item in enumerate(keydefdata):
+            if self.master.column_info[indx][0] == 'C_KEY':
+                key = item
+                if self.master.keylist is None:
+                    self.txt_key.setText(key)
+                else:
+                    ix = self.master.keylist.index(key)
+                    self.cmb_key.setCurrentIndex(ix)
+                self._origdata[self.master.ix_key] = key
+            elif self.master.column_info[indx][0] == 'C_MODS':
+                mods = item
+                self.cb_shift.setChecked(False)
+                self.cb_ctrl.setChecked(False)
+                self.cb_alt.setChecked(False)
+                self.cb_win.setChecked(False)
+                for x, y, z in zip('SCAW', self.master.ix_mods, (self.cb_shift, self.cb_ctrl,
+                    self.cb_alt, self.cb_win)):
+                    if x in mods:
+                        self._origdata[y] = True
+                        z.setChecked(True)
+            elif self.master.column_info[indx][0] == 'C_TYPE':
+                soort = item
+                if soort == 'U':
+                    self.b_del.setEnabled(True)
+            elif self.master.column_info[indx][0] == 'C_CNTXT' and self.master.contextslist:
+                context = item
+                ix = self.master.contextslist.index(context)
+                self.cmb_context.setCurrentIndex(ix)
+                self._origdata[self.ix_cntxt] = context
+            elif self.master.column_info[indx][0] == 'C_CMD' and self.master.commandslist:
+                command = item
+                if 'C_CNTXT' in self.fields:
+                    self.cmb_commando.clear()
+                    context = self.cmb_context.currentText()
+                    # if self.contextactionsdict:
+                    #     actionslist = self.master.contextactionsdict[context]
+                    # else:
+                    #     actionslist = self.master.commandslist
+                    actionslist = self.master.contextactionsdict[context] or self.master.commandslist
+                    self.cmb_commando.addItems(actionslist)
+                    try:
+                        ix = actionslist.index(command)
+                    except ValueError:
+                        ix = -1
+                else:
+                    ix = self.master.commandslist.index(command)
+                if ix >= 0:
+                    self.cmb_commando.setCurrentIndex(ix)
+                self._origdata[self.ix_cmd] = command
+            elif self.master.column_info[indx][0] == 'C_DESC':
+                oms = item
+                self.txt_oms.setText(oms)
+            else:
+                try:
+                    self.master.reader.vul_extra_details(self, indx, item)  # user exit
+                except AttributeError:
+                    pass
+        self._newdata = self._origdata[:]
+
+    def do_modification(self, delete=False):
+        """currently this only works for tcmdrkys - or does it?
+        """
+        # TODO uitzetten overbodig maken
+        print("in do_modification - Aanpassen uitgezet, werkt nog niet voor alles")
+        return
+        item = self.p0list.currentItem()
+        pos = self.p0list.indexOfTopLevelItem(item)
+        if delete:
+            indx = item.data(0, core.Qt.UserRole)
+            if self.captions["{:03}".format(indx)] == 'C_TYPE':
+                if self.data[indx][1] == "S":  # can't delete standard key
+                    hkd.show_message(self.parent, 'I_STDDEF')
+                    return
+            elif self.captions["{:03}".format(indx)] == 'C_KEY':
+                if self.data[indx][0] in self.defkeys:  # restore standard if any
+                    cmnd = self.master.defkeys[self.data[indx][0]]
+                    if cmnd in self.master.omsdict:
+                        oms = self.master.omsdict[cmnd]
+                    else:
+                        oms, cmnd = cmnd, ""
+                    key = self.data[indx][0]                 # is this correct?
+                    self.data[indx] = (key, 'S', cmnd, oms)  # key UNDEF
+                else:
+                    del self.data[indx]
+                    ## pos -= 1
+            self.b_save.setEnabled(False)
+            self.b_del.setEnabled(False)
+            self.set_title(modified=True)
+            self.master.populate_list(pos)    # refresh
+        else:
+            self.on_item_selected(item, item)  # , from_update=True)
+
+    # hulproutine t.b.v. managen column properties
+
+    def refresh_headers(self, headers):
+        "apply changes in the column headers"
+        self.p0list.setHeaderLabels(headers)
+        hdr = self.p0list.header()
+        hdr.setSectionsClickable(True)
+        for indx, col in enumerate(self.master.column_info):
+            hdr.resizeSection(indx, col[1])
+        hdr.setStretchLastSection(True)
 
     def enable_buttons(self, state=True):
         """anders wordt de gelijknamige methode van de Panel base class geactiveerd"""
-        pass
 
-    def keyprint(self,evt):
-        pass
-#------------ end of code copied from vikey_wxgui.py -------------------------------
-#----------------------------------------------------------------------------
 
-pagetexts = [ "VI", "Total Commander", "Double Commander", "And", "Many", "More"]
+class TabbedInterface(wx.Panel):
+    """ Als wx.NoteBook, maar met selector in plaats van tabs
+    """
+    def __init__(self, parent, master):
+        super().__init__(parent)
+        self.parent = parent
+        self.master = master
+
+    def setup_selector(self):
+        "create the selector"
+        self.sel = wx.ComboBox(self, size=(140, -1), style=wx.CB_READONLY)
+        self.sel.Bind(wx.EVT_COMBOBOX, self.after_changing_page)
+        # als ik echt met een choicebook werkte, kon ik deze *twee*  gebruiken:
+        # self.book.Bind(wx.EVT_CHOICEBOOK_PAGE_CHANGED, self.OnPageChanged)
+        # self.book.Bind(wx.EVT_CHOICEBOOK_PAGE_CHANGING, self.OnPageChanging)
+        self.pnl = wx.Simplebook(self)
+        # self.pnl = wx.Choicebook(self)
+
+    def setup_search(self):
+        "add the search widgets to the interface"
+        self.find_loc = wx.ComboBox(self, size=(140, -1), style=wx.CB_READONLY)
+        self.find = wx.ComboBox(self, size=(140, -1), style=wx.CB_DROPDOWN)
+        self.find.Bind(wx.EVT_TEXT, self.on_text_changed)
+        self.b_next = wx.Button(self, label='next')
+        self.b_next.Bind(wx.EVT_BUTTON, self.find_next)
+        self.b_next.Enable(False)
+        self.b_prev = wx.Button(self, label='prev')
+        self.b_prev.Bind(wx.EVT_BUTTON, self.find_prev)
+        self.b_prev.Enable(False)
+        self.b_filter = wx.Button(self, label=self.parent.editor.captions['C_FILTER'])
+        self.b_filter.Bind(wx.EVT_BUTTON, self.filter)
+        self.b_filter.Enable(False)
+        self.filter_on = False
+
+    def add_subscreen(self, win):
+        "add a screen to the tabbed widget"
+        self.pnl.AddPage(win.gui, '')
+
+    def add_to_selector(self, txt):
+        "add an option to the selector"
+        self.sel.Append(txt)
+
+    def format_screen(self):
+        "realize the screen"
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.AddSpacer(10)
+        self.sel_text = wx.StaticText(self, label='', size=(80, -1))
+        hbox.Add(self.sel_text, 0, wx.ALIGN_CENTER_VERTICAL)
+        hbox.Add(self.sel, 0)
+        hbox.Add(wx.StaticText(self, label=''), 1, wx.EXPAND)
+        self.find_text = wx.StaticText(self, label='', size=(80, -1))
+        hbox.Add(self.find_text, 0, wx.ALIGN_CENTER_VERTICAL)
+        hbox.Add(self.find_loc, 0)
+        hbox.Add(wx.StaticText(self, label=' : '), 0, wx.ALIGN_CENTER_VERTICAL)
+        hbox.Add(self.find, 0)
+        hbox.Add(self.b_filter, 0)
+        hbox.Add(self.b_next, 0)
+        hbox.Add(self.b_prev, 0)
+        hbox.AddSpacer(10)
+        vbox.Add(hbox, 0, wx.EXPAND)
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.Add(self.pnl, 0)
+        vbox.Add(hbox, 0)
+        self.SetAutoLayout(True)
+        self.SetSizer(vbox)
+        vbox.Fit(self)
+        # vbox.SetSizeHints(self)
+        self.setcaptions()
+        self.Show()
+
+    def setcaptions(self):
+        """update captions according to selected language
+        """
+        self.b_next.SetLabel(self.parent.editor.captions['C_NEXT'])
+        self.b_prev.SetLabel(self.parent.editor.captions['C_PREV'])
+        #print(self.sel_text.GetSize())
+        self.sel_text.SetLabel(self.parent.editor.captions['C_SELPRG'])
+        #print(self.sel_text.GetSize())
+        #test = len(self.sel_text.GetLabel()) * 9
+        #print(test)
+        #self.sel_text.SetSize(test, -1)
+        #print(self.sel_text.GetSize())
+        #print(self.find_text.GetSize())
+        self.find_text.SetLabel(self.parent.editor.captions['C_FIND'])
+        #print(self.find_text.GetSize())
+        #test = len(self.find_text.GetLabel()) * 9
+        #print(test)
+        #self.find_text.SetSize(test, -1)
+        #print(self.find_text.GetSize())
+        if self.filter_on:
+            self.b_filter.SetLabel(self.parent.editor.captions['C_FLTOFF'])
+        else:
+            self.b_filter.SetLabel(self.parent.editor.captions['C_FILTER'])
+        try:
+            self.parent.b_exit.SetLabel(self.parent.editor.captions['C_EXIT'])
+        except AttributeError:  # exit button bestaat nog niet tijdens initialisatie
+            pass
+
+    def after_changing_page(self, event):
+        """callback for change in tool page selector
+        """
+        self.on_page_changed(event.GetEventObject().GetSelection())  #Value())  # for now
+
+    def on_page_changed(self, indx):   # op deze ook een changing en changed zetten ipv deze combo?
+        """callback for change in tool page
+        """
+        # no use finishing this method if certain conditions aren't met
+        if self.parent.editor.book is None:
+            print("leaving: no choicebook setup yet - should this be possible?")
+            return
+        page = self.pnl.GetCurrentPage()
+        if page is None:                     # leaving: no page selected yet
+            return
+        if page.master.modified:
+            ok = page.exit()
+            if not ok:                       # leaving: can't exit modified page yet
+                return
+        self.parent.statusbar_message(self.parent.editor.captions["M_DESC"].format(
+            self.sel.GetStringSelection()))
+        self.pnl.SetSelection(indx)
+        self.master.page = self.pnl.GetCurrentPage().master  # change to new selection
+        print('in on_page_changed - going to set up menu')
+        self.parent.setup_menu()
+        if not all((self.master.page.settings, self.master.page.column_info,
+            self.master.page.data)):  # leaving: page data incomplete (e.g. no keydefs)
+            return
+        self.master.page.setcaptions()
+        items = [self.parent.editor.captions[x[0]] for x in self.master.page.column_info]
+        self.find_loc.Clear()
+        self.find_loc.AppendItems(items)
+        self.find_loc.SetSelection(len(items) - 1)
+        if self.master.page.filtertext:
+            self.find.SetValue(self.master.page.filtertext)
+            self.b_filter.SetText(self.parent.captions['C_FLTOFF'])
+            self.b_filter.Enable(True)
+        else:
+            self.find.SetValue('')
+            self.find.Enable(True)
+            self.b_next.Enable(False)
+            self.b_prev.Enable(False)
+            self.b_filter.Enable(False)
+
+    def on_text_changed(self, event):
+        """callback for change in search text
+        ndx"""
+        text = event.GetEventObject().GetValue()
+        if not text:
+            return
+        page = self.master.page  # self.pnl.currentWidget()
+        for ix, item in enumerate(page.column_info):
+            if page.captions[item[0]] == self.find_loc.GetStringSelection():
+                self.zoekcol = ix
+                break
+        # hier moet ik nog iets moois op vinden:
+        self.items_found = [] # page.gui.p0list.findItems(text, core.Qt.MatchContains, self.zoekcol)
+        self.b_next.Enable(False)
+        self.b_prev.Enable(False)
+        self.b_filter.Enable(False)
+        if self.items_found:
+            page.p0list.SetSelectedItem(self.items_found[0])
+            self.founditem = 0
+            if len(self.items_found) < len(self.master.page.data.items()):
+                self.b_next.Enable(True)
+                self.b_filter.Enable(True)
+            self.parent.statusbar_message(self.parent.editor.captions["I_#FOUND"].format(
+                len(self.items_found)))
+        else:
+            self.parent.statusbar_message(self.parent.editor.captions["I_NOTFND"].format(text))
+
+    def find_next(self):
+        """to next search result
+        """
+        self.b_prev.Enable(True)
+        if self.founditem < len(self.items_found) - 1:
+            self.founditem += 1
+            self.master.page.gui.p0list.SetSelection(self.items_found[self.founditem])
+        else:
+            self.parent.statusbar_message(self.parent.editor.captions["I_NONXT"])
+            self.b_next.Enable(False)
+
+    def find_prev(self):
+        """to previous search result
+        """
+        self.b_next.Enable(True)
+        if self.founditem == 0:
+            self.parent.statusbar_message(self.parent.editor.captions["I_NOPRV"])
+            self.b_prev.Enable(False)
+        else:
+            self.founditem -= 1
+            self.master.page.gui.p0list.SetSelection(self.items_found[self.founditem])
+
+    def filter(self):
+        """filter shown items according to search text
+        """
+        if not self.items_found:
+            return
+        state = str(self.b_filter.GetValue())
+        text = str(self.find.GteStringSelection())
+        item = self.master.page.gui.p0list.GetSelection()  # dit moet anders - p0list is een
+        self.reposition = item.text(0), item.text(1)  # dit moet anders      - wx.ListCtrl subclass
+        if state == self.parent.editor.captions['C_FILTER']:
+            state = self.parent.editor.captions['C_FLTOFF']
+            self.filter_on = True
+            self.master.page.filtertext = text
+            self.master.page.olddata = self.master.page.data
+            self.master.page.data = {ix: item for ix, item in enumerate(
+                self.master.page.data.values()) if text.upper() in item[self.zoekcol].upper()}
+            self.b_next.Enable(False)
+            self.b_prev.Enable(False)
+            self.find.Enable(False)
+        else:       # self.filter_on == True
+            state = self.parent.editor.captions['C_FILTER']
+            self.filter_on = False
+            self.master.page.filtertext = ''
+            self.master.page.data = self.master.page.olddata
+            self.b_next.Enable(True)
+            self.b_prev.Enable(True)
+            self.find.Enable(True)
+        self.master.page.populate_list()
+        for ix in range(self.master.page.gui.p0list.topLevelItemCount()):  # dit moet anders
+            item = self.master.page.gui.p0list.topLevelItem(ix)  # dit moet anders
+            if (item.text(0), item.text(1)) == self.reposition:  # dit moet anders
+                self.master.page.gui.p0list.setCurrentItem(item)  # dit moet anders
+                break
+        self.b_filter.SetValue(state)
+        if self.master.page.data == self.master.page.olddata:
+            self.on_text_changed(text)  # reselect items_found after setting filter to off
+
+    def set_selected(self, selection):
+        "set the new selection index"
+        self.sel.SetSelection(selection)
+
 
 class Gui(wx.Frame):
     """Hoofdscherm van de applicatie"""
     def __init__(self, parent=None):
         self.editor = parent
-        self.app = wx.App()  # redirect=True, filename="hotkeys.log")
-        wid = 860 if shared.LIN else 688
+        self.app = wx.App()
+        wid = 1140 if shared.LIN else 688
         hig = 594
-        super().__init__(None, size=(wid, hig),
-                          style=wx.DEFAULT_FRAME_STYLE |  ## wx.BORDER_SIMPLE |
-                                wx.NO_FULL_REPAINT_ON_RESIZE)
+        super().__init__(None, size=(wid, hig), style=wx.DEFAULT_FRAME_STYLE |
+                ## wx.BORDER_SIMPLE |
+                wx.NO_FULL_REPAINT_ON_RESIZE)
         self.sb = self.CreateStatusBar()
-        self.menuBar = wx.MenuBar()
+        self.menu_bar = wx.MenuBar()
+        self.menuitems = {}
 
     def show_empty_screen(self):
         """what to do when there's no data to show
         """
-        self.mainwidget = wx.StaticText(self, label=self.editor.captions["EMPTY_CONFIG_TEXT"])
+        message = self.editor.captions["EMPTY_CONFIG_TEXT"]
+        self.editor.book = SimpleNamespace()
+        self.editor.book.gui = DummyPage(self, message)
+        self.editor.book.page = SimpleNamespace()
+        self.editor.book.page.gui = self.editor.book.gui
         self.SetSize(640, 80)
 
     def go(self):
-        sizer0 = wx.BoxSizer(wx.VERTICAL)
-        sizer0.Add(self.mainwidget, 1, wx.EXPAND | wx.ALL, 5)
+        "build and show the interface"
+        self.SetMenuBar(self.menu_bar)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.editor.book.gui, 1, wx.EXPAND | wx.ALL, 5)
         self.b_exit = wx.Button(self, label=self.editor.captions['C_EXIT'])
-        self.b_exit.Bind(wx.EVT_BUTTON, self.exit)  # moet eigenlijk self.editor.exit zijn
-        sizer0.Add(self.b_exit, 0, wx.ALIGN_CENTER_HORIZONTAL)
-        self.SetSizer(sizer0)
+        self.b_exit.Bind(wx.EVT_BUTTON, self.editor.exit)
+        sizer.Add(self.b_exit, 0, wx.ALIGN_CENTER_HORIZONTAL)
+        self.SetSizer(sizer)
         self.SetAutoLayout(True)
-        sizer0.Fit(self)
-        sizer0.SetSizeHints(self)
+        sizer.Fit(self)
+        # sizer.SetSizeHints(self)
         self.Show(True)
         self.app.MainLoop()
 
     def set_window_title(self, title):
+        "show a title in the titlebar"
         self.SetTitle(title)
 
     def statusbar_message(self, message):
+        "show a message in the statusbar"
         self.sb.SetStatusText(message)
 
-    def exit(self, event=None):
-        self.Close(True)
+    def setup_tabs(self):
+        """build the tabbed widget into the interface
 
+        for compatibility - has already happened elsewhere in the application
+        """
 
-class MainWindow(wx.Frame):
-    """Hoofdscherm van de applicatie"""
-    def __init__(self,parent, id, args):
-        # args can contain an alternate tool configuration but we ignore that for now
-        wid = 860 if shared.LIN else 688
-        hig = 594
-        wx.Frame.__init__(self,parent, wx.ID_ANY, "HotKeys!!!", size=(wid, hig),
-                          style=wx.DEFAULT_FRAME_STYLE |  ## wx.BORDER_SIMPLE |
-                                wx.NO_FULL_REPAINT_ON_RESIZE)
-        self.sb = self.CreateStatusBar()
-        self.readcaptions('english.lng')
-        ## print('in mainwindow', self.captions)
-        # TODO: aanpassen aan nieuwe architectuur
-        self.menuBar = wx.MenuBar()
-        for title, items in (('M_APP', (
-                                ('M_SETT', (
-                                    ('M_LOC', self.m_loc),
-                                    ('M_LANG', self.m_lang))),
-                                ('M_EXIT', self.m_exit))),
-                             ('M_TOOL', (
-                                ('M_READ', self.m_read),
-                                ('M_SAVE', self.m_save))),
-                             ('M_HELP', (
-                                ('M_ABOUT', self.m_about),))):
+    def setup_menu(self):
+        """build menus and actions
+        """
+        print('in setup_menu')
+        has_items = bool(self.menu_bar.GetMenus())
+        ix = 0
+        for title, items in self.editor.get_menudata():
             menu = wx.Menu()
             for sel in items:
                 if sel == -1:
                     menu.AppendSeparator()
                 else:
                     sel, value = sel
-                    if callable(value):
-                        item = wx.MenuItem(None, -1, self.captions[sel])
+                    callback, shortcut = value
+                    if callable(callback):
+                        menutext = '\t'.join((self.editor.captions[sel], shortcut))
+                        item = wx.MenuItem(None, -1, menutext)
                         menu.Append(item)
-                        self.Bind(wx.EVT_MENU, value, id=item.GetId())
+                        self.Bind(wx.EVT_MENU, callback, id=item.GetId())
                     else:
                         submenu = wx.Menu()
-                        for selitem, callback in value:
-                            item = wx.MenuItem(None, -1, self.captions[selitem])
+                        for selitem, values in callback:
+                            callback_, shortcut = values
+                            menutext = '\t'.join((self.editor.captions[selitem], shortcut))
+                            item = wx.MenuItem(None, -1, menutext)
                             submenu.Append(item)
-                            self.Bind(wx.EVT_MENU, callback, id=item.GetId())
-                        menu.AppendSubMenu(submenu, self.captions[sel])
-            self.menuBar.Append(menu, self.captions[title])
-        self.SetMenuBar(self.menuBar)
-
-        # self.pnl = wx.Panel(self, -1) #, style=wx.BORDER_SIMPLE)
-        self.book = wx.Choicebook(self, -1) # , size= (600, 700))
-        for txt in pagetexts:
-            if txt == "VI":  # and False: # tijdelijk om dit niet te laten gebeuren
-                win = VIPanel(self.book, -1)
-                ## win.doelayout()
-#------------ start of code copied from vikey_wxgui.py -------------------------------
-                self.captions = win.captions
-                win.doelayout()
-                if len(win.data) == 0:
-                    with wx.MessageDialog(self, self.captions['042'], self.captions['T_MAIN'],
-                                          wx.OK | wx.ICON_INFORMATION) as dlg:
-                        dlg.ShowModal()
-                    # dlg.Destroy()
-#------------ end of code copied from vikey_wxgui.py -------------------------------
+                            self.Bind(wx.EVT_MENU, callback_, id=item.GetId())
+                        menu.AppendSubMenu(submenu, self.editor.captions[sel])
+            if has_items:
+                menu = self.menu_bar.Replace(ix, menu, self.editor.captions[title])
+                menu.Destroy()
             else:
-                win = wx.Panel(self.book, -1 ) #, style=wx.BORDER_SIMPLE)
-                st = wx.StaticText(win, -1, txt, (10,10))
-            self.book.AddPage(win, txt)
-        self.book.Bind(wx.EVT_CHOICEBOOK_PAGE_CHANGED, self.OnPageChanged)
-        self.book.Bind(wx.EVT_CHOICEBOOK_PAGE_CHANGING, self.OnPageChanging)
+                self.menu_bar.Append(menu, self.editor.captions[title])
+            print('appending menu to menubar')
+            ix += 1
 
-        sizer0 = wx.BoxSizer(wx.VERTICAL)
-        sizer1 = wx.BoxSizer(wx.HORIZONTAL)
-        sizer1.Add(self.book, 1, wx.EXPAND | wx.ALL, 0)
-        sizer0.Add(sizer1, 1, wx.EXPAND | wx.ALL, 0)
-        btn = wx.Button(self, label=self.captions['C_EXIT'])
-        btn.Bind(wx.EVT_BUTTON, self.exit)
-        sizer0.Add(btn, 0, wx.ALIGN_CENTER_HORIZONTAL)
-        self.SetSizer(sizer0)
-        self.SetAutoLayout(True)
-        sizer0.Fit(self)
-        sizer0.SetSizeHints(self)
-        # self.pnl.Layout()
-        self.Show(True)
+    def setcaptions(self):
+        "set title for menuitem or action"
+        for menu, item in self.menuitems.items():
+            try:
+                item.SetTitle(self.editor.captions[menu])
+            except AttributeError:
+                item.SetText(self.editor.captions[menu])
 
-    def m_read(self, event):
-        """(menu) callback voor het lezen van de hotkeys
+    def show_message(self, text):
+        "relay"
+        hkd.show_message(self, text=text)
 
-        vraagt eerst of het ok is om de hotkeys (opnieuw) te lezen
-        zet de gelezen keys daarna ook in de gui
-        """
-        wx.MessageBox('Lezen gekozen', self.captions['T_MAIN'])
-        return
-        if not self.modified:
-            h = show_message(self, '041')
-            if h == wx.ID_YES:
-                self.readkeys()
-                self.page.populate_list()
+    def ask_question(self, text):
+        "relay"
+        hkd.ask_question(self, text)
 
-    def m_save(self, event):
-        """(menu) callback voor het terugschrijven van de hotkeys
+    def get_textinput(self, text, prompt):
+        "relay"
+        text, ok = qtw.QInputDialog.getText(self, text, prompt, text=text)
+        return text, ok == qtw.QDialog.Accepted
 
-        vraagt eerst of het ok is om de hotkeys weg te schrijven
-        vraagt daarna eventueel of de betreffende applicatie geherstart moet worden
-        """
-        wx.MessageBox('Opslaan gekozen', self.captions['T_MAIN']) #shared.NOT_IMPLEMENTED)
-        return
-        if not self.modified:
-            h = show_message(self, '041')
-            if h != wx.ID_YES:
-                return
-        self.savekeys()
-        if self.ini.restart:
-            h = show_message(self, '026')
-            if h == wx.ID_YES:
-                os.system(self.ini.restart)
-        else:
-            wx.MessageBox(self.captions['037'], self.captions['T_MAIN'])
-            ## h = show_message(self, '037')
+    def get_choice(self, title, caption, choices, current):
+        "relay"
+        return qtw.QInputDialog.getItem(self, title, caption, choices, current, editable=False)
 
-    def m_user(self, event):
-        """(menu) callback voor een nog niet geïmplementeerde actie"""
-        return self.captions[shared.NOT_IMPLEMENTED]
+    def manage_filesettings(self):
+        "relay"
+        ok = hkd.FilesDialog(self, self.editor).exec_()
+        return ok == qtw.QDialog.Accepted
 
-    def m_loc(self, event):
-        """(menu) callback voor aanpassen van de bestandslocaties
+    def manage_extrasettings(self):
+        "relay"
+        dlg = hkd.ExtraSettingsDialog(self, self.editor).exec_()
+        return dlg == qtw.QDialog.Accepted
 
-        vraagt bij wijzigingen eerst of ze moeten worden opgeslagen
-        toont dialoog met bestandslocaties en controleert de gemaakte wijzigingen
-        (met name of de opgegeven paden kloppen)
-        """
-        wx.MessageBox('paden gekozen', self.captions['T_MAIN']) #shared.NOT_IMPLEMENTED)
-        return
-        if self.modified:
-            h = show_message(self, '025')
-            if h == wx.ID_YES:
-                self.savekeys()
-            elif h == wx.ID_CANCEL:
-                return
-        paths = [self.ini.pad,]
-        captions = [self.captions[x] for x in ('028','044','039')]
-        ## captions = ['Define file locations for:', 'TC','UC','CI','KT','HK']
-        dlg = FilesDialog(self, -1, self.captions['T_MAIN'], paths, captions,
-            size=(400, 200),
-            #style=wx.CAPTION | wx.SYSTEM_MENU | wx.THICK_FRAME,
-            style=wx.DEFAULT_DIALOG_STYLE, # & ~wx.CLOSE_BOX,
-            )
-        ## dlg.CenterOnScreen()
-        fout = "*"
-        text = ''
-        while fout:
-            val = dlg.ShowModal()
-            pad = dlg.bVI.GetValue()
-            fout = ""
-            if val == wx.ID_OK:
-                text = "modified"
-                if pad != "":
-                    naam = self.captions['044']
-                    if not os.path.isdir(pad):
-                        fout = self.captions['034'] % naam
-                    elif not os.path.exists(os.path.join(pad,naam)):
-                        fout = self.captions['035'] % naam
-            if fout:
-                mdlg = wx.MessageDialog(self,fout,self.captions['T_MAIN'])
-                mdlg.ShowModal()
-                mdlg.Destroy()
-        dlg.Destroy()
-        if text:
-            ## for i,pad in enumerate(paden):
-                ## if pad != "":
-                    ## self.ini.paden[i] = pad
-            self.ini.pad = pad
-            self.ini.write()
-            text = ''
+    def manage_columnsettings(self):
+        "relay"
+        dlg = hkd.ColumnSettingsDialog(self, self.editor).exec_()
+        return dlg == qtw.QDialog.Accepted
 
-    def m_lang(self, event):
-        """(menu) callback voor taalkeuze
+    def manual_entry(self):
+        "relay"
+        dlg = hkd.EntryDialog(self, self.editor).exec_()
+        return dlg == qtw.QDialog.Accepted
 
-        past de settings aan en leest het geselecteerde language file
-        """
-        choices = [x for x in os.listdir(os.path.join(shared.HERE, 'languages'))
-                   if os.path.splitext(x)[1] == ".lng"]
-        with wx.SingleChoiceDialog(self, self.captions['P_SELLNG'], self.captions['T_MAIN'], choices,
-                                   wx.CHOICEDLG_STYLE) as dlg:
-            for i, x in enumerate(choices):
-                print(x, self.ini.lang)
-                if x == self.ini.lang:
-                    dlg.SetSelection(i)
-                    break
-            h = dlg.ShowModal()
-            if h == wx.ID_OK:
-                lang = dlg.GetStringSelection()
-                self.ini.lang = lang
-                self.ini.write()
-                self.readcaptions()
-                self.setcaptions()
-        ## dlg.Destroy()
+    def manage_startupsettings(self):
+        "relay"
+        ok = hkd.InitialToolDialog(self, self.editor).exec_()
+        return ok == qtw.QDialog.Accepted
 
-    def m_about(self, event):
-        """(menu) callback voor het tonen van de "about" dialoog
-        """
-        info = wx.adv.AboutDialogInfo()
-        info.Name = self.captions['T_MAIN']
-        info.Version = shared.VRS
-        info.Copyright = shared.AUTH
-        ## info.Description = shared.TTL, 350, wx.ClientDC(self)
-        ## info.WebSite = ("http://en.wikipedia.org/wiki/Hello_world", "Hello World home page")
-        ## info.Developers = [ "Joe Programmer",
-                            ## "Jane Coder",
-                            ## "Vippy the Mascot" ]
-        ## info.License = wordwrap(licenseText, 500, wx.ClientDC(self))
-        wx.adv.AboutBox(info, self)
-
-    def m_exit(self, event):
-        """(menu) callback om het programma direct af te sluiten"""
-        self.exit()
-
-    def exit(self, event=None):
+    def close(self, event=None):
         self.Close(True)
-
-    def readcaptions(self, lang):
-        self.captions = {}
-        with open(os.path.join(shared.HERE, 'languages', lang)) as f_in:
-            for x in f_in:
-                if x[0] == '#' or x.strip() == "":
-                    continue
-                key, value = x.strip().split(None,1)
-                self.captions[key] = value
-        return self.captions
-
-    ## def on_menu(self, event):
-        ## id = str(event.GetId())
-        ## text = MENU_FUNC[id](self)
-        ## if text:
-            ## dlg = wx.MessageDialog(self,text,self.captions['T_MAIN'], wx.OK)
-            ## h = dlg.ShowModal()
-            ## dlg.Destroy()
-
-    def OnPageChanged(self, event):
-        old = event.GetOldSelection()
-        new = event.GetSelection()
-        ## sel = self.GetSelection()
-        ## self.log.write('OnPageChanged,  old:%d, new:%d, sel:%d\n' % (old, new, sel))
-        event.Skip()
-
-    def OnPageChanging(self, event):
-        old = event.GetOldSelection()
-        new = event.GetSelection()
-        ## sel = self.GetSelection()
-        ## self.log.write('OnPageChanging, old:%d, new:%d, sel:%d\n' % (old, new, sel))
-        event.Skip()
-
-
-def main(args=None):
-    app = wx.App()  # redirect=True, filename="hotkeys.log")
-    print('----------')
-    frame = MainWindow(None, -1, args)
-    app.MainLoop()

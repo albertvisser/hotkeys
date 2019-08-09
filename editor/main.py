@@ -12,6 +12,7 @@
 from __future__ import print_function
 import os
 # import sys
+import pdb
 import string
 import importlib
 ## import shutil
@@ -46,7 +47,7 @@ class HotkeyPanel:
         shared.log(self.pad)
         if self.pad == NO_PATH:
             print('init HotkeyPanel with NO_PATH')
-            # self.gui.setup_empty_screen(nodata, self.parent.parent.title)
+            self.gui.setup_empty_screen('No path data for HotKeyPanel', self.parent.parent.title)
             return
 
         nodata = ''
@@ -93,9 +94,6 @@ class HotkeyPanel:
                     self.otherstuff = self.reader.buildcsv(parent, showinfo=False)[1]
                 except FileNotFoundError:
                     nodata = "Can't build settings for {}".format(modulename)
-                # except AttributeError:
-                #    print('Got AttributeError for {}'.format(modulename))
-                #    raise
 
         if nodata:
             print('init HotkeyPanel with no data', nodata)
@@ -146,8 +144,8 @@ class HotkeyPanel:
         self.gui.set_title()
         if self.has_extrapanel:
             self.gui.captions_extra_fields()
-        if self.data:
-            self.populate_list()
+        # if self.data:
+        #     self.populate_list()
 
     def populate_list(self, pos=0):
         """vullen van de lijst
@@ -254,20 +252,21 @@ class Editor:
         else:
             self.gui.set_window_title(self.title)
             self.gui.statusbar_message(self.captions["T_HELLO"].format(self.captions["T_MAIN"]))
-            self.setup_tabs()
-            self.gui.setup_menu()
+            self.book = ChoiceBook(self)
+            self.gui.setup_tabs()
+            start = 0
+            if 'title' in self.ini and self.ini['title']:
+                self.title = self.ini['title']
+            if 'initial' in self.ini and self.ini['initial'] != '':
+                start = [x for x, y in self.ini['plugins']].index(self.ini['initial'])
+            self.book.gui.on_page_changed(start)
+            self.book.gui.set_selected(start)
+            self.setcaptions()
         self.gui.go()
 
-    def setup_tabs(self):
-        """add the tabbed window to the inteface
-        """
-        start = 0
-        if 'title' in self.ini and self.ini['title']:
-            self.title = self.ini['title']
-        if 'initial' in self.ini and self.ini['initial'] != '':
-            start = [x for x, y in self.ini['plugins']].index(self.ini['initial'])
-        self.book = ChoiceBook(self)
-        self.gui.setup_tabs(start)
+#     def setup_tabs(self):
+#         """add the tabbed window to the inteface
+#         """
 
     def get_menudata(self):
         """provide the application's menu definition to the program
@@ -285,8 +284,8 @@ class Editor:
                             ('M_SAVE', (self.m_save, 'Ctrl+S')), )),
                 ('M_HELP', (('M_ABOUT', (self.m_about, 'Ctrl+H')), )))
 
-    # menu callbacks
-    def m_read(self):
+    # menu callbacks (event argument is for compatibility between gui toolkits)
+    def m_read(self, event=None):
         """(menu) callback voor het lezen van de hotkeys
 
         vraagt eerst of het ok is om de hotkeys (opnieuw) te lezen
@@ -301,7 +300,7 @@ class Editor:
         self.book.page.readkeys()
         self.book.page.populate_list()
 
-    def m_save(self):
+    def m_save(self, event=None):
         """(menu) callback voor het terugschrijven van de hotkeys
 
         vraagt eerst of het ok is om de hotkeys weg te schrijven
@@ -317,7 +316,7 @@ class Editor:
             return
         self.gui.show_message('I_RSTRT')
 
-    def m_title(self):
+    def m_title(self, event=None):
         """menu callback voor het aanpassen van de schermtitel
         """
         oldtitle = self.title
@@ -331,7 +330,7 @@ class Editor:
                     self.title = self.captions["T_MAIN"]
                 self.set_title()
 
-    def m_loc(self):
+    def m_loc(self, event=None):
         """(menu) callback voor aanpassen van de bestandslocaties
 
         vraagt bij wijzigingen eerst of ze moeten worden opgeslagen
@@ -345,7 +344,7 @@ class Editor:
         self.last_added = None  # wordt in de hierna volgende dialoog ingesteld
         ok = self.gui.manage_filesettings()
         if ok:
-            selection = self.book.gui.get_selected()
+            selection = self.book.gui.get_selected_index()
             shared.modify_settings(self.ini)
 
             # update the screen(s)
@@ -362,6 +361,8 @@ class Editor:
                 test = self.book.gui.remove_tool(indx, program, new_programs)
                 if test:
                     hlpdict[program] = test
+                else:
+                    self.pluginfiles.pop(program)
 
             # add new ones, modify existing or leave them alone
             for indx, program in enumerate(new_programs):
@@ -386,7 +387,7 @@ class Editor:
                 selection -= 1
             self.book.gui.set_selected(selection)
 
-    def m_rebuild(self):
+    def m_rebuild(self, event=None):
         """rebuild csv data from (updated) settings
         """
         if not self.book.page.settings:
@@ -398,7 +399,7 @@ class Editor:
             self.gui.show_message('I_DEFRBLD')
             return
         try:
-            newdata = test(self)
+            newdata = test(self.book)
         except FileNotFoundError:
             self.gui.show_message('I_ERRRBLD')
             return
@@ -418,7 +419,7 @@ class Editor:
             mld = self.captions['I_#FOUND'].format(mld)
         self.gui.show_message(text=mld)
 
-    def m_tool(self):
+    def m_tool(self, event=None):
         """define tool-specific settings
         """
         if not self.book.page.settings:
@@ -441,7 +442,7 @@ class Editor:
             elif test_redef != old_redef and test_dets:
                 self.book.gui.set_panel_editable(test_redef)
 
-    def m_col(self):
+    def m_col(self, event=None):
         """define tool-specific settings: column properties
         """
         if not self.book.page.settings:
@@ -471,7 +472,7 @@ class Editor:
             self.book.page.gui.refresh_headers(headers)
             self.book.page.populate_list()
 
-    def m_entry(self):
+    def m_entry(self, event=None):
         """manual entry of keyboard shortcuts
         """
         if not all((self.book.page.settings, self.book.page.column_info)):
@@ -484,7 +485,7 @@ class Editor:
                                 self.book.page.column_info, self.book.page.data, self.ini['lang'])
                 self.book.page.populate_list()
 
-    def m_lang(self):
+    def m_lang(self, event=None):
         """(menu) callback voor taalkeuze
 
         past de settings aan en leest het geselecteerde language file
@@ -502,7 +503,7 @@ class Editor:
             self.readcaptions(lang)
             self.setcaptions()
 
-    def m_about(self):
+    def m_about(self, event=None):
         """(menu) callback voor het tonen van de "about" dialoog
         """
         self.gui.show_message(
@@ -510,7 +511,7 @@ class Editor:
                                                            shared.AUTH,
                                                            self.captions['T_LONG']).split(' / ')))
 
-    def m_pref(self):
+    def m_pref(self, event=None):
         """mogelijkheid bieden om een tool op te geven dat default getoond wordt
         """
         oldpref = self.ini.get("initial", None)
@@ -526,13 +527,13 @@ class Editor:
                 self.ini['initial'] = pref
                 shared.change_setting('initial', oldpref, pref, self.ini['filename'])
 
-    def m_exit(self):
+    def m_exit(self, event=None):
         """(menu) callback om het programma direct af te sluiten
         """
         self.exit()
 
     # other methods
-    def exit(self):  # , e=None):
+    def exit(self, event=None):
         """quit the application
         """
         if not self.book.page.gui.exit():
@@ -548,7 +549,6 @@ class Editor:
         # TODO: should actually be handled in the files definition dialog
         if mode == shared.mode_f and pref not in [x[0] for x in self.ini['plugins']]:
             oldmode, mode = mode, shared.mode_r
-            print(oldmode, mode)
             self.ini['startup'] = mode
             shared.change_setting('startup', oldmode, mode, self.ini['filename'])
         # when setting is 'remember', set the remembered tool to the current one
