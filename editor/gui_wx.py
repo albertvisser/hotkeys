@@ -1,14 +1,15 @@
 """HotKeys main program - gui specific code - wxPython version
 """
-import os
-import sys
-import functools
+# import os
+# import sys
+# import functools
 from types import SimpleNamespace
 import wx
 import wx.adv
-import wx.lib.mixins.listctrl  as  listmix
+import wx.lib.mixins.listctrl as listmix
 import editor.shared as shared
 import editor.dialogs_wx as hkd
+
 
 class MyListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin):
     """base class voor de listcontrol
@@ -71,13 +72,12 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
     def setup_list(self):
         """add the list widget to the interface
         """
-        wid = 1140, 594
         self.p0list = MyListCtrl(self, size=(1140, 594), style=wx.LC_REPORT | wx.BORDER_SUNKEN |
-                                             #~ wx.LC_VRULES |
-                                             wx.LC_HRULES | wx.LC_SINGLE_SEL)
+                                                               # wx.LC_VRULES |
+                                                               wx.LC_HRULES | wx.LC_SINGLE_SEL)
         sizer = wx.BoxSizer(wx.VERTICAL)
         if self.master.column_info:
-            listmix.ColumnSorterMixin.__init__(self, 3) # 5)
+            listmix.ColumnSorterMixin.__init__(self, 3)  # 5)
             for col, inf in enumerate(self.master.column_info):
                 title, width = inf[:2]
                 self.p0list.AppendColumn(self.master.captions[title])
@@ -160,9 +160,8 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
     def add_extra_fields(self):
         """fields showing details for selected keydef, to make editing possible
         """
-        return  # voor nu even overslaan
         self.screenfields = []
-        self._box = box = wx.Frame(self)
+        self._box = box = wx.Panel(self)
         # frameheight = 90
         # try:
         #     frameheight = self.master.reader.get_frameheight()  # user exit
@@ -171,27 +170,25 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         # box.setMaximumHeight(frameheight)
 
         if 'C_KEY' in self.master.fields:
-            self.lbl_key = qtw.QLabel(self.master.captions['C_KTXT'] + " ", box)
+            self.lbl_key = wx.StaticText(box, label=self.master.captions['C_KTXT'] + " ")
             if self.master.keylist is None:
-                ted = qtw.QLineEdit(box)
-                ted.setMaximumWidth(90)
-                ted.textChanged[str].connect(functools.partial(self.on_text, ted, str))
+                ted = wx.TextCtrl(box, size=(90, -1))
+                ted.Bind(wx.EVT_TEXT, self.on_text)
                 self.screenfields.append(ted)
                 self.txt_key = ted
             else:
-                cb = qtw.QComboBox(box)
-                cb.setMaximumWidth(90)
-                cb.addItems(self.master.keylist)  # niet sorteren
-                cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox, cb, str))
+                cb = wx.ComboBox(box, size=(90, -1), style=wx.CB_DROPDOWN,
+                                 choices=self.master.keylist)  # niet sorteren
+                cb.Bind(wx.EVT_COMBOBOX, self.on_combobox)
                 self.screenfields.append(cb)
                 self.cmb_key = cb
 
         if 'C_MODS' in self.master.fields:
             for ix, x in enumerate(('M_CTRL', 'M_ALT', 'M_SHFT', 'M_WIN')):
-                cb = qtw.QCheckBox(self.master.captions[x].join(("+ ", "")), box)
-                cb.setChecked(False)
+                cb = wx.CheckBox(box, self.master.captions[x].join(("+ ", "")))
+                cb.SetValue(False)
                 self.screenfields.append(cb)
-                cb.stateChanged.connect(functools.partial(self.on_checkbox, cb))
+                cb.Bind(wx.EVT_CHECKBOX, self.on_checkbox)
                 if ix == 0:
                     self.cb_ctrl = cb
                 elif ix == 1:
@@ -202,40 +199,38 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
                     self.cb_win = cb
 
         if 'C_CNTXT' in self.master.fields:
-            self.lbl_context = qtw.QLabel(self.master.captions['C_CNTXT'], box)
-            cb = qtw.QComboBox(box)
-            cb.addItems(self.master.contextslist)
-            cb.setMaximumWidth(110)
-            cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox, cb, str))
+            self.lbl_context = wx.StaticText(box, label=self.master.captions['C_CNTXT'])
+            cb = wx.ComboBox(box, size=(110, -1), style=wx.CB_READONLY,
+                             choices=self.master.contextslist)
+            cb.Bind(wx.EVT_COMBOBOX, self.on_combobox)
             self.screenfields.append(cb)
             self.cmb_context = cb
 
         if 'C_CMD' in self.master.fields:
-            self.txt_cmd = qtw.QLabel(self.master.captions['C_CTXT'] + " ", box)
-            cb = qtw.QComboBox(self)
-            cb.setMaximumWidth(150)
+            self.txt_cmd = wx.StaticText(box, label=self.master.captions['C_CTXT'] + " ")
+            cb = wx.ComboBox(self, size=(150, -1), style=wx.CB_READONLY)
             if 'C_CNTXT' not in self.master.fields:  # load on choosing context
-                cb.addItems(self.master.commandslist)
-            cb.currentIndexChanged[str].connect(functools.partial(self.on_combobox, cb, str))
+                cb.SetItems(self.master.commandslist)
+            cb.Bind(wx.EVT_COMBOBOX, self.on_combobox)
             self.screenfields.append(cb)
             self.cmb_commando = cb
 
-        self.b_save = qtw.QPushButton(self.master.captions['C_SAVE'], box)
-        self.b_save.setEnabled(False)
-        self.b_save.clicked.connect(self.on_update)
-        self.b_del = qtw.QPushButton(self.master.captions['C_DEL'], box)
-        self.b_del.setEnabled(False)
-        self.b_del.clicked.connect(self.on_delete)
+        self.b_save = wx.Button(box, label=self.master.captions['C_SAVE'])
+        self.b_save.Enable(False)
+        self.b_save.Bind(wx.EVT_BUTTON, self.on_update)
+        self.b_del = wx.Button(box, label=self.master.captions['C_DEL'])
+        self.b_del.Enable(False)
+        self.b_del.Bind(wx.EVT_BUTTON, self.on_delete)
         self._savestates = (False, False)
 
         if 'C_DESC' in self.master.fields:
-            self.txt_oms = qtw.QTextEdit(box)
-            self.txt_oms.setReadOnly(True)
+            self.txt_oms = wx.TextCtrl(box, style=wx.TE_MULTILINE | wx.TE_READONLY)
 
-        try:
-            self.master.reader.add_extra_fields(self, box)  # user exit
-        except AttributeError:
-            pass
+        # FIXME: even wachten tot plugin ook is aangepast
+        # try:
+        #     self.master.reader.add_extra_fields(self, box)  # user exit
+        # except AttributeError:
+        #     pass
 
         self.set_extrascreen_editable(bool(int(self.master.settings['RedefineKeys'])))
 
@@ -256,99 +251,98 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
     def layout_extra_fields(self, sizer):
         """add the extra fields to the layout
         """
-        return  # voor nu even overslaan
-        bsizer = qtw.QVBoxLayout()
+        bsizer = wx.BoxSizer(wx.VERTICAL)
 
-        sizer1 = qtw.QHBoxLayout()
-        sizer2 = qtw.QHBoxLayout()
+        sizer1 = wx.BoxSizer(wx.HORIZONTAL)
+        sizer2 = wx.BoxSizer(wx.HORIZONTAL)
         if 'C_KEY' in self.master.fields:
-            sizer3 = qtw.QHBoxLayout()
-            sizer3.addWidget(self.lbl_key)
+            sizer3 = wx.BoxSizer(wx.HORIZONTAL)
+            sizer3.Add(self.lbl_key, 0)
             if self.master.keylist is None:
-                sizer3.addWidget(self.txt_key)
+                sizer3.Add(self.txt_key, 0)
             else:
-                sizer3.addWidget(self.cmb_key)
-            sizer3.addStretch()
-            sizer2.addLayout(sizer3)
+                sizer3.Add(self.cmb_key, 0)
+            sizer2.Add(sizer3, 0)
 
         if 'C_MODS' in self.master.fields:
-            sizer3 = qtw.QHBoxLayout()
-            sizer3.addWidget(self.cb_ctrl)
-            sizer3.addWidget(self.cb_alt)
-            sizer3.addWidget(self.cb_shift)
-            sizer3.addWidget(self.cb_win)
-            sizer3.addStretch()
-            sizer2.addLayout(sizer3)
+            sizer3 = wx.BoxSizer(wx.HORIZONTAL)
+            sizer3.Add(self.cb_ctrl, 0)
+            sizer3.Add(self.cb_alt, 0)
+            sizer3.Add(self.cb_shift, 0)
+            sizer3.Add(self.cb_win, 0)
+            sizer2.Add(sizer3, 0)
 
-        sizer1.addLayout(sizer2)
-        sizer1.addStretch()
+        sizer1.Add(sizer2, 0)
         if 'C_CNTXT' in self.master.fields:
-            sizer2 = qtw.QHBoxLayout()
-            sizer2.addWidget(self.lbl_context)
-            sizer2.addWidget(self.cmb_context)
-            sizer1.addLayout(sizer2)
+            sizer2 = wx.BoxSizer(wx.HORIZONTAL)
+            sizer2.Add(self.lbl_context, 0)
+            sizer2.Add(self.cmb_context, 0)
+            sizer1.Add(sizer2, 0)
 
         if 'C_CMD' in self.master.fields:
-            sizer2 = qtw.QHBoxLayout()
-            sizer2.addWidget(self.txt_cmd)
-            sizer2.addWidget(self.cmb_commando)
-            sizer1.addLayout(sizer2)
+            sizer2 = wx.BoxSizer(wx.HORIZONTAL)
+            sizer2.Add(self.txt_cmd, 0)
+            sizer2.Add(self.cmb_commando, 0)
+            sizer1.Add(sizer2, 0)
 
-        try:
-            self.master.reader.layout_extra_fields_topline(self, sizer1)  # user exit
-        except AttributeError:
-            pass
+        # FIXME: even wachten tot plugin ook is aangepast
+        # try:
+        #     self.master.reader.layout_extra_fields_topline(self, sizer1)  # user exit
+        # except AttributeError:
+        #     pass
 
-        sizer1.addWidget(self.b_save)
-        sizer1.addWidget(self.b_del)
-        bsizer.addLayout(sizer1)
+        sizer1.Add(self.b_save, 0)
+        sizer1.Add(self.b_del, 0)
+        bsizer.Add(sizer1, 0)
 
-        try:
-            test = self.master.reader.layout_extra_fields_nextline
-        except AttributeError:
-            pass
-        else:
-            sizer1 = qtw.QHBoxLayout()
-            self.master.reader.layout_extra_fields_nextline(self, sizer1)  # user exit
-            bsizer.addLayout(sizer1)
+        # FIXME: even wachten tot plugin ook is aangepast
+        # try:
+        #     test = self.master.reader.layout_extra_fields_nextline
+        # except AttributeError:
+        #     pass
+        # else:
+        #     sizer1 = wx.BoxSizer(wx.HORIZONTAL)
+        #     self.master.reader.layout_extra_fields_nextline(self, sizer1)  # user exit
+        #     bsizer.Add(sizer1, 0)
 
-        sizer1 = qtw.QHBoxLayout()
+        sizer1 = wx.BoxSizer(wx.HORIZONTAL)
         if 'C_DESC' in self.master.fields:
-            sizer2 = qtw.QVBoxLayout()
-            sizer2.addWidget(self.txt_oms)
-            sizer1.addLayout(sizer2, 2)
+            sizer2 = wx.BoxSizer(wx.VERTICAL)
+            sizer2.Add(self.txt_oms, 1, wx.EXPAND)
+            sizer1.Add(sizer2, 1, wx.EXPAND)
 
-        try:
-            self.master.reader.layout_extra_fields(self, sizer1)  # user exit
-        except AttributeError:
-            pass
+        # FIXME: even wachten tot plugin ook is aangepast
+        # try:
+        #     self.master.reader.layout_extra_fields(self, sizer1)  # user exit
+        # except AttributeError:
+        #     pass
 
-        bsizer.addLayout(sizer1)
+        bsizer.Add(sizer1, 0)
 
-        self._box.setLayout(bsizer)
-        sizer.addWidget(self._box)
+        self._box.SetSizer(bsizer)
+        sizer.Add(self._box)
 
     def captions_extra_fields(self):
         """to be called on changing the language
         """
-        return  # voor nu even overslaan
         if 'C_KEY' in self.master.fields:
-            self.lbl_key.setText(self.master.captions['C_KTXT'])
+            self.lbl_key.SetLabel(self.master.captions['C_KTXT'])
         if 'C_MODS' in self.master.fields:
-            self.cb_win.setText(self.master.captions['M_WIN'].join(("+", "  ")))
-            self.cb_ctrl.setText(self.master.captions['M_CTRL'].join(("+", "  ")))
-            self.cb_alt.setText(self.master.captions['M_ALT'].join(("+", "  ")))
-            self.cb_shift.setText(self.master.captions['M_SHFT'].join(("+", "  ")))
+            self.cb_win.SetLabel(self.master.captions['M_WIN'].join(("+", "  ")))
+            self.cb_ctrl.SetLabel(self.master.captions['M_CTRL'].join(("+", "  ")))
+            self.cb_alt.SetLabel(self.master.captions['M_ALT'].join(("+", "  ")))
+            self.cb_shift.SetLabel(self.master.captions['M_SHFT'].join(("+", "  ")))
         if 'C_CNTXT' in self.master.fields:
-            self.lbl_context.setText(self.master.captions['C_CNTXT'] + ':')
+            self.lbl_context.SetLabel(self.master.captions['C_CNTXT'] + ':')
         if 'C_CMD' in self.master.fields:
-            self.txt_cmd.setText(self.master.captions['C_CTXT'])
-        self.b_save.setText(self.master.captions['C_SAVE'])
-        self.b_del.setText(self.master.captions['C_DEL'])
-        try:
-            self.master.reader.captions_extra_fields(self)  # user exit
-        except AttributeError:
-            pass
+            self.txt_cmd.SetLabel(self.master.captions['C_CTXT'])
+        self.b_save.SetLabel(self.master.captions['C_SAVE'])
+        self.b_del.SetLabel(self.master.captions['C_DEL'])
+        # FIXME: even wachten tot plugin ook is aangepast
+        # try:
+        #     self.master.reader.captions_extra_fields(self)  # user exit
+        # except AttributeError:
+        #     pass
 
     def GetListCtrl(self):
         """ten behoeve van de columnsorter mixin"""
@@ -363,12 +357,12 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         kleur = False
         for key in range(len(self.data.items)):
             if kleur:
-                #~ self.p0list.SetItemBackgroundColour(key,wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENU))
-            #~ else:
-                self.p0list.SetItemBackgroundColour(key,wx.SystemSettings.GetColour(wx.SYS_COLOUR_INFOBK))
+            #     self.p0list.SetItemBackgroundColour(key, wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENU))
+            # else:
+                self.p0list.SetItemBackgroundColour(key, wx.SystemSettings.GetColour(wx.SYS_COLOUR_INFOBK))
             kleur = not kleur
 
-    def on_column_click(self, event):
+    def on_column_click(self, event):  # FIXME: do we need this for wx version?
         """callback op het klikken op een kolomtitel
         """
         print("on_column_click: %d\n" % event.GetColumn())
@@ -381,7 +375,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         print("on_doubleclick item %s\n" % self.p0list.GetItemText(self.current_item))
         event.Skip()
 
-    def on_text(self, event):  #, ted, text):
+    def on_text(self, event):  # , ted, text):
         """on changing a text entry
         """
         ted = event.GetEventWidget()
@@ -510,65 +504,53 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
                 if 'C_CMD' in self.fields:
                     self.b_save.Enable(False)
 
-    def on_item_selected(self, event):  # LET OP: is hieronder nog een keer gedefinieerd
+    def on_item_selected(self, event):
         """callback op het selecteren van een item
 
         velden op het hoofdscherm worden bijgewerkt vanuit de selectie"""
-        print('in on_item_selected', event)
-        seli = self.p0list.GetItemData(event.GetEventObject().GetFirstSelected())  # Index())
+        item = event.GetItem()
+        print('in on_item_selected', event, item)
+        # check: is het überhaupt nodig?
+        if not self.master.has_extrapanel:  # dit is hier wel voldoende
+            return
+        # check: zitten we niet te vroeg in het proces?
+        if not item:  # bv. bij p0list.clear()
+            return
+        # if self.master.initializing_screen:
+        #     self.refresh_extrascreen(event.GetItem())  # newitem)
+        #     self.master.initializing_screen = False
+        #     return
+        # seli = self.p0list.GetItemData(event.GetEventObject().GetFirstSelected())  # Index())
         ## print "Itemselected",seli,self.data[seli]
-        # self.vuldetails(seli)
-        self.on_item_selected_2(seli)
+        # self.refresh_extrascreen(seli)
+        self.refresh_extrascreen(item)  # newitem)
+        # self.on_item_selected_2(seli)
         event.Skip()
 
-    def on_item_deselected(self, event):    # zit ook in de on_item_selected hieronder
+    def on_item_deselected(self, event):
         """callback op het niet meer geselecteerd zijn van een item
 
-        er wordt gevraagd of de key definitie moet worden bijgewerkt"""
-        indx = event.GetIndex()  # EventObject()
-        # if not test:
-        #     return
-        # print(test)
-        seli = self.p0list.GetItemData(indx)  # test.GetFirstSelected())  # Index())
-        ## print "ItemDeselected",seli,self.data[seli]
-        if self.defchanged:  # zie onder bij uitvraging op "make_change"
-            self.defchanged = False
-            ok, cancel = hkd.show_message(self, 'Q_SAVCHG')
-            if cancel:
-                return
-            if ok:
-                self.aanpassen()
-
-    def on_item_activated(self, event):
-        """callback op het activeren van een item (onderdeel van het selecteren)
+        er wordt gevraagd of de key definitie moet worden bijgewerkti
         """
-        print('in on_item_activated', event)
-        self.current_item = event.m_itemIndex  # GetEventIndex()
-
-    def on_item_selected_2(self, newitem, olditem=None):  # proberen deze te realiseren in de
-                                                          # callbacks hierboven
-        """callback on selection of an item
-
-        velden op het hoofdscherm worden bijgewerkt vanuit de selectie
-
-        bevat een soort detectie of de definitie gewijzigd is die rekening probeert
-        te houden met of een nieuwe keydef wordt aangemaakt die een kopie is van de
-        oude voor een andere keycombo - alleen die triggert ook bij opbouwen van
-        het scherm
-        """
-        print('in on_item_selected', newitem, olditem)
-        # TODO: kijken wat hiervan bij de gui-onafhankelijke code kan worden ondergebracht
-        if not self.master.has_extrapanel:
-            return
-        # if not int(self.parent.page.settings[shared.SettType.RDEF.value]):
-        #     return
-        if not newitem:  # bv. bij p0list.clear()
-            return
-        self.initializing_keydef = True
+        olditem = event.GetItem()
+        print('in on_item_deselected', event, olditem)
+        return  # voorlopig verder negeren
+        # TODO: kijken wat hiervan aan GUI onafhankelijke code kan worden uitgefilterd
+        # check 1: zitten we niet te vroeg in het proces?
         if self.master.initializing_screen:
-            self.refresh_extrascreen(newitem)
-            self.initializing_keydef = False
             return
+        if not olditem:  # bv. bij p0list.clear()
+            return
+        #  check 2: kunnen we wijzigen (hebben we een extra schermdeel is niet voldoende)
+        ## if not self.master.has_extrapanel:
+            ## return
+        if not bool(self.parent.master.page.settings[shared.SettType.RDEF.value]):
+            return
+
+        # indx = event.GetIndex()  # EventObject()
+        # seli = self.p0list.GetItemData(indx)  # test.GetFirstSelected())  # Index())
+
+        # bepalen wat er aan de hand is
         other_item = other_cntxt = other_cmd = False
         if 'C_KEYS' in self.master.fields:
             origkey = self._origdata[self.master.ix_key]
@@ -576,9 +558,9 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
             other_item = key != origkey
         if 'C_MODS' in self.master.fields:
             origmods = ''.join([y for x, y in zip(self.master.ix_mods, ('WCAS'))
-                if self._origdata[x]])
+                                if self._origdata[x]])
             mods = ''.join([y for x, y in zip(self.master.ix_mods, ('WCAS'))
-                if self._newdata[x]])
+                            if self._newdata[x]])
             other_item = other_item or mods != origmods
         if 'C_CMD' in self.master.fields:
             origcmd = self._origdata[self.ix_cmd]
@@ -588,8 +570,11 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
             origcntxt = self._origdata[self.ix_cntxt]
             context = self._newdata[self.ix_cntxt]
             other_cntxt = context != origcntxt
+        # deze afvraging wordt lastig want in deseleced weet ik nog niet wat new_item wordt
         cursor_moved = True if newitem != olditem and olditem is not None else False
         any_change = other_item or other_cmd or other_cntxt
+
+        # kijken of de selectie al bestaat
         found = False
         for number, item in self.master. data.items():
             keymatch = modmatch = cntxtmatch = True
@@ -603,6 +588,8 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
                 found = True
                 indx = number
                 break
+
+        # vragen wat er moet gebeuren
         make_change = False
         if any_change:
             if cursor_moved:
@@ -614,11 +601,12 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
                     make_change = True
             else:
                 make_change = True
+
         # TODO note this only works for one specific plugin (tcmdrkys) I think
         # which is no problem as long as I don't modify keydefs
         if make_change:
-            item = self.p0list.currentItem()
-            pos = self.p0list.indexOfTopLevelItem(item)
+            item = self.p0list.currentItem()                # TODO nog omschrijven
+            pos = self.p0list.indexOfTopLevelItem(item)     # deze ook
             if found:
                 self.data[indx] = (key, mods, 'U', cmnd, self.omsdict[cmnd])
             else:
@@ -647,10 +635,14 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
                 self.reader.on_extra_selected(self, item)  # user exit
             except AttributeError:
                 pass
-            newitem = self.p0list.topLevelItem(pos)
+            # newitem = self.p0list.topLevelItem(pos)
             self.populate_list(pos)    # refresh
-        self.refresh_extrascreen(newitem)
-        self.initializing_keydef = False
+
+    def on_item_activated(self, event):
+        """callback op het activeren van een item (onderdeel van het selecteren)
+        """
+        print('in on_item_activated', event)
+        self.current_item = event.GetItem()  # GetEventIndex()
 
     def on_update(self, event):
         """callback for editing kb shortcut
@@ -672,66 +664,67 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         print('in refresh_extrascreen', selitem)
         if not selitem:  # bv. bij p0list.clear()
             return
-        seli = selitem.data(0, core.Qt.UserRole)
-        if sys.version < '3':
-            seli = seli.toPyObject()
+        seli = selitem.GetData()
         keydefdata = self.master.data[seli]
         if 'C_CMD' in self.master.fields:
-            self.b_save.setEnabled(False)
-            self.b_del.setEnabled(False)
+            self.b_save.Enable(False)
+            self.b_del.Enable(False)
         self._origdata = self.master.init_origdata[:]
         for indx, item in enumerate(keydefdata):
             if self.master.column_info[indx][0] == 'C_KEY':
                 key = item
                 if self.master.keylist is None:
-                    self.txt_key.setText(key)
+                    self.txt_key.SetText(key)
                 else:
-                    ix = self.master.keylist.index(key)
-                    self.cmb_key.setCurrentIndex(ix)
+                    # ix = self.master.keylist.index(key)
+                    self.cmb_key.SetString(key)
                 self._origdata[self.master.ix_key] = key
             elif self.master.column_info[indx][0] == 'C_MODS':
                 mods = item
-                self.cb_shift.setChecked(False)
-                self.cb_ctrl.setChecked(False)
-                self.cb_alt.setChecked(False)
-                self.cb_win.setChecked(False)
-                for x, y, z in zip('SCAW', self.master.ix_mods, (self.cb_shift, self.cb_ctrl,
-                    self.cb_alt, self.cb_win)):
+                self.cb_shift.SetValue(False)
+                self.cb_ctrl.SetValue(False)
+                self.cb_alt.SetValue(False)
+                self.cb_win.SetValue(False)
+                for x, y, z in zip('SCAW',
+                                   self.master.ix_mods,
+                                   (self.cb_shift, self.cb_ctrl, self.cb_alt, self.cb_win)):
                     if x in mods:
                         self._origdata[y] = True
-                        z.setChecked(True)
+                        z.SetValue(True)
             elif self.master.column_info[indx][0] == 'C_TYPE':
                 soort = item
                 if soort == 'U':
-                    self.b_del.setEnabled(True)
+                    self.b_del.Enable(True)
             elif self.master.column_info[indx][0] == 'C_CNTXT' and self.master.contextslist:
                 context = item
-                ix = self.master.contextslist.index(context)
-                self.cmb_context.setCurrentIndex(ix)
+                # ix = self.master.contextslist.index(context)
+                # self.cmb_context.setCurrentIndex(ix)
+                self.cmb_context.SetString(context)
                 self._origdata[self.ix_cntxt] = context
             elif self.master.column_info[indx][0] == 'C_CMD' and self.master.commandslist:
                 command = item
                 if 'C_CNTXT' in self.fields:
-                    self.cmb_commando.clear()
-                    context = self.cmb_context.currentText()
+                    self.cmb_commando.Clear()
+                    context = self.cmb_context.GetStringSelection()  # currentText()
                     # if self.contextactionsdict:
                     #     actionslist = self.master.contextactionsdict[context]
                     # else:
                     #     actionslist = self.master.commandslist
                     actionslist = self.master.contextactionsdict[context] or self.master.commandslist
-                    self.cmb_commando.addItems(actionslist)
-                    try:
-                        ix = actionslist.index(command)
-                    except ValueError:
-                        ix = -1
-                else:
-                    ix = self.master.commandslist.index(command)
-                if ix >= 0:
-                    self.cmb_commando.setCurrentIndex(ix)
+                    self.cmb_commando.SetItems(actionslist)
+                    # try:
+                    #     ix = actionslist.index(command)
+                    # except ValueError:
+                    #     ix = -1
+                # else:
+                    # ix = self.master.commandslist.index(command)
+                # if ix >= 0:
+                #     self.cmb_commando.setCurrentIndex(ix)
+                self.cmb_commando.SetString(command)
                 self._origdata[self.ix_cmd] = command
             elif self.master.column_info[indx][0] == 'C_DESC':
                 oms = item
-                self.txt_oms.setText(oms)
+                self.txt_oms.SetValue(oms)
             else:
                 try:
                     self.master.reader.vul_extra_details(self, indx, item)  # user exit
@@ -745,10 +738,12 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         # TODO uitzetten overbodig maken
         print("in do_modification - Aanpassen uitgezet, werkt nog niet voor alles")
         return
-        item = self.p0list.currentItem()
-        pos = self.p0list.indexOfTopLevelItem(item)
+        # zou dit niet hetzelfde moeten zijn als het laatste stuk in on_item_deselected
+        #   (onder de conditie "make_change")?
+        item = self.p0list.currentItem()                # TODO nog omschrijven
+        pos = self.p0list.indexOfTopLevelItem(item)     # deze ook
         if delete:
-            indx = item.data(0, core.Qt.UserRole)
+            indx = item.data(0, core.Qt.UserRole)       # deze ook
             if self.captions["{:03}".format(indx)] == 'C_TYPE':
                 if self.data[indx][1] == "S":  # can't delete standard key
                     hkd.show_message(self.parent, 'I_STDDEF')
@@ -863,20 +858,8 @@ class TabbedInterface(wx.Panel):
         """
         self.b_next.SetLabel(self.parent.editor.captions['C_NEXT'])
         self.b_prev.SetLabel(self.parent.editor.captions['C_PREV'])
-        #print(self.sel_text.GetSize())
         self.sel_text.SetLabel(self.parent.editor.captions['C_SELPRG'])
-        #print(self.sel_text.GetSize())
-        #test = len(self.sel_text.GetLabel()) * 9
-        #print(test)
-        #self.sel_text.SetSize(test, -1)
-        #print(self.sel_text.GetSize())
-        #print(self.find_text.GetSize())
         self.find_text.SetLabel(self.parent.editor.captions['C_FIND'])
-        #print(self.find_text.GetSize())
-        #test = len(self.find_text.GetLabel()) * 9
-        #print(test)
-        #self.find_text.SetSize(test, -1)
-        #print(self.find_text.GetSize())
         if self.filter_on:
             self.b_filter.SetLabel(self.parent.editor.captions['C_FLTOFF'])
         else:
@@ -889,7 +872,7 @@ class TabbedInterface(wx.Panel):
     def after_changing_page(self, event):
         """callback for change in tool page selector
         """
-        self.on_page_changed(event.GetEventObject().GetSelection())  #Value())  # for now
+        self.on_page_changed(event.GetEventObject().GetSelection())  # GetValue())  # for now
 
     def on_page_changed(self, indx):   # op deze ook een changing en changed zetten ipv deze combo?
         """callback for change in tool page
@@ -912,7 +895,7 @@ class TabbedInterface(wx.Panel):
         print('in on_page_changed - going to set up menu')
         self.parent.setup_menu()
         if not all((self.master.page.settings, self.master.page.column_info,
-            self.master.page.data)):  # leaving: page data incomplete (e.g. no keydefs)
+                    self.master.page.data)):  # leaving: page data incomplete (e.g. no keydefs)
             return
         self.master.page.setcaptions()
         items = [self.parent.editor.captions[x[0]] for x in self.master.page.column_info]
@@ -942,7 +925,7 @@ class TabbedInterface(wx.Panel):
                 self.zoekcol = ix
                 break
         # hier moet ik nog iets moois op vinden:
-        self.items_found = [] # page.gui.p0list.findItems(text, core.Qt.MatchContains, self.zoekcol)
+        self.items_found = []  # page.gui.p0list.findItems(text, core.Qt.MatchContains, self.zoekcol)
         self.b_next.Enable(False)
         self.b_prev.Enable(False)
         self.b_filter.Enable(False)
@@ -1029,8 +1012,8 @@ class Gui(wx.Frame):
         wid = 1140 if shared.LIN else 688
         hig = 594
         super().__init__(None, size=(wid, hig), style=wx.DEFAULT_FRAME_STYLE |
-                ## wx.BORDER_SIMPLE |
-                wx.NO_FULL_REPAINT_ON_RESIZE)
+                                                      # wx.BORDER_SIMPLE |
+                                                      wx.NO_FULL_REPAINT_ON_RESIZE)
         self.sb = self.CreateStatusBar()
         self.menu_bar = wx.MenuBar()
         self.menuitems = {}
@@ -1128,37 +1111,38 @@ class Gui(wx.Frame):
 
     def get_textinput(self, text, prompt):
         "relay"
-        text, ok = qtw.QInputDialog.getText(self, text, prompt, text=text)
-        return text, ok == qtw.QDialog.Accepted
+        text, ok = qtw.QInputDialog.getText(self, text, prompt, text=text)  # TODO omschrijven
+        return text, ok == wx.ID_OK
 
     def get_choice(self, title, caption, choices, current):
-        "relay"
+        "relay"  # TODO omschrijven
         return qtw.QInputDialog.getItem(self, title, caption, choices, current, editable=False)
 
     def manage_filesettings(self):
         "relay"
         ok = hkd.FilesDialog(self, self.editor).exec_()
-        return ok == qtw.QDialog.Accepted
+        return ok == wx.ID_OK
 
     def manage_extrasettings(self):
         "relay"
         dlg = hkd.ExtraSettingsDialog(self, self.editor).exec_()
-        return dlg == qtw.QDialog.Accepted
+        return dlg == wx.ID_OK
 
     def manage_columnsettings(self):
         "relay"
         dlg = hkd.ColumnSettingsDialog(self, self.editor).exec_()
-        return dlg == qtw.QDialog.Accepted
+        return dlg == wx.ID_OK
 
     def manual_entry(self):
         "relay"
         dlg = hkd.EntryDialog(self, self.editor).exec_()
-        return dlg == qtw.QDialog.Accepted
+        return dlg == wx.ID_OK
 
     def manage_startupsettings(self):
         "relay"
         ok = hkd.InitialToolDialog(self, self.editor).exec_()
-        return ok == qtw.QDialog.Accepted
+        return ok == wx.ID_OK
 
     def close(self, event=None):
+        """applicatie afsluiten"""
         self.Close(True)
