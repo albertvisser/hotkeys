@@ -534,15 +534,16 @@ class Editor:
 
     # other methods
     def exit(self, event=None):
-        """quit the application
+        """quit the applicationi - extra actions to perform on closing
         """
-        if not self.book.page.gui.exit():
-            return
-        self.close()
-
-    def close(self):
-        """extra actions to perform on closing
-        """
+        # if not self.book.page.gui.exit():
+        #     return
+        if self.book.page.gui.modified:
+            ok, noexit = hkd.ask_ync_question(self, 'Q_SAVXIT')
+            if ok:
+                self.savekeys()
+            if noexit:
+                return
         mode = self.ini.get("startup", '')
         pref = self.ini.get("initial", '')
         # when setting is 'fixed', don't remember a startup tool that is removed from the config
