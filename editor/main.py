@@ -18,7 +18,8 @@ import importlib
 ## import shutil
 
 import editor.shared as shared
-from .gui import Gui, TabbedInterface, SingleDataInterface
+import editor.gui as gui
+# from .gui import Gui, TabbedInterface, SingleDataInterface
 # from .gui_qt import DummyPage
 NO_PATH = 'NO_PATH'
 
@@ -38,7 +39,7 @@ class HotkeyPanel:
         self.initializing_screen = True
         self.modified = False
 
-        self.gui = SingleDataInterface(self.parent.gui, self)
+        self.gui = gui.SingleDataInterface(self.parent.gui, self)
 
         self.captions = self.parent.parent.captions
         self.filtertext = ''
@@ -136,12 +137,12 @@ class HotkeyPanel:
             pass
         shared.writecsv(self.pad, self.settings, self.column_info, self.data,
                         self.parent.parent.ini['lang'])
-        self.gui.set_title(modified=False)
+        self.set_title(modified=False)
 
     def setcaptions(self):
         """update captions according to selected language
         """
-        self.gui.set_title()
+        self.set_title()
         if self.has_extrapanel:
             self.gui.captions_extra_fields()
         # if self.data:
@@ -209,6 +210,26 @@ class HotkeyPanel:
         if self.keylist:
             self.keylist.sort()
 
+    def set_title(self, modified=None):
+        """set title and adapt to modified flag
+        if modified flag is not supplied, use its current state
+        """
+        if modified is not None:
+            self.modified = False
+        title = self.parent.parent.title
+        if self.modified:
+            title += ' ' + self.captions["T_MOD"]
+        self.gui.set_title(title)
+
+    def exit(self):
+        "ask if we cal leave the page"
+        if self.modified:
+            ok, noexit = hkd.ask_ync_question(self, 'Q_SAVXIT')
+            if ok:
+                self.savekeys()
+            if noexit:
+                return False
+        return True
 
 class ChoiceBook:
     """Het schermdeel dat de selector, zoekfunctie en de gegevenstabel toont
@@ -217,7 +238,7 @@ class ChoiceBook:
         self.parent = parent
         self.page = None
 
-        self.gui = TabbedInterface(self.parent.gui, self)
+        self.gui = gui.TabbedInterface(self.parent.gui, self)
         self.gui.setup_selector()
         self.gui.setup_search()
 
@@ -246,7 +267,7 @@ class Editor:
         self.title = self.captions["T_MAIN"]
         self.pluginfiles = {}
         self.book = None
-        self.gui = Gui(self)
+        self.gui = gui.Gui(self)
         if self.ini['plugins'] == []:
             self.gui.show_empty_screen()
         else:
@@ -292,10 +313,10 @@ class Editor:
         zet de gelezen keys daarna ook in de gui
         """
         if not self.book.page.settings:
-            self.gui.show_message('I_ADDSET')
+            gui.show_message('I_ADDSET')
             return
         if not self.book.page.modified:
-            if not self.gui.ask_question('Q_NOCHG'):
+            if not gui.ask_question('Q_NOCHG'):
                 return
         self.book.page.readkeys()
         self.book.page.populate_list()
@@ -307,28 +328,28 @@ class Editor:
         vraagt daarna eventueel of de betreffende applicatie geherstart moet worden
         """
         if not self.book.page.modified:
-            if not self.gui.ask_question('Q_NOCHG'):
+            if not gui.ask_question('Q_NOCHG'):
                 return
         try:
             self.book.page.savekeys()
         except AttributeError:
-            self.gui.show_message('I_DEFSAV')
+            gui.show_message('I_DEFSAV')
             return
-        self.gui.show_message('I_RSTRT')
+        gui.show_message('I_RSTRT')
 
     def m_title(self, event=None):
         """menu callback voor het aanpassen van de schermtitel
         """
         oldtitle = self.title
-        newtitle, ok = self.gui.get_textinput(oldtitle, self.captions["T_TITLE"])
+        newtitle, ok = gui.get_textinput(oldtitle, self.captions["T_TITLE"])
         if ok:
             if newtitle != oldtitle:
                 self.title = self.ini['title'] = newtitle
                 shared.change_setting('title', oldtitle, newtitle, self.ini['filename'])
                 if not newtitle:
-                    self.gui.show_message('I_STITLE')
+                    gui.show_message('I_STITLE')
                     self.title = self.captions["T_MAIN"]
-                self.set_title()
+                self.book.page.set_title()
 
     def m_loc(self, event=None):
         """(menu) callback voor aanpassen van de bestandslocaties
@@ -342,7 +363,7 @@ class Editor:
         current_paths = [y for x, y in self.ini["plugins"]]
 
         self.last_added = None  # wordt in de hierna volgende dialoog ingesteld
-        ok = self.gui.manage_filesettings()
+        ok = gui.manage_filesettings(self)
         if ok:
             selection = self.book.gui.get_selected_index()
             shared.modify_settings(self.ini)
@@ -391,17 +412,17 @@ class Editor:
         """rebuild csv data from (updated) settings
         """
         if not self.book.page.settings:
-            self.gui.show_message('I_ADDSET')
+            gui.show_message('I_ADDSET')
             return
         try:
             test = self.book.page.reader.buildcsv
         except AttributeError:
-            self.gui.show_message('I_DEFRBLD')
+            gui.show_message('I_DEFRBLD')
             return
         try:
             newdata = test(self.book)
         except FileNotFoundError:
-            self.gui.show_message('I_ERRRBLD')
+            gui.show_message('I_ERRRBLD')
             return
         if newdata[0]:
             self.book.page.data = newdata[0]
@@ -417,7 +438,7 @@ class Editor:
             except IndexError:
                 mld = 'No extra definition'
             mld = self.captions['I_#FOUND'].format(mld)
-        self.gui.show_message(text=mld)
+        gui.show_message(text=mld)
 
     def m_tool(self, event=None):
         """define tool-specific settings
@@ -425,7 +446,7 @@ class Editor:
         if not self.book.page.settings:
             self.book.page.settings = {x: '' for x in shared.csv_settingnames}
         old_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
-        ok = self.gui.manage_extrasettings()
+        ok = gui.manage_extrasettings(self)
         if ok:
             shared.writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
                             self.book.page.data, self.ini['lang'])
@@ -446,9 +467,9 @@ class Editor:
         """define tool-specific settings: column properties
         """
         if not self.book.page.settings:
-            self.gui.show_message('I_ADDSET')
+            gui.show_message('I_ADDSET')
             return
-        ok = self.gui.manage_columnsettings()
+        ok = gui.manage_columnsettings(self)
         if ok:
             new_pagedata = {}
             for key, value in self.book.page.data.items():
@@ -476,9 +497,9 @@ class Editor:
         """manual entry of keyboard shortcuts
         """
         if not all((self.book.page.settings, self.book.page.column_info)):
-            self.gui.show_message('I_ADDCOL')
+            gui.show_message('I_ADDCOL')
             return
-        ok = self.gui.manual_entry()
+        ok = gui.manual_entry(self)
         if ok:
             if self.book.page.data:
                 shared.writecsv(self.book.page.pad, self.book.page.settings,
@@ -495,7 +516,7 @@ class Editor:
         # bepaal welke er momenteel geactiveerd is
         oldlang = self.ini['lang']
         indx = choices.index(oldlang) if oldlang in choices else 0
-        lang, ok = self.gui.get_choice(self.title, self.captions["P_SELLNG"], choices,
+        lang, ok = gui.get_choice(self.title, self.captions["P_SELLNG"], choices,
                                        current=indx)
         if ok:
             shared.change_setting('lang', oldlang, lang, self.ini['filename'])
@@ -506,7 +527,7 @@ class Editor:
     def m_about(self, event=None):
         """(menu) callback voor het tonen van de "about" dialoog
         """
-        self.gui.show_message(
+        gui.show_message(
             text='\n'.join(self.captions['T_ABOUT'].format(self.captions['T_SHORT'], shared.VRS,
                                                            shared.AUTH,
                                                            self.captions['T_LONG']).split(' / ')))
@@ -517,7 +538,7 @@ class Editor:
         oldpref = self.ini.get("initial", None)
         oldmode = self.ini.get("startup", None)
         self.prefs = oldmode, oldpref
-        ok = self.gui.manage_startupsettings()
+        ok = gui.manage_startupsettings(self)
         if ok:
             mode, pref = self.prefs
             if mode:
@@ -536,14 +557,8 @@ class Editor:
     def exit(self, event=None):
         """quit the applicationi - extra actions to perform on closing
         """
-        # if not self.book.page.gui.exit():
-        #     return
-        if self.book.page.gui.modified:
-            ok, noexit = hkd.ask_ync_question(self, 'Q_SAVXIT')
-            if ok:
-                self.savekeys()
-            if noexit:
-                return
+        if not self.book.page.exit():
+            return
         mode = self.ini.get("startup", '')
         pref = self.ini.get("initial", '')
         # when setting is 'fixed', don't remember a startup tool that is removed from the config
@@ -567,18 +582,18 @@ class Editor:
         """
         self.captions = shared.readlang(lang)
 
-    def set_title(self):
-        """adjust title and modified flag
-        """
-        title = self.title
-        # if self.book.page.modified:
-        #     title += ' ' + self.captions["T_MOD"]
-        self.gui.set_window_title(title)
+    # def set_title(self):
+    #     """adjust title and modified flag
+    #     """
+    #     title = self.title
+    #     # if self.book.page.modified:
+    #     #     title += ' ' + self.captions["T_MOD"]
+    #     self.gui.set_window_title(title)
 
     def setcaptions(self):
         """propagate captions to other parts of the application
         """
-        self.set_title()
+        # self.set_title()
         self.gui.setcaptions()
         self.book.gui.setcaptions()
         self.book.page.setcaptions()

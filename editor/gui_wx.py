@@ -47,7 +47,6 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         super().__init__(parent.pnl)
         self.parent = parent
         self.master = master
-        self.modified = False
         self.defchanged = False
 
     def setup_empty_screen(self, nodata, title):
@@ -57,17 +56,6 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         sizer.Add(wx.StaticText(self, label=nodata))
         self.SetSizer(sizer)
         self.title = title
-
-    def exit(self):
-        """processing triggered by exit button
-        """
-        if self.modified:
-            ok, noexit = hkd.ask_ync_question(self, 'Q_SAVXIT')
-            if ok:
-                self.savekeys()
-            if noexit:
-                return False
-        return True
 
     def setup_list(self):
         """add the list widget to the interface
@@ -108,16 +96,9 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         # sizer.SetSizeHints(self)
         ## self.Layout()
 
-    def set_title(self, modified=None):
-        """set title and adapt to modified flag
-        if modified flag is not supplied, use its current state
+    def set_title(self, title):
+        """set screen title
         """
-        # is this of any use? does this window has its own title?
-        if modified is not None:
-            self.modified = False
-        title = self.master.title
-        if self.modified:
-            title += ' ' + self.captions["T_MOD"]
         self.master.parent.parent.gui.SetTitle(title)
 
     def clear_list(self):
@@ -620,7 +601,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
                     if y == newvalue:
                         indx = x
                     self.data[x] = y
-            self.modified = True
+            self.master.modified = True
             self._origdata = self.init_origdata
             if 'C_KEY' in self.master.fields:
                 self._origdata[self.master.ix_key] = key
@@ -1073,7 +1054,8 @@ class Gui(wx.Frame):
                     callback, shortcut = value
                     if callable(callback):
                         menutext = '\t'.join((self.editor.captions[sel], shortcut))
-                        item = wx.MenuItem(None, -1, menutext)
+                        item = wx.MenuItem(None, -1, text=menutext)
+                        self.menuitems[sel] = item, shortcut
                         menu.Append(item)
                         self.Bind(wx.EVT_MENU, callback, id=item.GetId())
                     else:
@@ -1081,67 +1063,34 @@ class Gui(wx.Frame):
                         for selitem, values in callback:
                             callback_, shortcut = values
                             menutext = '\t'.join((self.editor.captions[selitem], shortcut))
-                            item = wx.MenuItem(None, -1, menutext)
+                            item = wx.MenuItem(None, -1, text=menutext)
+                            self.menuitems[selitem] = item, shortcut
                             submenu.Append(item)
                             self.Bind(wx.EVT_MENU, callback_, id=item.GetId())
                         menu.AppendSubMenu(submenu, self.editor.captions[sel])
+                        self.menuitems[sel] = submenu, ''
             if has_items:
-                menu = self.menu_bar.Replace(ix, menu, self.editor.captions[title])
-                menu.Destroy()
+                oldmenu, menu = menu, self.menu_bar.Replace(ix, menu, self.editor.captions[title])
+                oldmenu.Destroy()
             else:
                 self.menu_bar.Append(menu, self.editor.captions[title])
-            print('appending menu to menubar')
+            self.menuitems[title] = menu, ''
             ix += 1
 
     def setcaptions(self):
         "set title for menuitem or action"
         for menu, item in self.menuitems.items():
+            item, shortcut = item
+            shared.log(item, always=True)
             try:
+                shared.log('trying to change menu title to' +  self.editor.captions[menu],
+                           always=True)
                 item.SetTitle(self.editor.captions[menu])
             except AttributeError:
-                item.SetText(self.editor.captions[menu])
-
-    def show_message(self, text):
-        "relay"
-        hkd.show_message(self, text=text)
-
-    def ask_question(self, text):
-        "relay"
-        hkd.ask_question(self, text)
-
-    def get_textinput(self, text, prompt):
-        "relay"
-        text, ok = qtw.QInputDialog.getText(self, text, prompt, text=text)  # TODO omschrijven
-        return text, ok == wx.ID_OK
-
-    def get_choice(self, title, caption, choices, current):
-        "relay"  # TODO omschrijven
-        return qtw.QInputDialog.getItem(self, title, caption, choices, current, editable=False)
-
-    def manage_filesettings(self):
-        "relay"
-        ok = hkd.FilesDialog(self, self.editor).exec_()
-        return ok == wx.ID_OK
-
-    def manage_extrasettings(self):
-        "relay"
-        dlg = hkd.ExtraSettingsDialog(self, self.editor).exec_()
-        return dlg == wx.ID_OK
-
-    def manage_columnsettings(self):
-        "relay"
-        dlg = hkd.ColumnSettingsDialog(self, self.editor).exec_()
-        return dlg == wx.ID_OK
-
-    def manual_entry(self):
-        "relay"
-        dlg = hkd.EntryDialog(self, self.editor).exec_()
-        return dlg == wx.ID_OK
-
-    def manage_startupsettings(self):
-        "relay"
-        ok = hkd.InitialToolDialog(self, self.editor).exec_()
-        return ok == wx.ID_OK
+                shared.log('changing menu item title', always=True)
+                item.SetText('\t'.join((self.editor.captions[menu], shortcut)))
+           #  else:
+           #      self.menu_bar.SetMenuLabel(['M_APP', 'M_SETT'].index(menu), self.editor.captions[menu])
 
     def close(self, event=None):
         """applicatie afsluiten"""

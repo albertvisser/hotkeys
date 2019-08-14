@@ -15,7 +15,6 @@ def show_message(win, message_id='', text='', args=None):
     """
     text = shared.get_text(win, message_id, text, args)
     qtw.QMessageBox.information(win, shared.get_title(win), text)
-    return
 
 
 def ask_question(win, message_id='', text='', args=None):
@@ -39,6 +38,21 @@ def ask_ync_question(win, message_id='', text='', args=None):
                                   qtw.QMessageBox.Yes | qtw.QMessageBox.No |
                                   qtw.QMessageBox.Cancel)
     return ok == qtw.QMessageBox.Yes, ok == qtw.QMessageBox.Cancel
+
+
+def get_textinput(win, text, prompt):
+    """toon een dialoog waarin een regel tekst kan worden opgegeven en retourneer het antwoord
+    (de opgegeven tekst en True bij OK) na sluiten van de dialoog
+    """
+    text, ok = qtw.QInputDialog.getText(win, text, prompt, text=text)
+    return text, ok == qtw.QDialog.Accepted
+
+
+def get_choice(win, title, caption, choices, current):
+    """toon een dialoog waarin een waarde gekozen kan worden uit een lijst en retourneer het
+    antwoord (de geselecteerde waarde en True bij OK) na sluiten van de dialoog
+    """
+    return qtw.QInputDialog.getItem(win, title, caption, choices, current, editable=False)
 
 
 class InitialToolDialog(qtw.QDialog):
@@ -215,6 +229,246 @@ class SetupDialog(qtw.QDialog):
                             int(self.c_rebuild.isChecked()),
                             int(self.c_details.isChecked()),
                             int(self.c_redef.isChecked())]
+        super().accept()
+
+
+class DeleteDialog(qtw.QDialog):
+    """dialog for deleting a tool from the collection
+    """
+    def __init__(self, parent):
+        self.parent = parent
+        self.last_added = ''  # TODO uitzoeken: kan dit wel altijd
+        super().__init__(parent)
+        self.sizer = qtw.QVBoxLayout()
+        hsizer = qtw.QHBoxLayout()
+        label = qtw.QLabel(self.parent.master.captions['Q_REMPRG'], self)
+        hsizer.addWidget(label)
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+
+        hsizer = qtw.QHBoxLayout()
+        check = qtw.QCheckBox(self.parent.master.captions['Q_REMCSV'], self)
+        hsizer.addWidget(check)
+        self.remove_keydefs = check
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+
+        hsizer = qtw.QHBoxLayout()
+        check = qtw.QCheckBox(self.parent.master.captions['Q_REMPLG'], self)
+        hsizer.addWidget(check)
+        self.remove_plugin = check
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+
+        buttonbox = qtw.QDialogButtonBox()
+        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.accepted.connect(self.accept)
+        buttonbox.rejected.connect(self.reject)
+        self.sizer.addWidget(buttonbox)
+        self.setLayout(self.sizer)
+
+    def accept(self):
+        """send settings to parent and leave
+        """
+        self.parent.remove_data = self.remove_keydefs.isChecked()
+        self.parent.remove_code = self.remove_plugin.isChecked()
+        qtw.QDialog.accept(self)
+
+
+class FilesDialog(qtw.QDialog):
+    """dialoog met meerdere FileBrowseButtons
+
+    voor het instellen van de bestandslocaties
+    """
+    def __init__(self, parent, master):
+        self.parent = parent
+        self.master = master
+        self.title = self.master.title
+        self.last_added = ''
+        self.code_to_remove = []
+        self.data_to_remove = []
+        super().__init__(parent)
+        self.resize(680, 400)
+
+        self.sizer = qtw.QVBoxLayout()
+        text = '\n'.join((self.master.captions['T_TOOLS'].split(' / ')))
+        hsizer = qtw.QHBoxLayout()
+        label = qtw.QLabel(text, self)
+        hsizer.addStretch()
+        hsizer.addWidget(label)
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+
+        hsizer = qtw.QHBoxLayout()
+        hsizer.addSpacing(36)
+        hsizer.addWidget(qtw.QLabel(self.master.captions['C_PRGNAM'], self),
+                         alignment=core.Qt.AlignHCenter | core.Qt.AlignVCenter)
+        hsizer.addSpacing(84)
+        hsizer.addWidget(qtw.QLabel(self.master.captions['C_CSVLOC'], self),
+                         alignment=core.Qt.AlignVCenter)
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+
+        pnl = qtw.QFrame(self)
+        self.scrl = qtw.QScrollArea(self)
+        self.scrl.setWidget(pnl)
+        self.scrl.setWidgetResizable(True)
+        self.bar = self.scrl.verticalScrollBar()
+        self.gsizer = qtw.QGridLayout()
+        rownum = 0
+        self.rownum = rownum
+        self.plugindata = []
+        self.checks = []
+        self.paths = []
+        self.progs = []
+        self.settingsdata = {}
+        # settingsdata is een mapping van pluginnaam op een tuple van programmanaam en
+        # andere settings (alleen als er een nieuw csv file voor moet worden aangemaakt)
+        for name, path in self.master.ini["plugins"]:
+            self.add_row(name, path)
+            self.settingsdata[name] = (self.master.pluginfiles[name],)
+        box = qtw.QVBoxLayout()
+        box.addLayout(self.gsizer)
+        box.addStretch()
+        pnl.setLayout(box)
+        self.sizer.addWidget(self.scrl)
+
+        buttonbox = qtw.QDialogButtonBox()
+        btn = buttonbox.addButton(self.master.captions['C_ADDPRG'],
+                                  qtw.QDialogButtonBox.ActionRole)
+        btn.clicked.connect(self.add_program)
+        btn = buttonbox.addButton(self.master.captions['C_REMPRG'],
+                                  qtw.QDialogButtonBox.ActionRole)
+        btn.clicked.connect(self.remove_programs)
+        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.accepted.connect(self.accept)
+        buttonbox.rejected.connect(self.reject)
+        hsizer = qtw.QHBoxLayout()
+        hsizer.addStretch()
+        hsizer.addWidget(buttonbox)
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+        self.setLayout(self.sizer)
+
+    def add_row(self, name, path=''):
+        """create a row for defining a file location
+        """
+        self.rownum += 1
+        colnum = 0
+        check = qtw.QCheckBox(name, self)
+        self.gsizer.addWidget(check, self.rownum, colnum)
+        self.checks.append(check)
+        colnum += 1
+        browse = FileBrowseButton(self, text=path)
+        self.gsizer.addWidget(browse, self.rownum, colnum)
+        self.paths.append((name, browse))
+        vbar = self.scrl.verticalScrollBar()
+        vbar.setMaximum(vbar.maximum() + 52)
+        vbar.setValue(vbar.maximum())
+
+    def delete_row(self, rownum):
+        """remove a tool location definition row
+        """
+        check = self.checks[rownum]
+        name, win = self.paths[rownum]
+        self.gsizer.removeWidget(check)
+        check.close()
+        self.gsizer.removeWidget(win)
+        win.close()
+        self.checks.pop(rownum)
+        self.paths.pop(rownum)
+        self.settingsdata.pop(name)
+
+    def add_program(self):
+        """nieuwe rij aanmaken in self.gsizer"""
+        newtool, ok = qtw.QInputDialog.getText(self, self.master.title,
+                                               self.master.captions['P_NEWPRG'])
+        if ok:
+            if newtool == "":
+                show_message(self.parent, 'I_NEEDNAME')
+                return
+            self.last_added = newtool
+            self.loc = prgloc = ""
+            self.settingsdata[newtool] = (prgloc,)
+            if ask_question(self.parent, 'P_INICSV'):
+                ok = SetupDialog(self, newtool).exec_()
+                if ok:
+                    self.settingsdata[newtool] = self.data
+                    prgloc = self.data[0]
+            self.add_row(newtool, path=self.loc)
+
+    def remove_programs(self):
+        """alle aangevinkte items verwijderen uit self.gsizer"""
+        checked = [(x, y.text()) for x, y in enumerate(self.checks) if y.isChecked()]
+        if checked:
+            dlg = DeleteDialog(self).exec_()
+            if dlg == qtw.QDialog.Accepted:
+                for row, name in reversed(checked):
+                    csv_name, prg_name = '', ''
+                    try:
+                        csv_name = self.paths[row][1].input.text()
+                        prg_name = self.settingsdata[name][0]
+                    except KeyError:
+                        logging.exception('')
+                    logging.info('csv name is %s', csv_name)
+                    logging.info('prg name is %s', prg_name)
+                    if self.remove_data:
+                        if csv_name:
+                            self.data_to_remove.append(csv_name)
+                    if self.remove_code:
+                        if prg_name:
+                            self.code_to_remove.append(
+                                prg_name.replace('.', '/') + '.py')
+                    self.delete_row(row)
+
+    def accept(self):
+        """send updates to parent and leave
+        """
+        # TODO onderbrengen in een gui onafhankeljke validatieroutine
+        if self.last_added not in [x[0] for x in self.paths]:
+            self.last_added = ''
+        self.master.last_added = self.last_added
+        for ix, entry in enumerate(self.paths):
+            name, path = entry
+            if name not in [x for x, y in self.master.ini['plugins']]:
+                csvname = path.input.text()
+                if not csvname:
+                    show_message(self, text='Please fill out all filenames')
+                    return
+                prgname = self.settingsdata[name][0]
+                if not prgname:
+                    # try to get the plugin name from the csv file
+                    try:
+                        data = shared.readcsv(csvname)
+                    except (FileNotFoundError, IsADirectoryError, ValueError):
+                        show_message(self, text='{} does not seem to be a usable '
+                                                'csv file'.format(csvname))
+                        return
+                    try:
+                        prgname = data[0][shared.SettType.PLG.value]
+                    except KeyError:
+                        show_message(self, text='{} does not contain a reference to a '
+                                                'plugin (PluginName setting)'.format(csvname))
+                        return
+                if len(self.settingsdata[name]) == 1:  # existing plugin
+                    try:
+                        _ = importlib.import_module(prgname)
+                    except ImportError:
+                        show_message(self, text='{} does not contain a reference to a '
+                                                'valid plugin'.format(csvname))
+                        return
+
+                self.master.pluginfiles[name] = prgname
+        for filename in self.code_to_remove + self.data_to_remove:
+            os.remove(filename)
+        self.newpathdata = {}
+        for name, entry in self.settingsdata.items():
+            if len(entry) > 1:
+                self.newpathdata[name] = entry
+        self.master.ini["plugins"] = shared.update_paths(self.paths, self.newpathdata,
+                                                         self.master.ini["lang"])
         super().accept()
 
 
@@ -636,246 +890,6 @@ class ExtraSettingsDialog(qtw.QDialog):
         super().accept()
 
 
-class DeleteDialog(qtw.QDialog):
-    """dialog for deleting a tool from the collection
-    """
-    def __init__(self, parent):
-        self.parent = parent
-        self.last_added = ''  # TODO uitzoeken: kan dit wel altijd
-        super().__init__(parent)
-        self.sizer = qtw.QVBoxLayout()
-        hsizer = qtw.QHBoxLayout()
-        label = qtw.QLabel(self.parent.master.captions['Q_REMPRG'], self)
-        hsizer.addWidget(label)
-        hsizer.addStretch()
-        self.sizer.addLayout(hsizer)
-
-        hsizer = qtw.QHBoxLayout()
-        check = qtw.QCheckBox(self.parent.master.captions['Q_REMCSV'], self)
-        hsizer.addWidget(check)
-        self.remove_keydefs = check
-        hsizer.addStretch()
-        self.sizer.addLayout(hsizer)
-
-        hsizer = qtw.QHBoxLayout()
-        check = qtw.QCheckBox(self.parent.master.captions['Q_REMPLG'], self)
-        hsizer.addWidget(check)
-        self.remove_plugin = check
-        hsizer.addStretch()
-        self.sizer.addLayout(hsizer)
-
-        buttonbox = qtw.QDialogButtonBox()
-        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
-        buttonbox.accepted.connect(self.accept)
-        buttonbox.rejected.connect(self.reject)
-        self.sizer.addWidget(buttonbox)
-        self.setLayout(self.sizer)
-
-    def accept(self):
-        """send settings to parent and leave
-        """
-        self.parent.remove_data = self.remove_keydefs.isChecked()
-        self.parent.remove_code = self.remove_plugin.isChecked()
-        qtw.QDialog.accept(self)
-
-
-class FilesDialog(qtw.QDialog):
-    """dialoog met meerdere FileBrowseButtons
-
-    voor het instellen van de bestandslocaties
-    """
-    def __init__(self, parent, master):
-        self.parent = parent
-        self.master = master
-        self.title = self.master.title
-        self.last_added = ''
-        self.code_to_remove = []
-        self.data_to_remove = []
-        super().__init__(parent)
-        self.resize(680, 400)
-
-        self.sizer = qtw.QVBoxLayout()
-        text = '\n'.join((self.master.captions['T_TOOLS'].split(' / ')))
-        hsizer = qtw.QHBoxLayout()
-        label = qtw.QLabel(text, self)
-        hsizer.addStretch()
-        hsizer.addWidget(label)
-        hsizer.addStretch()
-        self.sizer.addLayout(hsizer)
-
-        hsizer = qtw.QHBoxLayout()
-        hsizer.addSpacing(36)
-        hsizer.addWidget(qtw.QLabel(self.master.captions['C_PRGNAM'], self),
-                         alignment=core.Qt.AlignHCenter | core.Qt.AlignVCenter)
-        hsizer.addSpacing(84)
-        hsizer.addWidget(qtw.QLabel(self.master.captions['C_CSVLOC'], self),
-                         alignment=core.Qt.AlignVCenter)
-        hsizer.addStretch()
-        self.sizer.addLayout(hsizer)
-
-        pnl = qtw.QFrame(self)
-        self.scrl = qtw.QScrollArea(self)
-        self.scrl.setWidget(pnl)
-        self.scrl.setWidgetResizable(True)
-        self.bar = self.scrl.verticalScrollBar()
-        self.gsizer = qtw.QGridLayout()
-        rownum = 0
-        self.rownum = rownum
-        self.plugindata = []
-        self.checks = []
-        self.paths = []
-        self.progs = []
-        self.settingsdata = {}
-        # settingsdata is een mapping van pluginnaam op een tuple van programmanaam en
-        # andere settings (alleen als er een nieuw csv file voor moet worden aangemaakt)
-        for name, path in self.master.ini["plugins"]:
-            self.add_row(name, path)
-            self.settingsdata[name] = (self.master.pluginfiles[name],)
-        box = qtw.QVBoxLayout()
-        box.addLayout(self.gsizer)
-        box.addStretch()
-        pnl.setLayout(box)
-        self.sizer.addWidget(self.scrl)
-
-        buttonbox = qtw.QDialogButtonBox()
-        btn = buttonbox.addButton(self.master.captions['C_ADDPRG'],
-                                  qtw.QDialogButtonBox.ActionRole)
-        btn.clicked.connect(self.add_program)
-        btn = buttonbox.addButton(self.master.captions['C_REMPRG'],
-                                  qtw.QDialogButtonBox.ActionRole)
-        btn.clicked.connect(self.remove_programs)
-        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
-        buttonbox.accepted.connect(self.accept)
-        buttonbox.rejected.connect(self.reject)
-        hsizer = qtw.QHBoxLayout()
-        hsizer.addStretch()
-        hsizer.addWidget(buttonbox)
-        hsizer.addStretch()
-        self.sizer.addLayout(hsizer)
-        self.setLayout(self.sizer)
-
-    def add_row(self, name, path=''):
-        """create a row for defining a file location
-        """
-        self.rownum += 1
-        colnum = 0
-        check = qtw.QCheckBox(name, self)
-        self.gsizer.addWidget(check, self.rownum, colnum)
-        self.checks.append(check)
-        colnum += 1
-        browse = FileBrowseButton(self, text=path)
-        self.gsizer.addWidget(browse, self.rownum, colnum)
-        self.paths.append((name, browse))
-        vbar = self.scrl.verticalScrollBar()
-        vbar.setMaximum(vbar.maximum() + 52)
-        vbar.setValue(vbar.maximum())
-
-    def delete_row(self, rownum):
-        """remove a tool location definition row
-        """
-        check = self.checks[rownum]
-        name, win = self.paths[rownum]
-        self.gsizer.removeWidget(check)
-        check.close()
-        self.gsizer.removeWidget(win)
-        win.close()
-        self.checks.pop(rownum)
-        self.paths.pop(rownum)
-        self.settingsdata.pop(name)
-
-    def add_program(self):
-        """nieuwe rij aanmaken in self.gsizer"""
-        newtool, ok = qtw.QInputDialog.getText(self, self.master.title,
-                                               self.master.captions['P_NEWPRG'])
-        if ok:
-            if newtool == "":
-                show_message(self.parent, 'I_NEEDNAME')
-                return
-            self.last_added = newtool
-            self.loc = prgloc = ""
-            self.settingsdata[newtool] = (prgloc,)
-            if ask_question(self.parent, 'P_INICSV'):
-                ok = SetupDialog(self, newtool).exec_()
-                if ok:
-                    self.settingsdata[newtool] = self.data
-                    prgloc = self.data[0]
-            self.add_row(newtool, path=self.loc)
-
-    def remove_programs(self):
-        """alle aangevinkte items verwijderen uit self.gsizer"""
-        checked = [(x, y.text()) for x, y in enumerate(self.checks) if y.isChecked()]
-        if checked:
-            dlg = DeleteDialog(self).exec_()
-            if dlg == qtw.QDialog.Accepted:
-                for row, name in reversed(checked):
-                    csv_name, prg_name = '', ''
-                    try:
-                        csv_name = self.paths[row][1].input.text()
-                        prg_name = self.settingsdata[name][0]
-                    except KeyError:
-                        logging.exception('')
-                    logging.info('csv name is %s', csv_name)
-                    logging.info('prg name is %s', prg_name)
-                    if self.remove_data:
-                        if csv_name:
-                            self.data_to_remove.append(csv_name)
-                    if self.remove_code:
-                        if prg_name:
-                            self.code_to_remove.append(
-                                prg_name.replace('.', '/') + '.py')
-                    self.delete_row(row)
-
-    def accept(self):
-        """send updates to parent and leave
-        """
-        # TODO onderbrengen in een gui onafhankeljke validatieroutine
-        if self.last_added not in [x[0] for x in self.paths]:
-            self.last_added = ''
-        self.master.last_added = self.last_added
-        for ix, entry in enumerate(self.paths):
-            name, path = entry
-            if name not in [x for x, y in self.master.ini['plugins']]:
-                csvname = path.input.text()
-                if not csvname:
-                    show_message(self, text='Please fill out all filenames')
-                    return
-                prgname = self.settingsdata[name][0]
-                if not prgname:
-                    # try to get the plugin name from the csv file
-                    try:
-                        data = shared.readcsv(csvname)
-                    except (FileNotFoundError, IsADirectoryError, ValueError):
-                        show_message(self, text='{} does not seem to be a usable '
-                                                'csv file'.format(csvname))
-                        return
-                    try:
-                        prgname = data[0][shared.SettType.PLG.value]
-                    except KeyError:
-                        show_message(self, text='{} does not contain a reference to a '
-                                                'plugin (PluginName setting)'.format(csvname))
-                        return
-                if len(self.settingsdata[name]) == 1:  # existing plugin
-                    try:
-                        _ = importlib.import_module(prgname)
-                    except ImportError:
-                        show_message(self, text='{} does not contain a reference to a '
-                                                'valid plugin'.format(csvname))
-                        return
-
-                self.master.pluginfiles[name] = prgname
-        for filename in self.code_to_remove + self.data_to_remove:
-            os.remove(filename)
-        self.newpathdata = {}
-        for name, entry in self.settingsdata.items():
-            if len(entry) > 1:
-                self.newpathdata[name] = entry
-        self.master.ini["plugins"] = shared.update_paths(self.paths, self.newpathdata,
-                                                         self.master.ini["lang"])
-        super().accept()
-
-
 class EntryDialog(qtw.QDialog):
     """Dialog for Manual Entry
     """
@@ -887,21 +901,23 @@ class EntryDialog(qtw.QDialog):
         super().__init__(parent)
         self.resize(680, 400)
 
+        self.sizer = qtw.QVBoxLayout()
+        hsizer = qtw.QHBoxLayout()
+        self.p0list = qtw.QTableWidget(self)
+
         # use self.parent.page.column_info to define grid
         names, widths = [], []
         for row in self.master.book.page.column_info:
             names.append(self.captions[row[0]])
             widths.append(row[1])
-
-        # use self.master.page.data to populate grid
-        self.data = self.master.book.page.data
-
-        self.p0list = qtw.QTableWidget(self)
         self.p0list.setColumnCount(len(names))
         self.p0list.setHorizontalHeaderLabels(names)
         p0hdr = self.p0list.horizontalHeader()
         for indx, wid in enumerate(widths):
             p0hdr.resizeSection(indx, wid)
+
+        # use self.master.page.data to populate grid
+        self.data = self.master.book.page.data
         num_rows = 0
         for rowkey, row in self.data.items():
             self.p0list.insertRow(num_rows)
@@ -912,11 +928,11 @@ class EntryDialog(qtw.QDialog):
             num_rows += 1
         self.numrows = num_rows
 
-        self.sizer = qtw.QVBoxLayout()
-        hsizer = qtw.QHBoxLayout()
         hsizer.addWidget(self.p0list)
         self.sizer.addLayout(hsizer)
 
+        hsizer = qtw.QHBoxLayout()
+        hsizer.addStretch()
         buttonbox = qtw.QDialogButtonBox()
         btn = buttonbox.addButton(self.captions['C_ADDKEY'],
                                   qtw.QDialogButtonBox.ActionRole)
@@ -928,8 +944,6 @@ class EntryDialog(qtw.QDialog):
         buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
-        hsizer = qtw.QHBoxLayout()
-        hsizer.addStretch()
         hsizer.addWidget(buttonbox)
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
@@ -971,3 +985,33 @@ class EntryDialog(qtw.QDialog):
                 new_values[len(new_values)] = value
         self.master.book.page.data = new_values
         super().accept()
+
+
+def manage_filesettings(win):
+    "relay"
+    ok = FilesDialog(win.gui, win).exec_()
+    return ok == qtw.QDialog.Accepted
+
+
+def manage_extrasettings(win):
+    "relay"
+    dlg = ExtraSettingsDialog(win.gui, win).exec_()
+    return dlg == qtw.QDialog.Accepted
+
+
+def manage_columnsettings(win):
+    "relay"
+    dlg = ColumnSettingsDialog(win.gui, win).exec_()
+    return dlg == qtw.QDialog.Accepted
+
+
+def manual_entry(win):
+    "relay"
+    dlg = EntryDialog(win.gui, win).exec_()
+    return dlg == qtw.QDialog.Accepted
+
+
+def manage_startupsettings(win):
+    "relay"
+    ok = InitialToolDialog(win.gui, win).exec_()
+    return ok == qtw.QDialog.Accepted

@@ -38,7 +38,6 @@ class SingleDataInterface(qtw.QFrame):
         super().__init__(parent)
         self.parent = parent  # .parent()
         self.master = master
-        self.modified = False
 
     def setup_empty_screen(self, nodata, title):
         """build a subscreen with only a message
@@ -51,17 +50,6 @@ class SingleDataInterface(qtw.QFrame):
         sizer.addLayout(hsizer)
         self.setLayout(sizer)
         self.title = title
-
-    def exit(self):
-        """processing triggered by exit button
-        """
-        if self.modified:
-            ok, noexit = hkd.ask_ync_question(self, 'Q_SAVXIT')
-            if ok:
-                self.savekeys()
-            if noexit:
-                return False
-        return True
 
     def setup_list(self):
         """add the list widget to the interface
@@ -92,16 +80,8 @@ class SingleDataInterface(qtw.QFrame):
         self.setLayout(sizer)
         shared.log(self.master.otherstuff)
 
-    def set_title(self, modified=None):
-        """set title and adapt to modified flag
-        if modified flag is not supplied, use its current state
-        """
-        # is this of any use? does this window has its own title?
-        if modified is not None:
-            self.modified = False
-        title = self.master.title
-        if self.modified:
-            title += ' ' + self.captions["T_MOD"]
+    def set_title(self, title):
+        "set screen title"
         self.setWindowTitle(title)
 
     def clear_list(self):
@@ -520,7 +500,7 @@ class SingleDataInterface(qtw.QFrame):
                     if y == newvalue:
                         indx = x
                     self.data[x] = y
-            self.modified = True
+            self.master.modified = True
             self._origdata = self.init_origdata
             if 'C_KEY' in self.master.fields:
                 self._origdata[self.master.ix_key] = key
@@ -1047,48 +1027,6 @@ class Gui(qtw.QMainWindow):
                 item.setTitle(self.editor.captions[menu])
             except AttributeError:
                 item.setText(self.editor.captions[menu])
-
-    def show_message(self, text):
-        "relay"
-        hkd.show_message(self, text=text)
-
-    def ask_question(self, text):
-        "relay"
-        hkd.ask_question(self, text)
-
-    def get_textinput(self, text, prompt):
-        "relay"
-        text, ok = qtw.QInputDialog.getText(self, text, prompt, text=text)
-        return text, ok == qtw.QDialog.Accepted
-
-    def get_choice(self, title, caption, choices, current):
-        "relay"
-        return qtw.QInputDialog.getItem(self, title, caption, choices, current, editable=False)
-
-    def manage_filesettings(self):
-        "relay"
-        ok = hkd.FilesDialog(self, self.editor).exec_()
-        return ok == qtw.QDialog.Accepted
-
-    def manage_extrasettings(self):
-        "relay"
-        dlg = hkd.ExtraSettingsDialog(self, self.editor).exec_()
-        return dlg == qtw.QDialog.Accepted
-
-    def manage_columnsettings(self):
-        "relay"
-        dlg = hkd.ColumnSettingsDialog(self, self.editor).exec_()
-        return dlg == qtw.QDialog.Accepted
-
-    def manual_entry(self):
-        "relay"
-        dlg = hkd.EntryDialog(self, self.editor).exec_()
-        return dlg == qtw.QDialog.Accepted
-
-    def manage_startupsettings(self):
-        "relay"
-        ok = hkd.InitialToolDialog(self, self.editor).exec_()
-        return ok == qtw.QDialog.Accepted
 
     # hulproutine t.b.v. managen tool specifieke settings
 
