@@ -21,14 +21,11 @@ LIN = True if os.name == 'posix' else False
 CONF = 'editor.hotkey_config'  # default configuration file
 BASE = str(HERE.parent)
 
-LOGFILE = HERE / 'logs' / 'hotkeys.log'
+LOGFILE = pathlib.Path('/tmp') / 'logs' / 'hotkeys.log'
 DO_LOGGING = os.environ.get("DEBUG", '') not in ('', "0")
-if DO_LOGGING:
-    LOGFILE.parent.mkdir(exist_ok=True)
-    LOGFILE.touch(exist_ok=True)
-    logging.basicConfig(filename=str(LOGFILE),
-                        level=logging.DEBUG,
-                        format='%(asctime)s %(message)s')
+LOGFILE.parent.mkdir(exist_ok=True)
+LOGFILE.touch(exist_ok=True)
+logging.basicConfig(filename=str(LOGFILE), level=logging.DEBUG, format='%(asctime)s %(message)s')
 
 
 def log(message, always=False):
