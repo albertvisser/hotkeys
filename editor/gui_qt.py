@@ -660,7 +660,7 @@ class TabbedInterface(qtw.QFrame):
     def setup_selector(self):
         "create the selector"
         self.sel = qtw.QComboBox(self)
-        self.sel.currentIndexChanged.connect(self.on_page_changed)
+        self.sel.currentIndexChanged.connect(self.master.on_page_changed)
         self.pnl = qtw.QStackedWidget(self)
 
     def setup_search(self):
@@ -671,12 +671,12 @@ class TabbedInterface(qtw.QFrame):
         self.find = qtw.QComboBox(self)
         self.find.setMinimumContentsLength(20)
         self.find.setEditable(True)
-        self.find.editTextChanged.connect(self.on_text_changed)
+        self.find.editTextChanged.connect(self.master.on_text_changed)
         self.b_next = qtw.QPushButton("", self)
-        self.b_next.clicked.connect(self.find_next)
+        self.b_next.clicked.connect(self.master.find_next)
         self.b_next.setEnabled(False)
         self.b_prev = qtw.QPushButton('', self)
-        self.b_prev.clicked.connect(self.find_prev)
+        self.b_prev.clicked.connect(self.master.find_prev)
         self.b_prev.setEnabled(False)
         self.b_filter = qtw.QPushButton(self.parent.editor.captions['C_FILTER'], self)
         self.b_filter.clicked.connect(self.filter)
@@ -733,29 +733,17 @@ class TabbedInterface(qtw.QFrame):
         except AttributeError:  # exit button bestaat nog niet tijdens initialisatie
             pass
 
-    def on_page_changed(self, indx):
-        """callback for change in tool page
-        """
-        # no use finishing this method if certain conditions aren't met
-        if self.parent.editor.book is None:  # leaving: no choicebook setup yet
-            return
-        page = self.pnl.currentWidget()
-        if page is None:                     # leaving: no page selected yet
-            return
-        if page.master.modified:
-            ok = page.exit()
-            if not ok:                       # leaving: can't exit modified page yet
-                return
-        self.parent.statusbar_message(self.parent.editor.captions["M_DESC"].format(
-            self.sel.currentText()))
+    # used by on_page_changed
+    def get_panel(self):
+        return self.pnl.currentWidget()
+
+    def get_selected_tool(self):
+        return self.sel.currentText()))
+
+    def set_selected_panel(self, indx):
         self.pnl.setCurrentIndex(indx)
-        self.master.page = self.pnl.currentWidget().master  # change to new selection
-        self.parent.setup_menu()
-        if not all((self.master.page.settings, self.master.page.column_info,
-                    self.master.page.data)):  # leaving: page data incomplete (e.g. no keydefs)
-            return
-        self.master.page.setcaptions()
-        items = [self.parent.editor.captions[x[0]] for x in self.master.page.column_info]
+
+    def update_search(self, items):
         self.find_loc.clear()
         self.find_loc.addItems(items)
         self.find_loc.setCurrentText(items[-1])
@@ -770,50 +758,26 @@ class TabbedInterface(qtw.QFrame):
             self.b_prev.setEnabled(False)
             self.b_filter.setEnabled(False)
 
-    def on_text_changed(self, text):
-        """callback for change in search text
-        """
-        page = self.master.page  # self.pnl.currentWidget()
-        for ix, item in enumerate(page.column_info):
-            if page.captions[item[0]] == self.find_loc.currentText():
-                self.zoekcol = ix
-                break
-        self.items_found = page.gui.p0list.findItems(text, core.Qt.MatchContains, self.zoekcol)
-        self.b_next.setEnabled(False)
-        self.b_prev.setEnabled(False)
-        self.b_filter.setEnabled(False)
-        if self.items_found:
-            page.gui.p0list.setCurrentItem(self.items_found[0])
-            self.founditem = 0
-            if len(self.items_found) < len(self.master.page.data.items()):
-                self.b_next.setEnabled(True)
-                self.b_filter.setEnabled(True)
-            self.parent.statusbar_message(self.parent.editor.captions["I_#FOUND"].format(
-                len(self.items_found)))
-        else:
-            self.parent.statusbar_message(self.parent.editor.captions["I_NOTFND"].format(text))
+    # used by on_text_changed
+    def get_search_text(self):
+        return self.find_loc.currentText()
 
-    def find_next(self):
-        """to next search result
-        """
-        self.b_prev.setEnabled(True)
-        if self.founditem < len(self.items_found) - 1:
-            self.founditem += 1
-            self.master.page.gui.p0list.setCurrentItem(self.items_found[self.founditem])
-        else:
-            self.parent.statusbar_message(self.parent.editor.captions["I_NONXT"])
-            self.b_next.setEnabled(False)
+    def find_items(self, page):
+        return page.gui.p0list.findItems(text, core.Qt.MatchContains, self.zoekcol)
 
-    def find_prev(self):
-        """to previous search result
-        """
-        self.b_next.setEnabled(True)
-        if self.founditem == 0:
-            self.parent.statusbar_message(self.parent.editor.captions["I_NOPRV"])
-            self.b_prev.setEnabled(False)
-        else:
-            self.founditem -= 1
-            self.master.page.gui.p0list.setCurrentItem(self.items_found[self.founditem])
+    def init_search_buttons(self):
+        self.enable_search_buttons(next=False, prev=False, filter=False):
+
+    def set_selected_keydef_item(self, page, index):
+        page.p0list.SetSelectedItem(self.items_found[index])
+
+    def enable_search_buttons(self, next=None, prev=None, filter=None):
+        if next is not None:
+            self.b_next.setEnabled(next)
+        if prev is not None:
+            self.b_filter.setEnabled(prev)
+        if filter is not None:
+            self.b_filter.setEnabled(filter)
 
     def filter(self):
         """filter shown items according to search text

@@ -785,12 +785,12 @@ class TabbedInterface(wx.Panel):
         "add the search widgets to the interface"
         self.find_loc = wx.ComboBox(self, size=(140, -1), style=wx.CB_READONLY)
         self.find = wx.ComboBox(self, size=(140, -1), style=wx.CB_DROPDOWN)
-        self.find.Bind(wx.EVT_TEXT, self.on_text_changed)
+        self.find.Bind(wx.EVT_TEXT, self.after_changing_text)
         self.b_next = wx.Button(self, label='next')
-        self.b_next.Bind(wx.EVT_BUTTON, self.find_next)
+        self.b_next.Bind(wx.EVT_BUTTON, self.master.find_next)
         self.b_next.Enable(False)
         self.b_prev = wx.Button(self, label='prev')
-        self.b_prev.Bind(wx.EVT_BUTTON, self.find_prev)
+        self.b_prev.Bind(wx.EVT_BUTTON, self.master.find_prev)
         self.b_prev.Enable(False)
         self.b_filter = wx.Button(self, label=self.parent.editor.captions['C_FILTER'])
         self.b_filter.Bind(wx.EVT_BUTTON, self.filter)
@@ -853,33 +853,19 @@ class TabbedInterface(wx.Panel):
     def after_changing_page(self, event):
         """callback for change in tool page selector
         """
-        self.on_page_changed(event.GetEventObject().GetSelection())  # GetValue())  # for now
+        self.master.on_page_changed(event.GetEventObject().GetSelection())  # GetValue())  # for now
 
-    def on_page_changed(self, indx):   # op deze ook een changing en changed zetten ipv deze combo?
-        """callback for change in tool page
-        """
-        # no use finishing this method if certain conditions aren't met
-        if self.parent.editor.book is None:
-            print("leaving: no choicebook setup yet - should this be possible?")
-            return
-        page = self.pnl.GetCurrentPage()
-        if page is None:                     # leaving: no page selected yet
-            return
-        if page.master.modified:
-            ok = page.exit()
-            if not ok:                       # leaving: can't exit modified page yet
-                return
-        self.parent.statusbar_message(self.parent.editor.captions["M_DESC"].format(
-            self.sel.GetStringSelection()))
+    # used by on_page_changed
+    def get_panel(self):
+        return self.pnl.GetCurrentPage()
+
+    def get_selected_tool(self):
+        return self.sel.GetStringSelection()
+
+    def set_selected_panel(self, indx):
         self.pnl.SetSelection(indx)
-        self.master.page = self.pnl.GetCurrentPage().master  # change to new selection
-        print('in on_page_changed - going to set up menu')
-        self.parent.setup_menu()
-        if not all((self.master.page.settings, self.master.page.column_info,
-                    self.master.page.data)):  # leaving: page data incomplete (e.g. no keydefs)
-            return
-        self.master.page.setcaptions()
-        items = [self.parent.editor.captions[x[0]] for x in self.master.page.column_info]
+
+    def update_search(self, items):
         self.find_loc.Clear()
         self.find_loc.AppendItems(items)
         self.find_loc.SetSelection(len(items) - 1)
@@ -894,54 +880,35 @@ class TabbedInterface(wx.Panel):
             self.b_prev.Enable(False)
             self.b_filter.Enable(False)
 
-    def on_text_changed(self, event):
+    def after_changing_text(self, event):
         """callback for change in search text
-        ndx"""
+        """
         text = event.GetEventObject().GetValue()
-        if not text:
-            return
-        page = self.master.page  # self.pnl.currentWidget()
-        for ix, item in enumerate(page.column_info):
-            if page.captions[item[0]] == self.find_loc.GetStringSelection():
-                self.zoekcol = ix
-                break
+        if text:
+            self.master.on_text_changed(text)
+
+    # used by on_text_changed
+    def get_search_text(self):
+        return self.find_loc.GetStringSelection()
+
+    def find_items(self, page):
         # hier moet ik nog iets moois op vinden:
-        self.items_found = []  # page.gui.p0list.findItems(text, core.Qt.MatchContains, self.zoekcol)
-        self.b_next.Enable(False)
-        self.b_prev.Enable(False)
-        self.b_filter.Enable(False)
-        if self.items_found:
-            page.p0list.SetSelectedItem(self.items_found[0])
-            self.founditem = 0
-            if len(self.items_found) < len(self.master.page.data.items()):
-                self.b_next.Enable(True)
-                self.b_filter.Enable(True)
-            self.parent.statusbar_message(self.parent.editor.captions["I_#FOUND"].format(
-                len(self.items_found)))
-        else:
-            self.parent.statusbar_message(self.parent.editor.captions["I_NOTFND"].format(text))
+        # page.gui.p0list.findItems(text, core.Qt.MatchContains, self.zoekcol)
+        return []
 
-    def find_next(self):
-        """to next search result
-        """
-        self.b_prev.Enable(True)
-        if self.founditem < len(self.items_found) - 1:
-            self.founditem += 1
-            self.master.page.gui.p0list.SetSelection(self.items_found[self.founditem])
-        else:
-            self.parent.statusbar_message(self.parent.editor.captions["I_NONXT"])
-            self.b_next.Enable(False)
+    def init_search_buttons(self):
+        self.enable_search_buttons(next=False, prev=False, filter=False)
 
-    def find_prev(self):
-        """to previous search result
-        """
-        self.b_next.Enable(True)
-        if self.founditem == 0:
-            self.parent.statusbar_message(self.parent.editor.captions["I_NOPRV"])
-            self.b_prev.Enable(False)
-        else:
-            self.founditem -= 1
-            self.master.page.gui.p0list.SetSelection(self.items_found[self.founditem])
+    def set_selected_keydef_item(self, page, index):
+        page.p0list.SetSelectedItem(self.items_found[index])
+
+    def enable_search_buttons(self, next=None, prev=None, filter=None):
+        if next is not None:
+            self.b_next.Enable(next)
+        if prev is not None:
+            self.b_filter.Enable(prev)
+        if filter is not None:
+            self.b_filter.Enable(filter)
 
     def filter(self):
         """filter shown items according to search text

@@ -19,8 +19,6 @@ import importlib
 
 import editor.shared as shared
 import editor.gui as gui
-# from .gui import Gui, TabbedInterface, SingleDataInterface
-# from .gui_qt import DummyPage
 NO_PATH = 'NO_PATH'
 
 
@@ -231,6 +229,7 @@ class HotkeyPanel:
                 return False
         return True
 
+
 class ChoiceBook:
     """Het schermdeel dat de selector, zoekfunctie en de gegevenstabel toont
     """
@@ -256,6 +255,75 @@ class ChoiceBook:
 
         self.gui.format_screen()
 
+    def on_page_changed(self, indx):
+        """callback for change in tool page
+        """
+        # no use finishing this method if certain conditions aren't met
+        if self.parent.book is None:
+            print("leaving: no choicebook setup yet - should this be possible?")
+            return
+        page = self.gui.get_panel()
+        if page is None:                     # leaving: no page selected yet
+            return
+        if page.master.modified:
+            ok = page.exit()
+            if not ok:                       # leaving: can't exit modified page yet
+                return
+        self.parent.gui.statusbar_message(self.parent.captions["M_DESC"].format(
+            self.gui.get_selected_tool()))
+        self.gui.set_selected_panel(indx)
+        self.parent.page = self.gui.get_panel().master  # change to new selection
+        print('in on_page_changed - going to set up menu')
+        self.parent.gui.setup_menu()
+        if not all((self.parent.page.settings, self.parent.page.column_info,
+                    self.parent.page.data)):  # leaving: page data incomplete (e.g. no keydefs)
+            return
+        self.parent.page.setcaptions()
+        items = [self.parent.captions[x[0]] for x in self.parent.page.column_info]
+        self.gui.update_search(items)
+
+    def on_text_changed(self, text):
+        """callback for change in search text
+        """
+        page = self.page  # self.pnl.currentWidget()
+        for ix, item in enumerate(page.column_info):
+            if page.captions[item[0]] == self.gui.get_search_text():
+                self.zoekcol = ix
+                break
+        self.items_found = self.gui.find_items(page)
+        self.gui.init_search_buttons()
+        if self.items_found:
+            self.gui.set_selected_keydef_item(self, page, 0)
+            self.founditem = 0
+            if len(self.items_found) < len(self.master.page.data.items()):
+                self.gui.enable_search_buttons(next=True, filter=True)
+            message = self.parent.captions["I_#FOUND"].format(len(self.items_found))
+        else:
+            message = self.parent.captions["I_NOTFND"].format(text)
+        self.parent.gui.statusbar_message(message)
+
+    def find_next(self, event=None):
+        """to next search result
+        """
+        self.gui.enable_search_buttons(prev=True)
+        if self.founditem < len(self.items_found) - 1:
+            self.founditem += 1
+            self.gui.set_selected_keydef_item(self.parent.page, self.founditem)
+        else:
+            self.parent.statusbar_message(self.parent.editor.captions["I_NONXT"])
+            self.gui.enable_search_buttons(next=False)
+
+    def find_prev(self, event=None):
+        """to previous search result
+        """
+        self.gui.enable_search_buttons(next=True)
+        if self.founditem == 0:
+            self.parent.statusbar_message(self.parent.editor.captions["I_NOPRV"])
+            self.gui.enable_search_buttons(prev=False)
+        else:
+            self.founditem -= 1
+            self.gui.set_selected_keydef_item(self.parent.page, self.founditem)
+
 
 class Editor:
     """Hoofdscherm van de applicatie
@@ -280,7 +348,7 @@ class Editor:
                 self.title = self.ini['title']
             if 'initial' in self.ini and self.ini['initial'] != '':
                 start = [x for x, y in self.ini['plugins']].index(self.ini['initial'])
-            self.book.gui.on_page_changed(start)
+            self.book.on_page_changed(start)
             self.book.gui.set_selected(start)
             self.setcaptions()
         self.gui.go()
