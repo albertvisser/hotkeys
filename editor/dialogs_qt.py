@@ -125,6 +125,7 @@ class FileBrowseButton(qtw.QFrame):
         if text:
             self.startdir = os.path.dirname(text)
         super().__init__(parent)
+        self.setWindowTitle(self.master.title)
         self.setFrameStyle(qtw.QFrame.Panel | qtw.QFrame.Raised)
         vbox = qtw.QVBoxLayout()
         box = qtw.QHBoxLayout()
@@ -239,6 +240,7 @@ class DeleteDialog(qtw.QDialog):
         self.parent = parent
         self.last_added = ''  # TODO uitzoeken: kan dit wel altijd
         super().__init__(parent)
+        self.setWindowTitle(self.master.title)
         self.sizer = qtw.QVBoxLayout()
         hsizer = qtw.QHBoxLayout()
         label = qtw.QLabel(self.parent.master.captions['Q_REMPRG'], self)
@@ -284,12 +286,13 @@ class FilesDialog(qtw.QDialog):
     def __init__(self, parent, master):
         self.parent = parent
         self.master = master
-        self.title = self.master.title
+        # self.title = self.master.title
         self.last_added = ''
         self.code_to_remove = []
         self.data_to_remove = []
         super().__init__(parent)
         self.resize(680, 400)
+        self.setWindowTitle(self.master.title)
 
         self.sizer = qtw.QVBoxLayout()
         text = '\n'.join((self.master.captions['T_TOOLS'].split(' / ')))
@@ -480,6 +483,7 @@ class ColumnSettingsDialog(qtw.QDialog):
         self.master = master
         self.initializing = True
         super().__init__(parent)
+        self.setWindowTitle(self.master.title)
 
         self.sizer = qtw.QVBoxLayout()
         text = self.master.captions['T_COLSET'].format(
@@ -679,10 +683,11 @@ class ExtraSettingsDialog(qtw.QDialog):
     def __init__(self, parent, master):
         self.parent = parent
         self.master = master
-        self.title = self.master.title
+        # self.title = self.master.title
         self.captions = self.master.captions
         super().__init__(parent)
         ## self.resize(680, 400)
+        self.setWindowTitle(self.master.title)
 
         self.sizer = qtw.QVBoxLayout()
 
@@ -900,6 +905,7 @@ class EntryDialog(qtw.QDialog):
 
         super().__init__(parent)
         self.resize(680, 400)
+        self.setWindowTitle(self.master.title)
 
         self.sizer = qtw.QVBoxLayout()
         hsizer = qtw.QHBoxLayout()

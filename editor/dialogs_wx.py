@@ -154,8 +154,7 @@ class SetupDialog(wx.Dialog):
     def __init__(self, parent, name):
         self.parent = parent
         self.parent.data = []
-        super().__init__()
-        self.SetTitle(self.parent.master.captions['T_INICSV'])
+        super().__init__(parent, title=self.master.captions['T_INICSV'])
 
         grid = wx.FlexGridSizer(2, 2, 2)
 
@@ -276,11 +275,11 @@ class FilesDialog(wx.Dialog):
     def __init__(self, parent, master):
         self.parent = parent
         self.master = master
-        self.title = self.master.title
+        # self.title = self.master.title
         self.last_added = ''
         self.code_to_remove = []
         self.data_to_remove = []
-        super().__init__(parent, size=(680, 400))
+        super().__init__(parent, size=(680, 400), title=self.master.title)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         text = '\n'.join((self.master.captions['T_TOOLS'].split(' / ')))
@@ -456,7 +455,7 @@ class ColumnSettingsDialog(wx.Dialog):
         self.parent = parent
         self.master = master
         self.initializing = True
-        super().__init__(parent)
+        super().__init__(parent, title=self.master.title)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         text = self.master.captions['T_COLSET'].format(
@@ -637,9 +636,9 @@ class ExtraSettingsDialog(wx.Dialog):
     def __init__(self, parent, master):
         self.parent = parent
         self.master = master
-        self.title = self.master.title
+        # self.title = self.master.title
         self.captions = self.master.captions
-        super().__init__(parent, size=(680, 400))
+        super().__init__(parent, size=(680, 400), title=self.master.title)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -839,7 +838,7 @@ class EntryDialog(wx.Dialog):
         self.master = master
         self.captions = self.master.captions
 
-        super().__init__(parent, size=(680, 400))
+        super().__init__(parent, size=(680, 400), title=self.master.title)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
