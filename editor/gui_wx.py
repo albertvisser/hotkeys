@@ -793,7 +793,7 @@ class TabbedInterface(wx.Panel):
         self.b_prev.Bind(wx.EVT_BUTTON, self.master.find_prev)
         self.b_prev.Enable(False)
         self.b_filter = wx.Button(self, label=self.parent.editor.captions['C_FILTER'])
-        self.b_filter.Bind(wx.EVT_BUTTON, self.filter)
+        self.b_filter.Bind(wx.EVT_BUTTON, self.master.filter)
         self.b_filter.Enable(False)
         self.filter_on = False
 
@@ -888,10 +888,10 @@ class TabbedInterface(wx.Panel):
             self.master.on_text_changed(text)
 
     # used by on_text_changed
-    def get_search_text(self):
+    def get_search_col(self):
         return self.find_loc.GetStringSelection()
 
-    def find_items(self, page):
+    def find_items(self, page, text):
         # hier moet ik nog iets moois op vinden:
         # page.gui.p0list.findItems(text, core.Qt.MatchContains, self.zoekcol)
         return []
@@ -910,42 +910,31 @@ class TabbedInterface(wx.Panel):
         if filter is not None:
             self.b_filter.Enable(filter)
 
-    def filter(self):
-        """filter shown items according to search text
-        """
-        if not self.items_found:
-            return
-        state = str(self.b_filter.GetValue())
-        text = str(self.find.GteStringSelection())
+    # used by filter
+    def get_filter_wanted(self):
+        return str(self.b_filter.GetValue())
+
+    def get_search_text(self):
+        return str(self.find.GetStringSelection())
+
+    def get_found_keydef_position(self):
+        # dit is nog de qt variant
         item = self.master.page.gui.p0list.GetSelection()  # dit moet anders - p0list is een
-        self.reposition = item.text(0), item.text(1)  # dit moet anders      - wx.ListCtrl subclass
-        if state == self.parent.editor.captions['C_FILTER']:
-            state = self.parent.editor.captions['C_FLTOFF']
-            self.filter_on = True
-            self.master.page.filtertext = text
-            self.master.page.olddata = self.master.page.data
-            self.master.page.data = {ix: item for ix, item in enumerate(
-                self.master.page.data.values()) if text.upper() in item[self.zoekcol].upper()}
-            self.b_next.Enable(False)
-            self.b_prev.Enable(False)
-            self.find.Enable(False)
-        else:       # self.filter_on == True
-            state = self.parent.editor.captions['C_FILTER']
-            self.filter_on = False
-            self.master.page.filtertext = ''
-            self.master.page.data = self.master.page.olddata
-            self.b_next.Enable(True)
-            self.b_prev.Enable(True)
-            self.find.Enable(True)
-        self.master.page.populate_list()
+        return item.text(0), item.text(1)  # dit moet anders      - wx.ListCtrl subclass
+
+    def enable_search_text(self, value):
+        self.find.Enable(value)
+
+    def set_found_keydef_position(self):
+        # dit is nog de qt variant
         for ix in range(self.master.page.gui.p0list.topLevelItemCount()):  # dit moet anders
             item = self.master.page.gui.p0list.topLevelItem(ix)  # dit moet anders
             if (item.text(0), item.text(1)) == self.reposition:  # dit moet anders
                 self.master.page.gui.p0list.setCurrentItem(item)  # dit moet anders
                 break
+
+    def set_filter_wanted(self, state):
         self.b_filter.SetValue(state)
-        if self.master.page.data == self.master.page.olddata:
-            self.on_text_changed(text)  # reselect items_found after setting filter to off
 
     def set_selected(self, selection):
         "set the new selection index"

@@ -679,7 +679,7 @@ class TabbedInterface(qtw.QFrame):
         self.b_prev.clicked.connect(self.master.find_prev)
         self.b_prev.setEnabled(False)
         self.b_filter = qtw.QPushButton(self.parent.editor.captions['C_FILTER'], self)
-        self.b_filter.clicked.connect(self.filter)
+        self.b_filter.clicked.connect(self.master.filter)
         self.b_filter.setEnabled(False)
         self.filter_on = False
 
@@ -738,7 +738,7 @@ class TabbedInterface(qtw.QFrame):
         return self.pnl.currentWidget()
 
     def get_selected_tool(self):
-        return self.sel.currentText()))
+        return self.sel.currentText()
 
     def set_selected_panel(self, indx):
         self.pnl.setCurrentIndex(indx)
@@ -759,14 +759,14 @@ class TabbedInterface(qtw.QFrame):
             self.b_filter.setEnabled(False)
 
     # used by on_text_changed
-    def get_search_text(self):
+    def get_search_col(self):
         return self.find_loc.currentText()
 
-    def find_items(self, page):
+    def find_items(self, page, text):
         return page.gui.p0list.findItems(text, core.Qt.MatchContains, self.zoekcol)
 
     def init_search_buttons(self):
-        self.enable_search_buttons(next=False, prev=False, filter=False):
+        self.enable_search_buttons(next=False, prev=False, filter=False)
 
     def set_selected_keydef_item(self, page, index):
         page.p0list.SetSelectedItem(self.items_found[index])
@@ -779,42 +779,29 @@ class TabbedInterface(qtw.QFrame):
         if filter is not None:
             self.b_filter.setEnabled(filter)
 
-    def filter(self):
-        """filter shown items according to search text
-        """
-        if not self.items_found:
-            return
-        state = str(self.b_filter.text())
-        text = str(self.find.currentText())
-        item = self.master.page.gui.p0list.currentItem()
-        self.reposition = item.text(0), item.text(1)
-        if state == self.parent.editor.captions['C_FILTER']:
-            state = self.parent.editor.captions['C_FLTOFF']
-            self.filter_on = True
-            self.master.page.filtertext = text
-            self.master.page.olddata = self.master.page.data
-            self.master.page.data = {ix: item for ix, item in enumerate(
-                self.master.page.data.values()) if text.upper() in item[self.zoekcol].upper()}
-            self.b_next.setEnabled(False)
-            self.b_prev.setEnabled(False)
-            self.find.setEnabled(False)
-        else:       # self.filter_on == True
-            state = self.parent.editor.captions['C_FILTER']
-            self.filter_on = False
-            self.master.page.filtertext = ''
-            self.master.page.data = self.master.page.olddata
-            self.b_next.setEnabled(True)
-            self.b_prev.setEnabled(True)
-            self.find.setEnabled(True)
-        self.master.page.populate_list()
+    # used by filter
+    def get_filter_wanted(self):
+        return str(self.b_filter.text())
+
+    def get_search_text(self):
+        return str(self.find.currentText())
+
+    def get_found_keydef_position(self):
+        item = self.master.page.gui.p0list.GetSelection()
+        return item.text(0), item.text(1)
+
+    def enable_search_text(self, value):
+        self.find.setEnabled(value)
+
+    def set_found_keydef_position(self):
         for ix in range(self.master.page.gui.p0list.topLevelItemCount()):
             item = self.master.page.gui.p0list.topLevelItem(ix)
             if (item.text(0), item.text(1)) == self.reposition:
                 self.master.page.gui.p0list.setCurrentItem(item)
                 break
+
+    def set_filter_wanted(self, state):
         self.b_filter.setText(state)
-        if self.master.page.data == self.master.page.olddata:
-            self.on_text_changed(text)  # reselect items_found after setting filter to off
 
     # hulproutines t.b.v. managen bestandslocaties
 

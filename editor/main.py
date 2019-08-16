@@ -287,10 +287,10 @@ class ChoiceBook:
         """
         page = self.page  # self.pnl.currentWidget()
         for ix, item in enumerate(page.column_info):
-            if page.captions[item[0]] == self.gui.get_search_text():
+            if page.captions[item[0]] == self.gui.get_search_col():
                 self.zoekcol = ix
                 break
-        self.items_found = self.gui.find_items(page)
+        self.items_found = self.gui.find_items(page, text)
         self.gui.init_search_buttons()
         if self.items_found:
             self.gui.set_selected_keydef_item(self, page, 0)
@@ -323,6 +323,36 @@ class ChoiceBook:
         else:
             self.founditem -= 1
             self.gui.set_selected_keydef_item(self.parent.page, self.founditem)
+
+    def filter(self, event=None):
+        """filter shown items according to search text
+        """
+        if not self.items_found:
+            return
+        state = self.gui.get_filter_wanted()
+        text = self.gui.get_search_text()
+        self.reposition = get_found_keydef_position(self)
+        if state == self.parent.captions['C_FILTER']:
+            state = self.parent.captions['C_FLTOFF']
+            self.filter_on = True
+            self.parent.page.filtertext = text
+            self.parent.page.olddata = self.parent.page.data
+            self.parent.page.data = {ix: item for ix, item in enumerate(
+                self.parent.page.data.values()) if text.upper() in item[self.zoekcol].upper()}
+            self.gui.enable_search_buttons(next=False, prev=False)
+            self.gui.enable_search_text(False)
+        else:       # self.filter_on == True
+            state = self.parent.editor.captions['C_FILTER']
+            self.filter_on = False
+            self.parent.page.filtertext = ''
+            self.parent.page.data = self.parent.page.olddata
+            self.gui.enable_search_buttons(next=True, prev=True)
+            self.gui.enable_search_text(True)
+        self.parent.page.populate_list()
+        self.gui.set_found_keydef_position()
+        self.gui.set_filter.wanted(state)
+        if self.parent.page.data == self.parent.page.olddata:
+            self.on_text_changed(text)  # reselect items_found after setting filter to off
 
 
 class Editor:
@@ -584,8 +614,8 @@ class Editor:
         # bepaal welke er momenteel geactiveerd is
         oldlang = self.ini['lang']
         indx = choices.index(oldlang) if oldlang in choices else 0
-        lang, ok = gui.get_choice(self.title, self.captions["P_SELLNG"], choices,
-                                       current=indx)
+        lang, ok = gui.get_choice(self.gui, self.title, self.captions["P_SELLNG"], choices,
+                                  current=indx)
         if ok:
             shared.change_setting('lang', oldlang, lang, self.ini['filename'])
             self.ini['lang'] = lang
