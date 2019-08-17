@@ -3,7 +3,6 @@
 import sys
 # import os
 import functools
-from types import SimpleNamespace
 import PyQt5.QtWidgets as qtw
 ## import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
@@ -664,7 +663,7 @@ class TabbedInterface(qtw.QFrame):
         self.pnl = qtw.QStackedWidget(self)
 
     def setup_search(self):
-        "add the search widgets to the interface"
+        "add the search-related widgets to the interface"
         self.find_loc = qtw.QComboBox(self)
         self.find_loc.setMinimumContentsLength(5)
         self.find_loc.setEditable(False)
@@ -735,72 +734,85 @@ class TabbedInterface(qtw.QFrame):
 
     # used by on_page_changed
     def get_panel(self):
+        "return the currently selected panel's index"
         return self.pnl.currentWidget()
 
     def get_selected_tool(self):
+        "return the currently selected panel's name"
         return self.sel.currentText()
 
     def set_selected_panel(self, indx):
+        "set the index of the panel to be selected"
         self.pnl.setCurrentIndex(indx)
 
     def update_search(self, items):
+        "refresh the search-related widgets"
         self.find_loc.clear()
         self.find_loc.addItems(items)
         self.find_loc.setCurrentText(items[-1])
         if self.master.page.filtertext:
             self.find.setEditText(self.master.page.filtertext)
             self.b_filter.setText(self.parent.captions['C_FLTOFF'])
-            self.b_filter.setEnabled(True)
+            self.enable_search_buttons(filter=True)
         else:
             self.find.setEditText('')
             self.find.setEnabled(True)
-            self.b_next.setEnabled(False)
-            self.b_prev.setEnabled(False)
-            self.b_filter.setEnabled(False)
+            self.init_search_buttons()
 
     # used by on_text_changed
     def get_search_col(self):
+        "return the currently selected search column"
         return self.find_loc.currentText()
 
     def find_items(self, page, text):
-        return page.gui.p0list.findItems(text, core.Qt.MatchContains, self.zoekcol)
+        "return the items that contain the text to search for"
+        return page.gui.p0list.findItems(text, core.Qt.MatchContains, self.master.zoekcol)
 
     def init_search_buttons(self):
+        "set the search-related buttons to their initial values (i.e. disabled)"
         self.enable_search_buttons(next=False, prev=False, filter=False)
 
     def set_selected_keydef_item(self, page, index):
-        page.p0list.SetSelectedItem(self.items_found[index])
+        "select a search result in the list"
+        page.gui.p0list.setCurrentItem(self.master.items_found[index])
 
     def enable_search_buttons(self, next=None, prev=None, filter=None):
+        "set the appropriate search-related button(s) to the given value)s)"
         if next is not None:
             self.b_next.setEnabled(next)
         if prev is not None:
-            self.b_filter.setEnabled(prev)
+            self.b_prev.setEnabled(prev)
         if filter is not None:
             self.b_filter.setEnabled(filter)
 
     # used by filter
-    def get_filter_wanted(self):
+    def get_filter_state_text(self):
+        "return the current text of the filter button"
         return str(self.b_filter.text())
 
     def get_search_text(self):
+        "return the text to search for"
         return str(self.find.currentText())
 
     def get_found_keydef_position(self):
-        item = self.master.page.gui.p0list.GetSelection()
+        "return the position marker of the current search result"
+        item = self.master.page.gui.p0list.currentItem()
         return item.text(0), item.text(1)
 
     def enable_search_text(self, value):
+        "block or unblock entering/selecting a search text"
         self.find.setEnabled(value)
 
     def set_found_keydef_position(self):
+        "find the next search rel=sult acoording to position marker(?)"
         for ix in range(self.master.page.gui.p0list.topLevelItemCount()):
             item = self.master.page.gui.p0list.topLevelItem(ix)
-            if (item.text(0), item.text(1)) == self.reposition:
+            if (item.text(0), item.text(1)) == self.master.reposition:
                 self.master.page.gui.p0list.setCurrentItem(item)
                 break
 
-    def set_filter_wanted(self, state):
+    def set_filter_state_text(self, state):
+        "set the text for the filter button"
         self.b_filter.setText(state)
 
     # hulproutines t.b.v. managen bestandslocaties
@@ -810,7 +822,7 @@ class TabbedInterface(qtw.QFrame):
         return self.sel.currentIndex()
 
     def clear_selector(self):
-        "reset selctor"
+        "reset selector"
         self.sel.clear()
 
     def remove_tool(self, indx, program, program_list):
@@ -882,15 +894,10 @@ class Gui(qtw.QMainWindow):
         self.menu_bar = self.menuBar()
         self.menuitems = {}  # []
 
-    def show_empty_screen(self):
-        """what to do when there's no data to show
+    def resize_empty_screen(self, wid, hig):
+        """full size not needed for a single message
         """
-        # message = self.editor.captions["EMPTY_CONFIG_TEXT"]
-        # self.editor.book = SimpleNamespace()
-        # self.editor.book.gui = DummyPage(self, message)
-        # self.editor.book.page = SimpleNamespace()
-        # self.editor.book.page.gui = self.editor.book.gui
-        # self.resize(640, 80)
+        self.reSize(wid, hig)
 
     def go(self):
         "build and show the interface"

@@ -3,7 +3,6 @@
 # import os
 # import sys
 # import functools
-from types import SimpleNamespace
 import wx
 import wx.adv
 import wx.lib.mixins.listctrl as listmix
@@ -857,28 +856,30 @@ class TabbedInterface(wx.Panel):
 
     # used by on_page_changed
     def get_panel(self):
+        "return the currently selected panel's index"
         return self.pnl.GetCurrentPage()
 
     def get_selected_tool(self):
+        "return the currently selected panel's name"
         return self.sel.GetStringSelection()
 
     def set_selected_panel(self, indx):
+        "set the index of the panel to be selected"
         self.pnl.SetSelection(indx)
 
     def update_search(self, items):
+        "refresh the search-related widgets"
         self.find_loc.Clear()
         self.find_loc.AppendItems(items)
         self.find_loc.SetSelection(len(items) - 1)
         if self.master.page.filtertext:
             self.find.SetValue(self.master.page.filtertext)
             self.b_filter.SetText(self.parent.captions['C_FLTOFF'])
-            self.b_filter.Enable(True)
+            self.enable_search_buttons(filter=True)
         else:
             self.find.SetValue('')
             self.find.Enable(True)
-            self.b_next.Enable(False)
-            self.b_prev.Enable(False)
-            self.b_filter.Enable(False)
+            self.init_search_buttons()
 
     def after_changing_text(self, event):
         """callback for change in search text
@@ -889,52 +890,65 @@ class TabbedInterface(wx.Panel):
 
     # used by on_text_changed
     def get_search_col(self):
+        "return the currently selected search column"
         return self.find_loc.GetStringSelection()
 
     def find_items(self, page, text):
-        # hier moet ik nog iets moois op vinden:
-        # page.gui.p0list.findItems(text, core.Qt.MatchContains, self.zoekcol)
-        return []
+        "return the items that contain the text to search for"
+        result = []
+        for i in range(page.gui.p0list.GetItemCount()):
+            item = page.gui.p0list.GetItem(i)
+            if text in page.gui.p0list.GetItemText(i, self.master.zoekcol):
+                result.append(i)  # tem) - geen items maar indexes in de lijst opnemen
+        return result
 
     def init_search_buttons(self):
+        "set the search-related buttons to their initial values (i.e. disabled)"
         self.enable_search_buttons(next=False, prev=False, filter=False)
 
     def set_selected_keydef_item(self, page, index):
-        page.p0list.SetSelectedItem(self.items_found[index])
+        "select a search result in the list"
+        page.gui.p0list.Select(self.master.items_found[index])
 
     def enable_search_buttons(self, next=None, prev=None, filter=None):
+        "set the appropriate search-related button(s) to the given value)s)"
         if next is not None:
             self.b_next.Enable(next)
         if prev is not None:
-            self.b_filter.Enable(prev)
+            self.b_prev.Enable(prev)
         if filter is not None:
             self.b_filter.Enable(filter)
 
     # used by filter
-    def get_filter_wanted(self):
-        return str(self.b_filter.GetValue())
+    def get_filter_state_text(self):
+        "return the current text of the filter button"
+        return str(self.b_filter.GetLabel())
 
     def get_search_text(self):
+        "return the text to search for"
         return str(self.find.GetStringSelection())
 
     def get_found_keydef_position(self):
-        # dit is nog de qt variant
-        item = self.master.page.gui.p0list.GetSelection()  # dit moet anders - p0list is een
-        return item.text(0), item.text(1)  # dit moet anders      - wx.ListCtrl subclass
+        "return the position marker of the current search result"
+        plist = self.master.page.gui.p0list
+        item = plist.GetFirstSelected()
+        return plist.GetItemText(item, 0), plist.GetItemText(item, 1)
 
     def enable_search_text(self, value):
+        "block or unblock entering/selecting a search text"
         self.find.Enable(value)
 
     def set_found_keydef_position(self):
-        # dit is nog de qt variant
-        for ix in range(self.master.page.gui.p0list.topLevelItemCount()):  # dit moet anders
-            item = self.master.page.gui.p0list.topLevelItem(ix)  # dit moet anders
-            if (item.text(0), item.text(1)) == self.reposition:  # dit moet anders
-                self.master.page.gui.p0list.setCurrentItem(item)  # dit moet anders
+        "find the next search rel=sult acoording to position marker(?)"
+        plist = self.master.page.gui.p0list
+        for i in range(plist.GetItemCount()):
+            if (plist.GetItemText(i, 0), plist.GetItemText(i, 1)) == self.master.reposition:
+                plist.Select(i)
                 break
 
-    def set_filter_wanted(self, state):
-        self.b_filter.SetValue(state)
+    def set_filter_state_text(self, state):
+        "set the text for the filter button"
+        self.b_filter.SetLabel(state)
 
     def set_selected(self, selection):
         "set the new selection index"
@@ -955,15 +969,10 @@ class Gui(wx.Frame):
         self.menu_bar = wx.MenuBar()
         self.menuitems = {}
 
-    def show_empty_screen(self):
-        """what to do when there's no data to show
+    def resize_empty_screen(self, wid, hig):
+        """full size not needed for a single message
         """
-        message = self.editor.captions["EMPTY_CONFIG_TEXT"]
-        self.editor.book = SimpleNamespace()
-        self.editor.book.gui = DummyPage(self, message)
-        self.editor.book.page = SimpleNamespace()
-        self.editor.book.page.gui = self.editor.book.gui
-        self.SetSize(640, 80)
+        self.SetSize(wid, hig)
 
     def go(self):
         "build and show the interface"
@@ -1039,7 +1048,7 @@ class Gui(wx.Frame):
             item, shortcut = item
             shared.log(item, always=True)
             try:
-                shared.log('trying to change menu title to' +  self.editor.captions[menu],
+                shared.log('trying to change menu title to' + self.editor.captions[menu],
                            always=True)
                 item.SetTitle(self.editor.captions[menu])
             except AttributeError:

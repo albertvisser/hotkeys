@@ -9,7 +9,8 @@
         taalkeuze: op dit niveau
         paden: op applicatie niveau (in betreffende csv file)
 """
-from __future__ import print_function
+# from __future__ import print_function
+from types import SimpleNamespace
 import os
 # import sys
 import pdb
@@ -220,9 +221,9 @@ class HotkeyPanel:
         self.gui.set_title(title)
 
     def exit(self):
-        "ask if we cal leave the page"
+        "ask if we can leave the page"
         if self.modified:
-            ok, noexit = hkd.ask_ync_question(self, 'Q_SAVXIT')
+            ok, noexit = gui.ask_ync_question(self.gui, 'Q_SAVXIT')
             if ok:
                 self.savekeys()
             if noexit:
@@ -259,8 +260,8 @@ class ChoiceBook:
         """callback for change in tool page
         """
         # no use finishing this method if certain conditions aren't met
+        print(self.parent)
         if self.parent.book is None:
-            print("leaving: no choicebook setup yet - should this be possible?")
             return
         page = self.gui.get_panel()
         if page is None:                     # leaving: no page selected yet
@@ -293,9 +294,9 @@ class ChoiceBook:
         self.items_found = self.gui.find_items(page, text)
         self.gui.init_search_buttons()
         if self.items_found:
-            self.gui.set_selected_keydef_item(self, page, 0)
+            self.gui.set_selected_keydef_item(page, 0)
             self.founditem = 0
-            if len(self.items_found) < len(self.master.page.data.items()):
+            if 1 < len(self.items_found) < len(self.parent.page.data.items()):
                 self.gui.enable_search_buttons(next=True, filter=True)
             message = self.parent.captions["I_#FOUND"].format(len(self.items_found))
         else:
@@ -310,7 +311,7 @@ class ChoiceBook:
             self.founditem += 1
             self.gui.set_selected_keydef_item(self.parent.page, self.founditem)
         else:
-            self.parent.statusbar_message(self.parent.editor.captions["I_NONXT"])
+            self.parent.gui.statusbar_message(self.parent.captions["I_NONXT"])
             self.gui.enable_search_buttons(next=False)
 
     def find_prev(self, event=None):
@@ -318,7 +319,7 @@ class ChoiceBook:
         """
         self.gui.enable_search_buttons(next=True)
         if self.founditem == 0:
-            self.parent.statusbar_message(self.parent.editor.captions["I_NOPRV"])
+            self.parent.gui.statusbar_message(self.parent.captions["I_NOPRV"])
             self.gui.enable_search_buttons(prev=False)
         else:
             self.founditem -= 1
@@ -329,11 +330,11 @@ class ChoiceBook:
         """
         if not self.items_found:
             return
-        state = self.gui.get_filter_wanted()
+        state_text = self.gui.get_filter_state_text()
         text = self.gui.get_search_text()
-        self.reposition = get_found_keydef_position(self)
-        if state == self.parent.captions['C_FILTER']:
-            state = self.parent.captions['C_FLTOFF']
+        self.reposition = self.gui.get_found_keydef_position()
+        if state_text == self.parent.captions['C_FILTER']:
+            state_text = self.parent.captions['C_FLTOFF']
             self.filter_on = True
             self.parent.page.filtertext = text
             self.parent.page.olddata = self.parent.page.data
@@ -342,7 +343,7 @@ class ChoiceBook:
             self.gui.enable_search_buttons(next=False, prev=False)
             self.gui.enable_search_text(False)
         else:       # self.filter_on == True
-            state = self.parent.editor.captions['C_FILTER']
+            state_text = self.parent.captions['C_FILTER']
             self.filter_on = False
             self.parent.page.filtertext = ''
             self.parent.page.data = self.parent.page.olddata
@@ -350,7 +351,7 @@ class ChoiceBook:
             self.gui.enable_search_text(True)
         self.parent.page.populate_list()
         self.gui.set_found_keydef_position()
-        self.gui.set_filter.wanted(state)
+        self.gui.set_filter_state_text(state_text)
         if self.parent.page.data == self.parent.page.olddata:
             self.on_text_changed(text)  # reselect items_found after setting filter to off
 
@@ -367,7 +368,7 @@ class Editor:
         self.book = None
         self.gui = gui.Gui(self)
         if self.ini['plugins'] == []:
-            self.gui.show_empty_screen()
+            self.show_empty_screen()
         else:
             self.gui.set_window_title(self.title)
             self.gui.statusbar_message(self.captions["T_HELLO"].format(self.captions["T_MAIN"]))
@@ -382,6 +383,16 @@ class Editor:
             self.book.gui.set_selected(start)
             self.setcaptions()
         self.gui.go()
+
+    def show_empty_screen(self):
+        """what to do when there's no data to show
+        """
+        message = self.captions["EMPTY_CONFIG_TEXT"]
+        self.book = SimpleNamespace()
+        self.book.gui = gui.DummyPage(self.gui, message)
+        self.book.page = SimpleNamespace()
+        self.book.page.gui = self.book.gui
+        self.gui.resize_empty_screen(640, 80)
 
 #     def setup_tabs(self):
 #         """add the tabbed window to the inteface
@@ -411,10 +422,10 @@ class Editor:
         zet de gelezen keys daarna ook in de gui
         """
         if not self.book.page.settings:
-            gui.show_message('I_ADDSET')
+            gui.show_message(self.gui, 'I_ADDSET')
             return
         if not self.book.page.modified:
-            if not gui.ask_question('Q_NOCHG'):
+            if not gui.ask_question(self.gui, 'Q_NOCHG'):
                 return
         self.book.page.readkeys()
         self.book.page.populate_list()
@@ -426,26 +437,26 @@ class Editor:
         vraagt daarna eventueel of de betreffende applicatie geherstart moet worden
         """
         if not self.book.page.modified:
-            if not gui.ask_question('Q_NOCHG'):
+            if not gui.ask_question(self.gui, 'Q_NOCHG'):
                 return
         try:
             self.book.page.savekeys()
         except AttributeError:
-            gui.show_message('I_DEFSAV')
+            gui.show_message(self.gui, 'I_DEFSAV')
             return
-        gui.show_message('I_RSTRT')
+        gui.show_message(self.gui, 'I_RSTRT')
 
     def m_title(self, event=None):
         """menu callback voor het aanpassen van de schermtitel
         """
         oldtitle = self.title
-        newtitle, ok = gui.get_textinput(oldtitle, self.captions["T_TITLE"])
+        newtitle, ok = gui.get_textinput(self.gui, oldtitle, self.captions["T_TITLE"])
         if ok:
             if newtitle != oldtitle:
                 self.title = self.ini['title'] = newtitle
                 shared.change_setting('title', oldtitle, newtitle, self.ini['filename'])
                 if not newtitle:
-                    gui.show_message('I_STITLE')
+                    gui.show_message(self.gui, 'I_STITLE')
                     self.title = self.captions["T_MAIN"]
                 self.book.page.set_title()
 
@@ -510,17 +521,17 @@ class Editor:
         """rebuild csv data from (updated) settings
         """
         if not self.book.page.settings:
-            gui.show_message('I_ADDSET')
+            gui.show_message(self.gui, 'I_ADDSET')
             return
         try:
             test = self.book.page.reader.buildcsv
         except AttributeError:
-            gui.show_message('I_DEFRBLD')
+            gui.show_message(self.gui, 'I_DEFRBLD')
             return
         try:
             newdata = test(self.book)
         except FileNotFoundError:
-            gui.show_message('I_ERRRBLD')
+            gui.show_message(self.gui, 'I_ERRRBLD')
             return
         if newdata[0]:
             self.book.page.data = newdata[0]
@@ -536,7 +547,7 @@ class Editor:
             except IndexError:
                 mld = 'No extra definition'
             mld = self.captions['I_#FOUND'].format(mld)
-        gui.show_message(text=mld)
+        gui.show_message(self.gui, text=mld)
 
     def m_tool(self, event=None):
         """define tool-specific settings
@@ -565,7 +576,7 @@ class Editor:
         """define tool-specific settings: column properties
         """
         if not self.book.page.settings:
-            gui.show_message('I_ADDSET')
+            gui.show_message(self.gui, 'I_ADDSET')
             return
         ok = gui.manage_columnsettings(self)
         if ok:
@@ -595,7 +606,7 @@ class Editor:
         """manual entry of keyboard shortcuts
         """
         if not all((self.book.page.settings, self.book.page.column_info)):
-            gui.show_message('I_ADDCOL')
+            gui.show_message(self.gui, 'I_ADDCOL')
             return
         ok = gui.manual_entry(self)
         if ok:
@@ -625,8 +636,10 @@ class Editor:
     def m_about(self, event=None):
         """(menu) callback voor het tonen van de "about" dialoog
         """
-        gui.show_message(
-            text='\n'.join(self.captions['T_ABOUT'].format(self.captions['T_SHORT'], shared.VRS,
+        gui.show_message(self.gui,
+            self.gui,
+            text='\n'.join(self.captions['T_ABOUT'].format(self.captions['T_SHORT'],
+                                                           shared.VRS,
                                                            shared.AUTH,
                                                            self.captions['T_LONG']).split(' / ')))
 
