@@ -34,6 +34,10 @@ def log(message, always=False):
         logging.info(message)
 
 
+def log_exc(message):
+    logging.exception(message)
+
+
 class LineType(enum.Enum):
     """Types of lines in the csv file (first value)
     """
