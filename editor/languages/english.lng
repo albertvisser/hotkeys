@@ -143,6 +143,7 @@ M_SAVE &Save definitions
 M_RBLD Re&build definitions file
 M_EXIT e&Xit
 M_SETT &Settings
+M_SETT2 &Settings
 M_TITLE &Screen Title
 M_LOC &File locations
 M_LANG &Language

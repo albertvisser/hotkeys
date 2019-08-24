@@ -143,6 +143,7 @@ M_SAVE definities op&Slaan
 M_RBLD definities &bestand opnieuw opbouwen
 M_EXIT e&Xit
 M_SETT &Instellingen
+M_SETT2 &Instellingen
 M_TITLE &Schermtitel
 M_LOC  &Bestandslocaties
 M_LANG &Taal
