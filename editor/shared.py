@@ -216,7 +216,6 @@ def read_columntitledata(editor):
     """
     column_textids = []
     column_names = []
-    last_textid = ''
     in_section = False
 
     with (HERELANG / editor.ini["lang"]).open() as f_in:
@@ -231,12 +230,11 @@ def read_columntitledata(editor):
                     in_section = True
                 continue
             test = line.split(None, 1)
-            if test[0] > last_textid and test[0] < '100':
-                last_textid = test[0]
+            log(test, always=True)
             if in_section:
                 column_textids.append(test[0])
                 column_names.append(test[1])
-    return column_textids, column_names, last_textid
+    return column_textids, column_names
 
 
 def add_columntitledata(newdata):
@@ -269,8 +267,11 @@ def update_paths(paths, pathdata, lang):
     """
     updir = HERE.parent
     newpaths = []
-    for name, path in paths:
-        loc = path.input.text()         # bv editor/plugins/gitrefs_hotkeys.csv
+    print('in update_paths')
+    # for name, path in paths:
+    #     print(paths)
+    #     loc = path.input.text()         # bv editor/plugins/gitrefs_hotkeys.csv
+    for name, loc in paths:
         newpaths.append((name, loc))
         if name in pathdata:
             data = pathdata[name]       # bv. ['editor.plugins.gitrefs_keys', 'gitrefs hotkeys', 0, 0, 0]

@@ -1,9 +1,7 @@
 """Dialog classes for hotkeys
 """
 import os
-import importlib
-import importlib.util
-import logging
+import collections
 import PyQt5.QtWidgets as qtw
 ## import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
@@ -44,7 +42,7 @@ def get_textinput(win, text, prompt):
     """toon een dialoog waarin een regel tekst kan worden opgegeven en retourneer het antwoord
     (de opgegeven tekst en True bij OK) na sluiten van de dialoog
     """
-    text, ok = qtw.QInputDialog.getText(win, text, prompt, text=text)
+    text, ok = qtw.QInputDialog.getText(win, 'Application Title', prompt, text=text)
     return text, ok == qtw.QDialog.Accepted
 
 
@@ -100,14 +98,9 @@ class InitialToolDialog(qtw.QDialog):
     def accept(self):
         """confirm dialog
         """
-        if self.check_fixed.isChecked():
-            mode = shared.mode_f
-        elif self.check_remember.isChecked():
-            mode = shared.mode_r
-        else:
-            mode = None
-        pref = self.sel_fixed.currentText()
-        self.master.prefs = mode, pref
+        self.parent.master.accept_startupsettings(self.check_fixed.isChecked(),
+                                                  self.check_remember.isChecked(),
+                                                  self.sel_fixed.currentText())
         super().accept()
 
 
@@ -208,29 +201,19 @@ class SetupDialog(qtw.QDialog):
         self.setLayout(box)
 
     def accept(self):
-        """
-        set self.parent.loc to the chosen filename
+        """set self.parent.loc to the chosen filename
+
         write the settings to this file along with some sample data - deferred to
         confirmation of the filesdialog
         """
-        cloc = self.t_loc.input.text()
-        ploc = self.t_program.text()
-        if cloc == "":
-            show_message(self.parent.master, 'I_NEEDNAME')
-            return
-        cloc = os.path.abspath(cloc)
-        if os.path.exists(cloc):
-            show_message(self.parent.master, 'I_GOTSETFIL', args=[cloc])
-            return
-        if importlib.util.find_spec(ploc):
-            show_message(self.parent.master, 'I_GOTPLGFIL', args=[ploc])
-            return
-        self.parent.loc = cloc
-        self.parent.data = [ploc, self.t_title.text(),
-                            int(self.c_rebuild.isChecked()),
-                            int(self.c_details.isChecked()),
-                            int(self.c_redef.isChecked())]
-        super().accept()
+        ok = self.parent.master.accept_csvsettings(self.t_loc.input.text(),
+                                                   self.t_program.text(),
+                                                   self.t_title.text(),
+                                                   self.c_rebuild.isChecked(),
+                                                   self.c_details.isChecked(),
+                                                   self.c_redef.isChecked())
+        if ok:
+            super().accept()
 
 
 class DeleteDialog(qtw.QDialog):
@@ -386,8 +369,7 @@ class FilesDialog(qtw.QDialog):
 
     def add_program(self):
         """nieuwe rij aanmaken in self.gsizer"""
-        newtool, ok = qtw.QInputDialog.getText(self, self.master.title,
-                                               self.master.captions['P_NEWPRG'])
+        newtool, ok = get_textinput(self, '', self.master.captions['P_NEWPRG'])
         if ok:
             if newtool == "":
                 show_message(self.parent, 'I_NEEDNAME')
@@ -414,9 +396,9 @@ class FilesDialog(qtw.QDialog):
                         csv_name = self.paths[row][1].input.text()
                         prg_name = self.settingsdata[name][0]
                     except KeyError:
-                        logging.exception('')
-                    logging.info('csv name is %s', csv_name)
-                    logging.info('prg name is %s', prg_name)
+                        shared.log_exc('')
+                    shared.log('csv name is %s', csv_name)
+                    shared.log('prg name is %s', prg_name)
                     if self.remove_data:
                         if csv_name:
                             self.data_to_remove.append(csv_name)
@@ -429,50 +411,11 @@ class FilesDialog(qtw.QDialog):
     def accept(self):
         """send updates to parent and leave
         """
-        # TODO onderbrengen in een gui onafhankeljke validatieroutine
-        if self.last_added not in [x[0] for x in self.paths]:
-            self.last_added = ''
-        self.master.last_added = self.last_added
-        for ix, entry in enumerate(self.paths):
-            name, path = entry
-            if name not in [x for x, y in self.master.ini['plugins']]:
-                csvname = path.input.text()
-                if not csvname:
-                    show_message(self, text='Please fill out all filenames')
-                    return
-                prgname = self.settingsdata[name][0]
-                if not prgname:
-                    # try to get the plugin name from the csv file
-                    try:
-                        data = shared.readcsv(csvname)
-                    except (FileNotFoundError, IsADirectoryError, ValueError):
-                        show_message(self, text='{} does not seem to be a usable '
-                                                'csv file'.format(csvname))
-                        return
-                    try:
-                        prgname = data[0][shared.SettType.PLG.value]
-                    except KeyError:
-                        show_message(self, text='{} does not contain a reference to a '
-                                                'plugin (PluginName setting)'.format(csvname))
-                        return
-                if len(self.settingsdata[name]) == 1:  # existing plugin
-                    try:
-                        _ = importlib.import_module(prgname)
-                    except ImportError:
-                        show_message(self, text='{} does not contain a reference to a '
-                                                'valid plugin'.format(csvname))
-                        return
-
-                self.master.pluginfiles[name] = prgname
-        for filename in self.code_to_remove + self.data_to_remove:
-            os.remove(filename)
-        self.newpathdata = {}
-        for name, entry in self.settingsdata.items():
-            if len(entry) > 1:
-                self.newpathdata[name] = entry
-        self.master.ini["plugins"] = shared.update_paths(self.paths, self.newpathdata,
-                                                         self.master.ini["lang"])
-        super().accept()
+        ok = self.master.accept_pathsettings([(x, y.input.text()) for x, y in self.paths],
+                                             self.settingsdata,
+                                             self.code_to_remove + self.data_to_remove)
+        if ok:
+            super().accept()
 
 
 class ColumnSettingsDialog(qtw.QDialog):
@@ -520,9 +463,10 @@ class ColumnSettingsDialog(qtw.QDialog):
         self.rownum = 0  # indicates the number of rows in the gridlayout
         self.data, self.checks = [], []
         self.col_textids, self.col_names, self.last_textid = \
-            shared.read_columntitledata(self.master)
+            self.master.col_textids, self.master.col_names, self.master.last_textid
         for ix, item in enumerate(self.master.book.page.column_info):
-            item.append(ix)
+            print(item)
+            item.append(ix)  # dit zou column_info niet moeten bijwerken maar doet dat blijkbaar wel?
             self.add_row(*item)
         box = qtw.QVBoxLayout()
         box.addLayout(self.gsizer)
@@ -549,15 +493,14 @@ class ColumnSettingsDialog(qtw.QDialog):
         self.setLayout(self.sizer)
         self.initializing = False
 
-    def exec_(self):
-        """reimplementation to prevent dialog from showing in some cases
-        """
-        if self.last_textid == '099':
-            # TODO: rethink this
-            show_message(self.parent, text="Can't perform this function: "
-                                           "no language text identifiers below 100 left")
-            self.reject()
-        return super().exec_()
+    # def exec_(self):
+    #     """reimplementation to prevent dialog from showing in some cases
+    #     """
+    #     if self.last_textid == '099':
+    #         show_message(self.parent, text="Can't perform this function: "
+    #                                        "no language text identifiers below 100 left")
+    #         self.reject()
+    #     return super().exec_()
 
     def add_row(self, name='', width='', is_flag=False, colno=''):
         """create a row for defining column settings
@@ -650,31 +593,11 @@ class ColumnSettingsDialog(qtw.QDialog):
     def accept(self):
         """save the changed settings and leave
         """
-        # TODO: het meeste hiervan kan in een gui-onafhankelijke validatieroutine
-        column_info, new_titles = [], []
-        lastcol = -1
-        for ix, value in enumerate(sorted(self.data, key=lambda x: x[2].value())):
-            w_name, w_width, w_colno, w_flag, old_colno = value
-            if w_colno.value() == lastcol:
-                show_message(self.parent, 'I_DPLCOL')
-                return
-            lastcol = w_colno.value()
-            name = w_name.currentText()
-            if name in self.col_names:
-                name = self.col_textids[self.col_names.index(name)]
-            else:
-                self.last_textid = "{:0>3}".format(int(self.last_textid) + 1)
-                new_titles.append((self.last_textid, name))
-                name = self.last_textid
-            column_info.append([name, int(w_width.text()), w_flag.isChecked(),
-                                old_colno])
-        if new_titles:
-            shared.add_columntitledata(new_titles)
-        self.master.book.page.column_info = column_info
-        for id_, name in new_titles:
-            self.master.captions[id_] = name
-            self.master.book.page.captions[id_] = name
-        super().accept()
+        data = [(x.currentText(), y.value(), a.text(), b.isChecked(), c)
+                for x, y, a, b, c in self.data]
+        ok = self.master.accept_columnsettings(data)
+        if ok:
+            super().accept()
 
 
 class ExtraSettingsDialog(qtw.QDialog):
@@ -858,41 +781,16 @@ class ExtraSettingsDialog(qtw.QDialog):
     def accept(self):
         """update settings and leave
         """
-        # TODO: het meeste hiervan kan in een gui onafhankelijke validatieroutine
-        if self.c_redef.isChecked() and not self.c_showdet.isChecked():
-            show_message(self, "I_NODET")
-            return
-        if self.c_showdet.isChecked():
-            try:
-                test = self.master.book.page.reader.add_extra_attributes
-            except AttributeError:
-                self.c_showdet.setChecked(False)
-                self.c_redef.setChecked(False)
-                show_message(self, "I_IMPLXTRA")
-                return
-        self.master.book.page.settings[shared.SettType.PLG.value] = self.t_program.text()
-        self.master.book.page.settings[shared.SettType.PNL.value] = self.t_title.text()
-        value = '1' if self.c_rebuild.isChecked() else '0'
-        self.master.book.page.settings[shared.SettType.RBLD.value] = value
-        value = '1' if self.c_showdet.isChecked() else '0'
-        self.master.book.page.settings[shared.SettType.DETS.value] = value
-        value = '1' if self.c_redef.isChecked() else '0'
-        self.master.book.page.settings[shared.SettType.RDEF.value] = value
-
-        settingsdict, settdescdict = {}, {}
-        for w_name, w_value, w_desc in self.data:
-            settingsdict[w_name.text()] = w_value.text()
-            settdescdict[w_name.text()] = w_desc.text()
-        todelete = []
-        for setting in self.master.book.page.settings:
-            if setting not in shared.csv_settingnames:
-                todelete.append(setting)
-        for setting in todelete:
-            del self.master.book.page.settings[setting]
-        self.master.book.page.settings.update(settingsdict)
-        self.master.book.page.settings['extra'] = settdescdict
-
-        super().accept()
+        data = [(x.text(), y.text(), z.text()) for x, y, z in self.data]
+        ok = self.master.confirm_extrasettings(self.t_program.text(), self.t_title.text(),
+                                               self.c_rebuild.isChecked(),
+                                               self.c_showdet.isChecked(),
+                                               self.c_redef.isChecked(), data)
+        if not ok:
+            self.c_showdet.setChecked(False)
+            self.c_redef.setChecked(False)
+        else:
+            super().accept()
 
 
 class EntryDialog(qtw.QDialog):
@@ -978,46 +876,19 @@ class EntryDialog(qtw.QDialog):
     def accept(self):
         """send updates to parent and leave
         """
-        # TODO onderbrengen in een gui onafhankelijke validatieroutine?
-        new_values = {}
+        new_values = collections.defaultdict(list)
         for rowid in range(self.p0list.rowCount()):
-            value = []
             for colid in range(self.p0list.columnCount()):
                 try:
-                    value.append(self.p0list.item(rowid, colid).text())
+                    value = self.p0list.item(rowid, colid).text()
                 except AttributeError:
-                    value.append('')
-            if value != [''] * self.p0list.columnCount():
-                new_values[len(new_values)] = value
+                    value = ''
+                new_values[rowid + 1].append(value)
         self.master.book.page.data = new_values
         super().accept()
 
 
-def manage_filesettings(win):
-    "relay"
-    ok = FilesDialog(win.gui, win).exec_()
-    return ok == qtw.QDialog.Accepted
-
-
-def manage_extrasettings(win):
-    "relay"
-    dlg = ExtraSettingsDialog(win.gui, win).exec_()
-    return dlg == qtw.QDialog.Accepted
-
-
-def manage_columnsettings(win):
-    "relay"
-    dlg = ColumnSettingsDialog(win.gui, win).exec_()
-    return dlg == qtw.QDialog.Accepted
-
-
-def manual_entry(win):
-    "relay"
-    dlg = EntryDialog(win.gui, win).exec_()
-    return dlg == qtw.QDialog.Accepted
-
-
-def manage_startupsettings(win):
-    "relay"
-    ok = InitialToolDialog(win.gui, win).exec_()
+def show_dialog(win, cls):
+    "show a dialog and return confirmation"
+    ok = cls(win.gui, win).exec_()
     return ok == qtw.QDialog.Accepted

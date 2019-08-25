@@ -9,13 +9,13 @@
         taalkeuze: op dit niveau
         paden: op applicatie niveau (in betreffende csv file)
 """
-# from __future__ import print_function
 from types import SimpleNamespace
 import os
 # import sys
 import pdb
 import string
 import importlib
+import importlib.util
 ## import shutil
 
 import editor.shared as shared
@@ -46,7 +46,7 @@ class HotkeyPanel:
 
         shared.log(self.pad)
         if self.pad == NO_PATH:
-            print('init HotkeyPanel with NO_PATH')
+            # print('init HotkeyPanel with NO_PATH')
             self.gui.setup_empty_screen('No path data for HotKeyPanel', self.parent.parent.title)
             return
 
@@ -96,8 +96,8 @@ class HotkeyPanel:
                     nodata = "Can't build settings for {}".format(modulename)
 
         if nodata:
-            print('init HotkeyPanel with no data', nodata)
-            # self.gui.setup_empty_screen(nodata, self.parent.parent.title)
+            # print('init HotkeyPanel with no data', nodata)
+            self.gui.setup_empty_screen(nodata, self.parent.parent.title)
             return
 
         try:
@@ -111,13 +111,16 @@ class HotkeyPanel:
         # schermdeel - het vullen van veldwaarden hierin gebeurt als gevolg van het vullen
         # van de eerste rij in de listbox, daarom moet deze het laatst
         # self.otherstuff = self.reader.getotherstuff()
+        # print('in init: has_extrapanel is', self.has_extrapanel, 'voor', self)
         if self.has_extrapanel:
-            shared.log('extrapanel: %s', self.has_extrapanel)
+            # shared.log('extrapanel: %s', self.has_extrapanel)
             self.fields = [x[0] for x in self.column_info]
             self.add_extra_attributes()
             self.gui.add_extra_fields()
 
         self.gui.setup_list()
+        if self.has_extrapanel:
+            self.refresh_extrascreen(self.gui.getfirstitem())
         self.initializing_screen = False
 
     def readkeys(self):
@@ -153,8 +156,8 @@ class HotkeyPanel:
         self.gui.clear_list()
 
         items = self.data.items()
-        # if not items:  # if items is None or len(items) == 0:
-        #     return
+        if not items:  # if items is None or len(items) == 0:
+            return
 
         for key, data in items:
             try:
@@ -173,8 +176,9 @@ class HotkeyPanel:
         self.gui.set_listselection(pos)
 
     def add_extra_attributes(self):
-        """pertaining to details for selected keydef, to make editing possible
+        """helper stuff for selected keydef, to make editing possible
         """
+        # print('in add_extra_attributes, set up _origdata voor', self)
         self.init_origdata = []
         ix_item = 0
         if 'C_KEY' in self.fields:
@@ -199,9 +203,8 @@ class HotkeyPanel:
             self.init_origdata.append('')
             self.ix_cmd = ix_item
             ix_item += 1
-        self.contextslist = []
-        self.contextsactionsdict = {}
-        self.commandslist = []
+        self.contextslist = self.commandslist = self.defkeys = []
+        self.contextactionsdict = self.omsdict = self.descriptions = {}
         try:
             self.reader.add_extra_attributes(self)  # user exit
         except AttributeError:
@@ -229,6 +232,316 @@ class HotkeyPanel:
             if noexit:
                 return False
         return True
+
+    def on_text(self, *args):
+        """on changing a text enty
+        """
+        if self.initializing_screen:
+            return
+        text = self.gui.get_widget_text(*args)
+        self.defchanged = False
+        if 'C_KEY' in self.fields:
+            if text == self._origdata[self.ix_key]:
+                self.defchanged = True
+                self.gui.enable_save(True)
+            elif text == self._origdata[self.ix_key]:
+                self.defchanged = False
+                self.gui.enable_save(False)
+
+    def on_combobox(self, *args):
+        """callback op het gebruik van een combobox
+
+        zorgt ervoor dat de buttons ge(de)activeerd worden
+        """
+        if self.initializing_screen:
+            return
+        # print(args)
+        cb, text = self.gui.get_choice_value(*args)
+        self.defchanged = False
+        try:
+            test_key = bool(self.gui.cmb_key)  # moet/kan dit met GetValue?
+        except AttributeError:
+            test_key = False
+        try:
+            test_cmd = bool(self.gui.cmb_commando)
+        except AttributeError:
+            test_cmd = False
+        try:
+            test_cnx = bool(self.gui.cmb_context)
+        except AttributeError:
+            test_cnx = False
+        if test_key and cb == self.gui.cmb_key:
+            keyitemindex = self.ix_key
+            if text != self._origdata[keyitemindex]:
+                self._newdata[keyitemindex] = text
+                if not self.gui.initializing_keydef:
+                    self.defchanged = True
+                    if 'C_CMD' in self.fields:
+                        self.gui.enable_save(True)
+            elif self.gui.get_combobox_text(self.gui.cmb_commando) == self._origdata[keyitemindex]:  # UNDEF
+                self.defchanged = False
+                if 'C_CMD' in self.fields:
+                    self.gui.enable_save(False)
+        elif test_cnx and cb == self.gui.cmb_context:
+            if text != self._origdata[self.ix_cntxt]:
+                context = self._origdata[self.ix_cntxt] = self.gui.get_combobox_text(self.gui.cmb_context)
+                self.gui.init_combobox(self.gui.cmb_commando)
+                # if self.contextactionsdict:
+                #     actionslist = self.contextactionsdict[context]
+                # else:
+                #     actionslist = self.commandslist
+                actionslist = self.contextactionsdict[context] or self.commandslist
+                self.gui.init_combobox(self.gui.cmb_commando, actionslist)
+                if not self.gui.initializing_keydef:
+                    self.defchanged = True
+                    if 'C_CMD' in self.fields:
+                        self.gui.enable_save(True)
+            elif self.gui.get_combobox_text(self.gui.cmb_commando) == self._origdata[self.ix_cntxt]:
+                self.defchanged = False
+                if 'C_CMD' in self.fields:
+                    self.gui.enable_save(False)
+        elif test_cmd and cb == self.gui.cmb_commando:
+            cmditemindex = self.ix_cmd
+            if text != self._origdata[cmditemindex]:
+                self._newdata[cmditemindex] = text
+                try:
+                    text_to_set = self.descriptions[text]
+                except KeyError:
+                    text_to_set = self.captions['M_NODESC']
+                self.gui.set_textfield_value(self.gui.txt_oms, text_to_set)
+                if not self.gui.initializing_keydef:
+                    self.defchanged = True
+                    if 'C_CMD' in self.fields:
+                        self.gui.enable_save(True)
+            elif self.gui.get_combobox_text(self.gui.cmb_key) == self._origdata[cmditemindex]:
+                if 'C_CMD' in self.fields:
+                    self.gui.enable_save(False)
+        else:
+            try:
+                self.reader.on_combobox(self, cb, text)  # user exit
+            except AttributeError:
+                pass
+
+    def on_checkbox(self, *args):
+        """callback op het gebruik van een checkbox
+
+        voorlopig alleen voor de modifiers
+        """
+        if self.initializing_screen:
+            return
+        cb, state = self.gui.get_check_value(*args)
+        for win, indx in zip((self.gui.cb_shift, self.gui.cb_ctrl,
+                              self.gui.cb_alt, self.gui.cb_win), self.ix_mods):
+            if cb == win and state != self._origdata[indx]:
+                self._newdata[indx] = state
+                if not self.gui.initializing_keydef:
+                    self.defchanged = True
+                    if 'C_CMD' in self.fields:
+                        self.gui.enable_save(True)
+                break
+        else:
+            states = [self.gui.get_checkbox_state(self.gui.cb_shift),
+                      self.gui.get_checkbox_state(self.gui.cb_ctrl),
+                      self.gui.get_checkbox_state(self.gui.cb_alt),
+                      self.gui.get_checkbox_state(self.gui.cb_win)]
+            if states == [self._origdata[x] for x in self.ix_mods]:
+                self.defchanged = False
+                if 'C_CMD' in self.fields:
+                    self.gui.enable_save(False)
+
+    def refresh_extrascreen(self, selitem):
+        """show new values after changing kb shortcut
+        """
+        if not selitem:  # bv. bij p0list.clear()
+            return
+        seli = self.gui.get_itemdata(selitem)
+        keydefdata = self.data[seli]
+        if 'C_CMD' in self.fields:
+            self.gui.enable_save(False)
+            self.gui.enable_delete(False)
+        self._origdata = self.init_origdata[:]
+        # self._newdata = self.init_origdata[:]
+        for indx, item in enumerate(keydefdata):
+            if self.column_info[indx][0] == 'C_KEY':
+                key = item
+                if self.keylist is None:
+                    self.gui.set_textfield_value(self.gui.txt_key, key)
+                else:
+                    self.gui.set_combobox_string(self.gui.cmb_key, key, self.keylist)
+                self._origdata[self.ix_key] = key
+            elif self.column_info[indx][0] == 'C_MODS':
+                mods = item
+                self.gui.set_checkbox_state(self.gui.cb_shift, False)
+                self.gui.set_checkbox_state(self.gui.cb_ctrl, False)
+                self.gui.set_checkbox_state(self.gui.cb_alt, False)
+                self.gui.set_checkbox_state(self.gui.cb_win, False)
+                for x, y, z in zip('SCAW',
+                                   self.ix_mods,
+                                   (self.gui.cb_shift, self.gui.cb_ctrl, self.gui.cb_alt,
+                                    self.gui.cb_win)):
+                    if x in mods:
+                        self._origdata[y] = True
+                        self.gui.set_checkbox_state(z, True)
+            elif self.column_info[indx][0] == 'C_TYPE':
+                soort = item
+                if soort == 'U':
+                    self.gui.enable_delete(True)
+            elif self.column_info[indx][0] == 'C_CNTXT' and self.contextslist:
+                context = item
+                self.gui.set_combobox_string(self.gui.cmb_context, context, self.contextslist)
+                self._origdata[self.ix_cntxt] = context
+            elif self.column_info[indx][0] == 'C_CMD' and self.commandslist:
+                command = item
+                if 'C_CNTXT' in self.fields:
+                    self.gui.init_combobox(self.gui.cmb_commando)
+                    context = self.gui.get_combobox_selection(self.gui.cmb_context)  # currentText()
+                    # if self.contextactionsdict:
+                    #     actionslist = self.contextactionsdict[context]
+                    # else:
+                    #     actionslist = self.commandslist
+                    actionslist = self.contextactionsdict[context] or self.commandslist
+                    self.gui.init_combobox(self.gui.cmb_commando, actionslist)
+                    valuelist = actionslist
+                else:
+                    valuelist = self.commandslist
+                self.gui.set_combobox_string(self.gui.cmb_commando, command, valuelist)
+                self._origdata[self.ix_cmd] = command
+            elif self.column_info[indx][0] == 'C_DESC':
+                oms = item
+                self.gui.set_textfield_value(self.gui.txt_oms, oms)
+            else:
+                try:
+                    self.reader.vul_extra_details(self, indx, item)  # user exit
+                except AttributeError:
+                    pass
+        self._newdata = self._origdata[:]
+
+    def check_for_changes(self):
+        "find out what has been changed"
+        # moet eigenlijk generieker want bij bv VI is alleen C_KEY aanwezig terwijl de rest
+        # best belangrijk is
+        other_item = other_cntxt = other_cmd = False
+        key = mods = cmnd = context = ''
+        # print(self.fields)
+        # print('check for changes:', self._origdata[self.ix_key], self._newdata[self.ix_key])
+        if 'C_KEY' in self.fields:
+            origkey = self._origdata[self.ix_key]
+            key = self._newdata[self.ix_key]
+            other_item = key != origkey
+        if 'C_MODS' in self.fields:
+            origmods = ''.join([y for x, y in zip(self.ix_mods, ('WCAS'))
+                                if self._origdata[x]])
+            mods = ''.join([y for x, y in zip(self.ix_mods, ('WCAS'))
+                            if self._newdata[x]])
+            other_item = other_item or mods != origmods
+        if 'C_CMD' in self.fields:
+            origcmd = self._origdata[self.ix_cmd]
+            cmnd = self._newdata[self.ix_cmd]
+            other_cmd = cmnd != origcmd
+        if 'C_CNTXT' in self.fields:
+            origcntxt = self._origdata[self.ix_cntxt]
+            context = self._newdata[self.ix_cntxt]
+            other_cntxt = context != origcntxt
+        return ((other_item, other_cmd, other_cntxt), (key, mods, cmnd, context))
+
+    def check_for_selected_keydef(self, keydefdata):
+        "find the keydef currently selected (if any)"
+        key, mods, cmnd, context = keydefdata
+        found, indx = False, -1
+        for number, item in self.data.items():
+            keymatch = modmatch = cntxtmatch = True
+            if 'C_KEY' in self.fields and item[0] != key:
+                keymatch = False
+            if 'C_MODS' in self.fields and item[1] != mods:
+                modmatch = False
+            if 'C_CNTXT' in self.fields and item[2] != context:
+                cntxtmatch = False
+            if keymatch and modmatch and cntxtmatch:
+                found = True
+                indx = number
+                break
+        return found, indx
+
+    def ask_what_to_do(self, changes, found, newitem, olditem):
+        "get input on what to do next"
+        cursor_moved = True if newitem != olditem and olditem is not None else False
+        make_change = False
+        if any(changes):
+            if cursor_moved:
+                make_change = gui.ask_question(self, "Q_SAVCHG")
+            elif changes[0]:
+                if found:
+                    make_change = gui.ask_question(self, "Q_DPLKEY")
+                else:
+                    make_change = True
+            else:
+                make_change = True
+        return make_change
+
+    def apply_changes(self, found, indx, keydefdata):
+        "effectuate the changes as indicated in the gui"
+        # TODO note this only works for one specific plugin (tcmdrkys) I think
+        # which is no problem as long as I don't modify keydefs
+        key, mods, cmnd, context = keydefdata
+        item = self.gui.get_selected_keydef()
+        pos = self.gui.get_keydef_position(item)
+        if found:
+            self.data[indx] = (key, mods, 'U', cmnd, self.omsdict[cmnd])
+        else:
+            # ordereddict opnieuw opbouwen
+            newdata = [x for x in self.data.values()]
+            newvalue = (key, mods, 'U', cmnd, self.omsdict[cmnd])
+            newdata.append(newvalue)
+            newdata.sort()
+            self.data.clear()
+            for x, y in enumerate(newdata):
+                if y == newvalue:  # is dit nodig?
+                    indx = x       # want waar gebruik ik die indx verder?
+                self.data[x] = y
+        self.modified = True
+        self._origdata = self.init_origdata
+        if 'C_KEY' in self.fields:
+            self._origdata[self.ix_key] = key
+        if 'C_MODS' in self.fields:
+            for mod, ix_mod in zip(('WCAS'), self.ix_mods):
+                self._origdata[ix_mod] = mod in mods
+        if 'C_CMD' in self.fields:
+            self._origdata[self.ix_cmd] = cmnd
+        if 'C_CNTXT' in self.fields:
+            self._origdata[self.ix_cntxt] = context
+        try:
+            self.reader.on_extra_selected(self, item)  # user exit
+        except AttributeError:
+            pass
+        newitem = self.gui.get_keydef_at_position(pos)
+        self.populate_list(pos)    # refresh
+        return newitem
+
+    def apply_deletion(self):
+        "remove the indicated keydef"
+        item = self.gui.get_selected_keydef()
+        pos = self.gui.get_keydef_position(item)
+        indx = self.gui.get_itemdata(item)
+        if self.captions["{:03}".format(indx)] == 'C_TYPE':
+            if self.data[indx][1] == "S":  # can't delete standard key
+                gui.show_message(self.parent, 'I_STDDEF')
+                return
+        elif self.captions["{:03}".format(indx)] == 'C_KEY':
+            if self.data[indx][0] in self.defkeys:  # restore standard if any
+                cmnd = self.defkeys[self.data[indx][0]]
+                if cmnd in self.omsdict:
+                    oms = self.omsdict[cmnd]
+                else:
+                    oms, cmnd = cmnd, ""
+                key = self.data[indx][0]                 # is this correct?
+                self.data[indx] = (key, 'S', cmnd, oms)  # key UNDEF
+            else:
+                del self.data[indx]
+                ## pos -= 1
+        self.gui.enable_save(False)
+        self.gui.enable_deleted(False)
+        self.set_title(modified=True)
+        self.populate_list(pos)    # refresh
 
 
 class ChoiceBook:
@@ -260,8 +573,7 @@ class ChoiceBook:
         """callback for change in tool page
         """
         # no use finishing this method if certain conditions aren't met
-        print(self.parent)
-        if self.parent.book is None:
+        if self.parent.book is None:        # leaving: not done setting up this object yet?
             return
         page = self.gui.get_panel()
         if page is None:                     # leaving: no page selected yet
@@ -273,30 +585,29 @@ class ChoiceBook:
         self.parent.gui.statusbar_message(self.parent.captions["M_DESC"].format(
             self.gui.get_selected_tool()))
         self.gui.set_selected_panel(indx)
-        self.parent.page = self.gui.get_panel().master  # change to new selection
-        print('in on_page_changed - going to set up menu')
+        win = self.gui.get_panel()
+        self.page = win.master              # change to new selection
         self.parent.gui.setup_menu()
-        if not all((self.parent.page.settings, self.parent.page.column_info,
-                    self.parent.page.data)):  # leaving: page data incomplete (e.g. no keydefs)
-            return
-        self.parent.page.setcaptions()
-        items = [self.parent.captions[x[0]] for x in self.parent.page.column_info]
+        if not all((self.page.settings, self.page.column_info, self.page.data)):
+            return                          # leaving: page data incomplete (e.g. no keydefs)
+        self.page.setcaptions()
+        items = [self.parent.captions[x[0]] for x in self.page.column_info]
         self.gui.update_search(items)
 
     def on_text_changed(self, text):
         """callback for change in search text
         """
         page = self.page  # self.pnl.currentWidget()
-        for ix, item in enumerate(page.column_info):
-            if page.captions[item[0]] == self.gui.get_search_col():
+        for ix, item in enumerate(self.page.column_info):
+            if self.page.captions[item[0]] == self.gui.get_search_col():
                 self.zoekcol = ix
                 break
-        self.items_found = self.gui.find_items(page, text)
+        self.items_found = self.gui.find_items(self.page, text)
         self.gui.init_search_buttons()
         if self.items_found:
             self.gui.set_selected_keydef_item(page, 0)
             self.founditem = 0
-            if 1 < len(self.items_found) < len(self.parent.page.data.items()):
+            if 1 < len(self.items_found) < len(self.page.data.items()):
                 self.gui.enable_search_buttons(next=True, filter=True)
             message = self.parent.captions["I_#FOUND"].format(len(self.items_found))
         else:
@@ -309,7 +620,7 @@ class ChoiceBook:
         self.gui.enable_search_buttons(prev=True)
         if self.founditem < len(self.items_found) - 1:
             self.founditem += 1
-            self.gui.set_selected_keydef_item(self.parent.page, self.founditem)
+            self.gui.set_selected_keydef_item(self.page, self.founditem)
         else:
             self.parent.gui.statusbar_message(self.parent.captions["I_NONXT"])
             self.gui.enable_search_buttons(next=False)
@@ -323,7 +634,7 @@ class ChoiceBook:
             self.gui.enable_search_buttons(prev=False)
         else:
             self.founditem -= 1
-            self.gui.set_selected_keydef_item(self.parent.page, self.founditem)
+            self.gui.set_selected_keydef_item(self.page, self.founditem)
 
     def filter(self, event=None):
         """filter shown items according to search text
@@ -336,23 +647,23 @@ class ChoiceBook:
         if state_text == self.parent.captions['C_FILTER']:
             state_text = self.parent.captions['C_FLTOFF']
             self.filter_on = True
-            self.parent.page.filtertext = text
-            self.parent.page.olddata = self.parent.page.data
-            self.parent.page.data = {ix: item for ix, item in enumerate(
-                self.parent.page.data.values()) if text.upper() in item[self.zoekcol].upper()}
+            self.page.filtertext = text
+            self.page.olddata = self.page.data
+            self.page.data = {ix: item for ix, item in enumerate(
+                self.page.data.values()) if text.upper() in item[self.zoekcol].upper()}
             self.gui.enable_search_buttons(next=False, prev=False)
             self.gui.enable_search_text(False)
         else:       # self.filter_on == True
             state_text = self.parent.captions['C_FILTER']
             self.filter_on = False
-            self.parent.page.filtertext = ''
-            self.parent.page.data = self.parent.page.olddata
+            self.page.filtertext = ''
+            self.page.data = self.page.olddata
             self.gui.enable_search_buttons(next=True, prev=True)
             self.gui.enable_search_text(True)
-        self.parent.page.populate_list()
+        self.page.populate_list()
         self.gui.set_found_keydef_position()
         self.gui.set_filter_state_text(state_text)
-        if self.parent.page.data == self.parent.page.olddata:
+        if self.page.data == self.page.olddata:
             self.on_text_changed(text)  # reselect items_found after setting filter to off
 
 
@@ -362,7 +673,7 @@ class Editor:
     def __init__(self, args):
         ini = args.conf or shared.CONF
         self.ini = shared.read_settings(ini)
-        self.readcaptions(self.ini['lang'])  # set up defaults
+        self.readcaptions(self.ini['lang'])
         self.title = self.captions["T_MAIN"]
         self.pluginfiles = {}
         self.book = None
@@ -379,8 +690,8 @@ class Editor:
                 self.title = self.ini['title']
             if 'initial' in self.ini and self.ini['initial'] != '':
                 start = [x for x, y in self.ini['plugins']].index(self.ini['initial'])
+            self.book.gui.set_selected_tool(start)
             self.book.on_page_changed(start)
-            self.book.gui.set_selected(start)
             self.setcaptions()
         self.gui.go()
 
@@ -394,10 +705,6 @@ class Editor:
         self.book.page.gui = self.book.gui
         self.gui.resize_empty_screen(640, 80)
 
-#     def setup_tabs(self):
-#         """add the tabbed window to the inteface
-#         """
-
     def get_menudata(self):
         """provide the application's menu definition to the program
         """
@@ -406,7 +713,7 @@ class Editor:
                                         ('M_LANG', (self.m_lang, 'Ctrl+L')),
                                         ('M_PREF', (self.m_pref, ''))), '')),
                            ('M_EXIT', (self.m_exit, 'Ctrl+Q')), )),
-                ('M_TOOL', (('M_SETT', ((('M_COL', (self.m_col, '')),
+                ('M_TOOL', (('M_SETT2', ((('M_COL', (self.m_col, '')),
                                          ('M_MISC', (self.m_tool, '')),
                                          ('M_ENTR', (self.m_entry, '')), ), '')),
                             ('M_READ', (self.m_read, 'Ctrl+R')),
@@ -472,8 +779,7 @@ class Editor:
         current_paths = [y for x, y in self.ini["plugins"]]
 
         self.last_added = None  # wordt in de hierna volgende dialoog ingesteld
-        ok = gui.manage_filesettings(self)
-        if ok:
+        if gui.show_dialog(self, gui.FilesDialog):
             selection = self.book.gui.get_selected_index()
             shared.modify_settings(self.ini)
 
@@ -515,7 +821,66 @@ class Editor:
                 selection = self.book.gui.get_new_selection(self.last_added)
             if selection > len(self.ini['plugins']) - 1:
                 selection -= 1
-            self.book.gui.set_selected(selection)
+            self.book.gui.set_selected_tool(selection)
+
+    def accept_pathsettings(self, name_path_list, settingsdata, names_to_remove):
+        """check and confirm input from FilesDialog
+        """
+        if self.last_added not in [x[0] for x in name_path_list]:
+            self.last_added = ''
+        # ? self.master.last_added = self.last_added
+        for ix, entry in enumerate(name_path_list):
+            name, csvname = entry
+            if name not in [x for x, y in self.ini['plugins']]:
+                if not csvname:
+                    gui.show_message(self.gui, text='Please fill out all filenames')
+                    return False
+                prgname = settingsdata[name][0]
+                if not prgname:
+                    # try to get the plugin name from the csv file
+                    try:
+                        data = shared.readcsv(csvname)
+                    except (FileNotFoundError, IsADirectoryError, ValueError):
+                        gui.show_message(self.gui, text='{} does not seem to be a usable '
+                                                        'csv file'.format(csvname))
+                        return False
+                    try:
+                        prgname = data[0][shared.SettType.PLG.value]
+                    except KeyError:
+                        gui.show_message(self.gui, text='{} does not contain a reference to a plug'
+                                                        'in (PluginName setting)'.format(csvname))
+                        return False
+                if len(settingsdata[name]) == 1:  # existing plugin
+                    try:
+                        _ = importlib.import_module(prgname)
+                    except ImportError:
+                        gui.show_message(self, text='{} does not contain a reference to a '
+                                                    'valid plugin'.format(csvname))
+                        return False
+
+                self.pluginfiles[name] = prgname
+        for filename in names_to_remove:
+            os.remove(filename)
+        newpathdata = {name: entry for name, entry in settingsdata.items() if len(entry) > 1}
+        self.ini["plugins"] = shared.update_paths(name_path_list, newpathdata, self.ini["lang"])
+        return True
+
+    def accept_csvsettings(self, cloc, ploc, title, rebuild, details, redef):
+        """check and confirm input from SetupDialog
+        """
+        if cloc == "":
+            gui.show_message(self.gui, 'I_NEEDNAME')
+            return False
+        cloc = os.path.abspath(cloc)
+        if os.path.exists(cloc):
+            gui.show_message(self.gui, 'I_GOTSETFIL', args=[cloc])
+            return False
+        if importlib.util.find_spec(ploc):
+            gui.show_message(self.gui, 'I_GOTPLGFIL', args=[ploc])
+            return False
+        self.gui.loc = cloc
+        self.gui.data = [ploc, title, int(rebuild), int(details), int(redef)]
+        return True
 
     def m_rebuild(self, event=None):
         """rebuild csv data from (updated) settings
@@ -555,8 +920,7 @@ class Editor:
         if not self.book.page.settings:
             self.book.page.settings = {x: '' for x in shared.csv_settingnames}
         old_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
-        ok = gui.manage_extrasettings(self)
-        if ok:
+        if gui.show_dialog(self, gui.ExtraSettingsDialog):
             shared.writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
                             self.book.page.data, self.ini['lang'])
             test_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
@@ -572,14 +936,45 @@ class Editor:
             elif test_redef != old_redef and test_dets:
                 self.book.gui.set_panel_editable(test_redef)
 
+    def accept_extrasettings(self, program, title, rebuild, showdet, redef, data):
+        "check and confirm the input from ExtraSettingsDialog"
+        if redef and not showdet:
+            gui.show_message(self, "I_NODET")
+            return False
+        if showdet:
+            try:
+                test = self.book.page.reader.add_extra_attributes
+            except AttributeError:
+                gui.show_message(self.gui, "I_IMPLXTRA")
+                return False
+        self.book.page.settings[shared.SettType.PLG.value] = program
+        self.book.page.settings[shared.SettType.PNL.value] = title
+        self.book.page.settings[shared.SettType.RBLD.value] = '1' if rebuild else '0'
+        self.book.page.settings[shared.SettType.DETS.value] = '1' if showdet else '0'
+        self.book.page.settings[shared.SettType.RDEF.value] = '1' if redef else '0'
+
+        settingsdict, settdescdict = {}, {}
+        for name, value, desc in data:
+            settingsdict[name] = value
+            settdescdict[name] = desc
+        todelete = []
+        for setting in self.book.page.settings:
+            if setting not in shared.csv_settingnames:
+                todelete.append(setting)
+        for setting in todelete:
+            del self.book.page.settings[setting]
+        self.book.page.settings.update(settingsdict)
+        self.book.page.settings['extra'] = settdescdict
+        return True
+
     def m_col(self, event=None):
         """define tool-specific settings: column properties
         """
+        self.col_textids, self.col_names = shared.read_columntitledata(self)
         if not self.book.page.settings:
             gui.show_message(self.gui, 'I_ADDSET')
             return
-        ok = gui.manage_columnsettings(self)
-        if ok:
+        if gui.show_dialog(self, gui.ColumnSettingsDialog):
             new_pagedata = {}
             for key, value in self.book.page.data.items():
                 newvalue = []
@@ -602,14 +997,39 @@ class Editor:
             self.book.page.gui.refresh_headers(headers)
             self.book.page.populate_list()
 
+    def accept_columnsettings(self, data):
+        "check and confirm input from columnsettings dialog"
+        column_info, new_titles = [], []
+        lastcol = -1
+        for ix, value in enumerate(sorted(data, key=lambda x: x[2])):
+            name, width, colno, flag, old_colno = value
+            if colno == lastcol:
+                gui.show_message(self.gui, 'I_DPLCOL')
+                return False
+            lastcol = colno
+            if name in self.col_names:
+                name = self.col_textids[self.col_names.index(name)]
+            else:
+                # TODO: vervangen door dialoog om identifier op te geven, zie ticket #814
+                self.last_textid = "{:0>3}".format(int(self.last_textid) + 1)
+                new_titles.append((self.last_textid, name))
+                name = self.last_textid
+            column_info.append([name, width, flag, old_colno])
+        if new_titles:
+            shared.add_columntitledata(new_titles)
+        self.book.page.column_info = column_info
+        for id_, name in new_titles:
+            self.captions[id_] = name
+            self.book.page.captions[id_] = name
+        return True
+
     def m_entry(self, event=None):
         """manual entry of keyboard shortcuts
         """
         if not all((self.book.page.settings, self.book.page.column_info)):
             gui.show_message(self.gui, 'I_ADDCOL')
             return
-        ok = gui.manual_entry(self)
-        if ok:
+        if gui.show_dialog(self, gui.EntryDialog):
             if self.book.page.data:
                 shared.writecsv(self.book.page.pad, self.book.page.settings,
                                 self.book.page.column_info, self.book.page.data, self.ini['lang'])
@@ -625,7 +1045,7 @@ class Editor:
         # bepaal welke er momenteel geactiveerd is
         oldlang = self.ini['lang']
         indx = choices.index(oldlang) if oldlang in choices else 0
-        lang, ok = gui.get_choice(self.gui, self.title, self.captions["P_SELLNG"], choices,
+        lang, ok = gui.get_choice(self.gui, self.captions["P_SELLNG"], self.title, choices,
                                   current=indx)
         if ok:
             shared.change_setting('lang', oldlang, lang, self.ini['filename'])
@@ -636,12 +1056,11 @@ class Editor:
     def m_about(self, event=None):
         """(menu) callback voor het tonen van de "about" dialoog
         """
-        gui.show_message(self.gui,
-            self.gui,
-            text='\n'.join(self.captions['T_ABOUT'].format(self.captions['T_SHORT'],
-                                                           shared.VRS,
-                                                           shared.AUTH,
-                                                           self.captions['T_LONG']).split(' / ')))
+        text = '\n'.join(self.captions['T_ABOUT'].format(self.captions['T_SHORT'],
+                                                         shared.VRS,
+                                                         shared.AUTH,
+                                                         self.captions['T_LONG']).split(' / '))
+        gui.show_message(self.gui, text=text)
 
     def m_pref(self, event=None):
         """mogelijkheid bieden om een tool op te geven dat default getoond wordt
@@ -649,8 +1068,7 @@ class Editor:
         oldpref = self.ini.get("initial", None)
         oldmode = self.ini.get("startup", None)
         self.prefs = oldmode, oldpref
-        ok = gui.manage_startupsettings(self)
-        if ok:
+        if gui.show_dialog(self, gui.InitialToolDialog):
             mode, pref = self.prefs
             if mode:
                 self.ini['startup'] = mode
@@ -659,6 +1077,17 @@ class Editor:
                 self.ini['initial'] = pref
                 shared.change_setting('initial', oldpref, pref, self.ini['filename'])
 
+    def accept_startupsettings(self, fix, remember, pref):
+        """check and confirm input from initialToolDialog
+        """
+        if fix:
+            mode = shared.mode_f
+        elif remember:
+            mode = shared.mode_r
+        else:
+            mode = None
+        self.prefs = mode, pref
+
     def m_exit(self, event=None):
         """(menu) callback om het programma direct af te sluiten
         """
@@ -666,14 +1095,14 @@ class Editor:
 
     # other methods
     def exit(self, event=None):
-        """quit the applicationi - extra actions to perform on closing
+        """quit the application - extra actions to perform on closing
         """
         if not self.book.page.exit():
             return
         mode = self.ini.get("startup", '')
         pref = self.ini.get("initial", '')
         # when setting is 'fixed', don't remember a startup tool that is removed from the config
-        # TODO: should actually be handled in the files definition dialog
+        # TODO: should actually be handled in the files definition dialog?
         if mode == shared.mode_f and pref not in [x[0] for x in self.ini['plugins']]:
             oldmode, mode = mode, shared.mode_r
             self.ini['startup'] = mode
@@ -692,6 +1121,7 @@ class Editor:
         """get captions from language file or settings
         """
         self.captions = shared.readlang(lang)
+        self.last_textid = ''
 
     # def set_title(self):
     #     """adjust title and modified flag
