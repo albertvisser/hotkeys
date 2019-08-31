@@ -102,9 +102,9 @@ class InitialToolDialog(wx.Dialog):
     def accept(self):
         """confirm dialog
         """
-        self.parent.master.accept_startupsettings(self.check_fixed.GetValue(),
-                                                  self.check_remember.GetValue(),
-                                                  self.sel_fixed.GetStringSelection())
+        self.master.accept_startupsettings(self.check_fixed.GetValue(),
+                                           self.check_remember.GetValue(),
+                                           self.sel_fixed.GetStringSelection())
         return True
 
 
@@ -272,17 +272,14 @@ class FilesDialog(wx.Dialog):
         self.sizer.Add(label, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5)
 
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hsizer.AddSpacer(36)
         hsizer.Add(wx.StaticText(self, label=self.master.captions['C_PRGNAM']), 0,
-                   wx.ALIGN_CENTER_HORIZONTAL)
-        hsizer.AddSpacer(84)
+                   wx.ALIGN_CENTER_HORIZONTAL | wx.LEFT, 36)
         hsizer.Add(wx.StaticText(self, label=self.master.captions['C_CSVLOC']), 0,
-                   wx.ALIGN_CENTER_HORIZONTAL)
+                   wx.ALIGN_CENTER_HORIZONTAL | wx.LEFT, 84)
         self.sizer.Add(hsizer)
 
         self.scrl = wxsp.ScrolledPanel(self, style=wx.BORDER_SUNKEN)
-        self.gsizer = wx.FlexGridSizer(cols=2, vgap=2, hgap=2)
-        self.gsizer.AddGrowableCol(1)
+        self.gsizer = wx.BoxSizer(wx.VERTICAL)
         rownum = 0
         self.rownum = rownum
         self.plugindata = []
@@ -296,7 +293,11 @@ class FilesDialog(wx.Dialog):
         for name, path in self.master.ini["plugins"]:
             self.add_row(name, path)
             self.settingsdata[name] = (self.master.pluginfiles[name],)
+        # bsizer.Add(self.gsizer, 1, wx.EXPAND)
+        self.scrl.Fit()
         self.scrl.SetSizer(self.gsizer)
+        self.gsizer.SetSizeHints(self.scrl)
+        self.scrl.SetupScrolling()
         self.sizer.Add(self.scrl, 1, wx.EXPAND | wx.ALL, 5)
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
@@ -316,20 +317,20 @@ class FilesDialog(wx.Dialog):
         """create a row for defining a file location
         """
         self.rownum += 1
-        colnum = 0
-        check = wx.CheckBox(self.scrl, label=name)
-        item0 = self.gsizer.Add(check, 0, wx.ALIGN_CENTER_VERTICAL)
+        line = wx.BoxSizer(wx.HORIZONTAL)
+        check = wx.CheckBox(self.scrl, label=name, size=(150, -1))
+        line.Add(check, 0, wx.ALIGN_CENTER_VERTICAL, wx.LEFT, 5)
         self.checks.append(check)
-        colnum += 1
         # browse = wxfb.FilebrowseButton(self, startDirectory=startdir, initialValue=path, fileMask=
-        browse = wxfb.FileBrowseButton(self.scrl, size=(300, -1), style=wx.BORDER_SUNKEN,
+        browse = wxfb.FileBrowseButton(self.scrl, size=(400, -1), style=wx.BORDER_SUNKEN,
                                        labelText='', initialValue=path)
-        item1 = self.gsizer.Add(browse, 0, wx.EXPAND)
-        self.sizeritems.append((item0, item1))
+        line.Add(browse, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        self.gsizer.Add(line, 0)
         self.paths.append((name, browse))
         self.gsizer.Layout()
         self.scrl.Fit()
-        self.scrl.SetScrollbar(wx.VERTICAL, 0, 1, self.rownum * 52)
+        self.sizer.Layout()
+        # self.scrl.SetScrollbar(wx.VERTICAL, 0, 1, self.rownum * 52)
         self.scrl.ScrollChildIntoView(browse)
         # print('ready adding row')
         # vbar = self.scrl.verticalScrollBar()
@@ -339,20 +340,16 @@ class FilesDialog(wx.Dialog):
     def delete_row(self, rownum):
         """remove a tool location definition row
         """
+        print('in remove_row')
         check = self.checks[rownum]
-        print(check, self.gsizer.GetItem(check))
         name, win = self.paths[rownum]
-        print(name, win, self.gsizer.GetItem(win))
-        print(self.sizeritems)
-        print(self.gsizer.GetChildren())
-        start = rownum - 1
-        self.gsizer.Remove(start)  # rownum * 2 - 1)
+        self.gsizer.Remove(rownum)
         check.Destroy()
-        self.gsizer.Remove(start + 1)  # rownum * 2)
         win.Destroy()
         self.gsizer.Layout()
         self.scrl.Fit()
-        self.scrl.SetScrollbar(wx.VERTICAL, 0, 1, self.rownum * 52)
+        self.sizer.Layout()
+        # self.scrl.SetScrollbar(wx.VERTICAL, 0, 1, self.rownum * 52)
         # self.scrl.ScrollChildIntoView(browse)
         self.checks.pop(rownum)
         self.paths.pop(rownum)
@@ -380,8 +377,7 @@ class FilesDialog(wx.Dialog):
                             else:
                                 self.settingsdata[newtool] = self.parent.data
                                 prgloc = self.parent.data[0]
-            self.add_row(newtool, path=self.parent.loc)
-            self.Fit()
+            self.add_row(newtool, path=self.loc)
 
     def remove_programs(self, event):
         """alle aangevinkte items verwijderen uit self.gsizer"""
@@ -407,7 +403,6 @@ class FilesDialog(wx.Dialog):
                                 self.code_to_remove.append(
                                     prg_name.replace('.', '/') + '.py')
                         self.delete_row(row)
-            self.Fit()
 
     def accept(self):
         """send updates to parent and leave
@@ -456,14 +451,19 @@ class ColumnSettingsDialog(wx.Dialog):
         self.gsizer = wx.BoxSizer(wx.VERTICAL)
         self.rownum = 0  # indicates the number of rows in the gridlayout
         self.data, self.checks = [], []
-        self.col_textids, self.col_names, self.last_textid = \
-            self.master.col_textids, self.master.col_names, self.master.last_textid
+        self.col_textids, self.col_names = self.master.col_textids, self.master.col_names
+        print('in setting up dialog')
         for ix, item in enumerate(self.master.book.page.column_info):
             item.append(ix)
+            print(item)
             self.add_row(*item)
-        box = wx.BoxSizer(wx.VERTICAL)
-        box.Add(self.gsizer)
-        self.scrl.SetSizer(box)
+        # box = wx.BoxSizer(wx.VERTICAL)
+        # box.Add(self.gsizer)
+        self.scrl.Fit()
+        self.scrl.SetSizer(self.gsizer)
+        self.gsizer.Fit(self.scrl)
+        self.gsizer.SetSizeHints(self.scrl)
+        self.scrl.SetupScrolling()
         self.sizer.Add(self.scrl, 1, wx.EXPAND | wx.ALL, 5)
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
@@ -480,15 +480,6 @@ class ColumnSettingsDialog(wx.Dialog):
         self.sizer.SetSizeHints(self)
         self.SetSizer(self.sizer)
         self.initializing = False
-
-    # def ShowModal(self):
-    #     """reimplementation to prevent dialog from showing in some cases
-    #     """
-    #     if self.last_textid == '099':
-    #         show_message(self.parent, text="Can't perform this function: "
-    #                                        "no language text identifiers below 100 left")
-    #         return None
-    #     return super().ShowModal()
 
     def add_row(self, name='', width='', is_flag=False, colno=''):
         """create a row for defining column settings
@@ -511,42 +502,47 @@ class ColumnSettingsDialog(wx.Dialog):
         ghsizer.Add(w_name, 0, wx.LEFT, 2)
 
         colnum += 1
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hsizer.AddSpacer(20)
+        # hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        # hsizer.AddSpacer(20)
         w_width = wx.SpinCtrl(self.scrl, size=(130, -1), style=wx.SP_ARROW_KEYS)
         w_width.SetMax(999)
         if width:
             w_width.SetValue(width)
-        hsizer.Add(w_width)
-        hsizer.AddSpacer(20)
-        ghsizer.Add(hsizer, 0)
+        # hsizer.Add(w_width)
+        # hsizer.AddSpacer(20)
+        # ghsizer.Add(hsizer, 0)
+        ghsizer.Add(w_width, 0, wx.LEFT | wx.RIGHT, 20)
 
         colnum += 1
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hsizer.AddSpacer(40)
+        # hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        # hsizer.AddSpacer(40)
         w_flag = wx.CheckBox(self.scrl, size=(32, -1))
         w_flag.SetValue(is_flag)
-        hsizer.Add(w_flag)
-        hsizer.AddSpacer(24)
-        ghsizer.Add(hsizer, 0, wx.ALIGN_CENTER_VERTICAL)
+        # hsizer.Add(w_flag)
+        # hsizer.AddSpacer(24)
+        # ghsizer.Add(hsizer, 0, wx.ALIGN_CENTER_VERTICAL)
+        ghsizer.Add(w_flag, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.RIGHT, 40)
 
         colnum += 1
-        hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        hsizer.AddSpacer(68)
+        # hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        # hsizer.AddSpacer(68)
         val = self.rownum if colno == '' else colno + 1
         w_colno = wx.SpinCtrl(self.scrl, size=(126, -1))
         w_colno.SetRange(1, 99)
         w_colno.SetValue(val)
-        hsizer.Add(w_colno)
-        ghsizer.Add(hsizer, 0)
+        # hsizer.Add(w_colno)
+        # ghsizer.Add(hsizer, 0)
+        ghsizer.Add(w_colno, 0, wx.LEFT, 68)
 
         self.gsizer.Add(ghsizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         old_colno = "new" if colno == '' else colno
         self.data.append((w_name, w_width, w_colno, w_flag, old_colno))
         self.gsizer.Layout()
         self.scrl.Fit()
+        self.sizer.Layout()
+        self.scrl.ScrollChildIntoView(check)
 
-        self.scrl.SetScrollbar(wx.VERTICAL, 0, 1, self.rownum * 62)
+        # self.scrl.SetScrollbar(wx.VERTICAL, 0, 1, self.rownum * 62)
         # vbar = self.scrl.verticalScrollBar()
         # vbar.setMaximum(vbar.maximum() + 62)
         # vbar.setValue(vbar.maximum())
@@ -565,13 +561,15 @@ class ColumnSettingsDialog(wx.Dialog):
             widget.Destroy()
         self.gsizer.Layout()
         self.scrl.Fit()
+        self.sizer.Layout()
         self.checks.pop(rownum)
         self.data.pop(rownum)
 
     def add_column(self, event):
         """nieuwe rij aanmaken in self.gsizer"""
         self.add_row()
-        self.Fit()
+        print('ready adding column')
+        # self.Fit()
 
     def remove_columns(self, event):
         """alle aangevinkte items verwijderen uit self.gsizer"""
@@ -582,7 +580,7 @@ class ColumnSettingsDialog(wx.Dialog):
         if ask_question(self.parent, 'Q_REMCOL'):
             for row in reversed(checked):
                 self.delete_row(row)
-        self.Fit()
+        # self.Fit()
 
     def accept(self):
         """save the changed settings and leave
@@ -668,9 +666,9 @@ class ExtraSettingsDialog(wx.Dialog):
         vsizer.Add(hsizer, 0)
 
         self.scrl = wxsp.ScrolledPanel(pnl, style=wx.BORDER_SIMPLE)
+        # self.scrl = wx.ScrolledWindow(pnl, style=wx.BORDER_SIMPLE)
 
-        self.gsizer = wx.FlexGridSizer(3, 2, 2)
-        self.gsizer.AddGrowableCol(2, 1)
+        self.gsizer = wx.BoxSizer(wx.VERTICAL)
         rownum = 0
         self.rownum = rownum
         self.data, self.checks = [], []
@@ -681,11 +679,20 @@ class ExtraSettingsDialog(wx.Dialog):
                 except KeyError:
                     desc = ''
                 self.add_row(name, value, desc)
-        size = self.rownum or 1
-        self.scrl.SetMinSize((-1, size * 80))
+        self.rows_present = self.rownum
+        # size = self.rownum or 1
+        # if self.rownum < 2:
+        #     self.scrl.SetSize(500, 75)
+        # elif self.rownum > 5:
+        #     self.scrl.SetSize(500, 200)
+        # else:
+        # self.scrl.Fit()
         self.scrl.SetSizer(self.gsizer)
         self.gsizer.Fit(self.scrl)
+        self.gsizer.SetSizeHints(self.scrl)
+        self.scrl.SetupScrolling()
         vsizer.Add(self.scrl, 1, wx.EXPAND | wx.ALL, 5)
+        # sizer.Add(self.scrl, 1, wx.ALL, 5)
 
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         btn = wx.Button(pnl, label=self.master.captions['C_ADDSET'])
@@ -702,6 +709,7 @@ class ExtraSettingsDialog(wx.Dialog):
         hbox.Add(wx.Button(self, id=wx.ID_OK))
         hbox.Add(wx.Button(self, id=wx.ID_CANCEL))
         self.sizer.Add(hbox, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.BOTTOM, 2)
+        # if self.rownum > 3:
         self.sizer.SetSizeHints(self)
         self.SetSizer(self.sizer)
 
@@ -709,36 +717,39 @@ class ExtraSettingsDialog(wx.Dialog):
         """add a row for defining a setting (name, value)
         """
         self.rownum += 1
-        colnum = 0
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
         check = wx.CheckBox(self.scrl)
-        self.gsizer.Add(check, 0, wx.LEFT, 2)
+        hsizer.Add(check, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
         self.checks.append(check)
-        colnum += 1
         w_name = wx.TextCtrl(self.scrl, value=name, size=(120, -1))
         if name:
             w_name.SetEditable(False)
-        self.gsizer.Add(w_name)
-        colnum += 1
+        hsizer.Add(w_name, 0, wx.LEFT | wx.RIGHT, 2)
+        hbox.Add(hsizer, 0)
         vsizer = wx.BoxSizer(wx.VERTICAL)
-        w_value = wx.TextCtrl(self.scrl, value=value)  # , size=(320, -1))
-        self.gsizer.Add(w_value, 1, wx.EXPAND | wx.RIGHT, 5)
-        self.rownum += 1
-        self.gsizer.AddStretchSpacer()
-        self.gsizer.AddStretchSpacer()
-        w_desc = wx.TextCtrl(self.scrl, value=desc)  # , size=(320, -1))
-        self.gsizer.Add(w_desc, 1, wx.EXPAND | wx.RIGHT, 5)
+        w_value = wx.TextCtrl(self.scrl, value=value, size=(320, -1))
+        vsizer.Add(w_value, 1)  # , wx.EXPAND | wx.RIGHT, 5)
+        # self.rownum += 1
+        w_desc = wx.TextCtrl(self.scrl, value=desc, size=(320, -1))
+        vsizer.Add(w_desc, 1)  # , wx.EXPAND | wx.RIGHT, 5)
+        hbox.Add(vsizer, 0, wx.EXPAND | wx.RIGHT, 5)
+        self.gsizer.Add(hbox, 0, wx.EXPAND)
         self.data.append((w_name, w_value, w_desc))
         self.gsizer.Layout()
-        self.scrl.SetScrollbar(wx.VERTICAL, 0, 1, self.rownum * 62)
+        self.scrl.Fit()
+        self.scrl.ScrollChildIntoView(w_desc)
+        self.sizer.Layout()
+        # self.scrl.SetScrollbar(wx.VERTICAL, 0, 1, self.rownum * 62)
         # vbar = self.scrl.verticalScrollBar()
         # vbar.setMaximum(vbar.maximum() + 62)
         # vbar.setValue(vbar.maximum())
-        test = self.scrl.GetScrollLines(wx.VERTICAL)
-        test2 = self.scrl.GetScrollPos(wx.VERTICAL)
-        test3 = self.scrl.GetScrollRange(wx.VERTICAL)
+        # test = self.scrl.GetScrollLines(wx.VERTICAL)
+        # test2 = self.scrl.GetScrollPos(wx.VERTICAL)
+        # test3 = self.scrl.GetScrollRange(wx.VERTICAL)
         # print(test, test2, test3)
         # print('before scrolling')
-        self.scrl.Scroll(-1, test)
+        # self.scrl.Scroll(-1, test)
         # print('after  scrolling')
 
     def delete_row(self, rownum):
@@ -746,18 +757,20 @@ class ExtraSettingsDialog(wx.Dialog):
         """
         check = self.checks[rownum]
         w_name, w_value, w_desc = self.data[rownum]
-        start = rownum - 1
-        for ix, widget in enumerate((check, w_name, w_value, w_desc)):
-            self.gsizer.Remove(start + ix)
+        self.gsizer.Remove(rownum)
+        for widget in (check, w_name, w_value, w_desc):
             widget.Destroy()
         self.gsizer.Layout()
         self.scrl.Fit()
+        self.sizer.Layout()
         self.checks.pop(rownum)
         self.data.pop(rownum)
 
     def add_setting(self, event):
         """nieuwe rij aanmaken in self.gsizer"""
         self.add_row()
+        # if self.rows_present > 1:
+        #     self.Fit()
         # print('ready building new row')
 
     def remove_settings(self, event):
@@ -768,6 +781,8 @@ class ExtraSettingsDialog(wx.Dialog):
             if ask_question(self.parent, 'Q_REMSET'):
                 for row in reversed(checked):
                     self.delete_row(row)
+        # if self.rows_present > 1:
+        #     self.Fit()
 
     def accept(self):
         """update settings and leave

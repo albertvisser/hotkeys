@@ -308,6 +308,18 @@ class SingleDataInterface(qtw.QFrame):
 
     # hulproutine t.b.v. managen column properties
 
+    def update_columns(self, oldcount, newcount):
+        "delete and insert columns"
+        return # wx code, not sure if I need this
+        hlp = oldcount
+        while hlp > newcount:
+            self.p0list.DeleteColumn(0)
+            hlp -= 1
+        hlp = newcount
+        while hlp > oldcount:
+            self.p0list.AppendColumn()
+            hlp -= 1
+
     def refresh_headers(self, headers):
         "apply changes in the column headers"
         self.p0list.setHeaderLabels(headers)

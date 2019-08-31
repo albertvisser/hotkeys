@@ -222,31 +222,31 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
             sizer3 = wx.BoxSizer(wx.HORIZONTAL)
             sizer3.Add(self.lbl_key, 0, wx.ALIGN_CENTER_VERTICAL)
             if self.master.keylist is None:
-                sizer3.Add(self.txt_key, 0)
+                sizer3.Add(self.txt_key, 0, wx.ALIGN_CENTER_VERTICAL)
             else:
-                sizer3.Add(self.cmb_key, 0)
+                sizer3.Add(self.cmb_key, 0, wx.ALIGN_CENTER_VERTICAL)
             sizer2.Add(sizer3, 0)
 
         if 'C_MODS' in self.master.fields:
             sizer3 = wx.BoxSizer(wx.HORIZONTAL)
-            sizer3.Add(self.cb_ctrl, 0)
-            sizer3.Add(self.cb_alt, 0)
-            sizer3.Add(self.cb_shift, 0)
-            sizer3.Add(self.cb_win, 0)
+            sizer3.Add(self.cb_ctrl, 0, wx.ALIGN_CENTER_VERTICAL)
+            sizer3.Add(self.cb_alt, 0, wx.ALIGN_CENTER_VERTICAL)
+            sizer3.Add(self.cb_shift, 0, wx.ALIGN_CENTER_VERTICAL)
+            sizer3.Add(self.cb_win, 0, wx.ALIGN_CENTER_VERTICAL)
             sizer2.Add(sizer3, 0)
 
         sizer1.Add(sizer2, 0)
         sizer1.AddStretchSpacer(1)
         if 'C_CNTXT' in self.master.fields:
             sizer2 = wx.BoxSizer(wx.HORIZONTAL)
-            sizer2.Add(self.lbl_context, 0)
-            sizer2.Add(self.cmb_context, 0)
+            sizer2.Add(self.lbl_context, 0, wx.ALIGN_CENTER_VERTICAL)
+            sizer2.Add(self.cmb_context, 0, wx.ALIGN_CENTER_VERTICAL)
             sizer1.Add(sizer2, 0)
 
         if 'C_CMD' in self.master.fields:
             sizer2 = wx.BoxSizer(wx.HORIZONTAL)
-            sizer2.Add(self.txt_cmd, 0)
-            sizer2.Add(self.cmb_commando, 0)
+            sizer2.Add(self.txt_cmd, 0, wx.ALIGN_CENTER_VERTICAL)
+            sizer2.Add(self.cmb_commando, 0, wx.ALIGN_CENTER_VERTICAL)
             sizer1.Add(sizer2, 0)
 
         try:
@@ -377,13 +377,28 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
 
     # hulproutine t.b.v. managen column properties
 
+    def update_columns(self, oldcount, newcount):
+        "delete and insert columns"
+        hlp = oldcount
+        while hlp > newcount:
+            self.p0list.DeleteColumn(0)
+            hlp -= 1
+        hlp = newcount
+        while hlp > oldcount:
+            self.p0list.AppendColumn('')
+            hlp -= 1
+
     def refresh_headers(self, headers):
         "apply changes in the column headers"
+        print(headers)
+        print(self.master.column_info)
         for indx, coldata in enumerate(self.master.column_info):
             hdr = self.p0list.GetColumn(indx)
-            if headers[indx] != hdr.GetText():
-                hdr.SetText(headers[indx])
+            print(hdr, hdr.GetText(), headers[indx])
+            #if headers[indx] != hdr.GetText():
+            hdr.SetText(headers[indx])
             hdr.SetWidth(coldata[1])
+            self.p0list.SetColumn(indx, hdr)
         self.p0list.resizeLastColumn(100)
 
     def enable_buttons(self, state=True):

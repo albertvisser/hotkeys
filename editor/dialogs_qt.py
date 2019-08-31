@@ -462,8 +462,7 @@ class ColumnSettingsDialog(qtw.QDialog):
         self.gsizer = qtw.QVBoxLayout()
         self.rownum = 0  # indicates the number of rows in the gridlayout
         self.data, self.checks = [], []
-        self.col_textids, self.col_names, self.last_textid = \
-            self.master.col_textids, self.master.col_names, self.master.last_textid
+        self.col_textids, self.col_names = self.master.col_textids, self.master.col_names
         for ix, item in enumerate(self.master.book.page.column_info):
             print(item)
             item.append(ix)  # dit zou column_info niet moeten bijwerken maar doet dat blijkbaar wel?
@@ -492,15 +491,6 @@ class ColumnSettingsDialog(qtw.QDialog):
         self.sizer.addLayout(hsizer)
         self.setLayout(self.sizer)
         self.initializing = False
-
-    # def exec_(self):
-    #     """reimplementation to prevent dialog from showing in some cases
-    #     """
-    #     if self.last_textid == '099':
-    #         show_message(self.parent, text="Can't perform this function: "
-    #                                        "no language text identifiers below 100 left")
-    #         self.reject()
-    #     return super().exec_()
 
     def add_row(self, name='', width='', is_flag=False, colno=''):
         """create a row for defining column settings

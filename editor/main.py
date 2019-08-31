@@ -974,7 +974,12 @@ class Editor:
         if not self.book.page.settings:
             gui.show_message(self.gui, 'I_ADDSET')
             return
-        if gui.show_dialog(self, gui.ColumnSettingsDialog):
+        oldcolcount = len(self.book.page.column_info)
+        if not gui.show_dialog(self, gui.ColumnSettingsDialog):
+            # strip off old colno and exit
+            self.book.page.column_info = [x[:-1] for x in self.book.page.column_info]
+            return
+        if self.modified:
             new_pagedata = {}
             for key, value in self.book.page.data.items():
                 newvalue = []
@@ -986,27 +991,45 @@ class Editor:
                         newvalue.append(value[test])
                 new_pagedata[key] = newvalue
             self.book.page.data = new_pagedata
-            self.book.page.column_info = [x[:-1] for x in self.book.page.column_info]
+        self.book.page.column_info = [x[:-1] for x in self.book.page.column_info]
+        if not self.modified:
+            gui.show_message(self.gui, 'I_NOCHG')
+            return
 
-            shared.writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
-                            self.book.page.data, self.ini['lang'])
-            if not self.book.page.data:
-                return
-            headers = [self.captions[col[0]] for col in self.book.page.column_info]
-            self.book.gui.refresh_locs(headers)
-            self.book.page.gui.refresh_headers(headers)
-            self.book.page.populate_list()
+        shared.writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
+                        self.book.page.data, self.ini['lang'])
+        # if not self.book.page.data:  # zeker weten dat we niet doorgaan als er geen data is?
+        #     return
+        headers = [self.captions[col[0]] for col in self.book.page.column_info]
+        self.book.page.gui.update_columns(oldcolcount, len(headers))
+        self.book.gui.refresh_locs(headers)
+        self.book.page.gui.refresh_headers(headers)
+        self.book.page.populate_list()
 
     def accept_columnsettings(self, data):
         "check and confirm input from columnsettings dialog"
         column_info, new_titles = [], []
-        lastcol = -1
+        # checken op dubbele en vergeten namen
+        test = [x[0] for x in data]
+        if len(set(test)) != len(test):
+            gui.show_message(self.gui, 'I_DPLNAM')
+            return False
+        if len([x for x in test if x]) != len(test):
+            gui.show_message(self.gui, 'I_MISSNAM')
+            return False
+        # checken op dubbele kolomnummers
+        test = [x[2] for x in data]
+        if len(set(test)) != len(test):
+            gui.show_message(self.gui, 'I_DPLCOL')
+            return False
+        #lastcol = -1
+        print('old info:', self.book.page.column_info)
         for ix, value in enumerate(sorted(data, key=lambda x: x[2])):
             name, width, colno, flag, old_colno = value
-            if colno == lastcol:
-                gui.show_message(self.gui, 'I_DPLCOL')
-                return False
-            lastcol = colno
+            # if colno == lastcol:
+            #    gui.show_message(self.gui, 'I_DPLCOL')
+            #    return False
+            #lastcol = colno
             if name in self.col_names:
                 name = self.col_textids[self.col_names.index(name)]
             else:
@@ -1017,7 +1040,9 @@ class Editor:
             column_info.append([name, width, flag, old_colno])
         if new_titles:
             shared.add_columntitledata(new_titles)
+        self.modified = self.book.page.column_info != column_info
         self.book.page.column_info = column_info
+        print('new info:', self.book.page.column_info)
         for id_, name in new_titles:
             self.captions[id_] = name
             self.book.page.captions[id_] = name
