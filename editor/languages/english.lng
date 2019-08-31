@@ -108,6 +108,7 @@ I_GOTSETFIL CSV file {} already exists
 I_GOTPLGFIL plugin module {} already exists
 I_NOSET Unknown setting type `{}` in CSV file {}
 Q_NOCHG You haven't made any changes. Are you sure you want to do this?
+I_NOCHG Nothing was changed
 I_NODATA No data for this program
 Q_DPLKEY This keycombo already exists, do you want to replace it?
 C_NONE No plugin for {} yet
@@ -127,6 +128,8 @@ I_DEFSAV Please define savekeys function in plugin or disable this option
 I_DEFRBLD Please define rebuild function in plugin or disable this option
 I_ERRRBLD Error rebuilding csv file (check filenames in plugin settings)
 I_DPLCOL Can't save this: identical values for column numbers
+I_DPLNAM Can't save this: identical values for column names
+I_MISSNAM Can't save this: not all column names are entered
 M_NODESC (No description available)
 T_COLTTL Titles of the columns in the display; refer to keys in the language file
 T_COLWID Column widths

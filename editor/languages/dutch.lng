@@ -108,6 +108,7 @@ I_GOTSETFIL CSV bestand {} bestaat al
 I_GOTPLGFIL plugin module {} bestaat al
 I_NOSET Onbekend soort instelling `{}` in CSV bestand {}
 Q_NOCHG Je hebt niks gewijzigd. Weet je zeker dat je dit wilt doen?
+I_NOCHG Geen aanpassingen 
 I_NODATA Geen data voor dit programma
 Q_DPLKEY Deze toetsencombinatie is al gedefinieerd, wil je hem vervangen?
 C_NONE Nog geen plugin voor {}
@@ -127,6 +128,8 @@ I_DEFSAV  Eerst savekeys functie in plugin definiëren of deze keuze deactiveren
 I_DEFRBLD Eerst rebuild functie in plugin definiëren of deze keuze deactiveren
 I_ERRRBLD Fout bij opbouwen csv file (controleer bestandsnamen in plugin settings)
 I_DPLCOL  Opslaan niet mogelijk: gelijke waarden voor kolomnummers
+I_DPLNAM  Opslaan niet mogelijk: gelijke waarden voor kolomnnamen
+I_MISSNAM Opslaan niet mogelijk: niet alle kolomnamen zijn opgegeven
 M_NODESC (Geen omschrijving beschikbaar)
 T_COLTTL Titels van de kolommen; zie de sleutels in het taalbestand
 T_COLWID Breedte van de kolommen
