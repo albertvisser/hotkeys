@@ -6,7 +6,7 @@ redefined keys are in ~/.vim/vimrc (map commands)
 import string
 import pathlib
 import collections
-import PyQt5.QtWidgets as qtw
+from .vikeys_gui import add_extra_fields, layout_extra_fields_topline, captions_extra_fields
 VI_VER = (pathlib.Path(__file__).parent / 'VI_VER').read_text().strip()
 
 
@@ -235,15 +235,15 @@ class DefaultKeys:
         return desc, value
 
 
-def buildcsv(parent, showinfo=True):
+def buildcsv(page, showinfo=True):
     """build the datastructures for constructing the CSV file
     """
     settname = 'VI_CMDREF'
-    if settname not in parent.page.settings:
-        parent.page.settings[settname] = '/usr/share/vim/vim{}/doc/index.txt'.format(VI_VER)
+    if settname not in page.settings:
+        page.settings[settname] = '/usr/share/vim/vim{}/doc/index.txt'.format(VI_VER)
         oms = 'Name of file containing setting names and descriptions'
-        parent.page.settings['extra'] = {settname: oms}
-    path = pathlib.Path(parent.page.settings[settname])
+        page.settings['extra'] = {settname: oms}
+    path = pathlib.Path(page.settings[settname])
     keyclass = DefaultKeys(path)
     keydefs = keyclass.keydefs
     kinds = keyclass.kinds
@@ -258,51 +258,10 @@ def add_extra_attributes(win):
     win.featurelist = sorted(win.otherstuff['types'])
 
 
-def add_extra_fields(win, box):
-    """add fields specific to this plugin
-    """
-    win.pre_parms_label = qtw.QLabel(box)
-    win.pre_parms_text = qtw.QLineEdit(box)
-    win.screenfields.append(win.pre_parms_text)
-    win.ix_pre_parms = 1
-    win.post_parms_label = qtw.QLabel(box)
-    win.post_parms_text = qtw.QLineEdit(box)
-    win.screenfields.append(win.post_parms_text)
-    win.ix_post_parms = 2
-    win.feature_label = qtw.QLabel(box)
-    win.feature_select = qtw.QComboBox(box)
-    win.feature_select.addItems(win.featurelist)
-    win.screenfields.append(win.feature_select)
-    win.ix_feature_select = 3
-
-
-# def get_frameheight():
-#     "return the height for the descriptions field"
-#     return x
-def layout_extra_fields_topline(win, box):
-    "add the specific fields to the layout"
-    sizer = qtw.QHBoxLayout()
-    sizer.addWidget(win.pre_parms_label)
-    sizer.addWidget(win.pre_parms_text)
-    sizer.addWidget(win.post_parms_label)
-    sizer.addWidget(win.post_parms_text)
-    sizer.addWidget(win.feature_label)
-    sizer.addWidget(win.feature_select)
-    box.addLayout(sizer)
-
-
 # def on_combobox(self, cb, text):
 #     """handle a specific field in case it's a combobox
 #     cb refers to the widget, text to the choice made
 #     """
-def captions_extra_fields(win):
-    "for plugin-specific fields, change the captions according to the language setting"
-    # win.fieldname.setText(win.captions['some_value'])
-    win.pre_parms_label.setText(win.captions['C_BPARMS'] + ':')
-    win.post_parms_label.setText(win.captions['C_APARMS'] + ':')
-    win.feature_label.setText(win.captions['C_FEAT'] + ':')
-
-
 # newdata is a tuple of values from a line in the screen table
 # def on_extra_selected(win, newdata):
 #     "callback on selection of an item - update specific field"
@@ -312,11 +271,11 @@ def vul_extra_details(win, indx, item):
     index refers to the sequence of the field in the screen table, item is the value contained
     """
     if win.column_info[indx][0] == 'C_BPARMS':
-        win.pre_parms_text.setText(item)
+        win.gui.set_textfield_value(win.gui.pre_parms_text, item)
         win._origdata[win.fieldindex] = item
-    if win.column_info[indx][0] == 'C_APARMS':
-        win.post_parms_text.setText(item)
+    elif win.column_info[indx][0] == 'C_APARMS':
+        win.gui.set_textfield_value(win.gui.post_parms_text, item)
         win._origdata[win.fieldindex] = item
-    if win.column_info[indx][0] == 'C_FEAT':
-        win.feature_select.setCurrentIndex(win.featurelist.index(item))
+    elif win.column_info[indx][0] == 'C_FEAT':
+        win.gui.set_combobox_string(win.gui.feature_select, item, win.featurelist)
         win._origdata[win.fieldindex] = item
