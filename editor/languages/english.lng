@@ -127,6 +127,7 @@ I_ADDCOL Please add settings and column information to csv file first
 I_DEFSAV Please define savekeys function in plugin or disable this option
 I_DEFRBLD Please define rebuild function in plugin or disable this option
 I_ERRRBLD Error rebuilding csv file (check filenames in plugin settings)
+I_NORBLD CSV not (re)built - {}
 I_DPLCOL Can't save this: identical values for column numbers
 I_DPLNAM Can't save this: identical values for column names
 I_MISSNAM Can't save this: not all column names are entered

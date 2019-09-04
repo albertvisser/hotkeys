@@ -127,6 +127,7 @@ I_ADDCOL  Eerst settings en kolom informatie aan csv bestand toevoegen
 I_DEFSAV  Eerst savekeys functie in plugin definiëren of deze keuze deactiveren
 I_DEFRBLD Eerst rebuild functie in plugin definiëren of deze keuze deactiveren
 I_ERRRBLD Fout bij opbouwen csv file (controleer bestandsnamen in plugin settings)
+I_NORBLD CSV niet op(nieuw) aangemaakt - {}
 I_DPLCOL  Opslaan niet mogelijk: gelijke waarden voor kolomnummers
 I_DPLNAM  Opslaan niet mogelijk: gelijke waarden voor kolomnnamen
 I_MISSNAM Opslaan niet mogelijk: niet alle kolomnamen zijn opgegeven
