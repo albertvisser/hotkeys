@@ -7,9 +7,7 @@ import xml.etree.ElementTree as ET
 import collections
 ## import functools
 ## import string
-import PyQt5.QtWidgets as qtw
-## import PyQt5.QtGui as gui
-## import PyQt5.QtCore as core
+from ..gui import show_cancel_message, get_file_to_open, get_file_to_save
 
 instructions = """\
 Instructions for rebuilding the key binding definitions
@@ -42,7 +40,7 @@ def _translate_keyname(inp):
     return out
 
 
-def buildcsv(parent, showinfo=True):
+def buildcsv(page, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het csv bestand
     """
@@ -50,18 +48,15 @@ def buildcsv(parent, showinfo=True):
     otherstuff = {}
 
     try:
-        initial = parent.page.settings['AC_KEYS']
+        initial = page.settings['AC_KEYS']
     except KeyError:
         initial = ''
 
     kbfile = ''
     if showinfo:
-        ok = qtw.QMessageBox.information(parent, parent.title, instructions,
-                                         qtw.QMessageBox.Ok | qtw.QMessageBox.Cancel)
-        if ok == qtw.QMessageBox.Ok:
-            kbfile = qtw.QFileDialog.getOpenFileName(
-                parent, parent.captions['C_SELFIL'], directory=initial,
-                filter='XML files (*.xml)')[0]
+        ok = show_cancel_message(page.gui, text=instructions)
+        if ok:
+            kbfile = get_file_to_open(page.gui, 'XML files (*.xml)', initial)  # or initial
     else:
         kbfile = initial
     if not kbfile:
@@ -94,6 +89,7 @@ def buildcsv(parent, showinfo=True):
     otherstuff['commands'] = commandlist
     return shortcuts, otherstuff
 
+
 how_to_save = """\
 Instructions to load the changed definitions back into Audacity.
 
@@ -112,16 +108,14 @@ or "Cancel" to return to the main program.
 def savekeys(parent):
     """schrijf de gegevens terug
     """
-    ok = qtw.QMessageBox.information(parent, parent.title, how_to_save,
-                                     qtw.QMessageBox.Ok | qtw.QMessageBox.Cancel)
-    if ok == qtw.QMessageBox.Cancel:
+    ok = show_cancel_message(parent, text=how_to_save)
+    if not ok:
         return
 
     try:
         kbfile = parent.settings['AC_KEYS']
     except KeyError:
-        kbfile = qtw.QFileDialog.getSaveFileName(parent, parent.captions['C_SELFIL'],
-                                                 filter='XML files (*.xml)')
+        kbfile = get_file_to_save(parent, 'XML files (*.xml)', initial)
 
     root = ET.Element('audacitykeyboard')
     root.set('audacityversion', "2.0.5")
