@@ -66,14 +66,16 @@ def get_choice(win, title, caption, choices, current):
     return qtw.QInputDialog.getItem(win, title, caption, choices, current, editable=False)
 
 
-def get_file_to_open(win, extension, start):
-    what = shared.get_text(win, 'C_SELFIL')
-    return qtw.QFileDialog.getOpenFileName(win, what, directory=start, filter=extension)[0]
+def get_file_to_open(win, oms='', extension='', start=''):
+    what = shared.add_to_text(win, 'C_SELFIL', oms)
+    fname, ok = qtw.QFileDialog.getOpenFileName(win, what, directory=start, filter=extension)
+    return fname
 
 
-def get_file_to_save(win, extension, start):
-    what = shared.get_text(win, 'C_SELFIL')
-    return qtw.QFileDialog.getSaveFileName(win, what, filter=extension)[0]
+def get_file_to_save(win, oms='', extension='', start=''):
+    what = shared.add_to_text(win, 'C_SELFIL', oms)
+    fname, ok = qtw.QFileDialog.getSaveFileName(win, what, filter=extension)
+    return fname
 
 
 class InitialToolDialog(qtw.QDialog):
@@ -141,7 +143,7 @@ class FileBrowseButton(qtw.QFrame):
         if text:
             self.startdir = os.path.dirname(text)
         super().__init__(parent)
-        self.setWindowTitle(self.master.title)
+        self.setWindowTitle(self.parent.title)
         self.setFrameStyle(qtw.QFrame.Panel | qtw.QFrame.Raised)
         vbox = qtw.QVBoxLayout()
         box = qtw.QHBoxLayout()

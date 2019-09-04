@@ -397,7 +397,6 @@ def quick_check(filename):
     print('{}: No errors found'.format(filename))
 
 
-# geëxtraheerd uit dialogs_qt.py
 def get_text(win, message_id='', text='', args=None):
     """retourneer de tekst geïdentificeerd door <message_id>
     als <text> is opgegeven wordt die gebruikt
@@ -415,6 +414,13 @@ def get_text(win, message_id='', text='', args=None):
     if args:
         text = text.format(*args)
     return text
+
+
+def add_to_text(win, message_id, oms):
+    what = get_text(win, message_id)
+    if oms:
+        what = ' - '.join((what, oms))
+    return what
 
 
 def get_title(win):

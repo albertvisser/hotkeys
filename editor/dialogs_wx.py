@@ -76,14 +76,13 @@ def get_choice(win, title, caption, choices, current):
     return text, ok == wx.ID_OK
 
 
-def get_file_to_open(win, extension, start):
-    what = shared.get_text(win, 'C_SELFIL')
-    test = wx.LoadFileSelector(what, extension, default_name=start, parent=win)
-    return test
+def get_file_to_open(win, oms='', extension='', start=''):
+    what = shared.add_to_text(win, 'C_SELFIL', oms)
+    return wx.LoadFileSelector(what, extension, default_name=start, parent=win)
 
 
-def get_file_to_save(win, extension, start):
-    what = shared.get_text(win, 'C_SELFIL')
+def get_file_to_save(win, oms='', extension= '', start=''):
+    what = shared.add_to_text(win, 'C_SELFIL', oms)
     return wx.SaveFileSelector(what, extension, default_name=start, parent=win)
 
 
