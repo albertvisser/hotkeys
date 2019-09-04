@@ -10,9 +10,22 @@ import editor.shared as shared
 
 def show_message(win, message_id='', text='', args=None):
     """toon een boodschap in een dialoog
+
+    args is bedoeld voor als er teksten in de message moeten orden geformatteerd
     """
     text = shared.get_text(win, message_id, text, args)
     qtw.QMessageBox.information(win, shared.get_title(win), text)
+
+
+def show_cancel_message(win, message_id ='', text='', args=None):
+    """als de vorige, maar met de mogelijkheid 'Cancel' te kiezen
+
+    daarom retourneert deze functie ook een boolean
+    """
+    text = shared.get_text(win, message_id, text, args)
+    ok = qtw.QMessageBox.information(win, shared.get_title(win), text,
+                                     qtw.QMessageBox.Ok | qtw.QMessageBox.Cancel)
+    return ok == qtw.QMessageBox.Ok
 
 
 def ask_question(win, message_id='', text='', args=None):
@@ -51,6 +64,16 @@ def get_choice(win, title, caption, choices, current):
     antwoord (de geselecteerde waarde en True bij OK) na sluiten van de dialoog
     """
     return qtw.QInputDialog.getItem(win, title, caption, choices, current, editable=False)
+
+
+def get_file_to_open(win, extension, start):
+    what = shared.get_text(win, 'C_SELFIL')
+    return qtw.QFileDialog.getOpenFileName(win, what, directory=start, filter=extension)[0]
+
+
+def get_file_to_save(win, extension, start):
+    what = shared.get_text(win, 'C_SELFIL')
+    return qtw.QFileDialog.getSaveFileName(win, what, filter=extension)[0]
 
 
 class InitialToolDialog(qtw.QDialog):

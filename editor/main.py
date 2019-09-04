@@ -91,9 +91,9 @@ class HotkeyPanel:
                 pass
             else:
                 try:
-                    self.otherstuff = self.reader.buildcsv(parent, showinfo=False)[1]
+                    self.otherstuff = self.reader.buildcsv(self, showinfo=False)[1]
                 except FileNotFoundError:
-                    nodata = "Can't build settings for {}".format(modulename)
+                    nodata = "Can't build/get settings for {}".format(modulename)
 
         if nodata:
             # print('init HotkeyPanel with no data', nodata)
@@ -178,7 +178,6 @@ class HotkeyPanel:
     def add_extra_attributes(self):
         """helper stuff for selected keydef, to make editing possible
         """
-        # print('in add_extra_attributes, set up _origdata voor', self)
         self.init_origdata = []
         ix_item = 0
         if 'C_KEY' in self.fields:
@@ -394,7 +393,7 @@ class HotkeyPanel:
                 command = item
                 if 'C_CNTXT' in self.fields:
                     self.gui.init_combobox(self.gui.cmb_commando)
-                    context = self.gui.get_combobox_selection(self.gui.cmb_context)  # currentText()
+                    context = self.gui.get_combobox_selection(self.gui.cmb_context)
                     # if self.contextactionsdict:
                     #     actionslist = self.contextactionsdict[context]
                     # else:
@@ -894,7 +893,7 @@ class Editor:
             gui.show_message(self.gui, 'I_DEFRBLD')
             return
         try:
-            newdata = test(self.book)
+            newdata = test(self.book.page)
         except FileNotFoundError:
             gui.show_message(self.gui, 'I_ERRRBLD')
             return
@@ -911,7 +910,7 @@ class Editor:
                 test = newdata[1]
             except IndexError:
                 mld = 'No extra definition'
-            mld = self.captions['I_#FOUND'].format(mld)
+            mld = self.captions['I_NORBLD'].format(self.captions['I_#FOUND'].format(mld))
         gui.show_message(self.gui, text=mld)
 
     def m_tool(self, event=None):

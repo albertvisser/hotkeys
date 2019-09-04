@@ -18,6 +18,16 @@ def show_message(win, message_id='', text='', args=None):
     wx.MessageBox(text, shared.get_title(win), parent=win)
 
 
+def show_cancel_message(win, message_id ='', text='', args=None):
+    """als de vorige, maar met de mogelijkheid 'Cancel' te kiezen
+
+    daarom retourneert deze functie ook een boolean
+    """
+    text = shared.get_text(win, message_id, text, args)
+    ok = wx.MessageBox(text, shared.get_title(win), parent=win, style= wx.OK | wx.CANCEL)
+    return ok == wx.OK
+
+
 def ask_question(win, message_id='', text='', args=None):
     """toon een vraag in een dialoog en retourneer het antwoord (Yes als True, No als False)
     na sluiten van de dialoog
@@ -64,6 +74,17 @@ def get_choice(win, title, caption, choices, current):
         if ok == wx.ID_OK:
             text = dlg.GetStringSelection()
     return text, ok == wx.ID_OK
+
+
+def get_file_to_open(win, extension, start):
+    what = shared.get_text(win, 'C_SELFIL')
+    test = wx.LoadFileSelector(what, extension, default_name=start, parent=win)
+    return test
+
+
+def get_file_to_save(win, extension, start):
+    what = shared.get_text(win, 'C_SELFIL')
+    return wx.SaveFileSelector(what, extension, default_name=start, parent=win)
 
 
 class InitialToolDialog(wx.Dialog):
