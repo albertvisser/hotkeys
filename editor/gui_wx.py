@@ -148,7 +148,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
 
         if 'C_MODS' in self.master.fields:
             for ix, x in enumerate(('M_CTRL', 'M_ALT', 'M_SHFT', 'M_WIN')):
-                cb = wx.CheckBox(box, self.master.captions[x].join(("+ ", "")))
+                cb = wx.CheckBox(box, label=self.master.captions[x].join(("+ ", "")))
                 cb.SetValue(False)
                 self.screenfields.append(cb)
                 cb.Bind(wx.EVT_CHECKBOX, self.master.on_checkbox)
@@ -171,7 +171,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
 
         if 'C_CMD' in self.master.fields:
             self.txt_cmd = wx.StaticText(box, label=self.master.captions['C_CTXT'] + " ")
-            cb = wx.ComboBox(self, size=(150, -1), style=wx.CB_READONLY)
+            cb = wx.ComboBox(box, size=(150, -1), style=wx.CB_READONLY)
             if 'C_CNTXT' not in self.master.fields:  # load on choosing context
                 cb.SetItems(self.master.commandslist)
             cb.Bind(wx.EVT_COMBOBOX, self.master.on_combobox)
@@ -217,25 +217,21 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         bsizer.AddSpacer(5)
 
         sizer1 = wx.BoxSizer(wx.HORIZONTAL)
+
         sizer2 = wx.BoxSizer(wx.HORIZONTAL)
         if 'C_KEY' in self.master.fields:
-            sizer3 = wx.BoxSizer(wx.HORIZONTAL)
-            sizer3.Add(self.lbl_key, 0, wx.ALIGN_CENTER_VERTICAL)
+            sizer2.Add(self.lbl_key, 0, wx.ALIGN_CENTER_VERTICAL)
             if self.master.keylist is None:
-                sizer3.Add(self.txt_key, 0, wx.ALIGN_CENTER_VERTICAL)
+                sizer2.Add(self.txt_key, 0, wx.ALIGN_CENTER_VERTICAL)
             else:
-                sizer3.Add(self.cmb_key, 0, wx.ALIGN_CENTER_VERTICAL)
-            sizer2.Add(sizer3, 0)
-
+                sizer2.Add(self.cmb_key, 0, wx.ALIGN_CENTER_VERTICAL)
         if 'C_MODS' in self.master.fields:
-            sizer3 = wx.BoxSizer(wx.HORIZONTAL)
-            sizer3.Add(self.cb_ctrl, 0, wx.ALIGN_CENTER_VERTICAL)
-            sizer3.Add(self.cb_alt, 0, wx.ALIGN_CENTER_VERTICAL)
-            sizer3.Add(self.cb_shift, 0, wx.ALIGN_CENTER_VERTICAL)
-            sizer3.Add(self.cb_win, 0, wx.ALIGN_CENTER_VERTICAL)
-            sizer2.Add(sizer3, 0)
-
+            sizer2.Add(self.cb_ctrl, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
+            sizer2.Add(self.cb_alt, 0, wx.ALIGN_CENTER_VERTICAL)
+            sizer2.Add(self.cb_shift, 0, wx.ALIGN_CENTER_VERTICAL)
+            sizer2.Add(self.cb_win, 0, wx.ALIGN_CENTER_VERTICAL)
         sizer1.Add(sizer2, 0)
+
         sizer1.AddStretchSpacer(1)
         if 'C_CNTXT' in self.master.fields:
             sizer2 = wx.BoxSizer(wx.HORIZONTAL)
@@ -487,6 +483,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
 
     def init_combobox(self, cb, choices=None):
         "initialize combobox to a set of new values"
+        print('in init_combobox')
         cb.Clear()
         if choices is not None:
             cb.AppendItems(choices)
@@ -520,9 +517,11 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
 
     def set_combobox_string(self, cmb, value, valuelist):
         "set the selection for a combobox"
+        # print('in set_combobox_string')
         try:
             ix = valuelist.index(value)
         except ValueError:
+            # print('exit on exception', value, 'not in', valuelist)
             return
         cmb.SetSelection(ix)
 

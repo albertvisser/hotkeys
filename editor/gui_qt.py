@@ -285,7 +285,7 @@ class SingleDataInterface(qtw.QFrame):
         if not newitem:  # bv. bij p0list.clear()
             return
         self.initializing_keydef = True
-        if self.master.initializing_screen:
+        if not self.master.initializing_screen:
             any_change, changedata = self.master.check_for_changes()
             found, indx = self.master.check_for_selected_keydef(changedata)
             make_change = self.master.ask_what_to_do(any_change, found, newitem, olditem)
