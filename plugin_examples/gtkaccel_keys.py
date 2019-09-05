@@ -7,11 +7,9 @@ import collections
 ## import functools
 import string
 import pdb
-import PyQt5.QtWidgets as qtw
-## import PyQt5.QtGui as gui
-## import PyQt5.QtCore as core
 from .read_gtkaccel import read_keydefs_and_stuff
-from .completedialog import AccelCompleteDialog
+from ..gui import get_file_to_open, get_file_to_save
+from .gtkaccel_keys_gui import send_completedialog
 
 settname = ''
 
@@ -28,7 +26,7 @@ def _translate_keyname(inp):
     return out
 
 
-def buildcsv(settnames, parent, showinfo=True):
+def buildcsv(settnames, page, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het csv bestand
     """
@@ -37,22 +35,24 @@ def buildcsv(settnames, parent, showinfo=True):
     ## pdb.set_trace()
     for ix, name in enumerate(settnames):
         try:
-            initial = parent.page.settings[name]
+            initial = page.settings[name]
         except KeyError:
             initial = ''
         if showinfo:
-            oms = ' - '.join((parent.captions['C_SELFIL'], fdesc[ix]))
+            oms = ' - '.join((page.captions['C_SELFIL'], fdesc[ix]))
             if not initial:
                 initial = os.path.dirname(__file__)
-                fname = qtw.QFileDialog.getSaveFileName(parent, oms,
-                                                        directory=initial)[0]
+                fname = get_file_to_save(page.gui, oms=fdesc[ix], start=initial)
+                # fname = qtw.QFileDialog.getSaveFileName(parent, oms,
+                #                                         directory=initial)[0]
             else:
-                fname = qtw.QFileDialog.getOpenFileName(parent, oms,
-                                                        directory=initial)[0]
+                fname = get_file_to_open(page.gui, oms=fdesc[ix], start=initial)
+                # fname = qtw.QFileDialog.getOpenFileName(parent, oms,
+                #                                         directory=initial)[0]
             ## print(fname)
-            if fname != initial:
-                parent.page.settings[name] = fname
-                parent.page.settings["extra"][name] = fdesc[ix]
+            if fname and fname != initial:
+                page.settings[name] = fname
+                page.settings["extra"][name] = fdesc[ix]
         else:
             fname = initial
         if ix == 0:
@@ -66,7 +66,7 @@ def buildcsv(settnames, parent, showinfo=True):
     keydefs = stuffdict.pop('keydefs')
     actions = stuffdict['actions']
     omsdict = stuffdict['descriptions']
-    # omsdict is uit de accepmap afgeleid waar gewoonlijk geen omschrijvingen in staan.
+    # omsdict is uit de accelmap afgeleid waar gewoonlijk geen omschrijvingen in staan.
     # Bij opnieuw opbouwen eerst kijken of deze misschien al eens zijn opgeslagen
     # De bestandsnaam kan als een extra setting worden opgenomen - dus: is er zo'n
     # setting bekend, dan dit bestand lezen
@@ -74,10 +74,9 @@ def buildcsv(settnames, parent, showinfo=True):
     # actions in de eerste kolom, descriptions in de tweede
     ## print(omsdict)
     if descfile and showinfo:
-        dlg = AccelCompleteDialog(parent, descfile, actions, omsdict).exec_()
-        if dlg == qtw.QDialog.Accepted:
-            # opslaan vindt plaats in de dialoog, maar de data steruggeven scheelt weer I/O
-            omsdict = parent.dialog_data
+        if send_completedialog(page, descfile, actions, omsdict):
+            # opslaan vindt plaats in de dialoog, maar de data teruggeven scheelt weer I/O
+            omsdict = page.dialog_data
     ## print(omsdict)
 
     # als er sprake is van others dan ook deze meenemen (Dia)
@@ -86,8 +85,7 @@ def buildcsv(settnames, parent, showinfo=True):
         lastkey += 1
         context, action = actions[command]
         description = omsdict[command]
-        shortcuts[str(lastkey)] = (_translate_keyname(key), mods, context, action,
-                                   description)
+        shortcuts[lastkey] = (_translate_keyname(key), mods, context, action, description)
 
     return shortcuts, stuffdict
 
@@ -108,4 +106,3 @@ def add_extra_attributes(win):
     else:
         win.othersdict = win.otherstuff['othercontext']
         win.otherskeys = win.otherstuff['otherkeys']
-#

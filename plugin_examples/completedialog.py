@@ -1,66 +1,37 @@
 """Hotkeys: GUI for adding descriptions
 """
-import csv
-import shutil
-import pathlib
+# TODO: (wx versie van maken en) de dialoog naar de dialogs modules verplaatsen
 import PyQt5.QtWidgets as qtw
 ## import PyQt5.QtGui as gui
 ## import PyQt5.QtCore as core
+import wx
+import wx.grid as wxg
+import editor.shared
+from ..toolkit import toolkit
 
 
-class AccelCompleteDialog(qtw.QDialog):
+class QCompleteDialog(qtw.QDialog):
     """(re)definition of generic dialog used in the main program
     """
-    def __init__(self, parent, outfile, cmds, desc):
+    def __init__(self, parent, *args):
         self.parent = parent
         ## self.captions = self.parent.captions
 
         super().__init__(parent)
         self.resize(680, 400)
 
-        ## self.cmds = {y: x for x, y in cmds.items()}
-        self.outfile = pathlib.Path(outfile)
-        try:
-            _in = self.outfile.open()
-        except FileNotFoundError:
-            print(str(self.outfile), 'not found')   # pass
-        else:
-            with _in:
-                rdr = csv.reader(_in)
-                for line in rdr:
-                    if line:
-                        key, oms = line
-                        ## print(key, oms)
-                        if oms:
-                            desc[int(key)] = oms
-        self.p0list = qtw.QTableWidget(len(cmds), 2, self)
+        mld = self.read_data(*args)
+        if mld:
+            raise ValueError(mld)
+
+        self.p0list = qtw.QTableWidget(len(self.cmds), 2, self)
         ## self.p0list.setColumnCount(2)
         self.p0list.setHorizontalHeaderLabels(['Command', 'Description'])
         hdr = self.p0list.horizontalHeader()
         ## p0hdr.resizeSection(0, 300)
         hdr.setStretchLastSection(True)
-        row = 0
-        self.cmds = {}
-        for key, cmd in sorted(cmds.items(), key=lambda x: x[1]):
-            ## print(key, cmd)
-            new_item = qtw.QTableWidgetItem()
-            try:
-                new_item.setText(cmd)
-                self.cmds[cmd] = key
-            except TypeError:
-                new_item.setText('/'.join(cmd))
-                self.cmds['/'.join(cmd)] = key
-            self.p0list.setItem(row, 0, new_item)
-            new_item = qtw.QTableWidgetItem()
-            try:
-                new_item.setText(desc[key])
-            except KeyError:
-                new_item.setText('')
-            self.p0list.setItem(row, 1, new_item)
-            row += 1
-        ## self.p0list.setVerticalHeaderLabels([y for x, y in self.cmds.items()])
+        self.build_table()
         self.p0list.setColumnWidth(0, 260)
-        ## self.p0list.resizeColumnToContents(0)
 
         self.sizer = qtw.QVBoxLayout()
         hsizer = qtw.QHBoxLayout()
@@ -88,90 +59,74 @@ class AccelCompleteDialog(qtw.QDialog):
             desc = self.p0list.item(rowid, 1).text()
             new_values[self.cmds[cmd]] = desc
         self.parent.dialog_data = new_values
-        if self.outfile.exists():
-            shutil.copyfile(str(self.outfile), str(self.outfile) + '~')
-        with self.outfile.open('w') as _out:
-            writer = csv.writer(_out)
-            for key, value in new_values.items():
-                if value:
-                    writer.writerow((key, value))
+        self.write_data(new_values)
         qtw.QDialog.accept(self)
 
+    def read_data(*args):
+        raise NotImplementedError
 
-class DcCompleteDialog(qtw.QDialog):
+    def build_table(self):
+        pass
+
+    def write_data(self, data):
+        pass
+
+
+class WCompleteDialog(wx.Dialog):
     """(re)definition of generic dialog used in the main program
     """
-    def __init__(self, parent, outfile, cmds):
+    def __init__(self, parent, *args):
         self.parent = parent
-        ## self.captions = self.parent.captions
 
-        super().__init__(parent)
-        self.resize(680, 400)
+        super().__init__(parent, size=(680, 400))
 
-        self.outfile = pathlib.Path(outfile)
-        # listitems = []
-        try:
-            _in = self.outfile.open()
-        except (IsADirectoryError, FileNotFoundError):
-            print(str(self.outfile), 'not found')   # pass
-        else:
-            with _in:
-                rdr = csv.reader(_in)
-                for key, oms in rdr:
-                    cmds[key] = oms
-        self.p0list = qtw.QTableWidget(len(cmds), 2, self)
-        ## self.p0list.setColumnCount(2)
-        self.p0list.setHorizontalHeaderLabels(['Command', 'Description'])
-        hdr = self.p0list.horizontalHeader()
-        ## p0hdr.resizeSection(0, 300)
-        hdr.setStretchLastSection(True)
-        row = 0
-        for key, desc in sorted(cmds.items()):
-            new_item = qtw.QTableWidgetItem()
-            new_item.setText(key)
-            self.p0list.setItem(row, 0, new_item)
-            new_item = qtw.QTableWidgetItem()
-            new_item.setText(desc)
-            self.p0list.setItem(row, 1, new_item)
-            row += 1
-        ## self.p0list.setVerticalHeaderLabels(names)
-        self.p0list.setColumnWidth(0, 260)
-        ## self.numrows = len(values)
+        mld = self.read_data(*args)
+        if mld:
+            raise ValueError(mld)
 
-        self.sizer = qtw.QVBoxLayout()
-        hsizer = qtw.QHBoxLayout()
-        hsizer.addWidget(self.p0list)
-        self.sizer.addLayout(hsizer)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.p0list = wxg.Grid(self)
+        self.p0list.CreateGrid(len(self.cmds), 2)
+        self.p0list.SetRowLabelSize(20)
 
-        buttonbox = qtw.QDialogButtonBox()
-        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
-        buttonbox.accepted.connect(self.accept)
-        buttonbox.rejected.connect(self.reject)
-        hsizer = qtw.QHBoxLayout()
-        hsizer.addStretch()
-        hsizer.addWidget(buttonbox)
-        hsizer.addStretch()
-        self.sizer.addLayout(hsizer)
-        self.setLayout(self.sizer)
+        for ix, row in enumerate((('Command', 280), ('Description', 400))):
+            self.p0list.SetColLabelValue(ix, row[0])
+            self.p0list.SetColSize(ix, row[1])
+        # hdr.setStretchLastSection(True)
+        self.build_table()
+
+        hsizer.Add(self.p0list, 1, wx.EXPAND)
+        self.sizer.Add(hsizer, 1, wx.EXPAND)
+
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.Add(wx.Button(self, id=wx.ID_OK))
+        hbox.Add(wx.Button(self, id=wx.ID_CANCEL))
+        self.sizer.Add(hbox, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_BOTTOM | wx.BOTTOM, 2)
+        self.SetSizer(self.sizer)
 
     def accept(self):
         """confirm changes
         """
         new_values = {}
-        for rowid in range(self.p0list.rowCount()):
-            key = self.p0list.item(rowid, 0).text()
-            desc = self.p0list.item(rowid, 1).text()
-            new_values[key] = desc
+        for rowid in range(self.p0list.GetNumberRows()):
+            cmd = self.p0list.GetCellValue(rowid, 0)
+            desc = self.p0list.GetCellValue(rowid, 1)
+            new_values[self.cmds[cmd]] = desc
         self.parent.dialog_data = new_values
-        if self.outfile.exists():
-            shutil.copyfile(str(self.outfile), str(self.outfile) + '~')
-        ## with open(self.outfile, 'w') as _out:
-            ## for key, value in new_values.items():
-                ## _out.write('{}: {}\n'.format(key, value))
-        with self.outfile.open('w') as _out:
-            writer = csv.writer(_out)
-            for key, value in new_values.items():
-                if value:
-                    writer.writerow((key, value))
-        qtw.QDialog.accept(self)
+        self.write_data(new_values)
+
+    def read_data(*args):
+        raise NotImplementedError
+
+    def build_table(self):
+        pass
+
+    def write_data(self, data):
+        pass
+
+
+if toolkit == 'qt':
+    CompleteDialog = QCompleteDialog
+elif toolkit == 'wx':
+    CompleteDialog = WCompleteDialog
