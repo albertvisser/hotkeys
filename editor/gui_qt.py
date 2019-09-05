@@ -55,7 +55,6 @@ class SingleDataInterface(qtw.QFrame):
         self.p0list = qtw.QTreeWidget(self)
         sizer = qtw.QVBoxLayout()
         if self.master.column_info:
-            self.p0list.setSortingEnabled(True)
             self.p0list.setHeaderLabels([self.master.captions[col[0]] for col in
                                          self.master.column_info])
             self.p0list.setAlternatingRowColors(True)
@@ -67,6 +66,7 @@ class SingleDataInterface(qtw.QFrame):
                     hdr.resizeSection(indx, col[1])
             hdr.setStretchLastSection(True)
             self.master.populate_list()
+            self.p0list.setSortingEnabled(True)
             sizer1 = qtw.QHBoxLayout()
             sizer1.addWidget(self.p0list)
             sizer.addLayout(sizer1)
@@ -568,7 +568,9 @@ class TabbedInterface(qtw.QFrame):
 
     def set_selected_keydef_item(self, page, index):
         "select a search result in the list"
-        page.gui.p0list.setCurrentItem(self.master.items_found[index])
+        item = self.master.items_found[index]
+        page.gui.p0list.setCurrentItem(item)
+        page.gui.p0list.scrollToItem(item)
 
     def enable_search_buttons(self, next=None, prev=None, filter=None):
         "set the appropriate search-related button(s) to the given value)s)"

@@ -144,6 +144,7 @@ class HotkeyPanel:
     def setcaptions(self):
         """update captions according to selected language
         """
+        self.captions = self.parent.parent.captions
         self.set_title()
         if self.has_extrapanel:
             self.gui.captions_extra_fields()

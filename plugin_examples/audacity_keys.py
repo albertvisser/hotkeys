@@ -56,7 +56,7 @@ def buildcsv(page, showinfo=True):
     if showinfo:
         ok = show_cancel_message(page.gui, text=instructions)
         if ok:
-            kbfile = get_file_to_open(page.gui, 'XML files (*.xml)', initial)  # or initial
+            kbfile = get_file_to_open(page.gui, extension='XML files (*.xml)', start=initial)
     else:
         kbfile = initial
     if not kbfile:
@@ -115,7 +115,7 @@ def savekeys(parent):
     try:
         kbfile = parent.settings['AC_KEYS']
     except KeyError:
-        kbfile = get_file_to_save(parent, 'XML files (*.xml)', initial)
+        kbfile = get_file_to_save(parent, extension='XML files (*.xml)', start=initial)
 
     root = ET.Element('audacitykeyboard')
     root.set('audacityversion', "2.0.5")

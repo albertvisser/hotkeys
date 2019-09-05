@@ -101,7 +101,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
             # see wx/lib/mixins/listctrl.py
             self.itemDataMap = self.master.data  # nodig voor ColumnSorterMixin
             listmix.ColumnSorterMixin.__init__(self, len(self.master.column_info))
-            # self.SortListItems(0, True)
+            self.SortListItems(0, True)
 
             self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_item_selected, self.p0list)
             self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.on_item_deselected, self.p0list)
@@ -253,6 +253,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         sizer1.Add(self.b_save, 0)
         sizer1.Add(self.b_del, 0)
         bsizer.Add(sizer1, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+        self.toplinesizer = sizer1
 
         try:
             test = self.master.reader.layout_extra_fields_nextline
@@ -283,6 +284,8 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
     def captions_extra_fields(self):
         """to be called on changing the language
         """
+        print('in captions_extra_fields')
+        print(self.master.fields)
         if 'C_KEY' in self.master.fields:
             self.lbl_key.SetLabel(self.master.captions['C_KTXT'])
         if 'C_MODS' in self.master.fields:
@@ -301,6 +304,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
             self.master.reader.captions_extra_fields(self)  # user exit
         except AttributeError:
             pass
+        self.toplinesizer.Layout()
 
     def on_item_deselected(self, event):
         """callback op het niet meer geselecteerd zijn van een item
@@ -588,19 +592,20 @@ class TabbedInterface(wx.Panel):
         vbox = wx.BoxSizer(wx.VERTICAL)
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         hbox.AddSpacer(10)
-        self.sel_text = wx.StaticText(self, label='', size=(80, -1))
+        self.sel_text = wx.StaticText(self)  # , label='', size=(80, -1))
         hbox.Add(self.sel_text, 0, wx.ALIGN_CENTER_VERTICAL)
-        hbox.Add(self.sel, 0)
+        hbox.Add(self.sel, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
         hbox.AddStretchSpacer(1)
-        self.find_text = wx.StaticText(self, label='', size=(80, -1))
+        self.find_text = wx.StaticText(self)  # , label='', size=(80, -1))
         hbox.Add(self.find_text, 0, wx.ALIGN_CENTER_VERTICAL)
-        hbox.Add(self.find_loc, 0)
+        hbox.Add(self.find_loc, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
         hbox.Add(wx.StaticText(self, label=' : '), 0, wx.ALIGN_CENTER_VERTICAL)
-        hbox.Add(self.find, 0)
+        hbox.Add(self.find, 0, wx.ALIGN_CENTER_VERTICAL)
         hbox.Add(self.b_filter, 0)
         hbox.Add(self.b_next, 0)
         hbox.Add(self.b_prev, 0)
         hbox.AddSpacer(10)
+        self.headlinesizer = hbox
         vbox.Add(hbox, 0, wx.EXPAND)
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         hbox.Add(self.pnl, 0)
@@ -615,14 +620,15 @@ class TabbedInterface(wx.Panel):
     def setcaptions(self):
         """update captions according to selected language
         """
-        self.b_next.SetLabel(self.parent.editor.captions['C_NEXT'])
-        self.b_prev.SetLabel(self.parent.editor.captions['C_PREV'])
         self.sel_text.SetLabel(self.parent.editor.captions['C_SELPRG'])
         self.find_text.SetLabel(self.parent.editor.captions['C_FIND'])
         if self.filter_on:
             self.b_filter.SetLabel(self.parent.editor.captions['C_FLTOFF'])
         else:
             self.b_filter.SetLabel(self.parent.editor.captions['C_FILTER'])
+        self.b_next.SetLabel(self.parent.editor.captions['C_NEXT'])
+        self.b_prev.SetLabel(self.parent.editor.captions['C_PREV'])
+        self.headlinesizer.Layout()
         try:
             self.parent.b_exit.SetLabel(self.parent.editor.captions['C_EXIT'])
         except AttributeError:  # exit button bestaat nog niet tijdens initialisatie
@@ -687,7 +693,9 @@ class TabbedInterface(wx.Panel):
 
     def set_selected_keydef_item(self, page, index):
         "select a search result in the list"
-        page.gui.p0list.Select(self.master.items_found[index])
+        item = self.master.items_found[index]
+        page.gui.p0list.Select(item)
+        page.gui.p0list.EnsureVisible(item)
 
     def enable_search_buttons(self, next=None, prev=None, filter=None):
         "set the appropriate search-related button(s) to the given value)s)"
