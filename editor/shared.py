@@ -34,8 +34,25 @@ def log(message, always=False):
         logging.info(message)
 
 
-def log_exc(message):
+def log_exc(message=''):
+    "output exception to log"
     logging.exception(message)
+
+
+def save_log():
+    """intention: rename previous log file
+    oddly enough, this renames the current log file immediately
+    also, log messages are written to it despite the name being changed...
+    """
+    if not LOGFILE.exists():  # dit is dus nooit aan de hand
+        return
+    for last in reversed(sorted(LOGFILE.parent.glob(LOGFILE.name + '*'))):
+        break
+    if last.suffix == LOGFILE.suffix:
+        newlast = 0
+    else:
+        newlast = int(last.suffix[1:]) + 1
+    LOGFILE.rename(LOGFILE.with_suffix('.'.join((LOGFILE.suffix, str(newlast)))))
 
 
 class LineType(enum.Enum):

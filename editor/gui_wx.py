@@ -192,7 +192,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         try:
             self.master.reader.add_extra_fields(self, box)  # user exit
         except AttributeError:
-            pass
+            shared.log_exc()
 
         self.set_extrascreen_editable(bool(int(self.master.settings['RedefineKeys'])))
 
@@ -248,7 +248,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         try:
             self.master.reader.layout_extra_fields_topline(self, sizer1)  # user exit
         except AttributeError:
-            pass
+            shared.log_exc()
 
         sizer1.Add(self.b_save, 0)
         sizer1.Add(self.b_del, 0)
@@ -258,7 +258,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         try:
             test = self.master.reader.layout_extra_fields_nextline
         except AttributeError:
-            pass
+            shared.log_exc()
         else:
             sizer1 = wx.BoxSizer(wx.HORIZONTAL)
             self.master.reader.layout_extra_fields_nextline(self, sizer1)  # user exit
@@ -273,7 +273,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         try:
             self.master.reader.layout_extra_fields(self, sizer1)  # user exit
         except AttributeError:
-            pass
+            shared.log_exc()
 
         bsizer.Add(sizer1, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
 
@@ -284,8 +284,6 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
     def captions_extra_fields(self):
         """to be called on changing the language
         """
-        print('in captions_extra_fields')
-        print(self.master.fields)
         if 'C_KEY' in self.master.fields:
             self.lbl_key.SetLabel(self.master.captions['C_KTXT'])
         if 'C_MODS' in self.master.fields:
@@ -487,10 +485,13 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
 
     def init_combobox(self, cb, choices=None):
         "initialize combobox to a set of new values"
-        print('in init_combobox')
         cb.Clear()
         if choices is not None:
             cb.AppendItems(choices)
+
+    def set_label_text(self, lbl, value):
+        "set the text for a label / static text"
+        lbl.SetLabel(value)
 
     def set_textfield_value(self, txt, value):
         "set the text for a textfield"
@@ -887,7 +888,6 @@ class Gui(wx.Frame):
             if has_items:
                 oldmenu = self.menu_bar.Replace(ix, menu, self.editor.captions[title])
                 oldmenu.Destroy()
-                shared.log(oldmenu, always=True)
             else:
                 self.menu_bar.Append(menu, self.editor.captions[title])
             self.menuitems[title] = menu, ''

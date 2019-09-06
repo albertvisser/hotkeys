@@ -54,11 +54,11 @@ class HotkeyPanel:
         if self.pad:
             try:
                 self.settings, self.column_info, self.data = shared.readcsv(self.pad)
-            except ValueError as e:
-                shared.logging.exception('')
+            except ValueError:
+                shared.log_exc()
                 nodata = self.captions['I_NOSET'].format(e, self.pad)
             except FileNotFoundError:
-                shared.logging.exception('')
+                shared.log_exc()
                 nodata = self.captions['I_NOSETFIL'].format(self.pad)
         else:
             nodata = self.captions['I_NOSETFIL'].format(self.pad)
@@ -73,13 +73,13 @@ class HotkeyPanel:
             try:
                 modulename = self.settings[shared.SettType.PLG.value]
             except KeyError:
-                shared.logging.exception('')
+                shared.log_exc()
                 nodata = True
             else:
                 try:
                     self.reader = importlib.import_module(modulename)
                 except ImportError:
-                    shared.logging.exception('')
+                    shared.log_exc()
                     nodata = True
             if nodata:
                 nodata = self.captions['I_NODATA'].replace('data', 'plugin code')
@@ -148,8 +148,6 @@ class HotkeyPanel:
         self.set_title()
         if self.has_extrapanel:
             self.gui.captions_extra_fields()
-        # if self.data:
-        #     self.populate_list()
 
     def populate_list(self, pos=0):
         """vullen van de lijst
@@ -255,7 +253,6 @@ class HotkeyPanel:
         """
         if self.initializing_screen:
             return
-        # print(args)
         cb, text = self.gui.get_choice_value(*args)
         self.defchanged = False
         try:
@@ -278,7 +275,7 @@ class HotkeyPanel:
                     self.defchanged = True
                     if 'C_CMD' in self.fields:
                         self.gui.enable_save(True)
-            elif self.gui.get_combobox_text(self.gui.cmb_commando) == self._origdata[keyitemindex]:  # UNDEF
+            elif self.gui.get_combobox_text(self.gui.cmb_commando) == self._origdata[self.ix_cmd]:
                 self.defchanged = False
                 if 'C_CMD' in self.fields:
                     self.gui.enable_save(False)
@@ -296,7 +293,7 @@ class HotkeyPanel:
                     self.defchanged = True
                     if 'C_CMD' in self.fields:
                         self.gui.enable_save(True)
-            elif self.gui.get_combobox_text(self.gui.cmb_commando) == self._origdata[self.ix_cntxt]:
+            elif self.gui.get_combobox_text(self.gui.cmb_commando) == self._origdata[self.ix_cmd]:
                 self.defchanged = False
                 if 'C_CMD' in self.fields:
                     self.gui.enable_save(False)
@@ -313,14 +310,14 @@ class HotkeyPanel:
                     self.defchanged = True
                     if 'C_CMD' in self.fields:
                         self.gui.enable_save(True)
-            elif self.gui.get_combobox_text(self.gui.cmb_key) == self._origdata[cmditemindex]:
+            elif self.gui.get_combobox_text(self.gui.cmb_key) == self._origdata[self.ix_key]:
                 if 'C_CMD' in self.fields:
                     self.gui.enable_save(False)
         else:
             try:
                 self.reader.on_combobox(self, cb, text)  # user exit
             except AttributeError:
-                pass
+                shared.log_exc()
 
     def on_checkbox(self, *args):
         """callback op het gebruik van een checkbox
@@ -413,7 +410,7 @@ class HotkeyPanel:
                 try:
                     self.reader.vul_extra_details(self, indx, item)  # user exit
                 except AttributeError:
-                    pass
+                    shared.log_exc()
         self._newdata = self._origdata[:]
 
     def check_for_changes(self):
@@ -671,6 +668,7 @@ class Editor:
     """Hoofdscherm van de applicatie
     """
     def __init__(self, args):
+        shared.save_log()
         ini = args.conf or shared.CONF
         self.ini = shared.read_settings(ini)
         self.readcaptions(self.ini['lang'])

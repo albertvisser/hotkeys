@@ -155,7 +155,7 @@ class SingleDataInterface(qtw.QFrame):
         try:
             self.master.reader.add_extra_fields(self, box)  # user exit
         except AttributeError:
-            pass
+            shared.log_exc()
 
         self.set_extrascreen_editable(bool(int(self.master.settings['RedefineKeys'])))
 
@@ -216,7 +216,7 @@ class SingleDataInterface(qtw.QFrame):
         try:
             self.master.reader.layout_extra_fields_topline(self, sizer1)  # user exit
         except AttributeError:
-            pass
+            shared.log_exc()
 
         sizer1.addWidget(self.b_save)
         sizer1.addWidget(self.b_del)
@@ -225,7 +225,7 @@ class SingleDataInterface(qtw.QFrame):
         try:
             test = self.master.reader.layout_extra_fields_nextline
         except AttributeError:
-            pass
+            shared.log_exc()
         else:
             sizer1 = qtw.QHBoxLayout()
             self.master.reader.layout_extra_fields_nextline(self, sizer1)  # user exit
@@ -240,7 +240,7 @@ class SingleDataInterface(qtw.QFrame):
         try:
             self.master.reader.layout_extra_fields(self, sizer1)  # user exit
         except AttributeError:
-            pass
+            shared.log_exc()
 
         bsizer.addLayout(sizer1)
 
@@ -388,6 +388,10 @@ class SingleDataInterface(qtw.QFrame):
         cb.clear()
         if choices is not None:
             cb.addItems(choices)
+
+    def set_label_text(self, lbl, value):
+        "set the text for a label / static text"
+        lbl.setText(value)
 
     def set_textfield_value(self, txt, value):
         "set the text for a textfield"
