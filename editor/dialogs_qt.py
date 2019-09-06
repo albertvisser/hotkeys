@@ -159,7 +159,7 @@ class FileBrowseButton(qtw.QFrame):
     def browse(self):
         """callback for button
         """
-        startdir = str(self.input.text()) or os.getcwd()
+        startdir = str(self.input.text()) or str(shared.HERE / 'plugins')
         path = qtw.QFileDialog.getOpenFileName(self, self.parent.captions['C_SELFIL'], startdir)
         if path[0]:
             self.input.setText(path[0])
