@@ -15,7 +15,9 @@ import bs4 as bs  # import BeautifulSoup
 import PyQt5.QtWidgets as qtw
 ## import PyQt5.QtGui as gui
 ## import PyQt5.QtCore as core
-from .completedialog import DcCompleteDialog
+from ..gui import show_cancel_message, get_file_to_open, get_file_to_save
+from .dckeys_gui import add_extra_fields, layout_extra_fields, send_completedialog
+
 
 instructions = """\
 Instructions for rebuilding the keyboard shortcut definitions
@@ -327,7 +329,7 @@ def analyze_keydefs(root, cat_name):
     return cmddict, dflt_assign, cmdparms, command_list
 
 
-def buildcsv(parent, showinfo=True):
+def buildcsv(page, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het csv bestand
 
@@ -346,32 +348,21 @@ def buildcsv(parent, showinfo=True):
 
     shortcuts = collections.OrderedDict()
     has_path = False
-    try:
-        test = parent.page
-    except AttributeError:
-        # pass   # TODO: handle failure in GUI instead of ignoring it here
-        # raise
-        return {}, {}
-    else:
-        try:
-            initial = test.settings['DC_PATH']
-            has_path = True
-            dc_keys = test.settings['DC_KEYS']
-            dc_cmds = test.settings['DC_CMDS']
-            dc_desc_h = test.settings['DC_DESC']
-        except KeyError:    # TODO: save defaults as settings
-            pass
-        if dc_desc_h:
-            dc_desc = dc_desc_h
+    initial = page.settings['DC_PATH']
+    has_path = True
+    dc_keys = page.settings['DC_KEYS']
+    dc_cmds = page.settings['DC_CMDS']
+    dc_desc_h = page.settings['DC_DESC']
+    # except KeyError:    # TODO: save defaults as settings
+    #     pass
+    if dc_desc_h:
+        dc_desc = dc_desc_h
     if showinfo and not has_path:
-        ok = qtw.QMessageBox.information(parent, parent.title, instructions,
-                                         qtw.QMessageBox.Ok | qtw.QMessageBox.Cancel)
-        if ok == qtw.QMessageBox.Cancel:
+        ok = show_cancel_message(page, text=instructions)
+        if not ok:
             # geeft (soms) segfault
             return
-        kbfile = qtw.QFileDialog.getOpenFileName(parent, parent.captions['C_SELFIL'],
-                                                 directory=initial,
-                                                 filter='SCF files (*.scf)')[0]
+        kbfile = get_file_to_open(page, extension='SCF files (*.scf)', start=initial)
     else:
         kbfile = initial
     if not kbfile:
@@ -411,12 +402,12 @@ def buildcsv(parent, showinfo=True):
     descfile = dc_desc
     omsdict = tobecompleted
     if showinfo:
-        dlg = DcCompleteDialog(parent, descfile, omsdict).exec_()
-        if dlg == qtw.QDialog.Accepted:
+        ok = send_completedialog(page, descfile, omsdict)
+        if ok:
             # opslaan vindt plaats in de dialoog, maar de data teruggeven scheelt weer I/O
             # zoals de dialoog nu aangestuurd wordt worden de omschrijvingen opgeslagen
             #   met volgnummers in plaats van commandonaam als key
-            omsdict = parent.dialog_data
+            omsdict = page.dialog_data
     # invullen in shortcuts en cmddict
     for key, value in shortcuts.items():
         for cmnd, desc in omsdict.items():
@@ -426,22 +417,13 @@ def buildcsv(parent, showinfo=True):
                 shortcuts[key] = tuple(itemlist)
                 cmddict.update(omsdict)
 
+    # geen idee of ik deze nog ergens uit kan afleiden
     only_for = ['', 'Command Line', 'Files Panel', 'Quick Search']
-    # geen idee waar die extra "control"s vandaan komen - oh wacht het zijn de
-    # extra vermeldingen in de definitie dialoog (titel: "only for these controls").
-    # een betere benaming zou dus zijn `only_for`
+    contexts = ['Main', 'Copy/Move Dialog', 'Differ', 'Edit Comment Dialog', 'Viewer']
 
-    # context entries worden gebruikt in keydefs (de dict voor de gui)
-    # context list entries worden gebruikt in stdkeys (de dict met veronderstelde standaard waarden)
-    contexts = ['Main', 'Copy/Move Dialog', 'Differ', 'Edit Comment Dialog',
-                'Viewer']
-
-    return shortcuts, {'stdkeys': stdkeys, 'defaults': defaults,
-                       'cmddict': cmddict, 'restrictions': only_for,
-                       'contexts': contexts, 'definedkeys': definedkeys,
-                       'context_list': context_list, 'cmdparms': params,
-                       'catdict': catdict}
-# omschrijvingen o.m. in cmddict? Maar wel iets bijhouden voor het geval niet aanwezig
+    return shortcuts, {'stdkeys': stdkeys, 'defaults': defaults, 'cmddict': cmddict,
+                       'restrictions': only_for, 'contexts': contexts, 'definedkeys': definedkeys,
+                       'context_list': context_list, 'cmdparms': params, 'catdict': catdict}
 
 
 how_to_save = """\
@@ -468,22 +450,19 @@ def build_shortcut(key, mods):
     return result + key
 
 
-def savekeys(parent):
+def savekeys(page):
     """schrijf de gegevens terug
     """
-    ok = qtw.QMessageBox.information(parent, parent.title, how_to_save,
-                                     qtw.QMessageBox.Ok | qtw.QMessageBox.Cancel)
-    if ok == qtw.QMessageBox.Cancel:
+    ok = show_cancel_message(page, text=how_to_save)
+    if not ok:
         return
-    kbfile = qtw.QFileDialog.getSaveFileName(parent, parent.captions['C_SELFIL'],
-                                             directory=parent.settings['DC_PATH'],
-                                             filter='SCF files (*.scf)')
+    kbfile = get_file_to_save(page, extension='SCF files (*.scf)', start=page.settings['DC_PATH'])
     if not kbfile:
         return
     root = ET.Element('doublecmd', DCVersion="0.6.6 beta")
     head = ET.SubElement(root, 'Hotkeys', Version="20")
     oldform = ''
-    for item in sorted(parent.data.values(), key=lambda x: x[3]):
+    for item in sorted(page.data.values(), key=lambda x: x[3]):
         key, mods, kind, context, cmnd, parm, ctrl, desc = item
         if context != oldform:
             newform = ET.SubElement(head, 'Form', Name=context)
@@ -530,57 +509,29 @@ def get_frameheight():
 def on_combobox(win, cb, text):
     """callback from GUI
     """
-    hlp = cb.currentText()
+    print('in dckeys on_combobox')
+    hlp = win.gui.get_combobox_selection(cb)
     if text != hlp:
         text = hlp
     win.defchanged = False
-    if cb == win.cmb_controls:
-        if text != win._origdata[win.ix_controls]:
-            win._newdata[win.ix_controls] = text
-            win.defchanged = True
-            win.b_save.setEnabled(True)
-        elif str(win.cmb_controls.currentText()) == win._origdata[win.ix_controls]:
-            win.b_save.setEnabled(False)
-
-
-def add_extra_fields(win, box):
-    """fields showing details for selected keydef, to make editing possible
-    """
-    win.lbl_parms = qtw.QLabel(win.captions['C_PARMS'], box)
-    win.txt_parms = qtw.QLineEdit(box)
-    win.txt_parms.setMaximumWidth(280)
-    win.screenfields.append(win.txt_parms)
-    win.ix_parms = 7
-    win.lbl_controls = qtw.QLabel(win.captions['C_CTRL'], box)
-    cb = qtw.QComboBox(box)
-    cb.addItems(win.controlslist)
-    cb.currentIndexChanged[str].connect(functools.partial(on_combobox, win, cb, str))
-    win.screenfields.append(cb)
-    win.cmb_controls = cb
-    win.ix_controls = 8
-
-
-def layout_extra_fields(win, layout):
-    """add the extra fields to the layout
-    """
-    sizer2 = qtw.QGridLayout()
-    line = 0
-    sizer2.addWidget(win.lbl_parms, line, 0)
-    sizer2.addWidget(win.txt_parms, line, 1)
-    line += 1
-    sizer2.addWidget(win.lbl_controls, line, 0)
-    sizer3 = qtw.QHBoxLayout()
-    sizer3.addWidget(win.cmb_controls)
-    sizer3.addStretch()
-    sizer2.addLayout(sizer3, line, 1)
-    layout.addLayout(sizer2, 1)
+    if cb == win.gui.cmb_controls:
+        if text != win._origdata[win.gui.ix_controls]:
+            win._newdata[win.gui.ix_controls] = text
+            if not win.gui.initializing_keydef:
+                win.defchanged = True
+                if 'C_CMD' in win.fields:
+                    win.gui.enable_save(True)
+        elif win.gui.get_combobox_text(win.cmb_commando) == win._origdata[win.ix_cmd]:
+            win.defchanged = False
+            if 'C_CMD' in win.fields:
+                win.gui.enable_save(False)
 
 
 def captions_extra_fields(win):
     """to be called on changing the language
     """
-    win.lbl_parms.setText(win.captions['C_PARMS'])
-    win.lbl_controls.setText(win.captions['C_CTRL'])
+    win.gui.set_label_text(win.gui.lbl_parms, win.captions['C_PARMS'])
+    win.gui.set_label_text(win.gui.lbl_controls, win.captions['C_CTRL'])
 
 
 def on_extra_selected(win, newdata):
@@ -595,9 +546,9 @@ def vul_extra_details(win, indx, item):
     """refresh nonstandard fields on details screen
     """
     if win.column_info[indx][0] == 'C_PARMS':
-        win.txt_parms.setText(item)
-        win._origdata[win.ix_parms] = item
-    elif win.parent.column_info[indx][0] == 'C_CTRL':
-        ix = win.controlslist.index(item)  # TODO: adapt for multiple values
-        win.cmb_controls.setCurrentIndex(ix)
-        win._origdata[win.ix_controls] = item
+        win.gui.set_textfield_value(win.gui.txt_parms, item)
+        win._origdata[win.gui.ix_parms] = item
+    elif win.column_info[indx][0] == 'C_CTRL':
+        # ix = win.controlslist.index(item)  # TODO: adapt for multiple values
+        win.gui.set_combobox_string(win.gui.cmb_controls, item, win.controlslist)
+        win._origdata[win.gui.ix_controls] = item
