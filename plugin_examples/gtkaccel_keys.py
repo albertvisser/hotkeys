@@ -43,13 +43,8 @@ def buildcsv(settnames, page, showinfo=True):
             if not initial:
                 initial = os.path.dirname(__file__)
                 fname = get_file_to_save(page.gui, oms=fdesc[ix], start=initial)
-                # fname = qtw.QFileDialog.getSaveFileName(parent, oms,
-                #                                         directory=initial)[0]
             else:
                 fname = get_file_to_open(page.gui, oms=fdesc[ix], start=initial)
-                # fname = qtw.QFileDialog.getOpenFileName(parent, oms,
-                #                                         directory=initial)[0]
-            ## print(fname)
             if fname and fname != initial:
                 page.settings[name] = fname
                 page.settings["extra"][name] = fdesc[ix]

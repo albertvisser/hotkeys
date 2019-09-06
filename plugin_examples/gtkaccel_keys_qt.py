@@ -1,11 +1,10 @@
 """Hotkeys plugins voor gtk-accel based apps - GUI toolkit specifieke code
 """
-import csv
-import shutil
 import PyQt5.QtWidgets as qtw
 ## import PyQt5.QtGui as gui
 ## import PyQt5.QtCore as core
 from .completedialog import CompleteDialog
+import editor.plugins.gtkaccel_keys_csv as dml
 
 
 def send_completedialog(parent, descfile, actions, omsdict):
@@ -21,21 +20,8 @@ class AccelCompleteDialog(CompleteDialog):
     def read_data(self, outfile, cmds, desc):
         self.outfile = outfile
         self.cmds = cmds
-        self.desc = desc
-        try:
-            _in = open(outfile)
-        except FileNotFoundError:
-            return '{} not found'.format(outfile)
-        else:
-            with _in:
-                rdr = csv.reader(_in)
-                for line in rdr:
-                    if line:
-                        key, oms = line
-                        ## print(key, oms)
-                        if oms:
-                            desc[int(key)] = oms
-        return ''
+        mld, self.desc = dml.read_data(outfile, desc)
+        return mld
 
     def build_table(self):
         row = 0
@@ -60,11 +46,4 @@ class AccelCompleteDialog(CompleteDialog):
 
     def write_data(self, new_data):
         "schrijf de omschrijvingsgegevens terug"
-        if os.path.exists(outfile):
-            shutil.copyfile(outfile, outfile + '~')
-        with open(outfile, 'w') as _out:
-            writer = csv.writer(_out)
-            for key, value in new_values.items():
-                if value:
-                    writer.writerow((key, value))
-
+        dml.write_data(self.outfile, new_data)
