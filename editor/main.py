@@ -88,11 +88,12 @@ class HotkeyPanel:
             try:
                 test = self.reader.buildcsv
             except AttributeError:
-                pass
+                shared.log_exc()
             else:
                 try:
                     self.otherstuff = self.reader.buildcsv(self, showinfo=False)[1]
                 except FileNotFoundError:
+                    shared.log_exc()
                     nodata = "Can't build/get settings for {}".format(modulename)
 
         if nodata:
@@ -103,7 +104,7 @@ class HotkeyPanel:
         try:
             self.has_extrapanel = bool(int(self.settings[shared.SettType.DETS.value]))
         except KeyError:
-            pass
+            shared.log_exc()
 
         self.title = self.settings["PanelName"]
 
@@ -136,7 +137,7 @@ class HotkeyPanel:
         try:
             self.reader.savekeys(self)
         except AttributeError:
-            pass
+            shared.log_exc()
         shared.writecsv(self.pad, self.settings, self.column_info, self.data,
                         self.parent.parent.ini['lang'])
         self.set_title(modified=False)
@@ -162,6 +163,7 @@ class HotkeyPanel:
             try:
                 int(key)
             except ValueError:
+                shared.log_exc()
                 continue
             new_item = self.gui.build_listitem(key)
             for indx, col in enumerate(self.column_info):
@@ -206,7 +208,7 @@ class HotkeyPanel:
         try:
             self.reader.add_extra_attributes(self)  # user exit
         except AttributeError:
-            pass
+            shared.log_exc()
         if self.keylist:
             self.keylist.sort()
 
@@ -509,7 +511,7 @@ class HotkeyPanel:
         try:
             self.reader.on_extra_selected(self, item)  # user exit
         except AttributeError:
-            pass
+            shared.log_exc()
         newitem = self.gui.get_keydef_at_position(pos)
         self.populate_list(pos)    # refresh
         return newitem
@@ -560,6 +562,7 @@ class ChoiceBook:
             try:
                 fl = win.settings[shared.SettType.PLG.value]
             except KeyError:
+                shared.log_exc()
                 fl = ''  # error is handled elsewhere
             self.parent.pluginfiles[txt] = fl
             self.gui.add_to_selector(txt)
@@ -747,6 +750,7 @@ class Editor:
         try:
             self.book.page.savekeys()
         except AttributeError:
+            shared.log_exc()
             gui.show_message(self.gui, 'I_DEFSAV')
             return
         gui.show_message(self.gui, 'I_RSTRT')
@@ -839,12 +843,14 @@ class Editor:
                     try:
                         data = shared.readcsv(csvname)
                     except (FileNotFoundError, IsADirectoryError, ValueError):
+                        shared.log_exc()
                         gui.show_message(self.gui, text='{} does not seem to be a usable '
                                                         'csv file'.format(csvname))
                         return False
                     try:
                         prgname = data[0][shared.SettType.PLG.value]
                     except KeyError:
+                        shared.log_exc()
                         gui.show_message(self.gui, text='{} does not contain a reference to a plug'
                                                         'in (PluginName setting)'.format(csvname))
                         return False
@@ -852,8 +858,9 @@ class Editor:
                     try:
                         _ = importlib.import_module(prgname)
                     except ImportError:
-                        gui.show_message(self, text='{} does not contain a reference to a '
-                                                    'valid plugin'.format(csvname))
+                        shared.log_exc()
+                        gui.show_message(self.gui, text='{} does not contain a reference to a '
+                                                        'valid plugin'.format(csvname))
                         return False
 
                 self.pluginfiles[name] = prgname
@@ -889,6 +896,7 @@ class Editor:
         try:
             test = self.book.page.reader.buildcsv
         except AttributeError:
+            shared.log_exc()
             gui.show_message(self.gui, 'I_DEFRBLD')
             return
         try:
@@ -943,6 +951,7 @@ class Editor:
             try:
                 test = self.book.page.reader.add_extra_attributes
             except AttributeError:
+                shared.log_exc()
                 gui.show_message(self.gui, "I_IMPLXTRA")
                 return False
         self.book.page.settings[shared.SettType.PLG.value] = program

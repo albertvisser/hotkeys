@@ -87,7 +87,7 @@ class SingleDataInterface(qtw.QFrame):
         try:
             frameheight = self.master.reader.get_frameheight()  # user exit
         except AttributeError:
-            pass
+            shared.log_exc()
         box.setMaximumHeight(frameheight)
 
         if 'C_KEY' in self.master.fields:
@@ -266,7 +266,7 @@ class SingleDataInterface(qtw.QFrame):
         try:
             self.master.reader.captions_extra_fields(self)  # user exit
         except AttributeError:
-            pass
+            shared.log_exc()
 
     def on_item_selected(self, newitem, olditem):
         """callback on selection of an item

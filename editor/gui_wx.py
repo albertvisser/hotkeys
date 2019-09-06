@@ -125,11 +125,11 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         """
         self.screenfields = []
         self._box = box = wx.Panel(self)
-        # frameheight = 90
-        # try:
-        #     frameheight = self.master.reader.get_frameheight()  # user exit
-        # except AttributeError:
-        #     pass
+        frameheight = 90
+        try:
+            frameheight = self.master.reader.get_frameheight()  # user exit
+        except AttributeError:
+            shared.log_exc()
         # box.setMaximumHeight(frameheight)
 
         if 'C_KEY' in self.master.fields:
@@ -301,7 +301,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         try:
             self.master.reader.captions_extra_fields(self)  # user exit
         except AttributeError:
-            pass
+            shared.log_exc()
         self.toplinesizer.Layout()
 
     def on_item_deselected(self, event):

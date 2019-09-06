@@ -660,7 +660,7 @@ class ExtraSettingsDialog(qtw.QDialog):
             if self.master.book.page.settings[shared.SettType.DETS.value] == '1':
                 self.c_showdet.toggle()
         except KeyError:
-            pass
+            shared.log_exc()
         hsizer.addWidget(self.c_showdet)
         vsizer.addLayout(hsizer)
         hsizer = qtw.QHBoxLayout()

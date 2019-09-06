@@ -655,7 +655,7 @@ class ExtraSettingsDialog(wx.Dialog):
             if self.master.book.page.settings[shared.SettType.DETS.value] == '1':
                 self.c_showdet.SetValue(True)
         except KeyError:
-            pass
+            shared.log_exc()
         hsizer.Add(self.c_showdet)
         vsizer.Add(hsizer, 0, wx.LEFT | wx.RIGHT, 5)
 
