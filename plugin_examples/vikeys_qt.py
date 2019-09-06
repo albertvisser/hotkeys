@@ -16,7 +16,7 @@ def add_extra_fields(win, box):
     win.ix_post_parms = 2
     win.feature_label = qtw.QLabel(box)
     win.feature_select = qtw.QComboBox(box)
-    win.feature_select.addItems(win.featurelist)
+    win.feature_select.addItems(win.master.featurelist)
     win.screenfields.append(win.feature_select)
     win.ix_feature_select = 3
 
@@ -34,11 +34,3 @@ def layout_extra_fields_topline(win, box):
     sizer.addWidget(win.feature_label)
     sizer.addWidget(win.feature_select)
     box.addLayout(sizer)
-
-
-def captions_extra_fields(win):
-    "for plugin-specific fields, change the captions according to the language setting"
-    # win.fieldname.setText(win.captions['some_value'])
-    win.pre_parms_label.setText(win.captions['C_BPARMS'] + ':')
-    win.post_parms_label.setText(win.captions['C_APARMS'] + ':')
-    win.feature_label.setText(win.captions['C_FEAT'] + ':')

@@ -33,11 +33,3 @@ def layout_extra_fields_topline(win, box):
     sizer.Add(win.feature_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.RIGHT, 2)
     sizer.Add(win.feature_select, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 2)
     box.Add(sizer, 0, wx.LEFT, 2)
-
-
-def captions_extra_fields(win):
-    "for plugin-specific fields, change the captions according to the language setting"
-    # win.fieldname.setText(win.captions['some_value'])
-    win.pre_parms_label.SetLabel(win.master.captions['C_BPARMS'] + ':')
-    win.post_parms_label.SetLabel(win.master.captions['C_APARMS'] + ':')
-    win.feature_label.SetLabel(win.master.captions['C_FEAT'] + ':')

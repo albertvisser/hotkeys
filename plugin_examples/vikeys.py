@@ -6,7 +6,7 @@ redefined keys are in ~/.vim/vimrc (map commands)
 import string
 import pathlib
 import collections
-from .vikeys_gui import add_extra_fields, layout_extra_fields_topline, captions_extra_fields
+from .vikeys_gui import add_extra_fields, layout_extra_fields_topline
 VI_VER = (pathlib.Path(__file__).parent / 'VI_VER').read_text().strip()
 
 
@@ -254,8 +254,16 @@ def buildcsv(page, showinfo=True):
 def add_extra_attributes(win):
     """define plugin-specific variables
     """
+    win.init_origdata += ['', '', '']
     win.keylist = win.otherstuff['keylist']
     win.featurelist = sorted(win.otherstuff['types'])
+
+
+def captions_extra_fields(win):
+    "for plugin-specific fields, change the captions according to the language setting"
+    win.set_label_text(win.pre_parms_label, win.master.captions['C_BPARMS'] + ':')
+    win.set_label_text(win.post_parms_label, win.master.captions['C_APARMS'] + ':')
+    win.set_label_text(win.feature_label, win.master.captions['C_FEAT'] + ':')
 
 
 # def on_combobox(self, cb, text):
@@ -272,10 +280,10 @@ def vul_extra_details(win, indx, item):
     """
     if win.column_info[indx][0] == 'C_BPARMS':
         win.gui.set_textfield_value(win.gui.pre_parms_text, item)
-        win._origdata[win.fieldindex] = item
+        win._origdata[win.gui.ix_pre_parms] = item
     elif win.column_info[indx][0] == 'C_APARMS':
         win.gui.set_textfield_value(win.gui.post_parms_text, item)
-        win._origdata[win.fieldindex] = item
+        win._origdata[win.gui.ix_post_parms] = item
     elif win.column_info[indx][0] == 'C_FEAT':
         win.gui.set_combobox_string(win.gui.feature_select, item, win.featurelist)
-        win._origdata[win.fieldindex] = item
+        win._origdata[win.gui.ix_feature_select] = item
