@@ -67,7 +67,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
     def setup_list(self):
         """add the list widget to the interface
         """
-        imglist = wx.ImageList(16, 16)
+        self.imglist = wx.ImageList(16, 16)
 
         # ik dacht dat ik dit netjes gekopieerd had maar als ik op een kolomheader klik
         # krijg ik toch een segfault
@@ -76,13 +76,13 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
             b"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAADxJ"
             b"REFUOI1jZGRiZqAEMFGke2gY8P/f3/9kGwDTjM8QnAaga8JlCG3CAJdt2MQxDCAUaOjyjKMp"
             b"cRAYAABS2CPsss3BWQAAAABJRU5ErkJggg==")
-        self.sm_up = imglist.Add(smalluparrow.GetBitmap())
+        self.sm_up = self.imglist.Add(smalluparrow.GetBitmap())
 
         smalldnarrow = PyEmbeddedImage(
             b"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAEhJ"
             b"REFUOI1jZGRiZqAEMFGke9QABgYGBgYWdIH///7+J6SJkYmZEacLkCUJacZqAD5DsInTLhDR"
             b"bcPlKrwugGnCFy6Mo3mBAQChDgRlP4RC7wAAAABJRU5ErkJggg==")
-        self.sm_dn = imglist.Add(smalldnarrow.GetBitmap())
+        self.sm_dn = self.imglist.Add(smalldnarrow.GetBitmap())
 
         self.p0list = MyListCtrl(self, size=(1140, 594), style=wx.LC_REPORT | wx.BORDER_SUNKEN |
                                                                # wx.LC_VRULES |
@@ -109,7 +109,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
             # self.Bind(wx.EVT_LIST_COL_CLICK, self.on_column_click, self.p0list)
             # self.p0list.Bind(wx.EVT_LEFT_DCLICK, self.on_doubleclick)
 
-        self.p0list.SetImageList(imglist, wx.IMAGE_LIST_SMALL)
+        self.p0list.SetImageList(self.imglist, wx.IMAGE_LIST_SMALL)
 
         sizer.Add(self.p0list, 1, wx.EXPAND | wx.ALL, 5)
 
@@ -406,9 +406,9 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         """ten behoeve van de columnsorter mixin"""
         return self.p0list
 
-    # def GetSortImages(self):
-    #     """ten behoeve van de columnsorter mixin"""
-    #     return (self.sm_dn, self.sm_up)
+    def GetSortImages(self):
+        """ten behoeve van de columnsorter mixin"""
+        return (self.sm_dn, self.sm_up)
 
     def OnSortOrderChanged(self):
         """ten behoeve van de columnsorter mixin
