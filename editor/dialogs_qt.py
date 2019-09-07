@@ -248,7 +248,7 @@ class DeleteDialog(qtw.QDialog):
         self.parent = parent
         self.last_added = ''  # TODO uitzoeken: kan dit wel altijd
         super().__init__(parent)
-        self.setWindowTitle(self.master.title)
+        self.setWindowTitle(self.parent.master.title)
         self.sizer = qtw.QVBoxLayout()
         hsizer = qtw.QHBoxLayout()
         label = qtw.QLabel(self.parent.master.captions['Q_REMPRG'], self)
@@ -901,6 +901,69 @@ class EntryDialog(qtw.QDialog):
                 new_values[rowid + 1].append(value)
         self.master.book.page.data = new_values
         super().accept()
+
+
+class CompleteDialog(qtw.QDialog):
+    """Model dialog for entering / completing command descriptions
+    """
+    def __init__(self, parent, master):
+        self.parent = parent
+        self.master = master
+        ## self.captions = self.parent.captions
+
+        super().__init__(parent)
+        self.resize(680, 400)
+
+        mld = self.read_data()  # *args)
+        if mld:
+            raise ValueError(mld)
+
+        self.p0list = qtw.QTableWidget(len(self.cmds), 2, self)
+        ## self.p0list.setColumnCount(2)
+        self.p0list.setHorizontalHeaderLabels(['Command', 'Description'])
+        hdr = self.p0list.horizontalHeader()
+        ## p0hdr.resizeSection(0, 300)
+        hdr.setStretchLastSection(True)
+        self.build_table()
+        self.p0list.setColumnWidth(0, 260)
+
+        self.sizer = qtw.QVBoxLayout()
+        hsizer = qtw.QHBoxLayout()
+        hsizer.addWidget(self.p0list)
+        self.sizer.addLayout(hsizer)
+
+        buttonbox = qtw.QDialogButtonBox()
+        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.accepted.connect(self.accept)
+        buttonbox.rejected.connect(self.reject)
+        hsizer = qtw.QHBoxLayout()
+        hsizer.addStretch()
+        hsizer.addWidget(buttonbox)
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+        self.setLayout(self.sizer)
+
+    def accept(self):
+        """confirm changes
+        """
+        new_values = {}
+        for rowid in range(self.p0list.rowCount()):
+            cmd = self.p0list.item(rowid, 0).text()
+            desc = self.p0list.item(rowid, 1).text()
+            new_values[self.cmds[cmd]] = desc
+        self.master.dialog_data = new_values
+        self.write_data(new_values)
+        qtw.QDialog.accept(self)
+
+    def read_data(self):  # *args):
+        raise NotImplementedError
+
+    def build_table(self):
+        pass
+
+    def write_data(self, data):
+        pass
 
 
 def show_dialog(win, cls):

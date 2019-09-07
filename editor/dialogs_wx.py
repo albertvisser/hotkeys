@@ -892,6 +892,60 @@ class EntryDialog(wx.Dialog):
         return True
 
 
+class CompleteDialog(wx.Dialog):
+    """Model dialog for entering / completing command descriptions
+    """
+    def __init__(self, parent, master):
+        self.parent = parent
+        self.master = master
+        super().__init__(parent, size=(680, 400))
+
+        mld = self.read_data()  # *args)
+        if mld:
+            raise ValueError(mld)
+
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.p0list = wxg.Grid(self)
+        self.p0list.CreateGrid(len(self.cmds), 2)
+        self.p0list.SetRowLabelSize(20)
+
+        for ix, row in enumerate((('Command', 280), ('Description', 400))):
+            self.p0list.SetColLabelValue(ix, row[0])
+            self.p0list.SetColSize(ix, row[1])
+        # hdr.setStretchLastSection(True)
+        self.build_table()
+
+        hsizer.Add(self.p0list, 1, wx.EXPAND)
+        self.sizer.Add(hsizer, 1, wx.EXPAND)
+
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.Add(wx.Button(self, id=wx.ID_OK))
+        hbox.Add(wx.Button(self, id=wx.ID_CANCEL))
+        self.sizer.Add(hbox, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_BOTTOM | wx.BOTTOM, 2)
+        self.SetSizer(self.sizer)
+
+    def accept(self):
+        """confirm changes
+        """
+        new_values = {}
+        for rowid in range(self.p0list.GetNumberRows()):
+            cmd = self.p0list.GetCellValue(rowid, 0)
+            desc = self.p0list.GetCellValue(rowid, 1)
+            new_values[self.cmds[cmd]] = desc
+        self.master.dialog_data = new_values
+        self.write_data(new_values)
+
+    def read_data(self):  # *args):
+        raise NotImplementedError
+
+    def build_table(self):
+        pass
+
+    def write_data(self, data):
+        pass
+
+
 def show_dialog(win, cls):
     "show a dialog and return confirmation"
     with cls(win.gui, win) as dlg:
