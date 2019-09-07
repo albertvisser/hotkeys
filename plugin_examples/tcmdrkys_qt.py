@@ -1,14 +1,21 @@
 """Hotkeys plugin for Total Commander - PyQt specific code
 """
 # TODO: ombouwen en gui-onafhanlkelijke onderdelen uitlichten
+import os
+import csv
+# import functools
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
+# import editor.shared as shared
+from .tcmdrkys_shared import PATHS, defaultkeys, defaultcommands, translate_keyname
 OKICON = '/usr/share/icons/Adwaita/16x16/emblems/emblem-ok-symbolic.symbolic.png'
 
 
-def show_mergedialog(win):
-    dlg = TCMergeDialog(page)
+def send_mergedialog(page):
+    """show the dialog for connecting commands to keyboard shortcuts
+    """
+    dlg = TcMergeDialog(page)
     paths = [page.settings[x] for x in reversed(PATHS[:4])]
     paths.append(page.pad)
     dlg.load_files(paths)
@@ -19,10 +26,10 @@ def show_mergedialog(win):
         ## parent.page.settings['TC_PAD'][0],
         ## parent.page.pad))
     ok = dlg.exec_()
-    return dlg == qtw.QDialog.Accepted
+    return ok == qtw.QDialog.Accepted
 
 
-class TCMergeDialog(qtw.QDialog):
+class TcMergeDialog(qtw.QDialog):
     """Dialoog om een gedocumenteerde toetscombinatie te koppelen aan een commando
 
     In het ene ini bestand staat namelijk toets + omschrijving en in het andere
@@ -34,7 +41,7 @@ class TCMergeDialog(qtw.QDialog):
         """Opbouwen van het scherm"""
         self.shortcuts = {}
         self.basedir = os.getcwd()
-        super().__init__(parent)
+        super().__init__(parent.gui)
         self.setWindowTitle("TCCM")
         self.okicon = gui.QIcon(OKICON)
         self.resize(1000, 600)
@@ -217,8 +224,7 @@ class TCMergeDialog(qtw.QDialog):
             new.setText(1, command)
             self.listlinks.addTopLevelItem(new)
             try:
-                item = self.listkeys.findItems(keytext,
-                    core.Qt.MatchFixedString, 0)[0]
+                item = self.listkeys.findItems(keytext, core.Qt.MatchFixedString, 0)[0]
             except IndexError:
                 # geen item - geen vermelding in KEYBOARD.TXT, wel bekend in hotkeys.hky
                 pass
@@ -280,8 +286,7 @@ class TCMergeDialog(qtw.QDialog):
         """
         item = self.listlinks.currentItem()
         if not item:
-            qtw.QMessageBox.information(self, "Delete entry", "Choose an item to "
-                "delete")
+            qtw.QMessageBox.information(self, "Delete entry", "Choose an item to " "delete")
             return
         ok = qtw.QMessageBox.question(self, "Delete entry", "Really delete?",
                                       qtw.QMessageBox.Yes | qtw.QMessageBox.No,
@@ -305,8 +310,7 @@ class TCMergeDialog(qtw.QDialog):
         "check if search string has changed"
         to_find = input.text()
         if not to_find:
-            qtw.QMessageBox.information(self, 'Find text',
-                'Please enter text to search for')
+            qtw.QMessageBox.information(self, 'Find text', 'Please enter text to search for')
             return None, None, None
         newsearch = to_find != search
         if newsearch:
@@ -364,29 +368,25 @@ class TCMergeDialog(qtw.QDialog):
 
     def findnextkey(self):
         "find next matching key item"
-        test = self.findnextitem(self.findkeytext, self.keysearch, self.listkeys,
-            self.keyresults)
+        test = self.findnextitem(self.findkeytext, self.keysearch, self.listkeys, self.keyresults)
         if test:
             self.keysearch, self.keyresults = test
 
     def findprevkey(self):
         "find previous matching key item"
-        test = self.findprevitem(self.findkeytext, self.keysearch, self.listkeys,
-            self.keyresults)
+        test = self.findprevitem(self.findkeytext, self.keysearch, self.listkeys, self.keyresults)
         if test:
             self.keysearch, self.keyresults = test
 
     def findnextcmd(self):
         "find next matching command item"
-        test = self.findnextitem(self.findcmdtext, self.cmdsearch, self.listcmds,
-            self.cmdresults)
+        test = self.findnextitem(self.findcmdtext, self.cmdsearch, self.listcmds, self.cmdresults)
         if test:
             self.cmdsearch, self.cmdresults = test
 
     def findprevcmd(self):
         "find previous matching command item"
-        test = self.findprevitem(self.findcmdtext, self.cmdsearch, self.listcmds,
-            self.cmdresults)
+        test = self.findprevitem(self.findcmdtext, self.cmdsearch, self.listcmds, self.cmdresults)
         if test:
             self.cmdsearch, self.cmdresults = test
 
@@ -394,7 +394,7 @@ class TCMergeDialog(qtw.QDialog):
         """remove all associations
         """
         self.listlinks.clear()
-        self.load_keys() # to reset all indicators
+        self.load_keys()  # to reset all indicators
 
     def save_links(self):
         """save the changes to a temp file
@@ -429,6 +429,6 @@ class TCMergeDialog(qtw.QDialog):
                 desc = self.cmddict[cmd]['oms']
             else:
                 desc = self.keydict[(key, mods)]['oms']
-            shortcuts[ix] = (_translate_keyname(key), mods, 'S', cmd, desc)
+            shortcuts[ix] = (translate_keyname(key), mods, 'S', cmd, desc)
         self.parent().tempdata = shortcuts
         super().accept()
