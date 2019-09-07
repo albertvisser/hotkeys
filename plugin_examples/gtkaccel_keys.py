@@ -8,8 +8,8 @@ import collections
 import string
 import pdb
 from .read_gtkaccel import read_keydefs_and_stuff
-from ..gui import get_file_to_open, get_file_to_save
-from .gtkaccel_keys_gui import send_completedialog
+from ..gui import get_file_to_open, get_file_to_save, show_dialog
+from .gtkaccel_keys_gui import AccelCompleteDialog
 
 settname = ''
 
@@ -69,7 +69,8 @@ def buildcsv(settnames, page, showinfo=True):
     # actions in de eerste kolom, descriptions in de tweede
     ## print(omsdict)
     if descfile and showinfo:
-        if send_completedialog(page, descfile, actions, omsdict):
+        page.dialog_data = {'descfile': descfile, 'actions': actions, 'omsdict': omsdict}
+        if show_dialog(page, AccelCompleteDialog):
             # opslaan vindt plaats in de dialoog, maar de data teruggeven scheelt weer I/O
             omsdict = page.dialog_data
     ## print(omsdict)

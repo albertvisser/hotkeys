@@ -1,8 +1,9 @@
 """Hotkeys plugin voor Double Commander - qt specifieke code
 """
+import csv
 import wx
 import wx.grid as wxg
-from .completedialog import CompleteDialog
+from ..dialogs_wx import CompleteDialog
 
 
 def add_extra_fields(win, box):
@@ -33,25 +34,17 @@ def layout_extra_fields(win, layout):
     layout.Add(sizer2, 0, wx.LEFT, 5)
 
 
-def send_completedialog(parent, descfile, omsdict):
-    with DcCompleteDialog(parent, descfile, omsdict) as dlg:
-      ok = dlg.ShowModal()
-      if ok == wx.ID_OK:
-          dlg.accept()
-    return ok == wx.ID_OK
-
-
 class DcCompleteDialog(CompleteDialog):
     """(re)definition of generic dialog used in the main program
     """
         ## self.p0list.setVerticalHeaderLabels(names)
         ## self.numrows = len(values)
-    def read_data(self, outfile, cmds):
+    def read_data(self):
         """lees eventuele extra commando's
         """
-        # listitems = []
-        self.cmds = cmds
-        self.desc = desc
+        outfile = self.master.dialog_data['descfile']
+        self.cmds = {}
+        self.desc = self.master.dialog_data['omsdict']
         try:
             _in = open(outfile)
         except (IsADirectoryError, FileNotFoundError):
@@ -64,6 +57,7 @@ class DcCompleteDialog(CompleteDialog):
         return ''
 
     def build_table(self):
+        "vul de tabel met in te voeren gegevens"
         row = 0
         for key, desc in sorted(self.cmds.items()):
             self.p0list.SetCellValue(row, 0, key)
@@ -71,4 +65,4 @@ class DcCompleteDialog(CompleteDialog):
             row += 1
 
     def write_data(self, new_data):
-        pass
+        "schrijf de omschrijvingen terug - vergeten te bedenken?"

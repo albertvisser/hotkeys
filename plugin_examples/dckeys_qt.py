@@ -1,8 +1,9 @@
 """Hotkeys plugin voor Double Commander - qt specifieke code
 """
+import csv
 import functools
 import PyQt5.QtWidgets as qtw
-from .completedialog import CompleteDialog
+from ..dialogs_qt import CompleteDialog
 
 
 def add_extra_fields(win, box):
@@ -38,22 +39,17 @@ def layout_extra_fields(win, layout):
     layout.addLayout(sizer2, 1)
 
 
-def send_completedialog(parent, descfile, omsdict):
-    dlg = DcCompleteDialog(parent, descfile, omsdict).exec_()
-    return dlg == qtw.QDialog.Accepted
-
-
 class DcCompleteDialog(CompleteDialog):
     """(re)definition of generic dialog used in the main program
     """
         ## self.p0list.setVerticalHeaderLabels(names)
         ## self.numrows = len(values)
-    def read_data(self, outfile, cmds):
+    def read_data(self):
         """lees eventuele extra commando's
         """
-        # listitems = []
-        self.cmds = cmds
-        self.desc = desc
+        outfile = self.master.dialog_data['descfile']
+        self.cmds = {}
+        self.desc = self.master.dialog_data['omsdict']
         try:
             _in = open(outfile)
         except (IsADirectoryError, FileNotFoundError):
@@ -66,6 +62,7 @@ class DcCompleteDialog(CompleteDialog):
         return ''
 
     def build_table(self):
+        "vul de tabel met in te voeren gegevens"
         row = 0
         for key, desc in sorted(self.cmds.items()):
             new_item = qtw.QTableWidgetItem()
@@ -77,4 +74,4 @@ class DcCompleteDialog(CompleteDialog):
             row += 1
 
     def write_data(self, new_data):
-        pass
+        "schrijf de omschrijvingen terug - vergeten te bedenken?"

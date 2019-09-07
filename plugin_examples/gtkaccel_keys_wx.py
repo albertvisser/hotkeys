@@ -2,16 +2,8 @@
 """
 import wx
 import wx.grid as wxg
-from .completedialog import CompleteDialog
+from ..dialogs_wx import CompleteDialog
 import editor.plugins.gtkaccel_keys_csv as dml
-
-
-def send_completedialog(parent, descfile, actions, omsdict):
-    with AccelCompleteDialog(parent.gui, descfile, actions, omsdict) as dlg:
-        ok = dlg.ShowModal()
-        if ok == wx.ID_OK:
-            dlg.accept()
-    return ok == wx.ID_OK
 
 
 class AccelCompleteDialog(CompleteDialog):
@@ -19,13 +11,15 @@ class AccelCompleteDialog(CompleteDialog):
     """
         ## self.p0list.setVerticalHeaderLabels([y for x, y in self.cmds.items()])
         ## self.p0list.resizeColumnToContents(0)
-    def read_data(self, outfile, cmds, desc):
-        self.outfile = outfile
-        self.cmds = cmds
-        mld, self.desc = dml.read_data(outfile, desc)
+    def read_data(self):  # , outfile, cmds, desc):
+        "lees de vóór aanroep van de class ingestelde gegevens in"
+        self.outfile = self.master.dialog_data['descfile']
+        self.cmds = self.master.dialog_data['actions']
+        mld, self.desc = dml.read_data(self.outfile, self.master.dialog_data['omsdict'])
         return mld
 
     def build_table(self):
+        "vul de tabel met in te voeren gegevens"
         row = 0
         cmds, self.cmds = self.cmds, {}
         for key, cmd in sorted(cmds.items(), key=lambda x: x[1]):

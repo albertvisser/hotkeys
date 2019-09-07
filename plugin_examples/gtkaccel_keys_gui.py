@@ -3,6 +3,6 @@
 
 from ..toolkit import toolkit
 if toolkit == 'qt':
-    from .gtkaccel_keys_qt import send_completedialog
+    from .gtkaccel_keys_qt import AccelCompleteDialog
 elif toolkit == 'wx':
-    from .gtkaccel_keys_wx import send_completedialog
+    from .gtkaccel_keys_wx import AccelCompleteDialog

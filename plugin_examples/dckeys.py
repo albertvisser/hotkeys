@@ -12,11 +12,8 @@ import functools
 import shutil
 import xml.etree.ElementTree as ET
 import bs4 as bs  # import BeautifulSoup
-import PyQt5.QtWidgets as qtw
-## import PyQt5.QtGui as gui
-## import PyQt5.QtCore as core
-from ..gui import show_cancel_message, get_file_to_open, get_file_to_save
-from .dckeys_gui import add_extra_fields, layout_extra_fields, send_completedialog
+from ..gui import show_cancel_message, get_file_to_open, get_file_to_save, show_dialog
+from .dckeys_gui import add_extra_fields, layout_extra_fields, DcCompleteDialog
 
 
 instructions = """\
@@ -402,12 +399,12 @@ def buildcsv(page, showinfo=True):
     descfile = dc_desc
     omsdict = tobecompleted
     if showinfo:
-        ok = send_completedialog(page, descfile, omsdict)
-        if ok:
+        page.dialog_data = {'descfile': descfile, 'omsdict': omsdict}
+        if show_dialog(page, DcCompleteDialog):
             # opslaan vindt plaats in de dialoog, maar de data teruggeven scheelt weer I/O
             # zoals de dialoog nu aangestuurd wordt worden de omschrijvingen opgeslagen
             #   met volgnummers in plaats van commandonaam als key
-            omsdict = page.dialog_data
+            omsdict = page.gui.dialog_data
     # invullen in shortcuts en cmddict
     for key, value in shortcuts.items():
         for cmnd, desc in omsdict.items():
