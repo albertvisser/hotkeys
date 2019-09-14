@@ -7,7 +7,7 @@ import string
 import pathlib
 import collections
 from .vikeys_gui import add_extra_fields, layout_extra_fields_topline
-VI_VER = (pathlib.Path(__file__).parent / 'VI_VER').read_text().strip()
+# VI_VER = (pathlib.Path(__file__).parent / 'VI_VER').read_text().strip()
 
 
 def convert_key(value):
@@ -238,9 +238,18 @@ class DefaultKeys:
 def buildcsv(page, showinfo=True):
     """build the datastructures for constructing the CSV file
     """
+    if 'extra' not in page.settings:
+        page.settings['extra'] = {}
+    settname = 'VI_VER'
+    if settname not in page.settings:
+        with (pathlib.Path.home() / '.viminfo').open(encoding='latin-1') as f:
+            line = f.readlines()[0]
+        page.settings[settname] = line.strip().rsplit('Vim ')[1][:-1]
+        page.settings['extra']['VI_VER'] = 'VI Version'
+    ver = page.settings[settname]
     settname = 'VI_CMDREF'
     if settname not in page.settings:
-        page.settings[settname] = '/usr/share/vim/vim{}/doc/index.txt'.format(VI_VER)
+        page.settings[settname] = '/usr/share/vim/vim{}/doc/index.txt'.format(ver)
         oms = 'Name of file containing setting names and descriptions'
         page.settings['extra'] = {settname: oms}
     path = pathlib.Path(page.settings[settname])
