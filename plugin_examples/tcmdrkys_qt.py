@@ -1,35 +1,13 @@
 """Hotkeys plugin for Total Commander - PyQt specific code
 """
-# TODO: ombouwen en gui-onafhanlkelijke onderdelen uitlichten
-import os
-import csv
-# import functools
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
-# import editor.shared as shared
-from .tcmdrkys_shared import PATHS, defaultkeys, defaultcommands, translate_keyname
+import editor.plugins.tcmdrkys_shared as shared
 OKICON = '/usr/share/icons/Adwaita/16x16/emblems/emblem-ok-symbolic.symbolic.png'
 
 
-def send_mergedialog(page):
-    """show the dialog for connecting commands to keyboard shortcuts
-    """
-    dlg = TcMergeDialog(page)
-    paths = [page.settings[x] for x in reversed(PATHS[:4])]
-    paths.append(page.pad)
-    dlg.load_files(paths)
-    ## dlg.load_files((
-        ## parent.page.settings['KB_PAD'][0],
-        ## parent.page.settings['CI_PAD'][0],
-        ## parent.page.settings['UC_PAD'][0],
-        ## parent.page.settings['TC_PAD'][0],
-        ## parent.page.pad))
-    ok = dlg.exec_()
-    return ok == qtw.QDialog.Accepted
-
-
-class TcMergeDialog(qtw.QDialog):
+class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
     """Dialoog om een gedocumenteerde toetscombinatie te koppelen aan een commando
 
     In het ene ini bestand staat namelijk toets + omschrijving en in het andere
@@ -37,11 +15,13 @@ class TcMergeDialog(qtw.QDialog):
     te zijn, dus moeten ze handmatig gekoppeld worden. Vandaar de ietwat misleidende
     naam "links"
     """
-    def __init__(self, parent):
-        """Opbouwen van het scherm"""
-        self.shortcuts = {}
-        self.basedir = os.getcwd()
-        super().__init__(parent.gui)
+    def __init__(self, parent, master):
+        """Opbouwen van het scherm
+
+        parent is een SingleDataInterface, master is een HotKeyPanel
+        """
+        shared.TcMergeMixin.__init__(self, master)
+        qtw.QDialog.__init__(self, parent)
         self.setWindowTitle("TCCM")
         self.okicon = gui.QIcon(OKICON)
         self.resize(1000, 600)
@@ -51,14 +31,6 @@ class TcMergeDialog(qtw.QDialog):
         self.listkeys.setHeaderLabels(['Key', 'Description'])
         self.listkeys.setMouseTracking(True)
         self.listkeys.itemEntered.connect(self.popuptext)
-        self.listcmds = qtw.QTreeWidget(self)
-        self.listcmds.setColumnCount(2)
-        self.listcmds.setHeaderLabels(['Command', 'Description'])
-        self.listcmds.setMouseTracking(True)
-        self.listcmds.itemEntered.connect(self.popuptext)
-        self.listlinks = qtw.QTreeWidget(self)
-        self.listlinks.setColumnCount(2)
-        self.listlinks.setHeaderLabels(['Key', 'Command'])
 
         self.findkeytext = qtw.QLineEdit(self)
         self.nextkey = qtw.QPushButton('&Next', self)
@@ -67,6 +39,13 @@ class TcMergeDialog(qtw.QDialog):
         self.prevkey = qtw.QPushButton('&Prev', self)
         self.prevkey.setMaximumWidth(50)
         self.prevkey.clicked.connect(self.findprevkey)
+
+        self.listcmds = qtw.QTreeWidget(self)
+        self.listcmds.setColumnCount(2)
+        self.listcmds.setHeaderLabels(['Command', 'Description'])
+        self.listcmds.setMouseTracking(True)
+        self.listcmds.itemEntered.connect(self.popuptext)
+
         self.findcmdtext = qtw.QLineEdit(self)
         self.nextcmd = qtw.QPushButton('Ne&xt', self)
         self.nextcmd.setMaximumWidth(50)
@@ -75,10 +54,12 @@ class TcMergeDialog(qtw.QDialog):
         self.prevcmd.setMaximumWidth(50)
         self.prevcmd.clicked.connect(self.findprevcmd)
 
+        self.listlinks = qtw.QTreeWidget(self)
+        self.listlinks.setColumnCount(2)
+        self.listlinks.setHeaderLabels(['Key', 'Command'])
+
         self.btn_link = qtw.QPushButton("&+ Add/Replace Link", self)
         self.btn_link.clicked.connect(self.make_link)
-        ## self.btn_edit = qtw.QButton(pnl,-1,"&Modify Link")
-        ## self.btn_edit.Bind(qtw.QEVT_BUTTON,self.edit_link)
         self.btn_delete = qtw.QPushButton("&- Discard Link", self)
         self.btn_delete.clicked.connect(self.delete_link)
 
@@ -89,58 +70,46 @@ class TcMergeDialog(qtw.QDialog):
         self.btn_save = qtw.QPushButton("&Save Links", self)
         self.btn_save.clicked.connect(self.save_links)
         self.btn_quit = qtw.QPushButton("&Afsluiten", self)
-        self.btn_quit.clicked.connect(self.reject)
+        self.btn_quit.clicked.connect(self.close)
         self.btn_build = qtw.QPushButton("&Build CSV", self)
-        self.btn_build.clicked.connect(self.accept)
-
-        for text, callback, keyseq in (
-                ('keylist', self.focuskeylist, 'Ctrl+1'),
-                ('cmdlist', self.focuscmdlist, 'Ctrl+2'),
-                ('findkey', self.focusfindkey, 'Ctrl+F'),
-                ('nextkey', self.findnextkey, 'Ctrl+N'),
-                ('prevkey', self.findprevkey, 'Ctrl+P'),
-                ('findcmd', self.focusfindcmd, 'Ctrl+Shift+F'),
-                ('nextcmd', self.findnextcmd, 'Ctrl+Shift+N'),
-                ('prevcmd', self.findprevcmd, 'Ctrl+Shift+P'),
-                ('addlink', self.make_link, 'Ctrl++'),
-                ('remlink', self.delete_link, 'Del'),
-                ('load', self.load_links, 'Ctrl+L'),
-                ('clear', self.reset_all, 'Ctrl+Del'),
-                ('save', self.accept, 'Ctrl+S'),
-                ('quit', self.close, 'Ctrl+Q')):
-            act = qtw.QAction(text, self)
-            act.triggered.connect(callback)
-            act.setShortcut(keyseq)
-            self.addAction(act)
+        self.btn_build.clicked.connect(self.confirm)
 
         vbox = qtw.QVBoxLayout()
         hbox = qtw.QHBoxLayout()
-        hbox.addWidget(self.listkeys)
-        hbox.addWidget(self.listcmds)
-        hbox.addWidget(self.listlinks)
-        vbox.addLayout(hbox)
 
-        hbox = qtw.QHBoxLayout()
+        vbox2 = qtw.QVBoxLayout()
+        vbox2.addWidget(self.listkeys)
         hbox2 = qtw.QHBoxLayout()
         hbox2.addWidget(qtw.QLabel('Find text:', self))
         hbox2.addWidget(self.findkeytext)
         hbox2.addWidget(self.nextkey)
         hbox2.addWidget(self.prevkey)
         hbox2.addStretch()
-        hbox.addLayout(hbox2)
+        vbox2.addLayout(hbox2)
+        hbox.addLayout(vbox2)
+
+        vbox2 = qtw.QVBoxLayout()
+        vbox2.addWidget(self.listcmds)
+
         hbox2 = qtw.QHBoxLayout()
         hbox2.addWidget(qtw.QLabel('Find text:', self))
         hbox2.addWidget(self.findcmdtext)
         hbox2.addWidget(self.nextcmd)
         hbox2.addWidget(self.prevcmd)
         hbox2.addStretch()
-        hbox.addLayout(hbox2)
+        vbox2.addLayout(hbox2)
+        hbox.addLayout(vbox2)
+
+        vbox2 = qtw.QVBoxLayout()
+        vbox2.addWidget(self.listlinks)
+
         hbox2 = qtw.QHBoxLayout()
         hbox2.addStretch()
         hbox2.addWidget(self.btn_link)
         hbox2.addWidget(self.btn_delete)
         hbox2.addStretch()
-        hbox.addLayout(hbox2)
+        vbox2.addLayout(hbox2)
+        hbox.addLayout(vbox2)
         vbox.addLayout(hbox)
 
         hbox = qtw.QHBoxLayout()
@@ -153,97 +122,125 @@ class TcMergeDialog(qtw.QDialog):
         hbox.addStretch()
         vbox.addLayout(hbox)
         self.setLayout(vbox)
-        self.keysearch = self.cmdsearch = ''
-        self.keyresults, self.cmdresults = [], []
 
-    def load_files(self, files):
-        """load definitions from the various input files"""
-        self.keyspad = files[0]
-        self.cmdspad = files[1]
-        self.linkspad = os.path.join(os.path.dirname(__file__),
-                                     'tc_default_hotkeys_mapped.csv')
-        self.load_keys()
-        self.load_commands()
+        for text, callback, keyseq, desc in self.getshortcuts():
+            act = qtw.QAction(text, self)
+            act.triggered.connect(callback)
+            act.setShortcut(keyseq)
+            self.addAction(act)
+        self.load_files()
 
-        ## # user commands (should be added to right list box?)
-        ## self.usrdict, self.uomsdict = usercommands(files[2])
-
-        ## # user defined keys (should be added to left list box?)
-        ## self.usrkeys = dict(userkeys(files[3]))
-        self.listlinks.clear()
-
-    def load_keys(self):
-        """load keyboard definitions"""
-
-        # keycombinations
-        # fill list box
-        self.keydict = defaultkeys(self.keyspad)  # dict(keyboardtext(pad))
+    def clear_listkeys(self):
+        "initialize the list of keycombos"
         self.listkeys.clear()
-        self.keydata, self.keytexts = [], []
-        for key, value in sorted(self.keydict.items()):
-            new = qtw.QTreeWidgetItem()
-            new.setText(0, ' '.join(key))
-            new.setData(0, core.Qt.UserRole, key)
-            new.setText(1, value['oms'])
-            self.listkeys.addTopLevelItem(new)
-            self.keydata.append(key)
-            self.keytexts.append(value['oms'])
 
-    def load_commands(self):
-        """load command definitions"""
-        # commands
-        # fill list box
-        self.cmddict = defaultcommands(self.cmdspad)
+    def add_listkeys_item(self, key, value):
+        "add an item to the list of keycombos"
+        new = qtw.QTreeWidgetItem()
+        new.setText(0, key)
+        new.setText(1, value['oms'])
+        self.listkeys.addTopLevelItem(new)
+
+    def clear_listcmds(self):
+        "initialize the list of mappable commands"
         self.listcmds.clear()
-        self.cmddata, self.cmdtexts = [], []
-        for key, value in sorted(self.cmddict.items()):
-            new = qtw.QTreeWidgetItem()
-            new.setText(0, key)
-            new.setText(1, value['oms'])
-            self.listcmds.addTopLevelItem(new)
-            self.cmddata.append(key)
-            self.cmdtexts.append(value['oms'])
 
-    def load_links(self):
-        "load keydefs from temp file"
-        self.reset_all()
-        try:
-            _in = open(self.linkspad, 'r')
-        except FileNotFoundError:
-            qtw.QMessageBox.information(self, 'Load data', "No saved data found")
-            return
+    def add_listcmds_item(self, key, value):
+        "add an item to the list of mappable commands"
+        new = qtw.QTreeWidgetItem()
+        new.setText(0, key)
+        new.setText(1, value['oms'])
+        self.listcmds.addTopLevelItem(new)
 
-        with _in:
-            rdr = csv.reader(_in)
-            lines = [row for row in rdr]
-        for key, mods, command in sorted(lines):
-            keytext = ' '.join((key, mods))
-            new = qtw.QTreeWidgetItem()
-            new.setText(0, keytext)
-            new.setData(0, core.Qt.UserRole, (key, mods))
-            new.setText(1, command)
-            self.listlinks.addTopLevelItem(new)
-            try:
-                item = self.listkeys.findItems(keytext, core.Qt.MatchFixedString, 0)[0]
-            except IndexError:
-                # geen item - geen vermelding in KEYBOARD.TXT, wel bekend in hotkeys.hky
-                pass
-            item.setIcon(0, self.okicon)
+    def clear_listlinks(self):
+        "(re)initialize the list of mappings"
+        self.listlinks.clear()
+        for ix in range(self.listlinks.topLevelItemCount()):
+            item = self.listlinks.topLevelItem(ix)
+            self.reset_listitem_icon(listitem)
+
+    def add_listlinks_item(self, keytext, command):
+        "add an item to the list of mappings"
+        new = qtw.QTreeWidgetItem()
+        new.setText(0, keytext)
+        new.setText(1, command)
+        self.listlinks.addTopLevelItem(new)
+
+    def set_listitem_icon(self, item):
+        "set the check image for a keycombo list item"
+        item.setIcon(0, self.okicon)
+
+    def get_selected_key_data(self):
+        "get the texts for the selected keycombo"
+        keychoice = self.listkeys.currentItem()
+        return keychoice, keychoice.text(0), keychoice.text(1)
+
+    def get_selected_cmd_data(self):
+        "get the texts for the selected command"
+        cmdchoice = self.listcmds.currentItem()
+        return cmdchoice, cmdchoice.text(0)
+
+    def get_selected_linkitem(self):
+        "get the selected mapping item"
+        return self.listlinks.currentItem()
+
+    def find_in_listlinks(self, keytext):
+        "find a keycombo in the mappings list"
+        for ix in range(self.listlinks.topLevelItemCount()):
+            item = self.listlinks.topLevelItem(ix)
+            if item.text(0) == keytext:
+                break
+        else:
+            item = None
+        return item
+
+    def find_in_listkeys(self, keytext):
+        "find a keycombo in the mappings list"
+        for ix in range(self.listkeys.topLevelItemCount()):
+            item = self.listkeys.topLevelItem(ix)
+            if item.text(0) == keytext:
+                break
+        else:
+            item = None
+        return item
+
+    def replace_linklist_item(self, item, cmdtext):
+        "replace the command in a mapping item"
+        item.setText(1, cmdtext)
+
+    def ensure_item_visible(self, item):
+        "make sure the selected mapping can be viewed in the list"
+        self.listlinks.scrollTo(self.listlinks.indexFromItem(item))
+
+    def remove_linkitem(self, item):
+        "delete a mapping from the list"
+        ix = self.listlinks.indexOfTopLevelItem(item)
+        item = self.listlinks.takeTopLevelItem(ix)
+
+    def reset_listitem_icon(self, item):
+        "find the corresponding keycombo item and unset the check image"
+        # beetje omslachtige manier van een icon verwijderen bij een TreeWidgetItem!
+        newitem = qtw.QTreeWidgetItem()
+        newitem.setText(0, item.text(0))
+        newitem.setText(1, item.text(1))
+        ix = self.listkeys.indexOfTopLevelItem(item)
+        self.listkeys.takeTopLevelItem(ix)
+        self.listkeys.insertTopLevelItem(ix, newitem)
 
     def focuskeylist(self):
-        "Enter search phrase"
+        "shift focus for selecting a keycombo item"
         self.listkeys.setFocus()
 
     def focuscmdlist(self):
-        "Enter search phrase"
+        "shift focus for selecting a command item"
         self.listcmds.setFocus()
 
     def focusfindkey(self):
-        "Enter search phrase"
+        "shift focus to enter a keycombo search phrase"
         self.findkeytext.setFocus()
 
     def focusfindcmd(self):
-        "Enter search phrase"
+        "shift focus to enter a command search phrase"
         self.findcmdtext.setFocus()
 
     def popuptext(self, item, colno):
@@ -251,184 +248,40 @@ class TcMergeDialog(qtw.QDialog):
         if colno == 1:
             item.setToolTip(colno, item.text(colno))
 
-    def make_link(self):
-        """connect the choices
-        """
-        keychoice = self.listkeys.currentItem()
-        keytext, key = keychoice.text(0), keychoice.data(0, core.Qt.UserRole)
-        cmdchoice = self.listcmds.currentItem()
-        cmdtext = cmdchoice.text(0)
+    def get_entry_text(self, win):
+        "get a text entry field's text"
+        return win.text()
 
-        # let op: als link al bestaat: vervangen, niet toevoegen
-        found = False
-        for ix in range(self.listlinks.topLevelItemCount()):
-            item = self.listlinks.topLevelItem(ix)
-            if item.text(0) == keytext:
-                found = True
-                break
-        if not found:
-            item = qtw.QTreeWidgetItem()
-            item.setText(0, keytext)
-            item.setData(0, core.Qt.UserRole, key)
-            self.listlinks.addTopLevelItem(item)
-        item.setText(1, cmdtext)
-        ## item.setText(2, gekozen_cmd)
-        ## item.setText(3, gekozen_oms)
-        ## if found:
-        self.listlinks.scrollTo(self.listlinks.indexFromItem(item))
-        ## else:
-        ## if not found:
-            ## self.listlinks.scrollToBottom()
-        keychoice.setIcon(0, self.okicon)
+    def find_listitems(self, win, search):
+        "find all items in a list that contain a search text"
+        return win.findItems(search, core.Qt.MatchContains, 1)
 
-    def delete_link(self):
-        """remove an association
-        """
-        item = self.listlinks.currentItem()
-        if not item:
-            qtw.QMessageBox.information(self, "Delete entry", "Choose an item to " "delete")
-            return
-        ok = qtw.QMessageBox.question(self, "Delete entry", "Really delete?",
-                                      qtw.QMessageBox.Yes | qtw.QMessageBox.No,
-                                      defaultButton=qtw.QMessageBox.Yes)
-        if ok == qtw.QMessageBox.Yes:
-            ix = self.listlinks.indexOfTopLevelItem(item)
-            item = self.listlinks.takeTopLevelItem(ix)
-            find = item.text(0)
-            ## self.listkeys.finditems(find, core.Qt.MatchExactly, 0)
-            item = self.listkeys.findItems(find, core.Qt.MatchFixedString, 0)[0]
-            # beetje omslachtige manier van een icon verwijderen bij een TreeWidgetItem!
-            newitem = qtw.QTreeWidgetItem()
-            newitem.setText(0, item.text(0))
-            newitem.setData(0, core.Qt.UserRole, item.data(0, core.Qt.UserRole))
-            newitem.setText(1, item.text(1))
-            ix = self.listkeys.indexOfTopLevelItem(item)
-            self.listkeys.takeTopLevelItem(ix)
-            self.listkeys.insertTopLevelItem(ix, newitem)
+    def get_selected_item(self, win):
+        "get the selected item in a list"
+        return win.currentItem()
 
-    def finditem(self, input, search, list, results):
-        "check if search string has changed"
-        to_find = input.text()
-        if not to_find:
-            qtw.QMessageBox.information(self, 'Find text', 'Please enter text to search for')
-            return None, None, None
-        newsearch = to_find != search
-        if newsearch:
-            search = to_find
-            results = list.findItems(search, core.Qt.MatchContains, 1)
-        return newsearch, search, results
+    def get_first_item(self, win):
+        "get the first item of a list"
+        return win.topLevelItem(0)
 
-    def findnextitem(self, input, search, list, results):
-        "search forward"
-        newsearch, search, results = self.finditem(input, search, list, results)
-        if not search:
-            return
-        current = list.currentItem()
-        if not current:
-            current = list.topLevelItem(0)
-        if newsearch:
-            # positioneren na huidige en klaar
-            for item in results:
-                if item.text(0) > current.text(0):
-                    list.setCurrentItem(item)
-                    return search, results
-        else:
-            # huidige zoeken in resultatenlijst, positioneren op volgende
-            newix = results.index(current) + 1
-            if newix < len(results):
-                list.setCurrentItem(results[newix])
-            else:
-                list.setCurrentItem(results[0])
-            return
-        qtw.QMessageBox.information(self, 'Find text', 'No (next) item found')
+    def get_last_item(self, win):
+        "get the last item of a list"
+        return win.topLevelItem(list.topLevelItemCount() - 1)
 
-    def findprevitem(self, input, search, list, results):
-        "search backward"
-        newsearch, search, results = self.finditem(input, search, list, results)
-        if not search:
-            return
-        current = list.currentItem()
-        if not current:
-            current = list.topLevelItem(list.topLevelItemCount() - 1)
-        if newsearch:
-            # positioneren vóór huidige en klaar
-            for item in reversed(results):
-                if item.text(0) < current.text(0):
-                    list.setCurrentItem(item)
-                    return search, results
-        else:
-            # huidige zoeken in resultatenlijst, positioneren op vorige
-            newix = results.index(current) - 1
-            if newix >= 0:
-                list.setCurrentItem(results[newix])
-            else:
-                list.setCurrentItem(results[-1])
-            return
-        qtw.QMessageBox.information(self, 'Find text', 'No previous item found')
+    def get_item_text(self, win, item, col):
+        "get the text for a column of an item in one of the lists"
+        return item.text(col)
 
-    def findnextkey(self):
-        "find next matching key item"
-        test = self.findnextitem(self.findkeytext, self.keysearch, self.listkeys, self.keyresults)
-        if test:
-            self.keysearch, self.keyresults = test
+    def set_selected_item(self, win, item):
+        "set the selected item for on of the lists"
+        # return list.currentItem() -- pardon?
+        win.setCurrentItem(item)
 
-    def findprevkey(self):
-        "find previous matching key item"
-        test = self.findprevitem(self.findkeytext, self.keysearch, self.listkeys, self.keyresults)
-        if test:
-            self.keysearch, self.keyresults = test
+    def count_links(self):
+        "get the current number of mappings in the list"
+        return self.listlinks.topLevelItemCount()
 
-    def findnextcmd(self):
-        "find next matching command item"
-        test = self.findnextitem(self.findcmdtext, self.cmdsearch, self.listcmds, self.cmdresults)
-        if test:
-            self.cmdsearch, self.cmdresults = test
-
-    def findprevcmd(self):
-        "find previous matching command item"
-        test = self.findprevitem(self.findcmdtext, self.cmdsearch, self.listcmds, self.cmdresults)
-        if test:
-            self.cmdsearch, self.cmdresults = test
-
-    def reset_all(self):
-        """remove all associations
-        """
-        self.listlinks.clear()
-        self.load_keys()  # to reset all indicators
-
-    def save_links(self):
-        """save the changes to a temp file
-        """
-        num_items = self.listlinks.topLevelItemCount()
-        if num_items == 0:
-            qtw.QMessageBox.information(self, 'Save data', 'No data to save')
-            return
-        with open(self.linkspad, "w") as _out:
-            writer = csv.writer(_out)
-            for ix in range(num_items):
-                item = self.listlinks.topLevelItem(ix)
-                try:
-                    key, mods = item.data(0, core.Qt.UserRole)
-                except ValueError:
-                    key, mods = item.data(0, core.Qt.UserRole), ''
-                    print(key)
-                writer.writerow((key, mods, item.text(1)))
-        qtw.QMessageBox.information(self, 'Save data', 'Data saved')
-
-    def accept(self):
-        """confirm the changes
-
-        don't save to file; just assign to a global variable
-        """
-        shortcuts = {}
-        for ix in range(self.listlinks.topLevelItemCount()):
-            item = self.listlinks.topLevelItem(ix)
-            key, mods = item.data(0, core.Qt.UserRole)
-            cmd = item.text(1)
-            if cmd:
-                desc = self.cmddict[cmd]['oms']
-            else:
-                desc = self.keydict[(key, mods)]['oms']
-            shortcuts[ix] = (translate_keyname(key), mods, 'S', cmd, desc)
-        self.parent().tempdata = shortcuts
-        super().accept()
+    def get_linkitem_data(self, ix):
+        "get the texts for a mapping item"
+        item = self.listlinks.topLevelItem(ix)
+        return item.text(0), item.text(1)

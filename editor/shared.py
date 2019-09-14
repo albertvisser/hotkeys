@@ -424,7 +424,10 @@ def get_text(win, message_id='', text='', args=None):
     try:
         win = win.editor
     except AttributeError:
-        win = win.master
+        try:
+            win = win.master
+        except AttributeError:
+            pass
     if message_id:
         text = win.captions[message_id].replace(' / ', '\n')
     elif not text:
