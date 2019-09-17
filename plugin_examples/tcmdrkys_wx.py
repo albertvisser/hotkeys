@@ -25,6 +25,7 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
         self.imglist = wx.ImageList(16, 16)
         # self.todoimage = self.imglist.Add(wx.NullBitmap)
         self.okimage = self.imglist.Add(wx.ArtProvider.GetBitmap(wx.ART_TICK_MARK))
+        self.todoimage = self.imglist.Add(wx.ArtProvider.GetBitmap(wx.ART_DEL_BOOKMARK)) # ART_MINUS
 
         self.listkeys = MyListCtrl(self, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
         self.listkeys.InsertColumn(0, 'Key')
@@ -157,17 +158,18 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
         "(re)initialize the list of mappings"
         self.listlinks.DeleteAllItems()
         for ix in range(self.listkeys.GetItemCount()):
-            item = self.listkeys.GetItem(ix)
-            self.reset_listitem_icon(item)
+            self.reset_listitem_icon(ix)
 
     def add_listlinks_item(self, keytext, command):
         "add an item to the list of mappings"
         index = self.listlinks.InsertItem(self.listlinks.GetItemCount(), keytext)
         self.listlinks.SetItem(index, 1, command)
+        return index  # self.listlinks.GetItem(index)
 
-    def set_listitem_icon(self, item):
+    def set_listitem_icon(self, ix):
         "set the check image for a keycombo list item"
         # item = self.listkeys.GetItem(keychoice)
+        item = self.listkeys.GetItem(ix)
         item.SetImage(self.okimage)
         self.listkeys.SetItem(item)
 
@@ -175,27 +177,31 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
         "get the texts for the selected keycombo"
         keychoice = self.listkeys.GetFirstSelected()
         keytext = self.listkeys.GetItemText(keychoice, 0)
-        key = self.listkeys.GetItemData(keychoice, 0)
-        return keychoice, key, keytext
+        keyoms = self.listkeys.GetItemText(keychoice, 1)
+        return keychoice, keytext, keyoms
 
     def get_selected_cmd_data(self):
         "get the texts for the selected command"
         cmdchoice = self.listcmds.GetFirstSelected()
-        cmdtext = self.listcmds.GetItemtext(cmdchoice, 0)
+        cmdtext = self.listcmds.GetItemText(cmdchoice, 0)
         return cmdchoice, cmdtext
 
-    def get_selected_linkitem(self, ix):
+    def get_selected_linkitem(self):
         "get the selected mapping item"
-        return self.listlinks.GetItem(ix)
+        ix = self.listlinks.GetFirstSelected()
+        if ix == -1:
+            return None
+        return ix
 
     def find_in_list(self, lst, col, text, start=0, exact=True):
         "find text in a column in a list from a given item"
         for ix in range(start, lst.GetItemCount()):
             itemtext = lst.GetItemText(ix, col)
             if (exact and itemtext == text) or (not exact and text.upper() in itemtext.upper()):
+                # item = self.listkeys.GetItem(ix)
                 break
         else:
-           ix = -1
+           ix = -1  # item = None
         return ix
 
     def find_in_listlinks(self, keytext):
@@ -206,22 +212,27 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
         "find a keycombo in the shortcuts list"
         return self.find_in_list(self.listkeys, 0, keytext)
 
-    def replace_linklist_item(self, item, cmdtext):
+    def replace_linklist_item(self, itemindex, cmdtext):
         "replace the command in a mapping item"
+        item = self.listlinks.GetItem(itemindex)
         self.listlinks.SetItemText(item, 1, cmdtext)
 
-    def ensure_item_visible(self, item):
+    def ensure_item_visible(self, ix, win=None):  # item):
         "make sure the selected mapping can be viewed in the list"
-        self.listlinks.scrollTo(self.listlinks.indexFromItem(item))
+        if win == None:
+            win = self.listlinks
+        print(win.EnsureVisible(ix))  # item.GetId())
 
-    def remove_linkitem(self, item):
+    def remove_linkitem(self, itemindex):
         "delete a mapping from the list"
-        find = self.listlinks.GetText(item, 0)
-        self.listlinks.DeleteItem(find)
+        # find = self.listlinks.GetItemText(item.GetId(), 0)
+        # self.listlinks.DeleteItem(find)
+        self.listlinks.DeleteItem(itemindex)  # item.GetId())
 
-    def reset_listitem_icon(self, item):
+    def reset_listitem_icon(self, ix):
         "find the corresponding keycombo item and unset the check image"
-        item.SetImage(-1)  # self.todoimage)
+        item = self.listkeys.GetItem(ix)
+        item.SetImage(self.todoimage)
         self.listkeys.SetItem(item)
 
     def focuskeylist(self, event=None):
@@ -231,6 +242,10 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
     def focuscmdlist(self, event=None):
         "shift focus for selecting a command item"
         self.listcmds.SetFocus()
+
+    def focuslinklist(self, event=None):
+        "shift focus for selecting a mapping item"
+        self.listlinks.SetFocus()
 
     def focusfindkey(self, event=None):
         "shift focus to enter a keycombo search phrase"
@@ -252,48 +267,82 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
     def find_listitems(self, win, search):
         "find all items in a list that contain a search text"
         results = []
-        item = self.find_in_list(self.listkeys, 1, search, exact=False)
-        while item != -1:
-            results.append(item)
-            item = self.find_in_list(self.listkeys, 1, search, start=item + 1, exact=False)
+        itemindex = self.find_in_list(win, 1, search, exact=False)
+        while itemindex != -1:
+            print(itemindex)
+            results.append(itemindex)
+            itemindex = self.find_in_list(win, 1, search, start=itemindex + 1, exact=False)
+        for itemindex in results:
+            item = win.GetItem(itemindex)
+            print(item, itemindex, item.GetText(), win.GetItemText(itemindex), 0)
         return results
 
     def get_selected_item(self, win):
         "get the selected item in a list"
-        test = win.GetFirstSelected()
-        if test == -1:
-            test = None
-        return test
+        sel = win.GetFirstSelected()
+        if sel != -1:
+            self.ensure_item_visible(sel, win)
+        return sel
+        # test = win.GetFirstSelected()
+        # all_items, count = [test], win.GetSelectedItemCount()
+        # while count - len(all_items) > 0:
+        #     all_items.append(win.GetNextSelected())
+        # print(count, 'items selected:', all_items)
+        # found = None if test == -1 else win.GetItem(test)
+        # print('get selected', found, test, end=' ')
+        # if found:
+        #     print(found.GetText(), win)
+        # else:
+        #     print('(not found)', win)
+        # # if test == -1:
+        # #     test = None
+        # # else:
+        # #     test = win.GetItem(test)
+        # return found
 
     def get_first_item(self, win):
         "get the first item of a list"
-        return 0
+        return 0  # win.GetItem(0)
 
     def get_last_item(self, win):
         "get the last item of a list"
-        return win.GetItemCount() - 1
+        return win.GetItemCount() - 1  # win.GetItem(win.GetItemCount() - 1)
 
-    def get_item_text(self, win, item, col):
+    def get_item_text(self, win, itemindex, col):
         "get the text for a column of an item in one of the lists"
-        return win.GetItemText(item, col)
+        # print(item, col, item.GetId(), win.GetItemText(item.GetId()))
+        return win.GetItemText(itemindex, col)
 
-    def set_selected_item(self, win, item):
+    def set_selected_item(self, win, itemindex):
         "set the selected item for on of the lists"
-        win.Select(item)
+        ix = win.GetFirstSelected()
+        if ix != -1:
+            print('in set_selected: selection is now', win.GetItem(ix), ix, win.GetItemText(ix, 0))
+        item = win.GetItem(itemindex)
+        print('in set_selected: set item', item, itemindex, item.GetText())
+        win.Select(itemindex)
+        ix = win.GetFirstSelected()
+        print('in set_selected: item is ', win.GetItem(ix), ix, win.GetItemText(ix, 0))
+        print('let`s try some more:', win.GetItem(ix, 0), win.GetItem(ix, 1),
+              win.GetItem(ix).GetText())
 
     def count_links(self):
         "get the current number of mappings in the list"
         return self.listlinks.GetItemCount()
 
-    def get_linkitem_data(self, ix):
+    def get_linkitem_data(self, itemindex):
         "get the texts for a mapping item"
-        item = self.listlinks.GetItem(ix)
-        return self.gui.get_item_text(item, 0), self.gui.get_item_text(item, 1)
+        return (self.get_item_text(self.listlinks, itemindex, 0),
+                self.get_item_text(self.listlinks, itemindex, 1))
 
     def reject(self):
         "discard the dialog"
         self.EndModal(wx.ID_CANCEL)
 
-    def accept(self):
-        "confirm the change amd end the dialog"
+    def finish(self):
+        "finalize confirmation"
         self.EndModal(wx.ID_OK)
+
+    def accept(self):
+        "close the dialog after confirmation"
+        return True

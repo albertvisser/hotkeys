@@ -209,14 +209,15 @@ class TcMergeMixin:
         "provide data for dialog command shortcuts"
         return (('keylist', self.focus_keylist, 'Ctrl+1', 'Focus list of keyboard shortcuts'),
                 ('cmdlist', self.focus_cmdlist, 'Ctrl+2', 'Focus list of commands'),
+                ('linklist', self.focus_linklist, 'Ctrl+3', 'Focus list of connections'),
                 ('findkey', self.focus_findkey, 'Ctrl+F', 'Enter search phrase for shortcut'),
                 ('nextkey', self.findnextkey, 'Ctrl+N', 'Forward in shortcut search results'),
                 ('prevkey', self.findprevkey, 'Ctrl+P', 'Back in shortcut search results'),
                 ('findcmd', self.focus_findcmd, 'Ctrl+Shift+F', 'Enter search phrase for command'),
                 ('nextcmd', self.findnextcmd, 'Ctrl+Shift+N', 'Forward in command search results'),
                 ('prevcmd', self.findprevcmd, 'Ctrl+Shift+P', 'Back in command search results'),
-                ('addlink', self.make_link, 'Ctrl++', 'Connect command to keyboard shortcut'),
-                ('remlink', self.delete_link, 'Del', 'Disconnect command from keyboard shortcut'),
+                ('addlink', self.make_link, 'Ctrl+C', 'Connect command to shortcut'),
+                ('remlink', self.delete_link, 'Ctrl+D', 'Disconnect command from shortcut'),
                 ('load', self.load_links, 'Ctrl+L', 'Load previously made connections'),
                 ('update', self.save_links, 'Ctrl+U', 'Save all command-shortcut connections'),
                 ('clear', self.reset_all, 'Ctrl+Del', 'Discard all command-shortcut connections'),
@@ -271,10 +272,10 @@ class TcMergeMixin:
             lines = [row for row in rdr]
         for key, mods, command in sorted(lines):
             keytext = ' '.join((key, mods))
-            self.add_listlinks_item(keytext, command)
-            item = self.find_in_listkeys(keytext)
-            if item:
-                self.set_listitem_icon(item)
+            ix = self.add_listlinks_item(keytext, command)
+            itemindex = self.find_in_listkeys(keytext)
+            if itemindex != -1:
+                self.set_listitem_icon(itemindex)
 
     def reset_all(self, event=None):
         """remove all associations
@@ -284,52 +285,57 @@ class TcMergeMixin:
     def make_link(self, event=None):
         """connect the choices
         """
-        keychoice, keytext, key = self.get_selected_key_data()
+        keychoice, keytext, keyoms = self.get_selected_key_data()
         cmdchoice, cmdtext = self.get_selected_cmd_data()
-        item = self.find_in_listlinks(keytext)
-        if item:
-            self.replace_linklist_item(item, cmdtext)
+        itemindex = self.find_in_listlinks(keytext)
+        if itemindex != -1:
+            self.replace_linklist_item(itemindex, cmdtext)
         else:
-            self.add_listlinks_item(keytext, cmdtext)
-        self.ensure_item_visible(item)
+            itemindex = self.add_listlinks_item(keytext, cmdtext)
+            keychoice = self.find_in_listkeys(keytext)
+        self.ensure_item_visible(itemindex)
         self.set_listitem_icon(keychoice)
 
     def delete_link(self, event=None):
         """remove an association
         """
-        item = self.get_selected_linkitem()
-        if not item:
-            editor.gui.show_message(text="choose an item to delete")
+        itemindex = self.get_selected_linkitem()
+        if not itemindex:
+            editor.gui.show_message(self, text="choose an item to delete")
             return
-        ok = editor.gui.ask_question("Really delete?")
+        ok = editor.gui.ask_question(self, text="Really delete?")
         if ok:
-            keytext = item.text(0)
-            self.remove_linkitem(item)
-            item = self.find_in_listkeys(keytext)
-            if item:
-                self.reset_listitem_icon(item)
+            keytext = self.get_item_text(self.listlinks, itemindex, 0)
+            self.remove_linkitem(itemindex)
+            itemix = self.find_in_listkeys(keytext)
+            if itemix:
+                self.reset_listitem_icon(itemix)
 
     def save_links(self, event=None):
         """save the changes to a temp file
         """
         num_items = self.count_links()
         if num_items == 0:
-            editor.gui.show_message('No data to save')
+            editor.gui.show_message(self, text='No data to save')
             return
         with open(self.linkspad, "w") as _out:
             writer = csv.writer(_out)
             for ix in range(num_items):
                 keytext, cmdtext = self.get_linkitem_data(ix)
                 writer.writerow((*keytext.split(' ', 1) , cmdtext))
-        editor.gui.show_message('Data saved')
+        editor.gui.show_message(self, text='Data saved')
 
     def focus_keylist(self, event=None):
-        "Enter search phrase"
+        "shift focus for selecting a keycombo item"
         self.focuskeylist()
 
     def focus_cmdlist(self, event=None):
-        "Enter search phrase"
+        "shift focus for selecting a command item"
         self.focuscmdlist()
+
+    def focus_linklist(self, event=None):
+        "shift focus for selecting a mapping item"
+        self.focuslinklist()
 
     def focus_findkey(self, event=None):
         "Enter search phrase"
@@ -367,67 +373,75 @@ class TcMergeMixin:
         if test:
             self.cmdsearch, self.cmdresults = test
 
-    def finditem(self, input, search, list, results):
+    def finditem(self, searchfield, search, itemlist, results):
         "check if search string has changed"
-        to_find = self.get_entry_text(input)
+        to_find = self.get_entry_text(searchfield)
         if not to_find:
-            editor.gui.show_message(self, 'Please enter text to search for')
+            editor.gui.show_message(self, text='Please enter text to search for')
             return None
         newsearch = to_find != search
         if newsearch:
             search = to_find
-            results = self.find_listitems(list, search)
+            results = self.find_listitems(itemlist, search)
         return newsearch, search, results
 
-    def findnextitem(self, input, search, list, results):
+    def findnextitem(self, searchfield, search, itemlist, results):
         "search forward"
-        newsearch, search, results = self.finditem(input, search, list, results)
+        search = self.finditem(searchfield, search, itemlist, results)
         if not search:
             return None
-        current = self.get_selected_item(list)
-        if current is None:
-            current = self.get_first_item(list)
+        newsearch, search, results = search
+        current = self.get_selected_item(itemlist)
+        print('in findnextitem, current is', current)
+        if current == -1:
+            current = self.get_first_item(itemlist)
+        # print(itemlist, current, itemlist.GetItemCount())
+        # print(self.listkeys, current, self.listkeys.GetItemCount())
         if newsearch:
             # positioneren na huidige en klaar
             for item in results:
-                print(item)
-                if self.get_item_text(list, item, 0) > self.get_item_text(list, current, 0):
-                    self.set_selected_item(list, item)
+                # print('new search, first item is', item, self.get_item_text(itemlist, item, 0))
+                if self.get_item_text(itemlist, item, 0) > self.get_item_text(itemlist, current, 0):
+                    print('new search, set current to', item)
+                    self.set_selected_item(itemlist, item)
                     return search, results
         else:
             # huidige zoeken in resultatenlijst, positioneren op volgende
+            # print('find next, current item is', current, self.get_item_text(itemlist, current, 0))
+            # print('    should be in', results)
             newix = results.index(current) + 1
-            if newix < len(results):
-                self.set_selected_item(list, results[newix])
-            else:
-                self.set_selected_item(list, results[0])
+            print('huidige positie:', results.index(current), len(results))
+            if newix >= len(results): # was <
+                newix = 0
+            print('find next, setting current to', results[newix])
+            self.set_selected_item(itemlist, results[newix])
             return None
-        editor.gui.show_message(self, 'No (next) item found')
+        editor.gui.show_message(self, text='No (next) item found')
         return None
 
-    def findprevitem(self, input, search, list, results):
+    def findprevitem(self, searchfield, search, itemlist, results):
         "search backward"
-        newsearch, search, results = self.finditem(input, search, list, results)
+        search = self.finditem(searchfield, search, itemlist, results)
         if not search:
             return None
-        current = self.get_selected_item(list)
-        if not current:
-            current = self.get_last_item(list)
+        newsearch, search, results = search
+        current = self.get_selected_item(itemlist)
+        if current == -1:
+            current = self.get_last_item(itemlist)
         if newsearch:
             # positioneren vóór huidige en klaar
             for item in reversed(results):
-                if self.get_item_text(list, item, 0) < self.get_item_text(list, current, 0):
-                    self.set_selected_item(list, item)
+                if self.get_item_text(itemlist, item, 0) < self.get_item_text(itemlist, current, 0):
+                    self.set_selected_item(itemlist, item)
                     return search, results
         else:
             # huidige zoeken in resultatenlijst, positioneren op vorige
             newix = results.index(current) - 1
-            if newix >= 0:
-                self.set_selected_item(list, results[newix])
-            else:
-                self.set_selected_item(list, results[-1])
+            if newix < 0:  # >= 0:  # moet dit niet < zijn?
+                newix = -1
+            self.set_selected_item(itemlist, results[newix])
             return None
-        editor.gui.show_message(self, 'No previous item found')
+        editor.gui.show_message(self, text='No previous item found')
         return None
 
     def confirm(self, event=None):
@@ -435,6 +449,7 @@ class TcMergeMixin:
 
         don't save to file; just assign to a global variable
         """
+        print('in confirm')
         shortcuts = {}
         for ix in range(self.count_links()):
             keytext, cmd = self.get_linkitem_data(ix)
@@ -444,8 +459,8 @@ class TcMergeMixin:
             else:
                 desc = self.keydict[(key, mods)]['oms']
             shortcuts[ix] = (translate_keyname(key), mods, 'S', cmd, desc)
-        self.parent().tempdata = shortcuts
-        self.accept()
+        self.parent.tempdata = shortcuts
+        self.finish()
 
     def close(self, event=None):
         "close without saving (cancel dialog)"

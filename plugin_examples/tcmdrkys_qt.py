@@ -5,6 +5,7 @@ import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
 import editor.plugins.tcmdrkys_shared as shared
 OKICON = '/usr/share/icons/Adwaita/16x16/emblems/emblem-ok-symbolic.symbolic.png'
+TODOICON = '/usr/share/icons/Adwaita/16x16/emblems/emblem-new.png'
 
 
 class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
@@ -24,6 +25,7 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
         qtw.QDialog.__init__(self, parent)
         self.setWindowTitle("TCCM")
         self.okicon = gui.QIcon(OKICON)
+        self.todoicon = gui.QIcon(TODOICON)
         self.resize(1000, 600)
 
         self.listkeys = qtw.QTreeWidget(self)
@@ -155,16 +157,16 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
     def clear_listlinks(self):
         "(re)initialize the list of mappings"
         self.listlinks.clear()
-        for ix in range(self.listlinks.topLevelItemCount()):
-            item = self.listlinks.topLevelItem(ix)
-            self.reset_listitem_icon(listitem)
+        for ix in range(self.listkeys.topLevelItemCount()):
+            item = self.listkeys.topLevelItem(ix)
+            self.reset_listitem_icon(item)
 
     def add_listlinks_item(self, keytext, command):
         "add an item to the list of mappings"
         new = qtw.QTreeWidgetItem()
         new.setText(0, keytext)
         new.setText(1, command)
-        self.listlinks.addTopLevelItem(new)
+        return self.listlinks.addTopLevelItem(new)
 
     def set_listitem_icon(self, item):
         "set the check image for a keycombo list item"
@@ -220,12 +222,14 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
     def reset_listitem_icon(self, item):
         "find the corresponding keycombo item and unset the check image"
         # beetje omslachtige manier van een icon verwijderen bij een TreeWidgetItem!
-        newitem = qtw.QTreeWidgetItem()
-        newitem.setText(0, item.text(0))
-        newitem.setText(1, item.text(1))
-        ix = self.listkeys.indexOfTopLevelItem(item)
-        self.listkeys.takeTopLevelItem(ix)
-        self.listkeys.insertTopLevelItem(ix, newitem)
+        # newitem = qtw.QTreeWidgetItem()
+        # newitem.setText(0, item.text(0))
+        # newitem.setText(1, item.text(1))
+        # ix = self.listkeys.indexOfTopLevelItem(item)
+        # self.listkeys.takeTopLevelItem(ix)
+        # self.listkeys.insertTopLevelItem(ix, newitem)
+        # alternatief: "default" icon
+        item.setIcon(0, self.todoicon)
 
     def focuskeylist(self):
         "shift focus for selecting a keycombo item"
@@ -234,6 +238,10 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
     def focuscmdlist(self):
         "shift focus for selecting a command item"
         self.listcmds.setFocus()
+
+    def focuslinklist(self):
+        "shift focus for selecting a mapping item"
+        self.listlinks.setFocus()
 
     def focusfindkey(self):
         "shift focus to enter a keycombo search phrase"
@@ -285,3 +293,7 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
         "get the texts for a mapping item"
         item = self.listlinks.topLevelItem(ix)
         return item.text(0), item.text(1)
+
+    def finish(self):
+        "finalize confirmation and close the dialog"
+        self.accept()
