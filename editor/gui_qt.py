@@ -697,7 +697,7 @@ class Gui(qtw.QMainWindow):
     def resize_empty_screen(self, wid, hig):
         """full size not needed for a single message
         """
-        self.reSize(wid, hig)
+        self.resize(wid, hig)
 
     def go(self):
         "build and show the interface"

@@ -152,7 +152,7 @@ def read_settings(ini):
         sett = importlib.import_module(ini)
         settings['filename'] = sett.__file__
     except ImportError:
-        shared.log_exc()
+        log_exc()
         sett = None
     try:
         settings['plugins'] = sett.PLUGINS
@@ -410,7 +410,7 @@ def quick_check(filename):
             for indx, col in enumerate(column_info):
                 _ = data[indx]
         except Exception:
-            shared.log_exc()
+            log_exc()
             print(key, data)
             raise
     print('{}: No errors found'.format(filename))
