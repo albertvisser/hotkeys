@@ -33,12 +33,13 @@ It's also meant for customisation of the editor part of this program.
 Usage
 -----
 
-Simply call ``hotkeys.py`` in the top directory.
+Simply call ``start.py`` in the top directory.
 
 
 Requirements
 ------------
 
 - Python
-- PyQt4 for the GUI part
+- PyQt(5) or wxPython (Phoenix) for the GUI part
 - the built in csv module for creating and reading the csv files
+- plugins may use BeautifulSoup (and lxml) for parsing HTML help files
