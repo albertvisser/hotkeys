@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-"""HotKeys plugin for Opera > 12
+"""HotKeys plugin for Opera <= 12 - not maintained
 """
 from __future__ import print_function
 import os

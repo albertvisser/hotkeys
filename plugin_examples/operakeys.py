@@ -1,5 +1,4 @@
-# -*- coding: UTF-8 -*-
-"""Hotkeys plugin for Opera 12 - not maintained anymore
+"""Hotkeys plugin for Opera > 12 - not maintained anymore
 
 See example_app_keys.py for a description of the plugin API.
 Only define the functions that need to be defined, for everything
