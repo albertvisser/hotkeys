@@ -168,7 +168,11 @@ class HotkeyPanel:
             new_item = self.gui.build_listitem(key)
             for indx, col in enumerate(self.column_info):
                 is_soort = col[2]
-                value = data[indx]
+                try:
+                    value = data[indx]
+                except IndexError:
+                    print(data)
+                    raise
                 if is_soort:
                     value = 'C_DFLT' if value == 'S' else 'C_RDEF'
                     value = self.captions[value]
@@ -283,7 +287,8 @@ class HotkeyPanel:
                     self.gui.enable_save(False)
         elif test_cnx and cb == self.gui.cmb_context:
             if text != self._origdata[self.ix_cntxt]:
-                context = self._origdata[self.ix_cntxt] = self.gui.get_combobox_text(self.gui.cmb_context)
+                context = self._origdata[self.ix_cntxt] = self.gui.get_combobox_text(
+                    self.gui.cmb_context)
                 self.gui.init_combobox(self.gui.cmb_commando)
                 # if self.contextactionsdict:
                 #     actionslist = self.contextactionsdict[context]

@@ -67,13 +67,17 @@ def get_choice(win, title, caption, choices, current):
 
 
 def get_file_to_open(win, oms='', extension='', start=''):
-    what = shared.add_to_text(win, 'C_SELFIL', oms)
+    """toon een dialoog waarmee een file geopend kan worden om te lezen
+    """
+    what = shared.get_open_title(win, 'C_SELFIL', oms)
     fname, ok = qtw.QFileDialog.getOpenFileName(win, what, directory=start, filter=extension)
     return fname
 
 
 def get_file_to_save(win, oms='', extension='', start=''):
-    what = shared.add_to_text(win, 'C_SELFIL', oms)
+    """toon een dialoog waarmee een file geopend kan worden om te schrijven
+    """
+    what = shared.get_open_title(win, 'C_SELFIL', oms)
     fname, ok = qtw.QFileDialog.getSaveFileName(win, what, filter=extension)
     return fname
 
@@ -131,8 +135,7 @@ class InitialToolDialog(qtw.QDialog):
 
 class FileBrowseButton(qtw.QFrame):
     """Combination widget showing a text field and a button
-    making it possible to either manually enter a filename or select
-    one using a FileDialog
+    making it possible to either manually enter a filename or select one using a FileDialog
     """
     def __init__(self, parent, text="", level_down=False):
         if level_down:

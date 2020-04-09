@@ -438,7 +438,9 @@ def get_text(win, message_id='', text='', args=None):
     return text
 
 
-def add_to_text(win, message_id, oms):
+def get_open_title(win, message_id, oms):
+    """Build title for File Open  / Save dialog
+    """
     what = get_text(win, message_id)
     if oms:
         what = ' - '.join((what, oms))

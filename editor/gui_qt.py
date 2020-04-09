@@ -102,7 +102,8 @@ class SingleDataInterface(qtw.QFrame):
                 cb = qtw.QComboBox(box)
                 cb.setMaximumWidth(90)
                 cb.addItems(self.master.keylist)  # niet sorteren
-                cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
+                cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb,
+                                                                      str))
                 self.screenfields.append(cb)
                 self.cmb_key = cb
 

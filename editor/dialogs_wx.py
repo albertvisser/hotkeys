@@ -77,12 +77,16 @@ def get_choice(win, title, caption, choices, current):
 
 
 def get_file_to_open(win, oms='', extension='', start=''):
-    what = shared.add_to_text(win, 'C_SELFIL', oms)
+    """toon een dialoog waarmee een file geopend kan worden om te lezen
+    """
+    what = shared.get_open_title(win, 'C_SELFIL', oms)
     return wx.LoadFileSelector(what, extension, default_name=start, parent=win)
 
 
 def get_file_to_save(win, oms='', extension= '', start=''):
-    what = shared.add_to_text(win, 'C_SELFIL', oms)
+    """toon een dialoog waarmee een file geopend kan worden om te schrijven
+    """
+    what = shared.get_open_title(win, 'C_SELFIL', oms)
     return wx.SaveFileSelector(what, extension, default_name=start, parent=win)
 
 
