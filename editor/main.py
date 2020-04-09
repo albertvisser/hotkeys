@@ -12,7 +12,12 @@
 from types import SimpleNamespace
 import os
 # import sys
+import csv
+import enum
 import pdb
+import pathlib
+import shutil
+import collections
 import string
 import importlib
 import importlib.util
@@ -21,6 +26,328 @@ import importlib.util
 import editor.shared as shared
 import editor.gui as gui
 NO_PATH = 'NO_PATH'
+named_keys = ['Insert', 'Del', 'Home', 'End', 'PgUp', 'PgDn', 'Space', 'Backspace',
+              'Tab', 'Num+', 'Num-', 'Num*', 'Num/', 'Enter', 'Esc', 'Left', 'Right',
+              'Up', 'Down', 'Letter', 'Letter(s)']
+HERELANG = shared.HERE / 'languages'    # os.path.join(HERE, 'languages')
+VRS = "2.1.x"
+AUTH = "(C) 2008-today Albert Visser"
+CONF = 'editor.hotkey_config'  # default configuration file
+BASE = shared.HERE.parent
+plugin_skeleton = '''\n
+"""
+See example_app_keys.py for a description of the plugin API.
+Only define the functions that need to be defined,
+for everything that's not in here
+the default code in the main program will be used.
+"""
+'''
+
+
+class LineType(enum.Enum):
+    """Types of lines in the csv file (first value)
+    """
+    SETT = 'Setting'
+    CAPT = 'Title'
+    WID = 'Width'
+    ORIG = 'is_type'
+    KEY = 'Keydef'
+
+
+def readlang(lang):
+    "get captions from language file"
+    captions = {}
+    with (HERELANG / lang).open() as f_in:
+        for x in f_in:
+            if x[0] == '#' or x.strip() == "":
+                continue
+            key, value = x.strip().split(None, 1)
+            captions[key] = value
+        return captions
+
+
+def get_csv_oms(lang):
+    "build descriptions for csv file"
+    captions = readlang(lang)
+    csv_oms = {shared.SettType.PLG.value: captions['T_NAMOF'].format(captions['S_PLGNAM'],
+                                                                     captions['T_NOPY']),
+               shared.SettType.PNL.value: captions['T_INSEL'].format(captions['S_PNLNAM']),
+               shared.SettType.RBLD.value: captions['T_BOOL'].format(captions['S_RBLD']),
+               shared.SettType.DETS.value: captions['T_BOOL'].format(captions['S_DETS']),
+               shared.SettType.RDEF.value: captions['T_BOOL'].format(captions['S_RSAV']),
+               LineType.CAPT.value: captions['T_COLTTL'],
+               LineType.WID.value: captions['T_COLWID'],
+               LineType.ORIG.value: captions['T_BOOL'].format(captions['T_COLIND'])}
+    return csv_oms
+
+
+def build_csv_sample_data(lang):
+    "create default data lines in the csv file"
+    csv_linetypes = [x.value for x in LineType.__members__.values()]
+    csv_sample_data = []
+    csv_oms = get_csv_oms(lang)
+    for indx, data in enumerate((['C_KEY', 'C_MODS', 'C_DESC'],
+                                 [120, 90, 292],
+                                 [0, 0, 0],)):
+        name = csv_linetypes[indx + 1]
+        oms = csv_oms[name]
+        data.insert(0, name)
+        data.append(oms)
+        csv_sample_data.append(data)
+    return csv_sample_data
+
+
+def get_pluginname(csvname):
+    "return the plugin's filename from the plugin's module name"
+    with open(csvname) as _in:
+        for line in _in:
+            test = line.split(',')
+            if test[:2] == [LineType.SETT.value, shared.SettType.PLG.value]:
+                pl_name = test[2]
+                break
+    # ideally we should import the given module to determine the actual file name
+    return pl_name.replace('.', '/') + '.py'
+
+
+def read_settings(ini):
+    "get application settings from a given location"
+    settings = {}
+    try:
+        sett = importlib.import_module(ini)
+        settings['filename'] = sett.__file__
+    except ImportError:
+        shared.log_exc()
+        sett = None
+    try:
+        settings['plugins'] = sett.PLUGINS
+    except AttributeError:
+        settings['plugins'] = []
+    try:
+        settings['lang'] = sett.LANG
+    except AttributeError:
+        settings['lang'] = 'english.lng'
+    try:
+        settings['initial'] = sett.INITIAL
+    except AttributeError:
+        pass
+    try:
+        settings['startup'] = sett.STARTUP
+    except AttributeError:
+        pass
+    try:
+        settings['title'] = sett.TITLE
+    except AttributeError:
+        pass
+    return settings
+
+
+def modify_settings(ini):
+    "modify the settings file at the given location"
+    inifile = ini['filename']
+    shutil.copyfile(inifile, inifile + '.bak')
+    data = []
+    dontread = False
+    with open(inifile + '.bak') as _in:
+        for line in _in:
+            if dontread:
+                if line.strip() == ']':
+                    data.append(line)
+                    dontread = False
+            else:
+                data.append(line)
+                if 'PLUGINS' in line:
+                    dontread = True
+                    for name, path in ini["plugins"]:
+                        data.append('    ("{}", "{}"),\n'.format(name, path))
+    with open(inifile, 'w') as _out:
+        for line in data:
+            _out.write(line)
+
+
+def read_columntitledata(editor):
+    """read the current language file and extract the already defined column headers
+    """
+    column_textids = []
+    column_names = []
+    in_section = False
+
+    with (HERELANG / editor.ini["lang"]).open() as f_in:
+        for line in f_in:
+            line = line.strip()
+            if line == '':
+                continue
+            elif line.startswith('#'):
+                if in_section:
+                    in_section = False
+                elif 'Keyboard mapping' in line:
+                    in_section = True
+                continue
+            test = line.split(None, 1)
+            shared.log(test, always=True)
+            if in_section:
+                column_textids.append(test[0])
+                column_names.append(test[1])
+    return column_textids, column_names
+
+
+def add_columntitledata(newdata):
+    """add the new column title(s) to all language files
+
+    input is a list of tuples (textid, text)"""
+    ## with os.scandir(HERELANG) as choices:
+    choices = os.scandir(HERELANG)
+    for choice in choices:
+        choice_file = pathlib.Path(choice.path)
+        if choice_file.suffix != '.lng':
+            continue
+        choice_o = pathlib.Path(choice.path + '~')
+        shutil.copyfile(str(choice), str(choice_o))
+        in_section = False
+        with choice_o.open() as f_in, choice.open('w') as f_out:
+            for line in f_in:
+                if line.startswith('# Keyboard mapping'):
+                    in_section = True
+                elif in_section and line.strip() == '':
+                    for textid, text in newdata:
+                        f_out.write('{} {}\n'.format(textid, text))
+                    in_section = False
+                f_out.write(line)
+
+
+def update_paths(paths, pathdata, lang):
+    """read the paths to the csv files from the data returned by the dialog
+    if applicable also write a skeleton plugin file
+    """
+    newpaths = []
+    print('in update_paths')
+    # for name, path in paths:
+    #     print(paths)
+    #     loc = path.input.text()         # bv editor/plugins/gitrefs_hotkeys.csv
+    for name, loc in paths:
+        newpaths.append((name, loc))
+        if name in pathdata:
+            data = pathdata[name]       # bv. ['editor.plugins.gitrefs_keys', 'gitrefs hotkeys', 0, 0, 0]
+            parts = data[0].split('.')
+            if parts[0] == '':
+                parts = parts[1:]
+            newfile = BASE / ('/'.join(parts) + '.py')
+            with newfile.open('w') as _out:
+                _out.write(plugin_skeleton)
+            initcsv(BASE / loc, data, lang)
+    return newpaths
+
+
+def initcsv(loc, data, lang):
+    """Initialize csv file
+
+    save some basic settings to a csv file together with some sample data
+    """
+    csv_oms = get_csv_oms(lang)
+    with loc.open("w") as _out:
+        wrt = csv.writer(_out)
+        for indx, sett in enumerate(shared.csv_settingnames):
+            wrt.writerow([LineType.SETT.value, sett, data[indx], csv_oms[sett]])
+        for row in build_csv_sample_data(lang):
+            wrt.writerow(row)
+
+
+def readcsv(pad):
+    """lees het csv bestand op het aangegeven pad en geeft de inhoud terug
+
+    retourneert dictionary van nummers met (voorlopig) 4-tuples
+    """
+    data = collections.OrderedDict()
+    coldata = []
+    settings = collections.OrderedDict()
+    try:
+        with open(pad, 'r') as _in:
+            rdr = csv.reader(_in)
+            rdrdata = [row for row in rdr]
+    except (FileNotFoundError, IsADirectoryError):
+        raise
+    key = 0
+    ## first = True
+    extrasettings = {}
+    for row in rdrdata:
+        rowtype, rowdata = row[0], row[1:]
+        if rowtype == LineType.SETT.value:
+            name, value, desc = rowdata
+            settings[name] = value
+            if name not in shared.csv_settingnames:
+                extrasettings[name] = desc
+        elif rowtype == LineType.CAPT.value:
+            for item in rowdata[:-1]:
+                coldata_item = ['', '', '']
+                coldata_item[0] = item
+                coldata.append(coldata_item)
+        elif rowtype == LineType.WID.value:
+            for ix, item in enumerate(rowdata[:-1]):
+                coldata[ix][1] = int(item)
+        elif rowtype == LineType.ORIG.value:
+            for ix, item in enumerate(rowdata[:-1]):
+                coldata[ix][2] = bool(int(item))
+        elif rowtype == LineType.KEY.value:
+            key += 1
+            data[key] = ([x.strip() for x in rowdata])
+        elif not rowtype.startswith('#'):
+            raise ValueError(rowtype)
+    if extrasettings:
+        settings['extra'] = extrasettings
+    return settings, coldata, data
+
+
+def writecsv(pad, settings, coldata, data, lang):
+    """schrijf de meegegeven data als csv bestand naar de aangegeven locatie
+    """
+    csvoms = get_csv_oms(lang)
+    extrasettoms = ''
+    if os.path.exists(pad):
+        shutil.copyfile(pad, pad + '~')
+    try:
+        extrasettoms = settings.pop('extra')
+    except KeyError:
+        extrasettoms = ''
+    with open(pad, "w") as _out:
+        wrt = csv.writer(_out)
+        for name, value in settings.items():
+            try:
+                settdesc = csvoms[name]
+            except KeyError:
+                settdesc = extrasettoms[name]
+            rowdata = LineType.SETT.value, name, value, settdesc
+            wrt.writerow(rowdata)
+        for ix, row in enumerate([[LineType.CAPT.value], [LineType.WID.value]]):
+            row += [x[ix] for x in coldata] + [csvoms[row[0]]]
+            wrt.writerow(row)
+        wrt.writerow([LineType.ORIG.value] + [int(x[2]) for x in coldata] +
+                     [csvoms[LineType.ORIG.value]])
+        for keydef in data.values():
+            row = [LineType.KEY.value] + [x for x in keydef]
+            wrt.writerow(row)
+    if extrasettoms:
+        settings['extra'] = extrasettoms
+
+
+def quick_check(filename):
+    """quick and dirty function for checking a csv file outside of the application
+
+    replicates some things that are done in building the list with keydefs
+    so we can catch errors in advance
+    """
+    _, column_info, data = readcsv(filename)
+    items = data.items()
+    if not items:   # if items is None or len(items) == 0:
+        print('No keydefs found in this file')
+        return
+    for key, data in items:
+        try:
+            for indx, col in enumerate(column_info):
+                _ = data[indx]
+        except Exception:
+            shared.log_exc()
+            print(key, data)
+            raise
+    print('{}: No errors found'.format(filename))
 
 
 class HotkeyPanel:
@@ -47,14 +374,14 @@ class HotkeyPanel:
         shared.log(self.pad)
         if self.pad == NO_PATH:
             # print('init HotkeyPanel with NO_PATH')
-            self.gui.setup_empty_screen(self.captions['I_NOPATH'],  self.parent.parent.title)
+            self.gui.setup_empty_screen(self.captions['I_NOPATH'], self.parent.parent.title)
             return
 
         nodata = ''
         if self.pad:
             try:
-                self.settings, self.column_info, self.data = shared.readcsv(self.pad)
-            except ValueError:
+                self.settings, self.column_info, self.data = readcsv(self.pad)
+            except ValueError as e:
                 shared.log_exc()
                 nodata = self.captions['I_NOSET'].format(e, self.pad)
             except FileNotFoundError:
@@ -126,7 +453,7 @@ class HotkeyPanel:
 
     def readkeys(self):
         "(re)read the data for the keydef list"
-        self.data = shared.readcsv(self.pad)[2]
+        self.data = readcsv(self.pad)[2]
 
     def savekeys(self):
         """save modified keydef back
@@ -138,8 +465,8 @@ class HotkeyPanel:
             self.reader.savekeys(self)
         except AttributeError:
             shared.log_exc()
-        shared.writecsv(self.pad, self.settings, self.column_info, self.data,
-                        self.parent.parent.ini['lang'])
+        writecsv(self.pad, self.settings, self.column_info, self.data,
+                 self.parent.parent.ini['lang'])
         self.set_title(modified=False)
 
     def setcaptions(self):
@@ -191,8 +518,7 @@ class HotkeyPanel:
             ix_item += 1
             self.keylist = [x for x in string.ascii_uppercase] + \
                 [x for x in string.digits] + ["F" + str(i) for i in range(1, 13)] + \
-                shared.named_keys + \
-                ['.', ',', '+', '=', '-', '`', '[', ']', '\\', ';', "'", '/']
+                named_keys + ['.', ',', '+', '=', '-', '`', '[', ']', '\\', ';', "'", '/']
         if 'C_MODS' in self.fields:
             self.init_origdata += [False, False, False, False]
             self.ix_mods = []
@@ -561,7 +887,7 @@ class ChoiceBook:
 
         for txt, loc in self.parent.ini['plugins']:
             if loc and not os.path.exists(loc):
-                loc = os.path.join(shared.BASE, loc)
+                loc = str(BASE / loc)
             win = HotkeyPanel(self, loc)
             self.gui.add_subscreen(win)
             try:
@@ -677,8 +1003,8 @@ class Editor:
     """
     def __init__(self, args):
         shared.save_log()
-        ini = args.conf or shared.CONF
-        self.ini = shared.read_settings(ini)
+        ini = args.conf or CONF
+        self.ini = read_settings(ini)
         self.readcaptions(self.ini['lang'])
         self.title = self.captions["T_MAIN"]
         self.pluginfiles = {}
@@ -720,8 +1046,8 @@ class Editor:
                                         ('M_PREF', (self.m_pref, ''))), '')),
                            ('M_EXIT', (self.m_exit, 'Ctrl+Q')), )),
                 ('M_TOOL', (('M_SETT2', ((('M_COL', (self.m_col, '')),
-                                         ('M_MISC', (self.m_tool, '')),
-                                         ('M_ENTR', (self.m_entry, '')), ), '')),
+                                          ('M_MISC', (self.m_tool, '')),
+                                          ('M_ENTR', (self.m_entry, '')), ), '')),
                             ('M_READ', (self.m_read, 'Ctrl+R')),
                             ('M_RBLD', (self.m_rebuild, 'Ctrl+B')),
                             ('M_SAVE', (self.m_save, 'Ctrl+S')), )),
@@ -768,7 +1094,7 @@ class Editor:
         if ok:
             if newtitle != oldtitle:
                 self.title = self.ini['title'] = newtitle
-                shared.change_setting('title', oldtitle, newtitle, self.ini['filename'])
+                self.change_setting('title', oldtitle, newtitle)
                 if not newtitle:
                     gui.show_message(self.gui, 'I_STITLE')
                     self.title = self.captions["T_MAIN"]
@@ -788,7 +1114,7 @@ class Editor:
         self.last_added = None  # wordt in de hierna volgende dialoog ingesteld
         if gui.show_dialog(self, gui.FilesDialog):
             selection = self.book.gui.get_selected_index()
-            shared.modify_settings(self.ini)
+            modify_settings(self.ini)
 
             # update the screen(s)
             # clear the selector and the stackedwidget while pairing up programs and windows
@@ -820,7 +1146,7 @@ class Editor:
                 else:  # new entry
                     loc = new_paths[indx]
                     if not os.path.exists(loc):
-                        loc = os.path.join(shared.BASE, loc)
+                        loc = str(BASE / loc)
                     win = HotkeyPanel(self.book, loc)
                 self.book.gui.add_tool(program, win)
 
@@ -846,7 +1172,7 @@ class Editor:
                 if not prgname:
                     # try to get the plugin name from the csv file
                     try:
-                        data = shared.readcsv(csvname)
+                        data = readcsv(csvname)
                     except (FileNotFoundError, IsADirectoryError, ValueError):
                         shared.log_exc()
                         gui.show_message(self.gui, text=self.captions['I_NOCSV'].format(csvname))
@@ -869,7 +1195,7 @@ class Editor:
         for filename in names_to_remove:
             os.remove(filename)
         newpathdata = {name: entry for name, entry in settingsdata.items() if len(entry) > 1}
-        self.ini["plugins"] = shared.update_paths(name_path_list, newpathdata, self.ini["lang"])
+        self.ini["plugins"] = update_paths(name_path_list, newpathdata, self.ini["lang"])
         return True
 
     def accept_csvsettings(self, cloc, ploc, title, rebuild, details, redef):
@@ -909,8 +1235,8 @@ class Editor:
         if newdata[0]:
             self.book.page.data = newdata[0]
             self.book.page.otherstuff = newdata[1]
-            shared.writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
-                            self.book.page.data, self.ini['lang'])
+            writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
+                     self.book.page.data, self.ini['lang'])
             self.book.page.populate_list()
             mld = self.captions['I_RBLD']
         else:
@@ -929,8 +1255,8 @@ class Editor:
             self.book.page.settings = {x: '' for x in shared.csv_settingnames}
         old_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
         if gui.show_dialog(self, gui.ExtraSettingsDialog):
-            shared.writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
-                            self.book.page.data, self.ini['lang'])
+            writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
+                     self.book.page.data, self.ini['lang'])
             test_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
             test_dets = bool(int(self.book.page.settings[shared.SettType.DETS.value]))
             test_rbld = bool(int(self.book.page.settings[shared.SettType.RBLD.value]))
@@ -979,7 +1305,7 @@ class Editor:
     def m_col(self, event=None):
         """define tool-specific settings: column properties
         """
-        self.col_textids, self.col_names = shared.read_columntitledata(self)
+        self.col_textids, self.col_names = read_columntitledata(self)
         if not self.book.page.settings:
             gui.show_message(self.gui, 'I_ADDSET')
             return
@@ -1005,8 +1331,8 @@ class Editor:
             gui.show_message(self.gui, 'I_NOCHG')
             return
 
-        shared.writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
-                        self.book.page.data, self.ini['lang'])
+        writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
+                 self.book.page.data, self.ini['lang'])
         # if not self.book.page.data:  # zeker weten dat we niet doorgaan als er geen data is?
         #     return
         headers = [self.captions[col[0]] for col in self.book.page.column_info]
@@ -1031,14 +1357,14 @@ class Editor:
         if len(set(test)) != len(test):
             gui.show_message(self.gui, 'I_DPLCOL')
             return False
-        #lastcol = -1
+        # lastcol = -1
         print('old info:', self.book.page.column_info)
         for ix, value in enumerate(sorted(data, key=lambda x: x[2])):
             name, width, colno, flag, old_colno = value
             # if colno == lastcol:
             #    gui.show_message(self.gui, 'I_DPLCOL')
             #    return False
-            #lastcol = colno
+            # lastcol = colno
             if name in self.col_names:
                 name = self.col_textids[self.col_names.index(name)]
             else:
@@ -1048,7 +1374,7 @@ class Editor:
                 name = self.last_textid
             column_info.append([name, width, flag, old_colno])
         if new_titles:
-            shared.add_columntitledata(new_titles)
+            add_columntitledata(new_titles)
         self.modified = self.book.page.column_info != column_info
         self.book.page.column_info = column_info
         print('new info:', self.book.page.column_info)
@@ -1065,8 +1391,8 @@ class Editor:
             return
         if gui.show_dialog(self, gui.EntryDialog):
             if self.book.page.data:
-                shared.writecsv(self.book.page.pad, self.book.page.settings,
-                                self.book.page.column_info, self.book.page.data, self.ini['lang'])
+                writecsv(self.book.page.pad, self.book.page.settings,
+                         self.book.page.column_info, self.book.page.data, self.ini['lang'])
                 self.book.page.populate_list()
 
     def m_lang(self, event=None):
@@ -1075,14 +1401,14 @@ class Editor:
         past de settings aan en leest het geselecteerde language file
         """
         # bepaal welke language files er beschikbaar zijn
-        choices = [x.name for x in shared.HERELANG.iterdir() if x.suffix == ".lng"]
+        choices = [x.name for x in HERELANG.iterdir() if x.suffix == ".lng"]
         # bepaal welke er momenteel geactiveerd is
         oldlang = self.ini['lang']
         indx = choices.index(oldlang) if oldlang in choices else 0
         lang, ok = gui.get_choice(self.gui, self.captions["P_SELLNG"], self.title, choices,
                                   current=indx)
         if ok:
-            shared.change_setting('lang', oldlang, lang, self.ini['filename'])
+            self.change_setting('lang', oldlang, lang)
             self.ini['lang'] = lang
             self.readcaptions(lang)
             self.setcaptions()
@@ -1090,9 +1416,7 @@ class Editor:
     def m_about(self, event=None):
         """(menu) callback voor het tonen van de "about" dialoog
         """
-        text = '\n'.join(self.captions['T_ABOUT'].format(self.captions['T_SHORT'],
-                                                         shared.VRS,
-                                                         shared.AUTH,
+        text = '\n'.join(self.captions['T_ABOUT'].format(self.captions['T_SHORT'], VRS, AUTH,
                                                          self.captions['T_LONG']).split(' / '))
         gui.show_message(self.gui, text=text)
 
@@ -1106,10 +1430,10 @@ class Editor:
             mode, pref = self.prefs
             if mode:
                 self.ini['startup'] = mode
-                shared.change_setting('startup', oldmode, mode, self.ini['filename'])
+                self.change_setting('startup', oldmode, mode)
             if mode == 'Fixed':
                 self.ini['initial'] = pref
-                shared.change_setting('initial', oldpref, pref, self.ini['filename'])
+                self.change_setting('initial', oldpref, pref)
 
     def accept_startupsettings(self, fix, remember, pref):
         """check and confirm input from initialToolDialog
@@ -1140,21 +1464,45 @@ class Editor:
         if mode == shared.mode_f and pref not in [x[0] for x in self.ini['plugins']]:
             oldmode, mode = mode, shared.mode_r
             self.ini['startup'] = mode
-            shared.change_setting('startup', oldmode, mode, self.ini['filename'])
+            self.change_setting('startup', oldmode, mode)
         # when setting is 'remember', set the remembered tool to the current one
         if mode == shared.mode_r:
             try:
                 oldpref, pref = pref, self.book.gui.get_selected_text()
-                shared.change_setting(self, 'initial', oldpref, pref, self.ini['filename'])
+                self.change_setting('initial', oldpref, pref)
             except AttributeError:  # selector bestaat niet als er geen tool pages zijn
                 pass
         # super().close()
         self.gui.close()
 
+    def change_setting(self, setting, old, new):
+        "change a setting and write it immediately"
+        setting = setting.upper()
+        inifile = self.ini['filename']
+        shutil.copyfile(inifile, inifile + '.bak')
+        with open(inifile + '.bak') as _in:
+            lines = _in.readlines()
+        for ix, line in enumerate(lines):
+            if setting is not None and line.startswith(setting):
+                if not old:
+                    lines[ix] = line.replace("''", "'{}'".format(new))
+                elif not new:
+                    lines[ix] = line.replace("'{}'".format(old), "''")
+                    if setting == 'TITLE':
+                        lines[ix - 2: ix + 1] = [lines[ix - 2]]
+                else:
+                    lines[ix] = line.replace(old, new)
+                break
+        else:
+            lines.append('# {}\n'.format(self.captions['C_' + setting]))
+            lines.append("{} = '{}'\n".format(setting, new))
+        with open(inifile, 'w') as _out:
+            _out.writelines(lines)
+
     def readcaptions(self, lang):
         """get captions from language file or settings
         """
-        self.captions = shared.readlang(lang)
+        self.captions = readlang(lang)
         self.last_textid = ''
 
     # def set_title(self):
