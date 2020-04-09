@@ -914,7 +914,8 @@ class CompleteDialog(wx.Dialog):
         self.p0list.CreateGrid(len(self.cmds), 2)
         self.p0list.SetRowLabelSize(20)
 
-        for ix, row in enumerate((('Command', 280), ('Description', 400))):
+        for ix, row in enumerate((shared.get_text(self.parent, 'C_CMD'), (280),
+                                  shared.get_text(self.parent. 'C_DESC'), (400))):
             self.p0list.SetColLabelValue(ix, row[0])
             self.p0list.SetColSize(ix, row[1])
         # hdr.setStretchLastSection(True)

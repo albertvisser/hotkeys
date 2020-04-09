@@ -58,7 +58,7 @@ C_REMKEY &Verwijder geselecteerde regels
 C_KTXT Toets:
 C_CTXT Stel toets in op:
 C_SELPRG  Selecteer tool:
-C_FIND Zoek tekst in 
+C_FIND Zoek tekst in
 C_SELFIL Selecteer een bestand
 C_PRGNAM Programma
 C_CSVLOC Locatie van het CSV-bestand
@@ -108,7 +108,7 @@ I_GOTSETFIL CSV bestand {} bestaat al
 I_GOTPLGFIL plugin module {} bestaat al
 I_NOSET Onbekend soort instelling `{}` in CSV bestand {}
 Q_NOCHG Je hebt niks gewijzigd. Weet je zeker dat je dit wilt doen?
-I_NOCHG Geen aanpassingen 
+I_NOCHG Geen aanpassingen
 I_NODATA Geen data voor dit programma
 Q_DPLKEY Deze toetsencombinatie is al gedefinieerd, wil je hem vervangen?
 C_NONE Nog geen plugin voor {}
@@ -136,9 +136,18 @@ T_COLTTL Titels van de kolommen; zie de sleutels in het taalbestand
 T_COLWID Breedte van de kolommen
 T_COLIND geeft aan of de keydef standaard is of ge(her)definieerd
 I_NODET Bij keuze `aanpassen` moet keuze `toon details` ook aangekruisd zijn
-I_IMPLXTRA Implementeer extra functies in de plugin om dit te laten werken / in elk geval `add_extra_attributes / en misschien ook `translate_keyname` 
-I_TITLE Titel invullen s.v.p. 
-I_STITLE Standaard titel wordt gebruikt 
+I_IMPLXTRA Implementeer extra functies in de plugin om dit te laten werken / in elk geval `add_extra_attributes / en misschien ook `translate_keyname`
+I_TITLE Titel invullen s.v.p.
+I_STITLE Standaard titel wordt gebruikt
+I_NOPATH Geen pad gegevens for HotKeyPanel
+I_NOSETT Settings voor {} kunnen niet opgehaald/gegenereerd worden
+I_FILLALL Alle bestandsnamen invullen graag
+I_NOCSV  {} ziet er niet uit als een bruikbaar csv bestand
+I_NOPLNAM {} bevat geen verwijzing naar een plugin (PluginName setting)
+I_NOPLREF {} bevat geen verwijzing naar een valide plugin
+I_RBLD Toetsen definities opnieuw opgebouwd
+I_NODEFS Geen definitie gegevens
+I_NOEXTRA Geen extra definitie
 
 # menus/options
 M_APP  &Applicatie
@@ -158,3 +167,8 @@ M_ENTR Handmatige &Invoer
 M_PREF Voorkeursapplicatie
 M_HELP &Help
 M_ABOUT &Over...
+
+# comments in settings file
+C_INITIAL applicatie om bij startup te laten zien
+C_STARTUP te tonen applicatie: geselecteerd of onthouden bij afsluiten
+C_TITLE schermtitel (niet nodig indien standaardwaarde)

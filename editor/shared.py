@@ -200,7 +200,7 @@ def modify_settings(ini):
             _out.write(line)
 
 
-def change_setting(setting, old, new, inifile):
+def change_setting(win, setting, old, new, inifile):
     "change a setting and write it immediately"
     setting = setting.upper()
     shutil.copyfile(inifile, inifile + '.bak')
@@ -218,12 +218,7 @@ def change_setting(setting, old, new, inifile):
                 lines[ix] = line.replace(old, new)
             break
     else:
-        if setting == 'INITIAL':
-            lines.append('# application to show on startup\n')
-        elif setting == 'STARTUP':
-            lines.append('# application to show: selected or remember on closing\n')
-        elif setting == 'TITLE':
-            lines.append('# screen title (not needed if default)\n')
+        lines.append('# {}\n'.format(get_text(win, 'C_' + setting)))
         lines.append("{} = '{}'\n".format(setting, new))
     with open(inifile, 'w') as _out:
         _out.writelines(lines)

@@ -58,7 +58,7 @@ C_REMKEY &Delete selected keydef(s)
 C_KTXT Key:
 C_CTXT Map key to:
 C_SELPRG Select tool:
-C_FIND Find text in 
+C_FIND Find text in
 C_SELFIL Choose a file
 C_PRGNAM Program
 C_CSVLOC Location of the CSV-file
@@ -138,8 +138,17 @@ T_COLIND column indicates if keydef is original or (re)defined
 I_NODET For `redefine`, `show details` needs to be checked as well
 I_IMPLXTRA Please implement extra functions in plugin to make this work / you need at least `add_extra_attributes / and maybe `translate_keyname` as well
 I_TITLE Please enter a title
-I_STITLE Using standard title
- 
+I_STITLE Using standard titlei
+I_NOPATH No path data for HotKeyPanel
+I_NOSETT Can't build/get settings for {}
+I_FILLALL Please fill out all the filenames
+I_NOCSV  {} does not seem to be a usable csv file
+I_NOPLNAM {} does not contain a reference to a plugin (PluginName setting)
+I_NOPLREF {} does not contain a reference to a valid plugin
+I_RBLD	Keyboard definitions rebuilt
+I_NODEFS No definition data
+I_NOEXTRA  No extra definition
+
 # menus/options
 M_APP &Application
 M_READ (re)&Read definitions
@@ -158,3 +167,8 @@ M_MISC &Misc
 M_ENTR Manual &Entry
 M_HELP &Help
 M_ABOUT &About
+
+# comments in settings file
+C_INITIAL application to show on startup
+C_STARTUP application to show: selected or remember on closing
+C_TITLE screen title (not needed if default)

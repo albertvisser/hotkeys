@@ -47,7 +47,7 @@ class HotkeyPanel:
         shared.log(self.pad)
         if self.pad == NO_PATH:
             # print('init HotkeyPanel with NO_PATH')
-            self.gui.setup_empty_screen('No path data for HotKeyPanel', self.parent.parent.title)
+            self.gui.setup_empty_screen(self.captions['I_NOPATH'],  self.parent.parent.title)
             return
 
         nodata = ''
@@ -94,7 +94,7 @@ class HotkeyPanel:
                     self.otherstuff = self.reader.buildcsv(self, showinfo=False)[1]
                 except FileNotFoundError:
                     shared.log_exc()
-                    nodata = "Can't build/get settings for {}".format(modulename)
+                    nodata = self.captions['I_NOSETT'].format(modulename)
 
         if nodata:
             # print('init HotkeyPanel with no data', nodata)
@@ -840,7 +840,7 @@ class Editor:
             name, csvname = entry
             if name not in [x for x, y in self.ini['plugins']]:
                 if not csvname:
-                    gui.show_message(self.gui, text='Please fill out all filenames')
+                    gui.show_message(self.gui, text=self.captions['I_FILLALL'])
                     return False
                 prgname = settingsdata[name][0]
                 if not prgname:
@@ -849,23 +849,20 @@ class Editor:
                         data = shared.readcsv(csvname)
                     except (FileNotFoundError, IsADirectoryError, ValueError):
                         shared.log_exc()
-                        gui.show_message(self.gui, text='{} does not seem to be a usable '
-                                                        'csv file'.format(csvname))
+                        gui.show_message(self.gui, text=self.captions['I_NOCSV'].format(csvname))
                         return False
                     try:
                         prgname = data[0][shared.SettType.PLG.value]
                     except KeyError:
                         shared.log_exc()
-                        gui.show_message(self.gui, text='{} does not contain a reference to a plug'
-                                                        'in (PluginName setting)'.format(csvname))
+                        gui.show_message(self.gui, text=self.captions['I_NOPLNAM'].format(csvname))
                         return False
                 if len(settingsdata[name]) == 1:  # existing plugin
                     try:
                         _ = importlib.import_module(prgname)
                     except ImportError:
                         shared.log_exc()
-                        gui.show_message(self.gui, text='{} does not contain a reference to a '
-                                                        'valid plugin'.format(csvname))
+                        gui.show_message(self.gui, text=self.captions['I_NOPLREF'].format(csvname))
                         return False
 
                 self.pluginfiles[name] = prgname
@@ -915,13 +912,13 @@ class Editor:
             shared.writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
                             self.book.page.data, self.ini['lang'])
             self.book.page.populate_list()
-            mld = 'keyboard definitions rebuilt'
+            mld = self.captions['I_RBLD']
         else:
-            mld = 'No definition data'
+            mld = self.captions['I_NODEFS']
             try:
                 test = newdata[1]
             except IndexError:
-                mld = 'No extra definition'
+                mld = self.captions['I_NOEXTRA']
             mld = self.captions['I_NORBLD'].format(self.captions['I_#FOUND'].format(mld))
         gui.show_message(self.gui, text=mld)
 
@@ -1148,7 +1145,7 @@ class Editor:
         if mode == shared.mode_r:
             try:
                 oldpref, pref = pref, self.book.gui.get_selected_text()
-                shared.change_setting('initial', oldpref, pref, self.ini['filename'])
+                shared.change_setting(self, 'initial', oldpref, pref, self.ini['filename'])
             except AttributeError:  # selector bestaat niet als er geen tool pages zijn
                 pass
         # super().close()

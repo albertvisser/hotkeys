@@ -923,7 +923,8 @@ class CompleteDialog(qtw.QDialog):
 
         self.p0list = qtw.QTableWidget(len(self.cmds), 2, self)
         ## self.p0list.setColumnCount(2)
-        self.p0list.setHorizontalHeaderLabels(['Command', 'Description'])
+        self.p0list.setHorizontalHeaderLabels([shared.get_text(self.parent, 'C_CMD'),
+                                               shared.get_text(self.parent, 'C_DESC')])
         hdr = self.p0list.horizontalHeader()
         ## p0hdr.resizeSection(0, 300)
         hdr.setStretchLastSection(True)
