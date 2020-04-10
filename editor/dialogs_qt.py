@@ -800,7 +800,7 @@ class ExtraSettingsDialog(qtw.QDialog):
         """update settings and leave
         """
         data = [(x.text(), y.text(), z.text()) for x, y, z in self.data]
-        ok = self.master.confirm_extrasettings(self.t_program.text(), self.t_title.text(),
+        ok = self.master.accept_extrasettings(self.t_program.text(), self.t_title.text(),
                                                self.c_rebuild.isChecked(),
                                                self.c_showdet.isChecked(),
                                                self.c_redef.isChecked(), data)

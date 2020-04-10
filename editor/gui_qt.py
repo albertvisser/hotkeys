@@ -333,7 +333,7 @@ class SingleDataInterface(qtw.QFrame):
 # -- helper methods (called from master class) --
     def set_title(self, title):
         "set screen title"
-        self.setWindowTitle(title)
+        self.master.parent.parent.gui.setWindowTitle(title)
 
     def clear_list(self):
         "reset listcontrol"

@@ -134,10 +134,6 @@ def read_settings(ini):
         settings['startup'] = sett.STARTUP
     except AttributeError:
         pass
-    try:
-        settings['title'] = sett.TITLE
-    except AttributeError:
-        pass
     return settings
 
 
@@ -364,6 +360,7 @@ class HotkeyPanel:
         # switch om het gedrag van bepaalde routines tijdens initialisatie te beïnvloeden
         self.initializing_screen = True
         self.modified = False
+        self.title = self.parent.parent.title
 
         self.gui = gui.SingleDataInterface(self.parent.gui, self)
 
@@ -374,7 +371,7 @@ class HotkeyPanel:
         shared.log(self.pad)
         if self.pad == NO_PATH:
             # print('init HotkeyPanel with NO_PATH')
-            self.gui.setup_empty_screen(self.captions['I_NOPATH'], self.parent.parent.title)
+            self.gui.setup_empty_screen(self.captions['I_NOPATH'], self.title)
             return
 
         nodata = ''
@@ -425,7 +422,7 @@ class HotkeyPanel:
 
         if nodata:
             # print('init HotkeyPanel with no data', nodata)
-            self.gui.setup_empty_screen(nodata, self.parent.parent.title)
+            self.gui.setup_empty_screen(nodata, self.title)
             return
 
         try:
@@ -548,7 +545,7 @@ class HotkeyPanel:
         """
         if modified is not None:
             self.modified = False
-        title = self.parent.parent.title
+        title = self.title
         if self.modified:
             title += ' ' + self.captions["T_MOD"]
         self.gui.set_title(title)
@@ -1040,8 +1037,7 @@ class Editor:
     def get_menudata(self):
         """provide the application's menu definition to the program
         """
-        return (('M_APP', (('M_SETT', ((('M_TITLE', (self.m_title, '')),
-                                        ('M_LOC', (self.m_loc, 'Ctrl+F')),
+        return (('M_APP', (('M_SETT', ((('M_LOC', (self.m_loc, 'Ctrl+F')),
                                         ('M_LANG', (self.m_lang, 'Ctrl+L')),
                                         ('M_PREF', (self.m_pref, ''))), '')),
                            ('M_EXIT', (self.m_exit, 'Ctrl+Q')), )),
@@ -1085,20 +1081,6 @@ class Editor:
             gui.show_message(self.gui, 'I_DEFSAV')
             return
         gui.show_message(self.gui, 'I_RSTRT')
-
-    def m_title(self, event=None):
-        """menu callback voor het aanpassen van de schermtitel
-        """
-        oldtitle = self.title
-        newtitle, ok = gui.get_textinput(self.gui, oldtitle, self.captions["T_TITLE"])
-        if ok:
-            if newtitle != oldtitle:
-                self.title = self.ini['title'] = newtitle
-                self.change_setting('title', oldtitle, newtitle)
-                if not newtitle:
-                    gui.show_message(self.gui, 'I_STITLE')
-                    self.title = self.captions["T_MAIN"]
-                self.book.page.set_title()
 
     def m_loc(self, event=None):
         """(menu) callback voor aanpassen van de bestandslocaties
@@ -1284,6 +1266,9 @@ class Editor:
                 return False
         self.book.page.settings[shared.SettType.PLG.value] = program
         self.book.page.settings[shared.SettType.PNL.value] = title
+        if self.book.page.title != title:
+            self.book.page.title = title
+            self.book.page.set_title()
         self.book.page.settings[shared.SettType.RBLD.value] = '1' if rebuild else '0'
         self.book.page.settings[shared.SettType.DETS.value] = '1' if showdet else '0'
         self.book.page.settings[shared.SettType.RDEF.value] = '1' if redef else '0'
@@ -1504,14 +1489,6 @@ class Editor:
         """
         self.captions = readlang(lang)
         self.last_textid = ''
-
-    # def set_title(self):
-    #     """adjust title and modified flag
-    #     """
-    #     title = self.title
-    #     # if self.book.page.modified:
-    #     #     title += ' ' + self.captions["T_MOD"]
-    #     self.gui.set_window_title(title)
 
     def setcaptions(self):
         """propagate captions to other parts of the application
