@@ -77,6 +77,7 @@ class SingleDataInterface(qtw.QFrame):
 
         self.setLayout(sizer)
         shared.log(self.master.otherstuff)
+        self.set_listselection(0)
 
     def add_extra_fields(self):
         """fields showing details for selected keydef, to make editing possible
