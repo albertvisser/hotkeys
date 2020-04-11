@@ -533,7 +533,7 @@ class ColumnSettingsDialog(qtw.QDialog):
         colnum += 1
         w_name = qtw.QComboBox(self)
         w_name.addItems(self.col_names)
-        w_name.setEditable(True)
+        w_name.setEditable(False)  # True) nieuwe titels even niet mogelijk
         if name:
             w_name.setCurrentIndex(self.col_textids.index(name))
         else:
