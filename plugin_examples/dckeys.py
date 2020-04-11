@@ -236,6 +236,24 @@ def get_cmddict(path, stdkeys):
     return cmddict, dflt_assign, cmdparms, categories
 
 
+def get_toolbarcmds(path):
+    """lees de zelfgedefinieerde toolbar items
+
+    om deze te kunnen koppelen aan de betreffende keyboard shortcuts
+    """
+    data = ET.parse(path)
+    root = data.getroot()
+    tbcmddict = collections.defaultdict(list)
+    for toolbar in list(root.find('Toolbars')):
+        for row in list(toolbar):
+            for item in row.findall('Program'):
+                key = item.find('ID').text
+                desc = item.find('Hint').text
+                cmd = item.find('Command').text
+                parm = item.find('Params').text
+                tbcmddict[key] = (desc, cmd, parm)
+    return tbcmddict
+
 def analyze_keydefs(root, cat_name):
     """build the data for a specific category (corresponds with a section in the
     html)
@@ -342,6 +360,7 @@ def buildcsv(page, showinfo=True):
     # or http://doublecmd.github.io/doc/en/cmds.html
     dc_desc = os.path.join(os.path.dirname(__file__), 'descs.csv')
     dc_desc_h = ''
+    dc_sett = '/home/albert/.config/doublecmd/doublecmd.xml'
 
     shortcuts = collections.OrderedDict()
     has_path = False
@@ -350,6 +369,7 @@ def buildcsv(page, showinfo=True):
     dc_keys = page.settings['DC_KEYS']
     dc_cmds = page.settings['DC_CMDS']
     dc_desc_h = page.settings['DC_DESC']
+    dc_sett = page.settings['DC_SETT']
     # except KeyError:    # TODO: save defaults as settings
     #     pass
     if dc_desc_h:
@@ -380,6 +400,9 @@ def buildcsv(page, showinfo=True):
     # map omschrijvingen op standaard toets definities
     stdkeys, context_list = get_stdkeys(dc_keys)
 
+    # lees gegevens tbv sneltoetsen voor zelfgedefinieerde toolbar buttons
+    tbcmddict = get_toolbarcmds(dc_sett)
+
     # map omschrijvingen op commandonamen door de toets definities waar deze op gemapt
     # zijn te vergelijken
     cmddict, defaults, params, catdict = get_cmddict(dc_cmds, stdkeys)
@@ -393,6 +416,11 @@ def buildcsv(page, showinfo=True):
             # let op: hier ontstaan ook nieuwe cmddict entries
             oms = cmddict[value[3]] = tobecompleted[value[3]] = ''
         templist.append(oms)
+        # map omschrijving op toolbaritem indien van toepassing
+        if templist[4] == 'cm_ExecuteToolbarItem':
+            itemid = templist[5].split('=', 1)[1]
+            oms, cmd, parm = tbcmddict[itemid]
+            templist[7] = '{} ({} {})'.format(oms, cmd, parm)
         shortcuts[key] = tuple(templist)
 
     # stuur dialoog aan om beschrijvingen aan te vullen
@@ -404,7 +432,7 @@ def buildcsv(page, showinfo=True):
             # opslaan vindt plaats in de dialoog, maar de data teruggeven scheelt weer I/O
             # zoals de dialoog nu aangestuurd wordt worden de omschrijvingen opgeslagen
             #   met volgnummers in plaats van commandonaam als key
-            omsdict = page.gui.dialog_data
+            omsdict = page.dialog_data  # page.gui.dialog_data
     # invullen in shortcuts en cmddict
     for key, value in shortcuts.items():
         for cmnd, desc in omsdict.items():
