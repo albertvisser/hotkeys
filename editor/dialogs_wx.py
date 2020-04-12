@@ -18,13 +18,13 @@ def show_message(win, message_id='', text='', args=None):
     wx.MessageBox(text, shared.get_title(win), parent=win)
 
 
-def show_cancel_message(win, message_id ='', text='', args=None):
+def show_cancel_message(win, message_id='', text='', args=None):
     """als de vorige, maar met de mogelijkheid 'Cancel' te kiezen
 
     daarom retourneert deze functie ook een boolean
     """
     text = shared.get_text(win, message_id, text, args)
-    ok = wx.MessageBox(text, shared.get_title(win), parent=win, style= wx.OK | wx.CANCEL)
+    ok = wx.MessageBox(text, shared.get_title(win), parent=win, style=wx.OK | wx.CANCEL)
     return ok == wx.OK
 
 
@@ -83,7 +83,7 @@ def get_file_to_open(win, oms='', extension='', start=''):
     return wx.LoadFileSelector(what, extension, default_name=start, parent=win)
 
 
-def get_file_to_save(win, oms='', extension= '', start=''):
+def get_file_to_save(win, oms='', extension='', start=''):
     """toon een dialoog waarmee een file geopend kan worden om te schrijven
     """
     what = shared.get_open_title(win, 'C_SELFIL', oms)
@@ -246,7 +246,7 @@ class DeleteDialog(wx.Dialog):
         label = wx.StaticText(self, label=self.parent.master.captions['Q_REMPRG'])
         hsizer.Add(label, 0, wx.LEFT | wx.RIGHT, 5)
         # hsizer.addStretch()
-        self.sizer.Add(hsizer,1, wx.TOP, 5)
+        self.sizer.Add(hsizer, 1, wx.TOP, 5)
 
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         check = wx.CheckBox(self, label=self.parent.master.captions['Q_REMCSV'])
@@ -517,7 +517,8 @@ class ColumnSettingsDialog(wx.Dialog):
         self.checks.append(check)
 
         colnum += 1
-        w_name = wx.ComboBox(self.scrl, size=(140, -1), style=wx.CB_READONLY,  # wx.CB_DROPDOWN,
+        # w_name = wx.ComboBox(self.scrl, size=(140, -1), style=wx.CB_READONLY,  # wx.CB_DROPDOWN,
+        w_name = wx.ComboBox(self.scrl, size=(140, -1), style=wx.CB_DROPDOWN,
                              choices=self.col_names)
         if name:
             w_name.SetSelection(self.col_names.index(self.master.captions[name]))
@@ -611,7 +612,111 @@ class ColumnSettingsDialog(wx.Dialog):
         """
         data = [(x.GetValue(), y.GetValue(), a.GetValue(), b.GetValue(), c)
                 for x, y, a, b, c in self.data]
-        return self.master.accept_columnsettings(data)
+        # return self.master.accept_columnsettings(data)
+        ok, cancel = self.master.accept_columnsettings(data)
+        # onderstaande moet niet met True/False, heeft wx daar niet iets anders voor?
+        if ok:
+            return True  # super().accept()
+        elif cancel:
+            return False  # super().reject()
+
+
+class NewColumnsDialog(wx.Dialog):
+    """dialoog voor aanmaken nieuwe kolom-ids
+    """
+    def __init__(self, parent, master):
+        self.parent = parent
+        self.master = master
+        self.initializing = True
+        super().__init__(parent, title=self.master.title)
+        self.languages = [x.name for x in shared.HERELANG.iterdir() if x.suffix == ".lng"]
+        for indx, name in enumerate(self.languages):
+            if name == self.master.ini['lang']:
+                self.colno_current = indx + 1
+                break
+
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        # text = self.master.captions['T_COLSET'].format(
+        #     self.master.book.page.settings[shared.SettType.PNL.value])
+        text = '\n'.join(('Geef voor elke nieuwe kolomnaam een id op voor in het (ver)taalbestand',
+                          'alsmede de toe te voegen vertalingen'))
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        hsizer.Add(wx.StaticText(self, label=text))
+        self.sizer.Add(hsizer, 0, wx.ALL, 5)
+
+        # maak een kop voor de id en een kop voor elke taal die ondersteund wordt
+        gsizer = wx.GridSizer(len(self.languages) + 1, 2, 2)
+        # row = col = 0
+        # hsizer.addWidget(qtw.QLabel(self.master.captions['C_TTL'], self),
+        #                  alignment=core.Qt.AlignHCenter | core.Qt.AlignVCenter)
+        gsizer.Add(wx.StaticText(self, label='text id'), 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 10)
+        for name in self.languages:
+            # col += 1
+            gsizer.Add(wx.StaticText(self, label=name.split('.')[0].title()), 0,
+                       wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 10)
+
+        # maak een regel voor elke waarde in self.master.dialog_data en neem de waarde over
+        # in de kolom die overeenkomt met de huidige taalinstelling
+        # tevens de betreffende text entry read-only maken
+        self.widgets = []
+        for item in self.master.dialog_data:
+            # row += 1
+            entry_row = []
+            for col in range(len(self.languages) + 1):
+                entry = wx.TextCtrl(self)
+                if col == 0:
+                    text = 'C_xxx'
+                elif col == self.colno_current:
+                    text = item
+                    entry.Enable(False)
+                else:
+                    text = ''
+                entry.SetValue(text)
+                gsizer.Add(entry, 0, wx.ALL | wx.EXPAND)  # , row, col)
+                entry_row.append(entry)
+            self.widgets.append(entry_row)
+        self.sizer.Add(gsizer, 0, wx.ALL | wx.EXPAND, 5)
+
+        # grid.Add(text, 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP | wx.LEFT, 5)
+        # grid.Add(self.t_program, 0, wx.TOP | wx.RIGHT, 5)
+
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.Add(wx.Button(self, id=wx.ID_OK))
+        hbox.Add(wx.Button(self, id=wx.ID_CANCEL))
+        self.sizer.Add(hbox, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_BOTTOM | wx.TOP | wx.BOTTOM,
+                       5)
+        self.sizer.SetSizeHints(self)
+        self.SetSizer(self.sizer)
+        self.initializing = False
+
+    def accept(self):
+        """save the changed settings and leave
+        """
+        # get all the symbols from a language file
+        used_symbols = []
+        with (shared.HERELANG / self.master.ini['lang']).open() as _in:
+            for line in _in:
+                if line.strip() and not line.startswith('#'):
+                    used_symbols.append(line.split()[0])
+        # check and process the information entered
+        self.master.dialog_data = collections.defaultdict(dict)
+        for row in self.widgets:
+            for colno, col in enumerate(row):
+                entered = col.GetValue()
+                if not entered:
+                    show_message(self, text='Not all texts have been entered')
+                    return
+                if colno == 0:
+                    if entered == 'C_xxx':
+                        show_message(self, text='Please change model value for text_id')
+                        return
+                    if entered in used_symbols:
+                        show_message(self, text='Value {} for text_id is already used or not unique'.format(entered))
+                        return
+                    used_symbols.append(entered)
+            for ix, col in enumerate(row[1:]):
+                # self.master.dialog_data[row[0].text()][self.languages[ix]] = col.text()
+                self.master.dialog_data[self.languages[ix]][row[0].GetValue()] = col.GetValue()
 
 
 class ExtraSettingsDialog(wx.Dialog):
@@ -818,7 +923,7 @@ class ExtraSettingsDialog(wx.Dialog):
                                               self.c_showdet.GetValue(),
                                               self.c_redef.GetValue(), data)
         if not ok:
-            "eigenlijk moet de dialoog in dit geval opnieuw gestart worden"
+            # eigenlijk moet de dialoog in dit geval opnieuw gestart worden
             self.c_showdet.SetValue(False)
             self.c_redef.SetValue(False)
         return ok

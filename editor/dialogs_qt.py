@@ -663,7 +663,7 @@ class NewColumnsDialog(qtw.QDialog):
             for col in range(len(self.languages) + 1):
                 entry = qtw.QLineEdit(self)
                 if col == 0:
-                    text = 'C_xxx'.format(row)
+                    text = 'C_xxx'
                 elif col == self.colno_current:
                     text = item
                     entry.setEnabled(False)
