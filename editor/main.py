@@ -1,4 +1,4 @@
-"""hotkeys.py - PyQt5 version
+"""Hotkeys: GUI independent code
 
     main gui (choicebook)
     importeert de verschillende applicatiemodules
@@ -14,8 +14,6 @@ import os
 # import sys
 import csv
 import enum
-import pdb
-import pathlib
 import shutil
 import collections
 import string
@@ -29,7 +27,6 @@ NO_PATH = 'NO_PATH'
 named_keys = ['Insert', 'Del', 'Home', 'End', 'PgUp', 'PgDn', 'Space', 'Backspace',
               'Tab', 'Num+', 'Num-', 'Num*', 'Num/', 'Enter', 'Esc', 'Left', 'Right',
               'Up', 'Down', 'Letter', 'Letter(s)']
-HERELANG = shared.HERE / 'languages'    # os.path.join(HERE, 'languages')
 VRS = "2.1.x"
 AUTH = "(C) 2008-today Albert Visser"
 CONF = 'editor.hotkey_config'  # default configuration file
@@ -57,7 +54,7 @@ class LineType(enum.Enum):
 def readlang(lang):
     "get captions from language file"
     captions = {}
-    with (HERELANG / lang).open() as f_in:
+    with (shared.HERELANG / lang).open() as f_in:
         for x in f_in:
             if x[0] == '#' or x.strip() == "":
                 continue
@@ -167,7 +164,7 @@ def read_columntitledata(editor):
     column_names = []
     in_section = False
 
-    with (HERELANG / editor.ini["lang"]).open() as f_in:
+    with (shared.HERELANG / editor.ini["lang"]).open() as f_in:
         for line in f_in:
             line = line.strip()
             if line == '':
@@ -189,22 +186,21 @@ def read_columntitledata(editor):
 def add_columntitledata(newdata):
     """add the new column title(s) to all language files
 
-    input is a list of tuples (textid, text)"""
-    ## with os.scandir(HERELANG) as choices:
-    choices = os.scandir(HERELANG)
-    for choice in choices:
-        choice_file = pathlib.Path(choice.path)
-        if choice_file.suffix != '.lng':
-            continue
-        choice_o = pathlib.Path(choice.path + '~')
-        shutil.copyfile(str(choice), str(choice_o))
+    input is a dict of dicts ({language: {textid: text, ...}, ...})
+    the previous code assumed a list of tuples ((textid, text), ...) where the same text was copied
+      and the translation had to be made afterwards
+    """
+    for language, data in newdata.items():
+        language_file = shared.HERELANG / language
+        backup_file = shared.HERELANG / (language + '~')
+        shutil.copyfile(str(language_file), str(backup_file))
         in_section = False
-        with choice_o.open() as f_in, choice.open('w') as f_out:
+        with backup_file.open() as f_in, language_file.open('w') as f_out:
             for line in f_in:
                 if line.startswith('# Keyboard mapping'):
                     in_section = True
                 elif in_section and line.strip() == '':
-                    for textid, text in newdata:
+                    for textid, text in data.items():
                         f_out.write('{} {}\n'.format(textid, text))
                     in_section = False
                 f_out.write(line)
@@ -1333,40 +1329,53 @@ class Editor:
         test = [x[0] for x in data]
         if len(set(test)) != len(test):
             gui.show_message(self.gui, 'I_DPLNAM')
-            return False
+            return False, False  # not ok but continue with dialog
         if len([x for x in test if x]) != len(test):
             gui.show_message(self.gui, 'I_MISSNAM')
-            return False
+            return False, False  # not ok but continue with dialog
         # checken op dubbele kolomnummers
         test = [x[2] for x in data]
         if len(set(test)) != len(test):
             gui.show_message(self.gui, 'I_DPLCOL')
-            return False
+            return False, False  # not ok but continue with dialog
         # lastcol = -1
         print('old info:', self.book.page.column_info)
         for ix, value in enumerate(sorted(data, key=lambda x: x[2])):
             name, width, colno, flag, old_colno = value
-            # if colno == lastcol:
-            #    gui.show_message(self.gui, 'I_DPLCOL')
-            #    return False
-            # lastcol = colno
             if name in self.col_names:
                 name = self.col_textids[self.col_names.index(name)]
             else:
-                # TODO: vervangen door dialoog om identifier op te geven, zie ticket #814
-                self.last_textid = "{:0>3}".format(int(self.last_textid) + 1)
-                new_titles.append((self.last_textid, name))
-                name = self.last_textid
+                new_titles.append((name))  # hier gebruikt-ie tekst in plaats van tekst-id
             column_info.append([name, width, flag, old_colno])
+        print('column info before newcolumnsdialog:', column_info)
         if new_titles:
-            add_columntitledata(new_titles)
+            self.dialog_data = new_titles
+            if not gui.show_dialog(self, gui.NewColumnsDialog):
+                gui.show_message(self.gui, text='Dialog canceled, all changes are lost')
+                return False, True  # not ok, do not continue with dialog
+            print(self.dialog_data)
+            # hier moeten we voor de nieuwe namen nog de naam vervangen door het tekstid
+            # de betreffende zaken zitten in self.dialog_data[self.ini['lang']]
+            for item in column_info:
+                for key, value in self.dialog_data[self.ini['lang']].items():
+                    if item[0] == value:
+                        item[0] = key
+                        break
+            print('column info after newcolumnsdialog:', column_info)
+            add_columntitledata(self.dialog_data)
+            print('column info after add_columntitledata:', column_info)
+            for ix, item in enumerate(new_titles):
+                for name, value in self.dialog_data[self.ini['lang']].items():
+                    if value == item:
+                        new_titles[ix] = (name, item)
+                        break
         self.modified = self.book.page.column_info != column_info
         self.book.page.column_info = column_info
         print('new info:', self.book.page.column_info)
         for id_, name in new_titles:
             self.captions[id_] = name
             self.book.page.captions[id_] = name
-        return True
+        return True, False  # ok, done with dialog (but not canceled)
 
     def m_entry(self, event=None):
         """manual entry of keyboard shortcuts
@@ -1386,7 +1395,7 @@ class Editor:
         past de settings aan en leest het geselecteerde language file
         """
         # bepaal welke language files er beschikbaar zijn
-        choices = [x.name for x in HERELANG.iterdir() if x.suffix == ".lng"]
+        choices = [x.name for x in shared.HERELANG.iterdir() if x.suffix == ".lng"]
         # bepaal welke er momenteel geactiveerd is
         oldlang = self.ini['lang']
         indx = choices.index(oldlang) if oldlang in choices else 0

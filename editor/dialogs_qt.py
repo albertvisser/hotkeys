@@ -17,7 +17,7 @@ def show_message(win, message_id='', text='', args=None):
     qtw.QMessageBox.information(win, shared.get_title(win), text)
 
 
-def show_cancel_message(win, message_id ='', text='', args=None):
+def show_cancel_message(win, message_id='', text='', args=None):
     """als de vorige, maar met de mogelijkheid 'Cancel' te kiezen
 
     daarom retourneert deze functie ook een boolean
@@ -493,7 +493,7 @@ class ColumnSettingsDialog(qtw.QDialog):
         self.col_textids, self.col_names = self.master.col_textids, self.master.col_names
         for ix, item in enumerate(self.master.book.page.column_info):
             print(item)
-            item.append(ix)  # dit zou column_info niet moeten bijwerken maar doet dat blijkbaar wel?
+            item.append(ix)
             self.add_row(*item)
         box = qtw.QVBoxLayout()
         box.addLayout(self.gsizer)
@@ -533,7 +533,6 @@ class ColumnSettingsDialog(qtw.QDialog):
         colnum += 1
         w_name = qtw.QComboBox(self)
         w_name.addItems(self.col_names)
-        w_name.setEditable(False)  # True) nieuwe titels even niet mogelijk
         if name:
             w_name.setCurrentIndex(self.col_textids.index(name))
         else:
@@ -613,9 +612,111 @@ class ColumnSettingsDialog(qtw.QDialog):
         """
         data = [(x.currentText(), y.value(), a.text(), b.isChecked(), c)
                 for x, y, a, b, c in self.data]
-        ok = self.master.accept_columnsettings(data)
+        ok, cancel = self.master.accept_columnsettings(data)
         if ok:
             super().accept()
+        elif cancel:
+            super().reject()
+
+
+class NewColumnsDialog(qtw.QDialog):
+    """dialoog voor aanmaken nieuwe kolom-ids
+    """
+    def __init__(self, parent, master):
+        self.parent = parent
+        self.master = master
+        self.initializing = True
+        super().__init__(parent)
+        self.setWindowTitle(self.master.title)
+        self.languages = [x.name for x in shared.HERELANG.iterdir() if x.suffix == ".lng"]
+        for indx, name in enumerate(self.languages):
+            if name == self.master.ini['lang']:
+                self.colno_current = indx + 1
+                break
+
+        self.sizer = qtw.QVBoxLayout()
+        # text = self.master.captions['T_COLSET'].format(
+        #     self.master.book.page.settings[shared.SettType.PNL.value])
+        text = '\n'.join(('Geef voor elke nieuwe kolomnaam een id op voor in het (ver)taalbestand',
+                          'alsmede de toe te voegen vertalingen'))
+        hsizer = qtw.QHBoxLayout()
+        hsizer.addWidget(qtw.QLabel(text, self))
+        self.sizer.addLayout(hsizer)
+
+        # maak een kop voor de id en een kop voor elke taal die ondersteund wordt
+        gsizer = qtw.QGridLayout()
+        row = col = 0
+        # hsizer.addWidget(qtw.QLabel(self.master.captions['C_TTL'], self),
+        #                  alignment=core.Qt.AlignHCenter | core.Qt.AlignVCenter)
+        gsizer.addWidget(qtw.QLabel('text id', self), row, col)
+        for name in self.languages:
+            col += 1
+            gsizer.addWidget(qtw.QLabel(name.split('.')[0].title(), self), row, col)
+
+        # maak een regel voor elke waarde in self.master.dialog_data en neem de waarde over
+        # in de kolom die overeenkomt met de huidige taalinstelling
+        # tevens de betreffende text entry read-only maken
+        self.widgets = []
+        for item in self.master.dialog_data:
+            row += 1
+            entry_row = []
+            for col in range(len(self.languages) + 1):
+                entry = qtw.QLineEdit(self)
+                if col == 0:
+                    text = 'C_xxx'.format(row)
+                elif col == self.colno_current:
+                    text = item
+                    entry.setEnabled(False)
+                else:
+                    text = ''
+                entry.setText(text)
+                gsizer.addWidget(entry, row, col)
+                entry_row.append(entry)
+            self.widgets.append(entry_row)
+        self.sizer.addLayout(gsizer)
+
+        buttonbox = qtw.QDialogButtonBox()
+        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.accepted.connect(self.accept)
+        buttonbox.rejected.connect(self.reject)
+        hsizer = qtw.QHBoxLayout()
+        hsizer.addStretch()
+        hsizer.addWidget(buttonbox)
+        hsizer.addStretch()
+        self.sizer.addLayout(hsizer)
+        self.setLayout(self.sizer)
+        self.initializing = False
+
+    def accept(self):
+        """save the changed settings and leave
+        """
+        # get all the symbols from a language file
+        used_symbols = []
+        with (shared.HERELANG / self.master.ini['lang']).open() as _in:
+            for line in _in:
+                if line.strip() and not line.startswith('#'):
+                    used_symbols.append(line.split()[0])
+        # check and process the information entered
+        self.master.dialog_data = collections.defaultdict(dict)
+        for row in self.widgets:
+            for colno, col in enumerate(row):
+                entered = col.text()
+                if not entered:
+                    show_message(self, text='Not all texts have been entered')
+                    return
+                if colno == 0:
+                    if entered == 'C_xxx':
+                        show_message(self, text='Please change model value for text_id')
+                        return
+                    if entered in used_symbols:
+                        show_message(self, text='Value {} for text_id is already used or not unique'.format(entered))
+                        return
+                    used_symbols.append(entered)
+            for ix, col in enumerate(row[1:]):
+                # self.master.dialog_data[row[0].text()][self.languages[ix]] = col.text()
+                self.master.dialog_data[self.languages[ix]][row[0].text()] = col.text()
+        super().accept()
 
 
 class ExtraSettingsDialog(qtw.QDialog):
@@ -801,9 +902,9 @@ class ExtraSettingsDialog(qtw.QDialog):
         """
         data = [(x.text(), y.text(), z.text()) for x, y, z in self.data]
         ok = self.master.accept_extrasettings(self.t_program.text(), self.t_title.text(),
-                                               self.c_rebuild.isChecked(),
-                                               self.c_showdet.isChecked(),
-                                               self.c_redef.isChecked(), data)
+                                              self.c_rebuild.isChecked(),
+                                              self.c_showdet.isChecked(),
+                                              self.c_redef.isChecked(), data)
         if not ok:
             self.c_showdet.setChecked(False)
             self.c_redef.setChecked(False)

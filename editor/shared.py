@@ -8,6 +8,7 @@ import enum
 import logging
 
 HERE = pathlib.Path(__file__).parent.resolve()  # os.path.abspath(os.path.dirname(__file__))
+HERELANG = HERE / 'languages'    # os.path.join(HERE, 'languages')
 WIN = True if sys.platform == "win32" else False
 LIN = True if os.name == 'posix' else False
 
