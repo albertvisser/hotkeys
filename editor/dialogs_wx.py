@@ -615,10 +615,9 @@ class ColumnSettingsDialog(wx.Dialog):
         # return self.master.accept_columnsettings(data)
         ok, cancel = self.master.accept_columnsettings(data)
         # onderstaande moet niet met True/False, heeft wx daar niet iets anders voor?
-        if ok:
+        if ok or not cancel:
             return True  # super().accept()
-        elif cancel:
-            return False  # super().reject()
+        return False  # super().reject()
 
 
 class NewColumnsDialog(wx.Dialog):
@@ -705,18 +704,19 @@ class NewColumnsDialog(wx.Dialog):
                 entered = col.GetValue()
                 if not entered:
                     show_message(self, text='Not all texts have been entered')
-                    return
+                    return False
                 if colno == 0:
                     if entered == 'C_xxx':
                         show_message(self, text='Please change model value for text_id')
-                        return
+                        return False
                     if entered in used_symbols:
                         show_message(self, text='Value {} for text_id is already used or not unique'.format(entered))
-                        return
+                        return False
                     used_symbols.append(entered)
             for ix, col in enumerate(row[1:]):
                 # self.master.dialog_data[row[0].text()][self.languages[ix]] = col.text()
                 self.master.dialog_data[self.languages[ix]][row[0].GetValue()] = col.GetValue()
+        return True
 
 
 class ExtraSettingsDialog(wx.Dialog):
