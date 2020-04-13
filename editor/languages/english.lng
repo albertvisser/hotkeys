@@ -74,6 +74,7 @@ C_WID Width
 C_IND "Is Redefined" Indicator
 C_SEQ Sequence on screen
 T_TITLE Enter screen title (clear to use default)
+T_TRANS Enter a translation id for each new column name / as well as the necessary translations
 
 # save dialog
 Q_SAVCHG Previously selected definition was changed - save now?
@@ -142,12 +143,16 @@ I_STITLE Using standard titlei
 I_NOPATH No path data for HotKeyPanel
 I_NOSETT Can't build/get settings for {}
 I_FILLALL Please fill out all the filenames
-I_NOCSV  {} does not seem to be a usable csv file
+I_NOCSV {} does not seem to be a usable csv file
 I_NOPLNAM {} does not contain a reference to a plugin (PluginName setting)
 I_NOPLREF {} does not contain a reference to a valid plugin
-I_RBLD	Keyboard definitions rebuilt
+I_RBLD Keyboard definitions rebuilt
 I_NODEFS No definition data
-I_NOEXTRA  No extra definition
+I_NOEXTRA No extra definition
+T_NOTALL Not all texts have been entered
+T_CHGSTD Please change standard value for text_id
+T_NOTUNIQ Value {} for text_id is already used or not unique in input
+T_CANCLD Dialog canceled, all changes are lost
 
 # menus/options
 M_APP &Application

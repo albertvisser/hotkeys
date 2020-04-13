@@ -627,10 +627,7 @@ class NewColumnsDialog(wx.Dialog):
         super().__init__(parent, title=self.master.title)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        # text = self.master.captions['T_COLSET'].format(
-        #     self.master.book.page.settings[shared.SettType.PNL.value])
-        text = '\n'.join(('Geef voor elke nieuwe kolomnaam een id op voor in het (ver)taalbestand',
-                          'alsmede de toe te voegen vertalingen'))
+        text = '\n'.join((self.master.captions['T_TRANS'].split(' / ')))
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         hsizer.Add(wx.StaticText(self, label=text))
         self.sizer.Add(hsizer, 0, wx.ALL, 5)
@@ -639,17 +636,12 @@ class NewColumnsDialog(wx.Dialog):
         numcols = len(self.master.dialog_data['languages']) + 1
         gsizer = wx.GridSizer(numcols, 2, 2)
         # row = col = 0
-        # hsizer.addWidget(qtw.QLabel(self.master.captions['C_TTL'], self),
-        #                  alignment=core.Qt.AlignHCenter | core.Qt.AlignVCenter)
         gsizer.Add(wx.StaticText(self, label='text id'), 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 10)
         for name in self.master.dialog_data['languages']:
             # col += 1
             gsizer.Add(wx.StaticText(self, label=name.split('.')[0].title()), 0,
                        wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 10)
 
-        # maak een regel voor elke waarde in self.master.dialog_data en neem de waarde over
-        # in de kolom die overeenkomt met de huidige taalinstelling
-        # tevens de betreffende text entry read-only maken
         self.widgets = []
         for item in self.master.dialog_data['new_titles']:
             # row += 1

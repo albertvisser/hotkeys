@@ -74,6 +74,7 @@ C_WID Breedte
 C_IND "Is Aangepast" indicator
 C_SEQ Volgorde op scherm
 T_TITLE Vul schermtitel in (maak leeg voor standaard titel)
+T_TRANS Geef voor elke nieuwe kolomnaam een id op voor in het (ver)taalbestand / alsmede de toe te voegen vertalingen
 
 # save dialog
 Q_SAVCHG Eerder gekozen definitie is gewijzigd - nu opslaan?
@@ -148,6 +149,10 @@ I_NOPLREF {} bevat geen verwijzing naar een valide plugin
 I_RBLD Toetsen definities opnieuw opgebouwd
 I_NODEFS Geen definitie gegevens
 I_NOEXTRA Geen extra definitie
+T_NOTALL Niet alle waarden zijn ingevuld
+T_CHGSTD Standaard waarde(n) voor text_id aanpassen graag
+T_NOTUNIQ De text_id waarde {} is al in gebruik of dubbel ingevoerd
+T_CANCLD Dialog afgebroken, wijzigingen gaan verloren
 
 # menus/options
 M_APP  &Applicatie

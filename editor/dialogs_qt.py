@@ -630,10 +630,7 @@ class NewColumnsDialog(qtw.QDialog):
         self.setWindowTitle(self.master.title)
 
         self.sizer = qtw.QVBoxLayout()
-        # text = self.master.captions['T_COLSET'].format(
-        #     self.master.book.page.settings[shared.SettType.PNL.value])
-        text = '\n'.join(('Geef voor elke nieuwe kolomnaam een id op voor in het (ver)taalbestand',
-                          'alsmede de toe te voegen vertalingen'))
+        text = '\n'.join((self.master.captions['T_TRANS'].split(' / ')))
         hsizer = qtw.QHBoxLayout()
         hsizer.addWidget(qtw.QLabel(text, self))
         self.sizer.addLayout(hsizer)
@@ -641,8 +638,6 @@ class NewColumnsDialog(qtw.QDialog):
         # maak een kop voor de id en een kop voor elke taal die ondersteund wordt
         gsizer = qtw.QGridLayout()
         row = col = 0
-        # hsizer.addWidget(qtw.QLabel(self.master.captions['C_TTL'], self),
-        #                  alignment=core.Qt.AlignHCenter | core.Qt.AlignVCenter)
         gsizer.addWidget(qtw.QLabel('text id', self), row, col)
         for name in self.master.dialog_data['languages']:
             col += 1

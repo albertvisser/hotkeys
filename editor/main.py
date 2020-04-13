@@ -1355,7 +1355,7 @@ class Editor:
             self.dialog_data = {'textid': 'C_XXX', 'new_titles': new_titles,
                                 'languages': languages, 'colno': colno}
             if not gui.show_dialog(self, gui.NewColumnsDialog):
-                gui.show_message(self.gui, text='Dialog canceled, all changes are lost')
+                gui.show_message(self.gui, 'T_CANCLD')
                 return False, True  # not ok, do not continue with dialog
             for item in column_info:
                 for key, value in self.dialog_data[self.ini['lang']].items():
@@ -1392,14 +1392,14 @@ class Editor:
             for colno, col in enumerate(row):
                 entered = col
                 if not entered:
-                    gui.show_message(self.gui, text='Not all texts have been entered')
+                    gui.show_message(self.gui, 'T_NOTALL')
                     return False
                 if colno == 0:
                     if entered == modeltext:
-                        gui.show_message(self.gui, text='Please change model value for text_id')
+                        gui.show_message(self.gui, 'T_CHGSTD')
                         return False
                     if entered in used_symbols:
-                        gui.show_message(self.gui, text='Value {} for text_id is already used or not unique'.format(entered))
+                        gui.show_message(self.gui, 'T_NOTUNIQ', args=(entered,))
                         return False
                     used_symbols.append(entered)
             for ix, col in enumerate(row[1:]):
