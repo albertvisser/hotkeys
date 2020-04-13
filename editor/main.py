@@ -1339,31 +1339,30 @@ class Editor:
             gui.show_message(self.gui, 'I_DPLCOL')
             return False, False  # not ok but continue with dialog
         # lastcol = -1
-        print('old info:', self.book.page.column_info)
         for ix, value in enumerate(sorted(data, key=lambda x: x[2])):
             name, width, colno, flag, old_colno = value
             if name in self.col_names:
                 name = self.col_textids[self.col_names.index(name)]
             else:
-                new_titles.append((name))  # hier gebruikt-ie tekst in plaats van tekst-id
+                new_titles.append((name))
             column_info.append([name, width, flag, old_colno])
-        print('column info before newcolumnsdialog:', column_info)
         if new_titles:
-            self.dialog_data = new_titles
+            languages = [x.name for x in shared.HERELANG.iterdir() if x.suffix == ".lng"]
+            for indx, name in enumerate(languages):
+                if name == self.ini['lang']:
+                    colno = indx + 1
+                    break
+            self.dialog_data = {'textid': 'C_XXX', 'new_titles': new_titles,
+                                'languages': languages, 'colno': colno}
             if not gui.show_dialog(self, gui.NewColumnsDialog):
                 gui.show_message(self.gui, text='Dialog canceled, all changes are lost')
                 return False, True  # not ok, do not continue with dialog
-            print(self.dialog_data)
-            # hier moeten we voor de nieuwe namen nog de naam vervangen door het tekstid
-            # de betreffende zaken zitten in self.dialog_data[self.ini['lang']]
             for item in column_info:
                 for key, value in self.dialog_data[self.ini['lang']].items():
                     if item[0] == value:
                         item[0] = key
                         break
-            print('column info after newcolumnsdialog:', column_info)
             add_columntitledata(self.dialog_data)
-            print('column info after add_columntitledata:', column_info)
             for ix, item in enumerate(new_titles):
                 for name, value in self.dialog_data[self.ini['lang']].items():
                     if value == item:
@@ -1371,11 +1370,42 @@ class Editor:
                         break
         self.modified = self.book.page.column_info != column_info
         self.book.page.column_info = column_info
-        print('new info:', self.book.page.column_info)
         for id_, name in new_titles:
             self.captions[id_] = name
             self.book.page.captions[id_] = name
         return True, False  # ok, done with dialog (but not canceled)
+
+    def accept_newcolumns(self, entries):
+        "check and confirm input from newcolumns dialog"
+        languages = self.dialog_data['languages']
+        modeltext = self.dialog_data['textid']
+        # get all the symbols from a language file
+        used_symbols = []
+        with (shared.HERELANG / self.ini['lang']).open() as _in:
+            for line in _in:
+                if line.strip() and not line.startswith('#'):
+                    used_symbols.append(line.split()[0])
+        # check and process the information entered
+        print('accepting', entries)
+        self.dialog_data = collections.defaultdict(dict)
+        for row in entries:
+            for colno, col in enumerate(row):
+                entered = col
+                if not entered:
+                    gui.show_message(self.gui, text='Not all texts have been entered')
+                    return False
+                if colno == 0:
+                    if entered == modeltext:
+                        gui.show_message(self.gui, text='Please change model value for text_id')
+                        return False
+                    if entered in used_symbols:
+                        gui.show_message(self.gui, text='Value {} for text_id is already used or not unique'.format(entered))
+                        return False
+                    used_symbols.append(entered)
+            for ix, col in enumerate(row[1:]):
+                # self.dialog_data[row[0]][self.languages[ix]] = col
+                self.dialog_data[languages[ix]][row[0]] = col
+        return True
 
     def m_entry(self, event=None):
         """manual entry of keyboard shortcuts

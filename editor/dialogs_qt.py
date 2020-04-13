@@ -492,7 +492,6 @@ class ColumnSettingsDialog(qtw.QDialog):
         self.data, self.checks = [], []
         self.col_textids, self.col_names = self.master.col_textids, self.master.col_names
         for ix, item in enumerate(self.master.book.page.column_info):
-            print(item)
             item.append(ix)
             self.add_row(*item)
         box = qtw.QVBoxLayout()
@@ -533,6 +532,7 @@ class ColumnSettingsDialog(qtw.QDialog):
         colnum += 1
         w_name = qtw.QComboBox(self)
         w_name.addItems(self.col_names)
+        w_name.setEditable(True)
         if name:
             w_name.setCurrentIndex(self.col_textids.index(name))
         else:
@@ -628,11 +628,6 @@ class NewColumnsDialog(qtw.QDialog):
         self.initializing = True
         super().__init__(parent)
         self.setWindowTitle(self.master.title)
-        self.languages = [x.name for x in shared.HERELANG.iterdir() if x.suffix == ".lng"]
-        for indx, name in enumerate(self.languages):
-            if name == self.master.ini['lang']:
-                self.colno_current = indx + 1
-                break
 
         self.sizer = qtw.QVBoxLayout()
         # text = self.master.captions['T_COLSET'].format(
@@ -649,26 +644,25 @@ class NewColumnsDialog(qtw.QDialog):
         # hsizer.addWidget(qtw.QLabel(self.master.captions['C_TTL'], self),
         #                  alignment=core.Qt.AlignHCenter | core.Qt.AlignVCenter)
         gsizer.addWidget(qtw.QLabel('text id', self), row, col)
-        for name in self.languages:
+        for name in self.master.dialog_data['languages']:
             col += 1
             gsizer.addWidget(qtw.QLabel(name.split('.')[0].title(), self), row, col)
 
-        # maak een regel voor elke waarde in self.master.dialog_data en neem de waarde over
+        # maak een regel voor elke nieuwe titel en neem de waarde over
         # in de kolom die overeenkomt met de huidige taalinstelling
         # tevens de betreffende text entry read-only maken
         self.widgets = []
-        for item in self.master.dialog_data:
+        for item in self.master.dialog_data['new_titles']:
             row += 1
             entry_row = []
-            for col in range(len(self.languages) + 1):
+            for col in range(len(self.master.dialog_data['languages']) + 1):
                 entry = qtw.QLineEdit(self)
                 if col == 0:
-                    text = 'C_xxx'
-                elif col == self.colno_current:
-                    text = item
-                    entry.setEnabled(False)
+                    text = self.master.dialog_data['textid']
                 else:
-                    text = ''
+                    text = item
+                    if col == self.master.dialog_data['colno']:
+                        entry.setEnabled(False)
                 entry.setText(text)
                 gsizer.addWidget(entry, row, col)
                 entry_row.append(entry)
@@ -691,32 +685,10 @@ class NewColumnsDialog(qtw.QDialog):
     def accept(self):
         """save the changed settings and leave
         """
-        # get all the symbols from a language file
-        used_symbols = []
-        with (shared.HERELANG / self.master.ini['lang']).open() as _in:
-            for line in _in:
-                if line.strip() and not line.startswith('#'):
-                    used_symbols.append(line.split()[0])
-        # check and process the information entered
-        self.master.dialog_data = collections.defaultdict(dict)
-        for row in self.widgets:
-            for colno, col in enumerate(row):
-                entered = col.text()
-                if not entered:
-                    show_message(self, text='Not all texts have been entered')
-                    return
-                if colno == 0:
-                    if entered == 'C_xxx':
-                        show_message(self, text='Please change model value for text_id')
-                        return
-                    if entered in used_symbols:
-                        show_message(self, text='Value {} for text_id is already used or not unique'.format(entered))
-                        return
-                    used_symbols.append(entered)
-            for ix, col in enumerate(row[1:]):
-                # self.master.dialog_data[row[0].text()][self.languages[ix]] = col.text()
-                self.master.dialog_data[self.languages[ix]][row[0].text()] = col.text()
-        super().accept()
+        entries = [[col.text() for col in row] for row in self.widgets]
+        ok = self.master.accept_newcolumns(entries)
+        if ok:
+            super().accept()
 
 
 class ExtraSettingsDialog(qtw.QDialog):

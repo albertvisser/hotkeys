@@ -358,7 +358,6 @@ class FilesDialog(wx.Dialog):
         self.sizer.Layout()
         # self.scrl.SetScrollbar(wx.VERTICAL, 0, 1, self.rownum * 52)
         self.scrl.ScrollChildIntoView(browse)
-        # print('ready adding row')
         # vbar = self.scrl.verticalScrollBar()
         # vbar.setMaximum(vbar.maximum() + 52)
         # vbar.setValue(vbar.maximum())
@@ -366,7 +365,6 @@ class FilesDialog(wx.Dialog):
     def delete_row(self, rownum):
         """remove a tool location definition row
         """
-        print('in remove_row')
         check = self.checks[rownum]
         name, win = self.paths[rownum]
         self.gsizer.Remove(rownum)
@@ -593,7 +591,6 @@ class ColumnSettingsDialog(wx.Dialog):
     def add_column(self, event):
         """nieuwe rij aanmaken in self.gsizer"""
         self.add_row()
-        print('ready adding column')
         # self.Fit()
 
     def remove_columns(self, event):
@@ -628,11 +625,6 @@ class NewColumnsDialog(wx.Dialog):
         self.master = master
         self.initializing = True
         super().__init__(parent, title=self.master.title)
-        self.languages = [x.name for x in shared.HERELANG.iterdir() if x.suffix == ".lng"]
-        for indx, name in enumerate(self.languages):
-            if name == self.master.ini['lang']:
-                self.colno_current = indx + 1
-                break
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         # text = self.master.captions['T_COLSET'].format(
@@ -644,12 +636,13 @@ class NewColumnsDialog(wx.Dialog):
         self.sizer.Add(hsizer, 0, wx.ALL, 5)
 
         # maak een kop voor de id en een kop voor elke taal die ondersteund wordt
-        gsizer = wx.GridSizer(len(self.languages) + 1, 2, 2)
+        numcols = len(self.master.dialog_data['languages']) + 1
+        gsizer = wx.GridSizer(numcols, 2, 2)
         # row = col = 0
         # hsizer.addWidget(qtw.QLabel(self.master.captions['C_TTL'], self),
         #                  alignment=core.Qt.AlignHCenter | core.Qt.AlignVCenter)
         gsizer.Add(wx.StaticText(self, label='text id'), 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 10)
-        for name in self.languages:
+        for name in self.master.dialog_data['languages']:
             # col += 1
             gsizer.Add(wx.StaticText(self, label=name.split('.')[0].title()), 0,
                        wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 10)
@@ -658,32 +651,27 @@ class NewColumnsDialog(wx.Dialog):
         # in de kolom die overeenkomt met de huidige taalinstelling
         # tevens de betreffende text entry read-only maken
         self.widgets = []
-        for item in self.master.dialog_data:
+        for item in self.master.dialog_data['new_titles']:
             # row += 1
             entry_row = []
-            for col in range(len(self.languages) + 1):
+            for col in range(numcols):
                 entry = wx.TextCtrl(self)
                 if col == 0:
-                    text = 'C_xxx'
-                elif col == self.colno_current:
-                    text = item
-                    entry.Enable(False)
+                    text = self.master.dialog_data['textid']
                 else:
-                    text = ''
+                    text = item
+                    if col == self.master.dialog_data['colno']:
+                        entry.Enable(False)
                 entry.SetValue(text)
                 gsizer.Add(entry, 0, wx.ALL | wx.EXPAND)  # , row, col)
                 entry_row.append(entry)
             self.widgets.append(entry_row)
         self.sizer.Add(gsizer, 0, wx.ALL | wx.EXPAND, 5)
 
-        # grid.Add(text, 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP | wx.LEFT, 5)
-        # grid.Add(self.t_program, 0, wx.TOP | wx.RIGHT, 5)
-
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         hbox.Add(wx.Button(self, id=wx.ID_OK))
         hbox.Add(wx.Button(self, id=wx.ID_CANCEL))
-        self.sizer.Add(hbox, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_BOTTOM | wx.TOP | wx.BOTTOM,
-                       5)
+        self.sizer.Add(hbox, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.TOP | wx.BOTTOM, 5)
         self.sizer.SetSizeHints(self)
         self.SetSizer(self.sizer)
         self.initializing = False
@@ -691,32 +679,8 @@ class NewColumnsDialog(wx.Dialog):
     def accept(self):
         """save the changed settings and leave
         """
-        # get all the symbols from a language file
-        used_symbols = []
-        with (shared.HERELANG / self.master.ini['lang']).open() as _in:
-            for line in _in:
-                if line.strip() and not line.startswith('#'):
-                    used_symbols.append(line.split()[0])
-        # check and process the information entered
-        self.master.dialog_data = collections.defaultdict(dict)
-        for row in self.widgets:
-            for colno, col in enumerate(row):
-                entered = col.GetValue()
-                if not entered:
-                    show_message(self, text='Not all texts have been entered')
-                    return False
-                if colno == 0:
-                    if entered == 'C_xxx':
-                        show_message(self, text='Please change model value for text_id')
-                        return False
-                    if entered in used_symbols:
-                        show_message(self, text='Value {} for text_id is already used or not unique'.format(entered))
-                        return False
-                    used_symbols.append(entered)
-            for ix, col in enumerate(row[1:]):
-                # self.master.dialog_data[row[0].text()][self.languages[ix]] = col.text()
-                self.master.dialog_data[self.languages[ix]][row[0].GetValue()] = col.GetValue()
-        return True
+        entries = [[col.GetValue() for col in row] for row in self.widgets]
+        return self.master.accept_newcolumns(entries)
 
 
 class ExtraSettingsDialog(wx.Dialog):
