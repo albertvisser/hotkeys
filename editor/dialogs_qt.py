@@ -615,8 +615,8 @@ class ColumnSettingsDialog(qtw.QDialog):
         ok, cancel = self.master.accept_columnsettings(data)
         if ok:
             super().accept()
-        elif cancel:
-            super().reject()
+        # elif cancel:
+        #     super().reject()
 
 
 class NewColumnsDialog(qtw.QDialog):

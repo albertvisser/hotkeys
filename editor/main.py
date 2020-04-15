@@ -1355,7 +1355,7 @@ class Editor:
             self.dialog_data = {'textid': 'C_XXX', 'new_titles': new_titles,
                                 'languages': languages, 'colno': colno}
             if not gui.show_dialog(self, gui.NewColumnsDialog):
-                gui.show_message(self.gui, 'T_CANCLD')
+                # gui.show_message(self.gui, 'T_CANCLD')
                 return False, True  # not ok, do not continue with dialog
             for item in column_info:
                 for key, value in self.dialog_data[self.ini['lang']].items():
