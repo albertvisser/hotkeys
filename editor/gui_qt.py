@@ -324,6 +324,7 @@ class SingleDataInterface(qtw.QFrame):
 
     def refresh_headers(self, headers):
         "apply changes in the column headers"
+        self.p0list.setColumnCount(len(headers))
         self.p0list.setHeaderLabels(headers)
         hdr = self.p0list.header()
         hdr.setSectionsClickable(True)
