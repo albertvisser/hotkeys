@@ -522,6 +522,7 @@ class ColumnSettingsDialog(wx.Dialog):
             w_name.SetSelection(self.col_names.index(self.master.captions[name]))
         # else:
         #     w_name.SetSelection('')
+        w_name.Bind(wx.EVT_TEXT, self.on_text_changed)
         ghsizer.Add(w_name, 0, wx.LEFT, 2)
 
         colnum += 1
@@ -569,6 +570,20 @@ class ColumnSettingsDialog(wx.Dialog):
         # vbar = self.scrl.verticalScrollBar()
         # vbar.setMaximum(vbar.maximum() + 62)
         # vbar.setValue(vbar.maximum())
+
+    def on_text_changed(self, event):
+        "change column width according to length of column title"
+        win = event.GetEventObject()
+        wintext = win.GetValue()
+        for ix, text in enumerate(win.GetItems()):
+            if text.startswith(wintext):
+                win.SetSelection(ix)
+                wintext = text
+                break
+        for w_name, w_width, *dummy in self.data:
+            if w_name == win:
+                w_width.SetValue(10 * len(wintext))
+                break
 
     def delete_row(self, rownum):
         """remove a column settings row

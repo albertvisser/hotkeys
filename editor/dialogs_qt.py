@@ -537,6 +537,7 @@ class ColumnSettingsDialog(qtw.QDialog):
             w_name.setCurrentIndex(self.col_textids.index(name))
         else:
             w_name.clearEditText()
+        w_name.editTextChanged.connect(self.on_text_changed)
         ghsizer.addWidget(w_name, rownum)
         colnum += 1
         hsizer = qtw.QHBoxLayout()
@@ -592,6 +593,14 @@ class ColumnSettingsDialog(qtw.QDialog):
         self.gsizer.removeItem(self.gsizer.itemAt(rownum))
         self.checks.pop(rownum)
         self.data.pop(rownum)
+
+    def on_text_changed(self, text):
+        "adjust column width based on length of column title"
+        for w_name, w_width, *dummy in self.data:
+            column_text = w_name.currentText()
+            if column_text == text:
+                w_width.setValue(10 * len(text))
+                break
 
     def add_column(self):
         """nieuwe rij aanmaken in self.gsizer"""
