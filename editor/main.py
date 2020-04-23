@@ -718,11 +718,11 @@ class HotkeyPanel:
                 if 'C_CNTXT' in self.fields:
                     self.gui.init_combobox(self.gui.cmb_commando)
                     context = self.gui.get_combobox_selection(self.gui.cmb_context)
-                    # if self.contextactionsdict:
-                    #     actionslist = self.contextactionsdict[context]
-                    # else:
-                    #     actionslist = self.commandslist
-                    actionslist = self.contextactionsdict[context] or self.commandslist
+                    if self.contextactionsdict:
+                        actionslist = self.contextactionsdict[context]
+                    else:
+                        actionslist = self.commandslist
+                    # actionslist = self.contextactionsdict[context] or self.commandslist
                     self.gui.init_combobox(self.gui.cmb_commando, actionslist)
                     valuelist = actionslist
                 else:
