@@ -15,7 +15,6 @@ import bs4 as bs  # import BeautifulSoup
 from ..gui import show_cancel_message, get_file_to_open, get_file_to_save, show_dialog
 from .dckeys_gui import add_extra_fields, layout_extra_fields, DcCompleteDialog
 
-
 instructions = """\
 Instructions for rebuilding the keyboard shortcut definitions
 
@@ -36,6 +35,8 @@ a name different from the DC_PATH setting is present.
 
 
 def _shorten_mods(modifier_list):
+    """replace modifier names with their first letters and in a fixed sequence
+    """
     result = ''
     if 'Ctrl' in modifier_list:
         result += 'C'
@@ -101,13 +102,13 @@ def get_keydefs(path):
 
     keydata = collections.OrderedDict()
     keydata_2 = collections.defaultdict(list)
-    ## all_contexts = set()
-    ## all_controls = set()
+    all_contexts = set()
+    all_controls = set()
     key = 0
     root = data.getroot()
     for form in list(root.find('Hotkeys')):
         context = form.get('Name')
-        ## all_contexts.add(context)
+        all_contexts.add(context)
         for hotkey in form:
             shortcut = hotkey.find('Shortcut').text
             if shortcut.endswith('+'):
@@ -128,7 +129,7 @@ def get_keydefs(path):
             test = hotkey.findall('Control')
             if test is None:
                 controls = ''
-                ## all_controls.add(controls)
+                all_controls.add(controls)
             else:
                 controls = []
                 for control in test:
@@ -139,7 +140,7 @@ def get_keydefs(path):
             keydata[key] = (keyname, modifiers, context, command, parameter, controls)
             keydata_2[(keyname, modifiers)].append((context, command))
 
-    return keydata, keydata_2
+    return keydata, keydata_2, all_contexts, all_controls
 
 
 def get_stdkeys(path):
@@ -189,9 +190,9 @@ def get_stdkeys(path):
                     ## keynames = parse_keytext(test[0].text)  # kan meer dan 1 key / keycombo bevatten
                 ## else:
                     ## oms = col.text  # zelfde omschrijving als uit cmd's ? Heb ik deze nodig?
-        if keynames:
-            for name, mods in keynames:
-                stdkeys[(_translate_keynames(name), mods)].append((context, oms))
+            if keynames:
+                for name, mods in keynames:
+                    stdkeys[(_translate_keynames(name), mods)].append((context, oms))
 
     return stdkeys, contexts_list
 
@@ -253,6 +254,7 @@ def get_toolbarcmds(path):
                 parm = item.find('Params').text
                 tbcmddict[key] = (desc, cmd, parm)
     return tbcmddict
+
 
 def analyze_keydefs(root, cat_name):
     """build the data for a specific category (corresponds with a section in the
@@ -378,12 +380,12 @@ def buildcsv(page, showinfo=True):
         ok = show_cancel_message(page, text=instructions)
         if not ok:
             # geeft (soms) segfault
-            return
+            return None
         kbfile = get_file_to_open(page, extension='SCF files (*.scf)', start=initial)
     else:
         kbfile = initial
     if not kbfile:
-        return
+        return None
 
     if dc_keys.startswith('http'):
         if not os.path.exists('/tmp/dc_files/shortcuts.html'):
@@ -395,7 +397,7 @@ def buildcsv(page, showinfo=True):
     # map toetscombinatie, context, commandonaam, argumenten en venster op een
     # gezamenlijke sleutel (volgnummer)
     # map tevens context + commando op een toetscombinatie
-    keydata, definedkeys = get_keydefs(kbfile)            # alles
+    keydata, definedkeys, contextkeys, controlkeys = get_keydefs(kbfile)            # alles
 
     # map omschrijvingen op standaard toets definities
     stdkeys, context_list = get_stdkeys(dc_keys)
@@ -405,11 +407,12 @@ def buildcsv(page, showinfo=True):
 
     # map omschrijvingen op commandonamen door de toets definities waar deze op gemapt
     # zijn te vergelijken
+    # tevens staan er wat default assignments in dit file beschreven
     cmddict, defaults, params, catdict = get_cmddict(dc_cmds, stdkeys)
     tobecompleted = {}
     for key, value in keydata.items():
         templist = list(value)
-        templist.insert(2, ('X' if value != stdkeys[key] else ''))  # standard / customized
+        templist.insert(2, '')  # ('X' if value != stdkeys[key] else ''))  # standard / customized
         try:
             oms = cmddict[value[3]]
         except KeyError:
@@ -425,6 +428,7 @@ def buildcsv(page, showinfo=True):
 
     # stuur dialoog aan om beschrijvingen aan te vullen
     descfile = dc_desc
+    tobecompleted.pop('cm_ExecuteToolbarItem')  # FIXME: waar komt deze er in?
     omsdict = tobecompleted
     if showinfo:
         page.dialog_data = {'descfile': descfile, 'omsdict': omsdict}
@@ -432,7 +436,7 @@ def buildcsv(page, showinfo=True):
             # opslaan vindt plaats in de dialoog, maar de data teruggeven scheelt weer I/O
             # zoals de dialoog nu aangestuurd wordt worden de omschrijvingen opgeslagen
             #   met volgnummers in plaats van commandonaam als key
-            omsdict = page.dialog_data  # page.gui.dialog_data
+            omsdict = page.dialog_data
     # invullen in shortcuts en cmddict
     for key, value in shortcuts.items():
         for cmnd, desc in omsdict.items():
@@ -440,7 +444,7 @@ def buildcsv(page, showinfo=True):
                 itemlist = list(value)
                 itemlist[-1] = desc
                 shortcuts[key] = tuple(itemlist)
-                cmddict.update(omsdict)
+    cmddict.update(omsdict)
 
     # geen idee of ik deze nog ergens uit kan afleiden
     only_for = ['', 'Command Line', 'Files Panel', 'Quick Search']

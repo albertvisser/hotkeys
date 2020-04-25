@@ -1,5 +1,7 @@
 """Hotkeys plugin voor Double Commander - qt specifieke code
 """
+import os.path
+import shutil
 import csv
 import wx
 import wx.grid as wxg
@@ -24,7 +26,7 @@ def add_extra_fields(win, box):
 def layout_extra_fields(win, layout):
     """add the extra fields to the layout
     """
-    sizer2 = wx.FlexGridSizer(2,2,2)
+    sizer2 = wx.FlexGridSizer(2, 2, 2)
     line = 0
     sizer2.Add(win.lbl_parms, 0, wx.ALIGN_CENTER_VERTICAL)
     sizer2.Add(win.txt_parms, 1, wx.EXPAND)
@@ -42,18 +44,22 @@ class DcCompleteDialog(CompleteDialog):
     def read_data(self):
         """lees eventuele extra commando's
         """
-        outfile = self.master.dialog_data['descfile']
+        self.outfile = self.master.dialog_data['descfile']
         self.cmds = {}
         self.desc = self.master.dialog_data['omsdict']
         try:
-            _in = open(outfile)
+            _in = open(self.outfile)
         except (IsADirectoryError, FileNotFoundError):
-            return '{} not found'.format(outfile)
+            return '{} not found'.format(self.outfile)
         else:
             with _in:
                 rdr = csv.reader(_in)
                 for key, oms in rdr:
                     self.cmds[key] = oms
+        # nog niet eerder opgenomen lege beschrijvingen toevoegen
+        for key in self.desc:
+            if key not in self.cmds:
+                self.cmds[key] = ''
         return ''
 
     def build_table(self):
@@ -65,4 +71,13 @@ class DcCompleteDialog(CompleteDialog):
             row += 1
 
     def write_data(self, new_data):
-        "schrijf de omschrijvingen terug - vergeten te bedenken?"
+        "schrijf de omschrijvingen terug"
+        if new_data == self.cmds:  # no changes
+            return
+        if os.path.exists(self.outfile):
+            shutil.copyfile(str(self.outfile), str(self.outfile) + '~')
+        with open(self.outfile, 'w') as _out:
+            writer = csv.writer(_out)
+            for key, value in new_data.items():
+                if value:
+                    writer.writerow((key, value))
