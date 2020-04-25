@@ -1032,7 +1032,7 @@ class CompleteDialog(qtw.QDialog):
         for rowid in range(self.p0list.rowCount()):
             cmd = self.p0list.item(rowid, 0).text()
             desc = self.p0list.item(rowid, 1).text()
-            new_values[self.cmds[cmd]] = desc
+            new_values[cmd] = desc
         self.master.dialog_data = new_values
         self.write_data(new_values)
         qtw.QDialog.accept(self)
