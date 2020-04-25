@@ -472,7 +472,7 @@ class PropertiesFile():
         return regel
 
 
-def buildcsv(parent, showinfo=True):
+def buildcsv(page, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het csv bestand
     """
@@ -482,7 +482,7 @@ def buildcsv(parent, showinfo=True):
     # - Directory properties file called "SciTEDirectory.properties" which may be present
     #   in the same or in a parent directory as the file being edited.
 
-    settings = parent.page.settings
+    settings = page.settings
     ## settings = {
         ## 'SCI_GLBL': ('/etc/scite/SciTEGlobal.properties', ''),
         ## 'SCI_USER': ('/home/albert/.SciTEUser.properties', ''),
