@@ -1200,15 +1200,15 @@ class Editor:
             gui.show_message(self.gui, 'I_ADDSET')
             return
         try:
-            test = self.book.page.reader.buildcsv
+            newdata = self.book.page.reader.buildcsv(self.book.page)
         except AttributeError:
             shared.log_exc()
             gui.show_message(self.gui, 'I_DEFRBLD')
             return
-        try:
-            newdata = test(self.book.page)
         except FileNotFoundError:
             gui.show_message(self.gui, 'I_ERRRBLD')
+            return
+        if newdata is None:  # afgebroken
             return
         if newdata[0]:
             self.book.page.data = newdata[0]
