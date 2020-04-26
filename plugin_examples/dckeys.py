@@ -330,7 +330,7 @@ def analyze_keydefs(root, cat_name):
                 ## print(allkeys)
                 for key, mods in allkeys:
                     test = (_translate_keynames(key), mods)
-                    dflt_assign[test].add(command)  # command, cmddesc)
+                    dflt_assign[test].add(command)  # (command, cmddesc))
                     ## if cmddesc == '':
                         ## for context, desc in stdkeys[test]:
                             ## if context == 'main window':
@@ -344,6 +344,42 @@ def analyze_keydefs(root, cat_name):
                     cmdparms[command] = params
 
     return cmddict, dflt_assign, cmdparms, command_list
+
+
+def get_shortcuts(keydata, cmddict, tbcmddict, defaults):
+    """combineer keydata met gegevens uit de dictionaries met omschrijvingen
+    bepaal tegelijkertijd of dit een standaard definitie is of een aangepaste
+    """
+    shortcuts = collections.OrderedDict()
+    tobecompleted = {}
+    print(defaults)
+    for key, value in keydata.items():
+        templist = list(value)
+        # print(tuple(templist[:2]), value[3], defaults.get(tuple(templist[:2])))
+        standard = 'S' if defaults.get(tuple(templist[:2])) == {value[3]} else ''
+        # templist.insert(2, 'U' if value != stdkeys[key] else 'S'))
+        templist.insert(2, standard)
+        # try:
+        #     oms = cmddict[value[3]]
+        # except KeyError:
+        #     # let op: hier ontstaan ook nieuwe cmddict entries
+        #     oms = cmddict[value[3]] = tobecompleted[value[3]] = ''
+        # templist.append(oms)
+        if templist[4] == 'cm_ExecuteToolbarItem':
+            templist[2] = 'U'
+            itemid = templist[5].split('=', 1)[1]
+            oms, cmd, parm = tbcmddict[itemid]
+            templist.append('{} ({} {})'.format(oms, cmd, parm))
+        else:
+            try:
+                oms = cmddict[value[3]]
+            except KeyError:
+                # let op: hier ontstaan ook nieuwe cmddict entries
+                oms = cmddict[value[3]] = tobecompleted[value[3]] = ''
+            templist.append(oms)
+        shortcuts[key] = tuple(templist)
+    tobematched = [(x, y) for x, y in shortcuts.items() if not y[3]]
+    return shortcuts, tobematched, tobecompleted, cmddict
 
 
 def buildcsv(page, showinfo=True):
@@ -362,20 +398,24 @@ def buildcsv(page, showinfo=True):
     # or http://doublecmd.github.io/doc/en/cmds.html
     dc_desc = os.path.join(os.path.dirname(__file__), 'descs.csv')
     dc_desc_h = ''
+    dc_match = os.path.join(os.path.dirname(__file__), 'matches.csv')
+    dc_match_h = ''
     dc_sett = '/home/albert/.config/doublecmd/doublecmd.xml'
 
-    shortcuts = collections.OrderedDict()
     has_path = False
     initial = page.settings['DC_PATH']
     has_path = True
     dc_keys = page.settings['DC_KEYS']
     dc_cmds = page.settings['DC_CMDS']
     dc_desc_h = page.settings['DC_DESC']
+    # dc_match_h = page.settings['DC_MATCH']
     dc_sett = page.settings['DC_SETT']
     # except KeyError:    # TODO: save defaults as settings
     #     pass
     if dc_desc_h:
         dc_desc = dc_desc_h
+    if dc_match_h:
+        dc_match = dc_match_h
     if showinfo and not has_path:
         ok = show_cancel_message(page, text=instructions)
         if not ok:
@@ -409,26 +449,18 @@ def buildcsv(page, showinfo=True):
     # zijn te vergelijken
     # tevens staan er wat default assignments in dit file beschreven
     cmddict, defaults, params, catdict = get_cmddict(dc_cmds, stdkeys)
-    tobecompleted = {}
-    for key, value in keydata.items():
-        templist = list(value)
-        templist.insert(2, '')  # ('X' if value != stdkeys[key] else ''))  # standard / customized
-        try:
-            oms = cmddict[value[3]]
-        except KeyError:
-            # let op: hier ontstaan ook nieuwe cmddict entries
-            oms = cmddict[value[3]] = tobecompleted[value[3]] = ''
-        templist.append(oms)
-        # map omschrijving op toolbaritem indien van toepassing
-        if templist[4] == 'cm_ExecuteToolbarItem':
-            itemid = templist[5].split('=', 1)[1]
-            oms, cmd, parm = tbcmddict[itemid]
-            templist[7] = '{} ({} {})'.format(oms, cmd, parm)
-        shortcuts[key] = tuple(templist)
+
+    # vul definities aan en bepaal ontbrekende beschrijvingen
+    shortcuts, tobematched, tobecompleted, cmddict = get_shortcuts(keydata, cmddict, tbcmddict,
+                                                                   defaults)
+
+    # start matcher dialoog voor de entries die nog geen waarde voor "standard" hebben
+    matchfile = dc_match
+    # TODO build matcher dialog
 
     # stuur dialoog aan om beschrijvingen aan te vullen
     descfile = dc_desc
-    tobecompleted.pop('cm_ExecuteToolbarItem')  # FIXME: waar komt deze er in?
+    # tobecompleted.pop('cm_ExecuteToolbarItem')  # FIXME: waar komt deze er in?
     omsdict = tobecompleted
     if showinfo:
         page.dialog_data = {'descfile': descfile, 'omsdict': omsdict}
