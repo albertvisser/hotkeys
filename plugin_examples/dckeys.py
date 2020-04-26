@@ -15,6 +15,10 @@ import bs4 as bs  # import BeautifulSoup
 from ..gui import show_cancel_message, get_file_to_open, get_file_to_save, show_dialog
 from .dckeys_gui import add_extra_fields, layout_extra_fields, DcCompleteDialog
 
+CONFPATH = '/home/albert/.config/doublecmd'
+DOCSPATH = '/usr/share/doublecmd/doc/en'
+HERE = os.path.dirname(__file__)
+
 instructions = """\
 Instructions for rebuilding the keyboard shortcut definitions
 
@@ -348,23 +352,16 @@ def analyze_keydefs(root, cat_name):
 
 def get_shortcuts(keydata, cmddict, tbcmddict, defaults):
     """combineer keydata met gegevens uit de dictionaries met omschrijvingen
+
     bepaal tegelijkertijd of dit een standaard definitie is of een aangepaste
     """
     shortcuts = collections.OrderedDict()
     tobecompleted = {}
-    print(defaults)
     for key, value in keydata.items():
         templist = list(value)
-        # print(tuple(templist[:2]), value[3], defaults.get(tuple(templist[:2])))
         standard = 'S' if defaults.get(tuple(templist[:2])) == {value[3]} else ''
         # templist.insert(2, 'U' if value != stdkeys[key] else 'S'))
         templist.insert(2, standard)
-        # try:
-        #     oms = cmddict[value[3]]
-        # except KeyError:
-        #     # let op: hier ontstaan ook nieuwe cmddict entries
-        #     oms = cmddict[value[3]] = tobecompleted[value[3]] = ''
-        # templist.append(oms)
         if templist[4] == 'cm_ExecuteToolbarItem':
             templist[2] = 'U'
             itemid = templist[5].split('=', 1)[1]
@@ -391,48 +388,41 @@ def buildcsv(page, showinfo=True):
     returns: een mapping voor het csv file en een aantal hulptabellen
 
     """
-    initial = '/home/albert/.config/doublecmd/shortcuts.scf'
-    dc_keys = '/usr/share/doublecmd/doc/en/shortcuts.html'
-    # or http://doublecmd.github.io/doc/en/shortcuts.html
-    dc_cmds = '/usr/share/doublecmd/doc/en/cmds.html'
-    # or http://doublecmd.github.io/doc/en/cmds.html
-    dc_desc = os.path.join(os.path.dirname(__file__), 'descs.csv')
-    dc_desc_h = ''
-    dc_match = os.path.join(os.path.dirname(__file__), 'matches.csv')
-    dc_match_h = ''
-    dc_sett = '/home/albert/.config/doublecmd/doublecmd.xml'
-
+    # get keyboard definitions file name
     has_path = False
-    initial = page.settings['DC_PATH']
-    has_path = True
-    dc_keys = page.settings['DC_KEYS']
-    dc_cmds = page.settings['DC_CMDS']
-    dc_desc_h = page.settings['DC_DESC']
-    # dc_match_h = page.settings['DC_MATCH']
-    dc_sett = page.settings['DC_SETT']
-    # except KeyError:    # TODO: save defaults as settings
-    #     pass
-    if dc_desc_h:
-        dc_desc = dc_desc_h
-    if dc_match_h:
-        dc_match = dc_match_h
-    if showinfo and not has_path:
-        ok = show_cancel_message(page, text=instructions)
-        if not ok:
-            # geeft (soms) segfault
-            return None
-        kbfile = get_file_to_open(page, extension='SCF files (*.scf)', start=initial)
-    else:
+    initial = page.settings.get('DC_PATH', '')
+    if initial:
+        has_path = True
         kbfile = initial
+    else:
+        initial = os.path.join(CONFPATH, 'shortcuts.scf')
+        if showinfo:
+            ok = show_cancel_message(page.gui, text=instructions)
+            if not ok:
+                # geeft (soms) segfault
+                return None
+            kbfile = get_file_to_open(page.gui, extension='SCF files (*.scf)', start=initial)
+        else:
+            kbfile = initial
     if not kbfile:
         return None
 
+    # get names of other settings files
+    dc_keys = page.settings.get('DC_KEYS', os.path.join(DOCSPATH, 'shortcuts.html'))
+    # or http://doublecmd.github.io/doc/en/shortcuts.html
+    dc_cmds = page.settings.get('DC_CMDS', os.path.join(DOCSPATH, 'cmds.html'))
+    # or http://doublecmd.github.io/doc/en/cmds.html
     if dc_keys.startswith('http'):
         if not os.path.exists('/tmp/dc_files/shortcuts.html'):
             import subprocess
             subprocess.run(['wget', '-i', dc_keys, '-P', '/tmp/dc_files', '-nc'])
         dc_keys = os.path.join('/tmp/dc_files', os.path.split(dc_keys)[-1])
         dc_cmds = os.path.join('/tmp/dc_files', os.path.split(dc_cmds)[-1])
+    dc_desc = page.settings.get('DC_DESC', os.path.join(HERE, 'descs.csv'))
+    dc_match = page.settings.get('DC_MATCH', os.path.join(HERE, 'matches.csv'))
+    dc_sett = page.settings.get('DC_SETT', os.path.join(CONFPATH, 'doublecmd.xml'))
+
+    # TODO: save settings to page if they don't exist yet
 
     # map toetscombinatie, context, commandonaam, argumenten en venster op een
     # gezamenlijke sleutel (volgnummer)
@@ -460,15 +450,13 @@ def buildcsv(page, showinfo=True):
 
     # stuur dialoog aan om beschrijvingen aan te vullen
     descfile = dc_desc
-    # tobecompleted.pop('cm_ExecuteToolbarItem')  # FIXME: waar komt deze er in?
     omsdict = tobecompleted
     if showinfo:
         page.dialog_data = {'descfile': descfile, 'omsdict': omsdict}
         if show_dialog(page, DcCompleteDialog):
             # opslaan vindt plaats in de dialoog, maar de data teruggeven scheelt weer I/O
-            # zoals de dialoog nu aangestuurd wordt worden de omschrijvingen opgeslagen
-            #   met volgnummers in plaats van commandonaam als key
             omsdict = page.dialog_data
+
     # invullen in shortcuts en cmddict
     for key, value in shortcuts.items():
         for cmnd, desc in omsdict.items():
