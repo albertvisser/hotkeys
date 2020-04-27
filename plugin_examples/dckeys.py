@@ -7,6 +7,7 @@ from __future__ import print_function
 import os
 import collections
 import shutil
+import csv
 import xml.etree.ElementTree as ET
 import bs4 as bs  # import BeautifulSoup
 from ..gui import (show_cancel_message, get_file_to_open, get_file_to_save, show_dialog,
@@ -427,10 +428,10 @@ def buildcsv(page, showinfo=True):
     initial = page.settings.get('DC_PATH', '')
     if initial:
         kbfile = initial
+        new_setting = False
     else:
         initial = os.path.join(CONFPATH, 'shortcuts.scf')
-    # TODO: deze boodschap tonen met aan het eind een vraag of je een afwijkend scf file
-    # wilt gebruiken en een knop om de file open dialoog op te roepen
+        new_setting = True
     kbfile = initial
     if showinfo:
         # ok = show_cancel_message(page.gui, text=instructions)
@@ -441,22 +442,32 @@ def buildcsv(page, showinfo=True):
             kbfile = get_file_to_open(page.gui, extension='SCF files (*.scf)', start=initial)
     if not kbfile:
         return None
+    if new_setting:
+        page.settings['DC_PATH'] = kbfile
 
-    dc_keys = page.settings.get('DC_KEYS', os.path.join(DOCSPATH, 'shortcuts.html'))
-    # or http://doublecmd.github.io/doc/en/shortcuts.html
-    dc_cmds = page.settings.get('DC_CMDS', os.path.join(DOCSPATH, 'cmds.html'))
-    # or http://doublecmd.github.io/doc/en/cmds.html
+    dc_keys = page.settings.get('DC_KEYS', '')
+    if not dc_keys:
+        dc_keys = page_settings['DC_KEYS'] = os.path.join(DOCSPATH, 'shortcuts.html')
+    dc_cmds = page.settings.get('DC_CMDS', '')
+    if not dc_cmds:
+        dc_cmds = page.settings['DC_CMDS'] = os.path.join(DOCSPATH, 'cmds.html')
     if dc_keys.startswith('http'):
+        # http://doublecmd.github.io/doc/en/shortcuts.html
+        # http://doublecmd.github.io/doc/en/cmds.html
         if not os.path.exists('/tmp/dc_files/shortcuts.html'):
             import subprocess
             subprocess.run(['wget', '-i', dc_keys, '-P', '/tmp/dc_files', '-nc'])
-        dc_keys = os.path.join('/tmp/dc_files', os.path.split(dc_keys)[-1])
-        dc_cmds = os.path.join('/tmp/dc_files', os.path.split(dc_cmds)[-1])
-    dc_desc = page.settings.get('DC_DESC', os.path.join(HERE, 'descs.csv'))
-    dc_match = page.settings.get('DC_MATCH', os.path.join(HERE, 'matches.csv'))
-    dc_sett = page.settings.get('DC_SETT', os.path.join(CONFPATH, 'doublecmd.xml'))
-
-    # TODO: save settings to page if they don't exist yet
+        dc_keys = os.path.join('/tmp/dc_files', os.path.basename(dc_keys))
+        dc_cmds = os.path.join('/tmp/dc_files', os.path.basename(dc_cmds))
+    dc_sett = page.settings.get('DC_SETT', '')
+    if not dc_sett:
+        dc_sett = page.settings['DC_SETT'] = os.path.join(CONFPATH, 'doublecmd.xml')
+    dc_desc = page.settings.get('DC_DESC', '')
+    if not dc_desc:
+        dc_desc = page.settings['DC_DESC'] = os.path.join(HERE, 'dc_descs.csv')
+    dc_match = page.settings.get('DC_MATCH', '')
+    if not dc_match:
+        dc_match = page.settings['DC_MATCH'] = os.path.join(HERE, 'dc_matches.csv')
 
     keydata, definedkeys, contexts, only_for = get_keydefs(kbfile)  #3
 
@@ -473,15 +484,21 @@ def buildcsv(page, showinfo=True):
         page.dialog_data = {'descfile': dc_desc, 'omsdict': tobecompleted}
         if show_dialog(page, DcCompleteDialog):
             # opslaan vindt plaats in de dialoog, maar de data teruggeven scheelt weer I/O
-            tobecompleted = page.dialog_data
+            descdict = page.dialog_data
+    else:
+        descdict = {}
+        with open(dc_desc) as _in:
+            rdr = csv.reader(_in)
+            for key, oms in rdr:
+                descdict[key] = oms
 
     for key, value in shortcuts.items():
-        for cmnd, desc in tobecompleted.items():
+        for cmnd, desc in descdict.items():
             if value[4] == cmnd:
                 itemlist = list(value)
                 itemlist[-1] = desc
                 shortcuts[key] = tuple(itemlist)
-    cmddict.update(tobecompleted)
+    cmddict.update(descdict)
 
     for key, value in tobematched.items():
         keycombo, context = key[:2], key[2]
@@ -495,14 +512,21 @@ def buildcsv(page, showinfo=True):
     #     if show_dialog(page, DcMatchDialog):
     #         # opslaan vindt plaats in de dialoog, maar de data teruggeven scheelt weer I/O
     #         matchdict = page.dialog_data
+    # for key, value in shortcuts.items():
+    #     keydict = (value[0], value[1], value[3])
+    #     if not value[2]:
+    #         shortcuts[key][2] = matchdict[dictkey]
 
-    # geen idee of ik deze nog ergens uit kan afleiden
-    only_for = list(only_for)  # ['', 'Command Line', 'Files Panel', 'Quick Search']
-    contexts = list(contexts)  # ['Main', 'Copy/Move Dialog', 'Differ', 'Edit Comment Dialog', 'Viewer']
+    only_for = list(only_for)
+    contexts = list(contexts)
+    for name in context_list:
+        test = name.split('_')[0].title()
+        if test not in contexts:
+            contexts.append(test)
 
     return shortcuts, {'stdkeys': stdkeys, 'defaults': defaults, 'cmddict': cmddict,
-                       'restrictions': only_for, 'contexts': contexts, 'definedkeys': definedkeys,
-                       'context_list': context_list, 'cmdparms': params, 'catdict': catdict}
+                       'contexts': contexts, 'restrictions': only_for, 'cmdparms': params,
+                       'catdict': catdict}
 
 
 how_to_save = """\
