@@ -9,7 +9,8 @@ import collections
 import shutil
 import xml.etree.ElementTree as ET
 import bs4 as bs  # import BeautifulSoup
-from ..gui import show_cancel_message, get_file_to_open, get_file_to_save, show_dialog
+from ..gui import (show_cancel_message, get_file_to_open, get_file_to_save, show_dialog,
+                   ask_ync_question)
 from .dckeys_gui import add_extra_fields, layout_extra_fields, DcCompleteDialog
 
 CONFPATH = '/home/albert/.config/doublecmd'
@@ -34,12 +35,15 @@ Two more settings are used to store and extract information
 that is needed but not (yet) provided in the above files:
 DC_DESC for missing descriptions and DC_MATCH for keydefs
 that can't be automatically matched to internal commands.
-These can be entered using extra dialogs.
+These can be entered using extra dialogs that will be
+presented following this message.
 
 Inside Double Commander, in Configuration > Options > Hot keys,
 it's (theoretically) possible to select the shortcuts file, so
 support for using a name different from the DC_PATH setting is
 present.
+Do you want to select the shortcuts file yourself (choose "No"
+to stick to the DC_PATH setting)?"
 """
 
 
@@ -427,14 +431,14 @@ def buildcsv(page, showinfo=True):
         initial = os.path.join(CONFPATH, 'shortcuts.scf')
     # TODO: deze boodschap tonen met aan het eind een vraag of je een afwijkend scf file
     # wilt gebruiken en een knop om de file open dialoog op te roepen
+    kbfile = initial
     if showinfo:
-        ok = show_cancel_message(page.gui, text=instructions)
-        if not ok:
-            # geeft (soms) segfault
+        # ok = show_cancel_message(page.gui, text=instructions)
+        ok, cancel = ask_ync_question(page.gui, text=instructions)
+        if cancel:
             return None
-        kbfile = get_file_to_open(page.gui, extension='SCF files (*.scf)', start=initial)
-    else:
-        kbfile = initial
+        if ok:
+            kbfile = get_file_to_open(page.gui, extension='SCF files (*.scf)', start=initial)
     if not kbfile:
         return None
 
@@ -502,7 +506,8 @@ def buildcsv(page, showinfo=True):
 
 
 how_to_save = """\
-Instructions to load the changed definitions back into Double Commander.
+Instructions to load the changed definitions back
+into Double Commander.
 
 
 After you've saved the definitions to a .scf file, go to
