@@ -305,7 +305,10 @@ def writecsv(pad, settings, coldata, data, lang):
             try:
                 settdesc = csvoms[name]
             except KeyError:
-                settdesc = extrasettoms[name]
+                try:
+                    settdesc = extrasettoms[name]
+                except KeyError:
+                    settdesc = ''
             rowdata = LineType.SETT.value, name, value, settdesc
             wrt.writerow(rowdata)
         for ix, row in enumerate([[LineType.CAPT.value], [LineType.WID.value]]):
