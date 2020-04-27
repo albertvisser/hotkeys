@@ -47,14 +47,20 @@ def _shorten_mods(modifier_list):
     """replace modifier names with their first letters and in a fixed sequence
     """
     result = ''
-    if 'Ctrl' in modifier_list:
-        result += 'C'
-    if 'Alt' in modifier_list:
-        result += 'A'
-    if 'Shift' in modifier_list:
-        result += 'S'
-    if 'WinKey' in modifier_list:
-        result += 'W'
+    for values, outval in ((('Ctrl', 'CTRL', 'CLTR'), 'C'), (('Alt', 'ALT'), 'A'),
+                           (('Shift', 'SHIFT'), 'S'), (('WinKey',), 'W')):
+        for test in values:
+            if test in modifier_list:
+                result += outval
+                break
+    # if 'Ctrl' in modifier_list or 'CTRL' in modifier_list:
+    #     result += 'C'
+    # if 'Alt' in modifier_list or 'ALT' in modifier_list:
+    #     result += 'A'
+    # if 'Shift' in modifier_list or 'SHIFT' in modifier_list:
+    #     result += 'S'
+    # if 'WinKey' in modifier_list:
+    #     result += 'W'
     return result
 
 
@@ -110,7 +116,7 @@ def get_keydefs(path):
     data = ET.parse(path)
 
     keydata = collections.OrderedDict()
-    keydata_2 = collections.defaultdict(list)
+    keydata_2 = {}
     all_contexts = set()
     all_controls = set()
     key = 0
@@ -147,7 +153,7 @@ def get_keydefs(path):
                 controls = ';'.join(controls)
             key += 1
             keydata[key] = (keyname, modifiers, context, command, parameter, controls)
-            keydata_2[(keyname, modifiers)].append((context, command))
+            keydata_2[(keyname, modifiers, context)] = command
 
     return keydata, keydata_2, all_contexts, all_controls
 
@@ -165,7 +171,7 @@ def get_stdkeys(path):
     with open(path) as doc:
         soup = bs.BeautifulSoup(doc, 'lxml')
 
-    stdkeys = collections.defaultdict(list)
+    stdkeys = {}
     # newsoup = soup.find('div', class_='dchelpage')
     sections = soup.find_all('div')
     contexts_list = []
@@ -196,7 +202,7 @@ def get_stdkeys(path):
                     oms = col.get_text()
             if keynames:
                 for name, mods in keynames:
-                    stdkeys[(_translate_keynames(name), mods)].append((context, oms))
+                    stdkeys[(_translate_keynames(name), mods, context)] = oms
 
     return stdkeys, contexts_list
 
@@ -340,7 +346,7 @@ def analyze_keydefs(root):  # , cat_name):
     return cmddict, dflt_assign, cmdparms, command_list
 
 
-def get_shortcuts(keydata, stdkeys, cmddict, tbcmddict, defaults):
+def get_shortcuts(keydata, stdkeys, definedkeys, cmddict, tbcmddict, defaults):
     """combineer keydata met gegevens uit de dictionaries met omschrijvingen
 
     bepaal tegelijkertijd of dit een standaard definitie is of een aangepaste
@@ -350,17 +356,14 @@ def get_shortcuts(keydata, stdkeys, cmddict, tbcmddict, defaults):
     tobematched = {}
     for key, value in keydata.items():
         templist = list(value)
-        keycombo = tuple(templist[:2])
+        keycombo = tuple([value[0], value[1], value[2].lower().replace('main', 'main_window')])
         standard = 'S' if defaults.get(keycombo) == {value[3]} else ''
-        test = stdkeys.get(keycombo, '')
-        if test and value[3] in cmddict:
-            for context, desc in test:
-                if context.startswith(value[2].lower()):
-                    if desc == cmddict[value[3]]:
-                        standard = 'S'
-                    else:
-                        tobematched[tuple(templist[:3])] = desc, value[3]  # voorgift
-                    break
+        desc = stdkeys.get(keycombo, '')
+        if desc and value[3] in cmddict:
+            if desc == cmddict[value[3]]:
+                standard = 'S'
+            else:
+                tobematched[tuple(templist[:3])] = desc, value[3]  # voorgift
         templist.insert(2, standard)
         if templist[4] == 'cm_ExecuteToolbarItem':
             templist[2] = 'U'
@@ -375,6 +378,13 @@ def get_shortcuts(keydata, stdkeys, cmddict, tbcmddict, defaults):
                 oms = cmddict[value[3]] = tobecompleted[value[3]] = ''
             templist.append(oms)
         shortcuts[key] = tuple(templist)
+    for stdkey, value in stdkeys.items():
+        # definedkeys is een "dictionary versie" van keydata met dezelfde sleutel als stdkeys
+        context = stdkey[2].split('_')[0].title()
+        dictkey = tuple([stdkey[0], stdkey[1], context])
+        if dictkey not in definedkeys:
+            key += 1
+            shortcuts[key] = (stdkey[0], stdkey[1], 'S', context, '', '', '', value)
     for value in shortcuts.values():
         dictkey = tuple([value[0], value[1], value[3]])
         if not value[2] and dictkey not in tobematched:
@@ -444,22 +454,16 @@ def buildcsv(page, showinfo=True):
 
     # TODO: save settings to page if they don't exist yet
 
-    keydata, definedkeys, contexts, only_for = get_keydefs(kbfile)            # alles
+    keydata, definedkeys, contexts, only_for = get_keydefs(kbfile)  #3
 
-    stdkeys, context_list = get_stdkeys(dc_keys)
+    stdkeys, context_list = get_stdkeys(dc_keys)  #4
 
-    tbcmddict = get_toolbarcmds(dc_sett)
+    tbcmddict = get_toolbarcmds(dc_sett)  #5
 
-    cmddict, defaults, params, catdict = get_cmddict(dc_cmds)
-    with open('/tmp/hotkeys/dckeys-cmddict-1', 'w') as out:
-        for key, value in cmddict.items():
-            print(key, ':', value, file=out)
+    cmddict, defaults, params, catdict = get_cmddict(dc_cmds)  #6
 
-    shortcuts, tobematched, tobecompleted, cmddict = get_shortcuts(keydata, stdkeys, cmddict,
-                                                                   tbcmddict, defaults)
-    with open('/tmp/hotkeys/dckeys-cmddict-2', 'w') as out:
-        for key, value in cmddict.items():
-            print(key, ':', value, file=out)
+    shortcuts, tobematched, tobecompleted, cmddict = get_shortcuts(keydata, stdkeys, definedkeys,
+                                                                   cmddict, tbcmddict, defaults)  #7
 
     if showinfo:
         page.dialog_data = {'descfile': dc_desc, 'omsdict': tobecompleted}
@@ -474,9 +478,6 @@ def buildcsv(page, showinfo=True):
                 itemlist[-1] = desc
                 shortcuts[key] = tuple(itemlist)
     cmddict.update(tobecompleted)
-    with open('/tmp/hotkeys/dckeys-cmddict-3', 'w') as out:
-        for key, value in cmddict.items():
-            print(key, ':', value, file=out)
 
     for key, value in tobematched.items():
         keycombo, context = key[:2], key[2]
