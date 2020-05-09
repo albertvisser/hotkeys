@@ -10,3 +10,6 @@ logs/
 
 # data
 *.csv*
+
+# on-demand
+toolkit.py
