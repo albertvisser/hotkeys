@@ -176,7 +176,6 @@ class SetupDialog(qtw.QDialog):
     """
     def __init__(self, parent, name):
         self.parent = parent
-        self.parent.data = []
         super().__init__()
         self.setWindowTitle(self.parent.master.captions['T_INICSV'])
 
@@ -408,8 +407,8 @@ class FilesDialog(qtw.QDialog):
             if ask_question(self.parent, 'P_INICSV'):
                 ok = SetupDialog(self, newtool).exec_()
                 if ok:
-                    self.settingsdata[newtool] = self.data
-                    prgloc = self.data[0]
+                    self.settingsdata[newtool] = self.parent.data
+                    prgloc = self.parent.data[0]
             self.add_row(newtool, path=self.loc)
 
     def remove_programs(self):
