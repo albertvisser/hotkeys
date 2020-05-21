@@ -13,3 +13,4 @@ logs/
 
 # on-demand
 toolkit.py
+editor/plugins/
