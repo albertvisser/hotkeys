@@ -10,6 +10,7 @@ import pdb
 from .read_gtkaccel import read_keydefs_and_stuff
 from ..gui import get_file_to_open, get_file_to_save, show_dialog
 from .gtkaccel_keys_gui import AccelCompleteDialog
+import editor.plugins.gtkaccel_keys_csv as dml
 
 settname = ''
 
@@ -67,13 +68,16 @@ def buildcsv(settnames, page, showinfo=True):
     # setting bekend, dan dit bestand lezen
     # hier dan een GUI tonen waarin de omschrijvingen per command kunnen worden in/aangevuld
     # actions in de eerste kolom, descriptions in de tweede
-    ## print(omsdict)
-    if descfile and showinfo:
-        page.dialog_data = {'descfile': descfile, 'actions': actions, 'omsdict': omsdict}
-        if show_dialog(page, AccelCompleteDialog):
-            # opslaan vindt plaats in de dialoog, maar de data teruggeven scheelt weer I/O
-            omsdict = page.dialog_data
-    ## print(omsdict)
+    if descfile:
+        msg, descdict = dml.read_data(descfile, omsdict)
+        if msg:
+            print(msg)
+        elif showinfo:
+            page.dialog_data = {'descdict': descdict, 'actions': actions}  # , 'omsdict': omsdict}
+            if show_dialog(page, AccelCompleteDialog):
+                omsdict = page.dialog_data
+            if omsdict != descdict:
+                dml.write_data(descfile, omsdict)
 
     # als er sprake is van others dan ook deze meenemen (Dia)
     lastkey = 0

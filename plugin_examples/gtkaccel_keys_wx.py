@@ -3,20 +3,15 @@
 import wx
 import wx.grid as wxg
 from ..dialogs_wx import CompleteDialog
-import editor.plugins.gtkaccel_keys_csv as dml
 
 
 class AccelCompleteDialog(CompleteDialog):
     """(re)definition of generic dialog used in the main program
     """
-        ## self.p0list.setVerticalHeaderLabels([y for x, y in self.cmds.items()])
-        ## self.p0list.resizeColumnToContents(0)
     def read_data(self):  # , outfile, cmds, desc):
         "lees de vóór aanroep van de class ingestelde gegevens in"
-        self.outfile = self.master.dialog_data['descfile']
+        self.desc = self.master.dialog_data['descdict']
         self.cmds = self.master.dialog_data['actions']
-        mld, self.desc = dml.read_data(self.outfile, self.master.dialog_data['omsdict'])
-        return mld
 
     def build_table(self):
         "vul de tabel met in te voeren gegevens"
@@ -35,7 +30,3 @@ class AccelCompleteDialog(CompleteDialog):
 
             self.p0list.SetCellValue(row, 1, self.desc.get(key, ''))
             row += 1
-
-    def write_data(self, new_data):
-        "schrijf de omschrijvingsgegevens terug"
-        dml.write_data(self.outfile, new_data)

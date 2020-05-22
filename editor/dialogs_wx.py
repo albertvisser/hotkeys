@@ -980,9 +980,7 @@ class CompleteDialog(wx.Dialog):
         self.master = master
         super().__init__(parent, size=(680, 400))
 
-        mld = self.read_data()  # *args)
-        if mld:
-            raise ValueError(mld)
+        self.read_data()  # client exit to get start data for dialog
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -994,8 +992,7 @@ class CompleteDialog(wx.Dialog):
                                   shared.get_text(self.parent, 'C_DESC'), (400))):
             self.p0list.SetColLabelValue(ix, row[0])
             self.p0list.SetColSize(ix, row[1])
-        # hdr.setStretchLastSection(True)
-        self.build_table()
+        self.build_table()  # client exit to build the dialog body
 
         hsizer.Add(self.p0list, 1, wx.EXPAND)
         self.sizer.Add(hsizer, 1, wx.EXPAND)
@@ -1015,15 +1012,11 @@ class CompleteDialog(wx.Dialog):
             desc = self.p0list.GetCellValue(rowid, 1)
             new_values[self.cmds[cmd]] = desc
         self.master.dialog_data = new_values
-        self.write_data(new_values)
 
     def read_data(self):  # *args):
         raise NotImplementedError
 
     def build_table(self):
-        pass
-
-    def write_data(self, data):
         pass
 
 

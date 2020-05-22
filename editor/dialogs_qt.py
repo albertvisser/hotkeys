@@ -993,18 +993,14 @@ class CompleteDialog(qtw.QDialog):
         super().__init__(parent)
         self.resize(680, 400)
 
-        mld = self.read_data()  # *args)
-        if mld:
-            raise ValueError(mld)
+        self.read_data()  # client exit to get start data for dialog
 
         self.p0list = qtw.QTableWidget(len(self.cmds), 2, self)
-        ## self.p0list.setColumnCount(2)
         self.p0list.setHorizontalHeaderLabels([shared.get_text(self.parent, 'C_CMD'),
                                                shared.get_text(self.parent, 'C_DESC')])
         hdr = self.p0list.horizontalHeader()
-        ## p0hdr.resizeSection(0, 300)
         hdr.setStretchLastSection(True)
-        self.build_table()
+        self.build_table()  # client exit to build the dialog body
         self.p0list.setColumnWidth(0, 260)
 
         self.sizer = qtw.QVBoxLayout()
@@ -1033,16 +1029,12 @@ class CompleteDialog(qtw.QDialog):
             desc = self.p0list.item(rowid, 1).text()
             new_values[cmd] = desc
         self.master.dialog_data = new_values
-        self.write_data(new_values)
         qtw.QDialog.accept(self)
 
     def read_data(self):  # *args):
         raise NotImplementedError
 
     def build_table(self):
-        pass
-
-    def write_data(self, data):
         pass
 
 

@@ -39,28 +39,15 @@ def layout_extra_fields(win, layout):
 class DcCompleteDialog(CompleteDialog):
     """(re)definition of generic dialog used in the main program
     """
-        ## self.p0list.setVerticalHeaderLabels(names)
-        ## self.numrows = len(values)
     def read_data(self):
         """lees eventuele extra commando's
         """
-        self.outfile = self.master.dialog_data['descfile']
-        self.cmds = {}
+        self.cmds = self.master.dialog_data['descdict']
         self.desc = self.master.dialog_data['omsdict']
-        try:
-            _in = open(self.outfile)
-        except (IsADirectoryError, FileNotFoundError):
-            return '{} not found'.format(self.outfile)
-        else:
-            with _in:
-                rdr = csv.reader(_in)
-                for key, oms in rdr:
-                    self.cmds[key] = oms
         # nog niet eerder opgenomen lege beschrijvingen toevoegen
         for key in self.desc:
             if key not in self.cmds:
                 self.cmds[key] = ''
-        return ''
 
     def build_table(self):
         "vul de tabel met in te voeren gegevens"
@@ -69,15 +56,3 @@ class DcCompleteDialog(CompleteDialog):
             self.p0list.SetCellValue(row, 0, key)
             self.p0list.SetCellValue(row, 0, desc)
             row += 1
-
-    def write_data(self, new_data):
-        "schrijf de omschrijvingen terug"
-        if new_data == self.cmds:  # no changes
-            return
-        if os.path.exists(self.outfile):
-            shutil.copyfile(str(self.outfile), str(self.outfile) + '~')
-        with open(self.outfile, 'w') as _out:
-            writer = csv.writer(_out)
-            for key, value in new_data.items():
-                if value:
-                    writer.writerow((key, value))
