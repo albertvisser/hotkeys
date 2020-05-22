@@ -106,11 +106,12 @@ def parse_keytext(text):
     return retval
 
 
-def get_keydefs(path):
+def get_keydefs(data):
     """huidige keydefs afleiden
 
     input:
-        pad (zoals opgegeven in DC_PATH -- shortcuts.scf in de settings directory)
+        met ElementTree ingelezen data volgens pad zoals opgegeven in DC_PATH
+        (shortcuts.scf in de settings directory)
     resultaat:
         een mapping met key = een volgnummer, value = een tuple van keyname,
             modifiers, context, command, parameter en controls
@@ -118,8 +119,6 @@ def get_keydefs(path):
             van context en command
 
     """
-    data = ET.parse(path)
-
     keydata = collections.OrderedDict()
     keydata_2 = {}
     all_contexts = set()
@@ -163,19 +162,17 @@ def get_keydefs(path):
     return keydata, keydata_2, all_contexts, all_controls
 
 
-def get_stdkeys(path):
+def get_stdkeys(soup):
     """determine standard keys
 
     input:
-        pad (zoals opgegeven in DC_KEYS -- shortcuts.html in de docs directory)
+        met BeautifulSoup ingelezen data volgens pad zoals opgegeven in DC_KEYS
+        (shortcuts.html in de docs directory)
     resultaat:
         een mapping met key = een tuple van keyname, modifiers en value = een tuple
             van context en omschrijving
         een list met mogelijke contexts
     """
-    with open(path) as doc:
-        soup = bs.BeautifulSoup(doc, 'lxml')
-
     stdkeys = {}
     # newsoup = soup.find('div', class_='dchelpage')
     sections = soup.find_all('div')
@@ -212,11 +209,12 @@ def get_stdkeys(path):
     return stdkeys, contexts_list
 
 
-def get_cmddict(path):
+def get_cmddict(soup):
     """build dictionary of commands with descriptions
 
     input:
-        pad (zoals opgegeven in DC_CMDS -- cmds.html in de docs directory)
+        met BeautifulSoup ingelezen data volgens pad zoals opgegeven in DC_CMDS
+        (cmds.html in de docs directory)
     resultaat:
         een mapping met key = commandonaam en value = een tekst (de omschrijving)
         een mapping met key = een tuple van keyname, modifiers en value = een list
@@ -225,10 +223,6 @@ def get_cmddict(path):
             naam, waardebereik en omschrijving
         een mapping met key = categorie en value = een list van commandonamen
     """
-    with open(path) as doc:
-        soup = bs.BeautifulSoup(doc, 'lxml')
-
-    ## newsoup = soup.find('div', class_='dchelpage')
     newsoup = soup.select('div[class="dchelpage"]')[0]
 
     categories = {}
@@ -252,12 +246,16 @@ def get_cmddict(path):
     return cmddict, dflt_assign, cmdparms, categories
 
 
-def get_toolbarcmds(path):
+def get_toolbarcmds(data):
     """lees de zelfgedefinieerde toolbar items
 
-    om deze te kunnen koppelen aan de betreffende keyboard shortcuts
+    input:
+        met ElementTree ingelezen data volgens pad zoals opgegeven in DC_SETT
+        (doublecmd.xml in de settings directory)
+    resultaat:
+        een mapping met key = de parameter voor cm_ToolBarCmd
+        om de details in value te kunnen koppelen aan de betreffende keyboard shortcuts
     """
-    data = ET.parse(path)
     root = data.getroot()
     tbcmddict = collections.defaultdict(list)
     for toolbar in list(root.find('Toolbars')):
@@ -274,6 +272,11 @@ def get_toolbarcmds(path):
 def analyze_keydefs(root):  # , cat_name):
     """build the data for a specific category (corresponds with a section in the
     html)
+
+    input:
+        met BeautifulSoup geparsede node data
+    resultaat:
+        gegevens om toe te voegen aan de output van get_cmddict
     """
     cmddict, cmdparms = {}, {}
     dflt_assign = collections.defaultdict(set)
@@ -301,9 +304,9 @@ def analyze_keydefs(root):  # , cat_name):
                         if not item.name or item.name != 'div':
                             continue
                         if 'cmdname' in item['class']:
-                            command = item.a.text
+                            command = item.a.text.strip('.')
                         elif 'longcmdname' in item['class']:
-                            command = item.a.text
+                            command = item.a.text.strip('.')
                         elif 'shrtctkey' in item['class']:
                             defkey = item.text
                 elif "cmdhintcell" in col['class']:
@@ -397,6 +400,63 @@ def get_shortcuts(keydata, stdkeys, definedkeys, cmddict, tbcmddict, defaults):
     return shortcuts, tobematched, tobecompleted, cmddict
 
 
+def get_desc(page, showinfo, descdict, tobecompleted, cmddict):
+    """load descriptions from file, update in dialog if requested, filter out stuff that's
+    already in standard
+    """
+    if showinfo:
+        # WIP: feed dialog with data instead of filename
+        page.dialog_data = {'descdict': descdict, 'omsdict': tobecompleted}
+        if show_dialog(page, DcCompleteDialog):
+            descdict = page.dialog_data
+    else:
+        # print('eigen descriptions:', descdict)
+        # print('dc commands:', cmddict)
+        iter_ = list(descdict.keys())
+        for key in iter_:
+            # print(key)
+            if key in cmddict and cmddict[key]:
+                # print(cmddict[key])
+                descdict.pop(key)
+        # print('eigen descriptions na schonen:', descdict)
+    return descdict
+
+
+def update_from_descdict(cmddict, shortcuts, descdict):
+    """add extra descriptions into keydefs and cmddict dictionaries
+    """
+    for key, value in shortcuts.items():
+        for cmnd, desc in descdict.items():
+            if value[4] == cmnd:
+                itemlist = list(value)
+                itemlist[-1] = desc
+                shortcuts[key] = tuple(itemlist)
+    cmddict.update(descdict)
+    return cmddict, shortcuts
+
+
+def match_stuff(page, showinfo, shortcuts, tobematched):
+    """match commands from cmddict (?) to commands from descriptions (?)
+    """
+    for key, value in tobematched.items():
+        keycombo, context = key[:2], key[2]
+        for item in shortcuts.values():
+            if keycombo == item[:2] and context == item[3] and not value[0]:
+                tobematched[key] = (item[-1], value[1])
+
+    # TODO build matcher dialog
+    # if showinfo:
+    #     page.dialog_data = {'matchfile': dc_match, 'matchict': tobematched}
+    #     if show_dialog(page, DcMatchDialog):
+    #         # opslaan vindt plaats in de dialoog, maar de data teruggeven scheelt weer I/O
+    #         matchdict = page.dialog_data
+    # for key, value in shortcuts.items():
+    #     keydict = (value[0], value[1], value[3])
+    #     if not value[2]:
+    #         shortcuts[key][2] = matchdict[dictkey]
+    return shortcuts, tobematched
+
+
 def buildcsv(page, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het csv bestand
@@ -469,53 +529,39 @@ def buildcsv(page, showinfo=True):
     if not dc_match:
         dc_match = page.settings['DC_MATCH'] = os.path.join(HERE, 'dc_matches.csv')
 
-    keydata, definedkeys, contexts, only_for = get_keydefs(kbfile)  #3
+    keydata, definedkeys, contexts, only_for = get_keydefs(ET.parse(kbfile))  #3
 
-    stdkeys, context_list = get_stdkeys(dc_keys)  #4
+    with open(dc_keys) as doc:
+        soup = bs.BeautifulSoup(doc, 'lxml')
+    stdkeys, context_list = get_stdkeys(soup)  #4
 
-    tbcmddict = get_toolbarcmds(dc_sett)  #5
+    tbcmddict = get_toolbarcmds(ET.parse(dc_sett))  #5
 
-    cmddict, defaults, params, catdict = get_cmddict(dc_cmds)  #6
+    with open(dc_cmds) as doc:
+        soup = bs.BeautifulSoup(doc, 'lxml')
+    cmddict, defaults, params, catdict = get_cmddict(soup)  #6
 
     shortcuts, tobematched, tobecompleted, cmddict = get_shortcuts(keydata, stdkeys, definedkeys,
                                                                    cmddict, tbcmddict, defaults)  #7
 
-    if showinfo:
-        page.dialog_data = {'descfile': dc_desc, 'omsdict': tobecompleted}
-        if show_dialog(page, DcCompleteDialog):
-            # opslaan vindt plaats in de dialoog, maar de data teruggeven scheelt weer I/O
-            descdict = page.dialog_data
-    else:
-        descdict = {}
-        with open(dc_desc) as _in:
-            rdr = csv.reader(_in)
-            for key, oms in rdr:
-                descdict[key] = oms
+    origdescdict = {}
+    with open(dc_desc) as _in:
+        rdr = csv.reader(_in)
+        for key, oms in rdr:
+            origdescdict[key] = oms
+    descdict = get_desc(page, showinfo, origdescdict, tobecompleted, cmddict)
+    if descdict != origdescdict:
+        if os.path.exists(dc_desc):
+            shutil.copyfile(dc_desc, dc_desc + '~')
+        with open(dc_desc, 'w') as _out:
+            writer = csv.writer(_out)
+            for key, value in new_data.items():
+                if value:
+                    writer.writerow((key, value))
 
-    for key, value in shortcuts.items():
-        for cmnd, desc in descdict.items():
-            if value[4] == cmnd:
-                itemlist = list(value)
-                itemlist[-1] = desc
-                shortcuts[key] = tuple(itemlist)
-    cmddict.update(descdict)
+    cmddict, shortcuts = update_from_descdict(cmddict, shortcuts, descdict)
 
-    for key, value in tobematched.items():
-        keycombo, context = key[:2], key[2]
-        for item in shortcuts.values():
-            if keycombo == item[:2] and context == item[3] and not value[0]:
-                tobematched[key] = (item[-1], value[1])
-
-    # TODO build matcher dialog
-    # if showinfo:
-    #     page.dialog_data = {'matchfile': dc_match, 'matchict': tobematched}
-    #     if show_dialog(page, DcMatchDialog):
-    #         # opslaan vindt plaats in de dialoog, maar de data teruggeven scheelt weer I/O
-    #         matchdict = page.dialog_data
-    # for key, value in shortcuts.items():
-    #     keydict = (value[0], value[1], value[3])
-    #     if not value[2]:
-    #         shortcuts[key][2] = matchdict[dictkey]
+    shortcuts, tobematched = match_stuff(page, showinfo, shortcuts, tobematched)
 
     only_for = list(only_for)
     contexts = list(contexts)
@@ -631,11 +677,12 @@ def on_combobox(win, cb, text):
                 win.gui.enable_save(False)
 
 
-def captions_extra_fields(win):
+def captions_extra_fields(gui):
     """to be called on changing the language
     """
-    win.gui.set_label_text(win.gui.lbl_parms, win.captions['C_PARMS'])
-    win.gui.set_label_text(win.gui.lbl_controls, win.captions['C_CTRL'])
+    win = gui.master
+    gui.set_label_text(gui.lbl_parms, win.captions['C_PARMS'])
+    gui.set_label_text(gui.lbl_controls, win.captions['C_CTRL'])
 
 
 def on_extra_selected(win, newdata):
