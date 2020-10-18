@@ -36,7 +36,8 @@ def buildcsv(page, showinfo=True):
         if ok:
             shortcuts = page.tempdata
         else:
-            shortcuts = []
+            # shortcuts = []
+            return None
     else:
         shortcuts = []
     return shortcuts, {}
