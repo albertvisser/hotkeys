@@ -274,7 +274,7 @@ class TcMergeMixin:
             keytext = ' '.join((key, mods))
             ix = self.add_listlinks_item(keytext, command)
             itemindex = self.find_in_listkeys(keytext)
-            if itemindex != -1:
+            if itemindex is not None:  # != -1:
                 self.set_listitem_icon(itemindex)
 
     def reset_all(self, event=None):
