@@ -13,8 +13,7 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
 
     In het ene ini bestand staat namelijk toets + omschrijving en in het andere
     command + omschrijving en de omschrijvingen hoeven uiteraard niet 100% gelijk
-    te zijn, dus moeten ze handmatig gekoppeld worden. Vandaar de ietwat misleidende
-    naam "links"
+    te zijn, dus moeten ze handmatig gekoppeld worden.
     """
     def __init__(self, parent, master):
         """Opbouwen van het scherm
@@ -33,7 +32,11 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
         self.listkeys.setHeaderLabels(['Key', 'Description'])
         self.listkeys.setMouseTracking(True)
         self.listkeys.itemEntered.connect(self.popuptext)
+        self.listkeys.currentItemChanged.connect(self.select_match_fromkeys)
 
+        self.findkeybutton = self.create_findbutton(columns=('key', 'text'))
+        # self.find_keylist_text()
+        self.findkeybutton.setCurrentIndex(1)
         self.findkeytext = qtw.QLineEdit(self)
         self.nextkey = qtw.QPushButton('&Next', self)
         self.nextkey.setMaximumWidth(50)
@@ -47,7 +50,11 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
         self.listcmds.setHeaderLabels(['Command', 'Description'])
         self.listcmds.setMouseTracking(True)
         self.listcmds.itemEntered.connect(self.popuptext)
+        self.listcmds.currentItemChanged.connect(self.select_match_from_cmds)
 
+        self.findcmdbutton = self.create_findbutton(columns=('cmd', 'text'))
+        # self.find_cmdlist_text()
+        self.findcmdbutton.setCurrentIndex(1)
         self.findcmdtext = qtw.QLineEdit(self)
         self.nextcmd = qtw.QPushButton('Ne&xt', self)
         self.nextcmd.setMaximumWidth(50)
@@ -56,21 +63,22 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
         self.prevcmd.setMaximumWidth(50)
         self.prevcmd.clicked.connect(self.findprevcmd)
 
-        self.listlinks = qtw.QTreeWidget(self)
-        self.listlinks.setColumnCount(2)
-        self.listlinks.setHeaderLabels(['Key', 'Command'])
+        self.listmatches = qtw.QTreeWidget(self)
+        self.listmatches.setColumnCount(2)
+        self.listmatches.setHeaderLabels(['Key', 'Command'])
+        self.listmatches.currentItemChanged.connect(self.select_listitems_from_matches)
 
-        self.btn_link = qtw.QPushButton("&+ Add/Replace Link", self)
-        self.btn_link.clicked.connect(self.make_link)
-        self.btn_delete = qtw.QPushButton("&- Discard Link", self)
-        self.btn_delete.clicked.connect(self.delete_link)
+        self.btn_match = qtw.QPushButton("&+ Add/Replace match", self)
+        self.btn_match.clicked.connect(self.make_match)
+        self.btn_delete = qtw.QPushButton("&- Discard match", self)
+        self.btn_delete.clicked.connect(self.delete_match)
 
-        self.btn_load = qtw.QPushButton("&Load Links", self)
-        self.btn_load.clicked.connect(self.load_links)
+        self.btn_load = qtw.QPushButton("&Load matches", self)
+        self.btn_load.clicked.connect(self.load_matches)
         self.btn_clear = qtw.QPushButton("&Clear All", self)
         self.btn_clear.clicked.connect(self.reset_all)
-        self.btn_save = qtw.QPushButton("&Save Links", self)
-        self.btn_save.clicked.connect(self.save_links)
+        self.btn_save = qtw.QPushButton("&Save matches", self)
+        self.btn_save.clicked.connect(self.save_matches)
         self.btn_quit = qtw.QPushButton("&Afsluiten", self)
         self.btn_quit.clicked.connect(self.close)
         self.btn_build = qtw.QPushButton("&Build CSV", self)
@@ -82,7 +90,7 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
         vbox2 = qtw.QVBoxLayout()
         vbox2.addWidget(self.listkeys)
         hbox2 = qtw.QHBoxLayout()
-        hbox2.addWidget(qtw.QLabel('Find text:', self))
+        hbox2.addWidget(self.findkeybutton)
         hbox2.addWidget(self.findkeytext)
         hbox2.addWidget(self.nextkey)
         hbox2.addWidget(self.prevkey)
@@ -94,7 +102,7 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
         vbox2.addWidget(self.listcmds)
 
         hbox2 = qtw.QHBoxLayout()
-        hbox2.addWidget(qtw.QLabel('Find text:', self))
+        hbox2.addWidget(self.findcmdbutton)
         hbox2.addWidget(self.findcmdtext)
         hbox2.addWidget(self.nextcmd)
         hbox2.addWidget(self.prevcmd)
@@ -103,11 +111,11 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
         hbox.addLayout(vbox2)
 
         vbox2 = qtw.QVBoxLayout()
-        vbox2.addWidget(self.listlinks)
+        vbox2.addWidget(self.listmatches)
 
         hbox2 = qtw.QHBoxLayout()
         hbox2.addStretch()
-        hbox2.addWidget(self.btn_link)
+        hbox2.addWidget(self.btn_match)
         hbox2.addWidget(self.btn_delete)
         hbox2.addStretch()
         vbox2.addLayout(hbox2)
@@ -132,6 +140,15 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
             self.addAction(act)
         self.load_files()
 
+    def create_findbutton(self, columns):
+        """stel in waarop gezocht moet worden
+        """
+        control = qtw.QComboBox(self)
+        control.setEditable(False)
+        for text in columns:
+            control.addItem('Find ' + text)
+        return control
+
     def clear_listkeys(self):
         "initialize the list of keycombos"
         self.listkeys.clear()
@@ -154,19 +171,19 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
         new.setText(1, value['oms'])
         self.listcmds.addTopLevelItem(new)
 
-    def clear_listlinks(self):
+    def clear_listmatches(self):
         "(re)initialize the list of mappings"
-        self.listlinks.clear()
+        self.listmatches.clear()
         for ix in range(self.listkeys.topLevelItemCount()):
             item = self.listkeys.topLevelItem(ix)
             self.reset_listitem_icon(item)
 
-    def add_listlinks_item(self, keytext, command):
+    def add_listmatches_item(self, keytext, command):
         "add an item to the list of mappings"
         new = qtw.QTreeWidgetItem()
         new.setText(0, keytext)
         new.setText(1, command)
-        return self.listlinks.addTopLevelItem(new)
+        return self.listmatches.addTopLevelItem(new)
 
     def set_listitem_icon(self, item):
         "set the check image for a keycombo list item"
@@ -182,14 +199,14 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
         cmdchoice = self.listcmds.currentItem()
         return cmdchoice, cmdchoice.text(0)
 
-    def get_selected_linkitem(self):
+    def get_selected_matchitem(self):
         "get the selected mapping item"
-        return self.listlinks.currentItem()
+        return self.listmatches.currentItem()
 
-    def find_in_listlinks(self, keytext):
+    def find_in_listmatches(self, keytext):
         "find a keycombo in the mappings list"
-        for ix in range(self.listlinks.topLevelItemCount()):
-            item = self.listlinks.topLevelItem(ix)
+        for ix in range(self.listmatches.topLevelItemCount()):
+            item = self.listmatches.topLevelItem(ix)
             if item.text(0) == keytext:
                 break
         else:
@@ -197,7 +214,7 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
         return item
 
     def find_in_listkeys(self, keytext):
-        "find a keycombo in the mappings list"
+        "find a keycombo in the shortcuts list"
         for ix in range(self.listkeys.topLevelItemCount()):
             item = self.listkeys.topLevelItem(ix)
             if item.text(0) == keytext:
@@ -206,18 +223,18 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
             item = None
         return item
 
-    def replace_linklist_item(self, item, cmdtext):
+    def replace_matchlist_item(self, item, cmdtext):
         "replace the command in a mapping item"
         item.setText(1, cmdtext)
 
     def ensure_item_visible(self, item):
         "make sure the selected mapping can be viewed in the list"
-        self.listlinks.scrollTo(self.listlinks.indexFromItem(item))
+        self.listmatches.scrollTo(self.listmatches.indexFromItem(item))
 
-    def remove_linkitem(self, item):
+    def remove_matchitem(self, item):
         "delete a mapping from the list"
-        ix = self.listlinks.indexOfTopLevelItem(item)
-        item = self.listlinks.takeTopLevelItem(ix)
+        ix = self.listmatches.indexOfTopLevelItem(item)
+        item = self.listmatches.takeTopLevelItem(ix)
 
     def reset_listitem_icon(self, item):
         "find the corresponding keycombo item and unset the check image"
@@ -239,9 +256,9 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
         "shift focus for selecting a command item"
         self.listcmds.setFocus()
 
-    def focuslinklist(self):
+    def focusmatchlist(self):
         "shift focus for selecting a mapping item"
-        self.listlinks.setFocus()
+        self.listmatches.setFocus()
 
     def focusfindkey(self):
         "shift focus to enter a keycombo search phrase"
@@ -260,9 +277,13 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
         "get a text entry field's text"
         return win.text()
 
-    def find_listitems(self, win, search):
-        "find all items in a list that contain a search text"
-        return win.findItems(search, core.Qt.MatchContains, 1)
+    def get_search_choice(self, control):
+        "return the selected item's index for the given list"
+        return control.currentIndex()
+
+    def find_listitems(self, win, search, in_col=1):
+        "find all items in a list that contain text in a given column"
+        return win.findItems(search, core.Qt.MatchContains, in_col)   #  1)
 
     def get_selected_item(self, win):
         "get the selected item in a list"
@@ -285,13 +306,16 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
         # return list.currentItem() -- pardon?
         win.setCurrentItem(item)
 
-    def count_links(self):
+    def count_matches(self):
         "get the current number of mappings in the list"
-        return self.listlinks.topLevelItemCount()
+        return self.listmatches.topLevelItemCount()
 
-    def get_linkitem_data(self, ix):
+    # def matches_loaded(self):
+    #    return self.listkeys.topLevelItemCount() > 0
+
+    def get_matchitem_data(self, ix):
         "get the texts for a mapping item"
-        item = self.listlinks.topLevelItem(ix)
+        item = self.listmatches.topLevelItem(ix)
         return item.text(0), item.text(1)
 
     def finish(self):

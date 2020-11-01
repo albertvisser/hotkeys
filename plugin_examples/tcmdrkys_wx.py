@@ -10,8 +10,7 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
 
     In het ene ini bestand staat namelijk toets + omschrijving en in het andere
     command + omschrijving en de omschrijvingen hoeven uiteraard niet 100% gelijk
-    te zijn, dus moeten ze handmatig gekoppeld worden. Vandaar de ietwat misleidende
-    naam "links"
+    te zijn, dus moeten ze handmatig gekoppeld worden.
     """
     def __init__(self, parent, master):
         """Opbouwen van het scherm
@@ -33,6 +32,8 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
         self.listkeys.SetImageList(self.imglist, wx.IMAGE_LIST_SMALL)
         # self.listkeys.SetToolTip(self.popuptext)  -- nog iets op vinden
 
+        self.findkeybutton = self.create_findbutton(columns=('key', 'text'))
+        self.findkeybutton.SetSelection(1)
         self.findkeytext = wx.TextCtrl(self, size=(120, -1))
         self.nextkey = wx.Button(self, label='&Next', size=(50, -1))
         self.nextkey.Bind(wx.EVT_BUTTON, self.findnextkey)
@@ -44,27 +45,29 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
         self.listcmds.InsertColumn(1, 'Description')
         # self.listcmds.SetToolTip(self.popuptext)  -- nog iets op vinden
 
+        self.findcmdbutton = self.create_findbutton(columns=('cmd', 'text'))
+        self.findcmdbutton.SetSelection(1)
         self.findcmdtext = wx.TextCtrl(self, size=(120, -1))
         self.nextcmd = wx.Button(self, label='Ne&xt', size=(50, -1))
         self.nextcmd.Bind(wx.EVT_BUTTON, self.findnextcmd)
         self.prevcmd = wx.Button(self, label='Pre&v', size=(50, -1))
         self.prevcmd.Bind(wx.EVT_BUTTON, self.findprevcmd)
 
-        self.listlinks = MyListCtrl(self, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
-        self.listlinks.InsertColumn(0, 'Key')
-        self.listlinks.InsertColumn(1, 'Command')
+        self.listmatches = MyListCtrl(self, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
+        self.listmatches.InsertColumn(0, 'Key')
+        self.listmatches.InsertColumn(1, 'Command')
 
-        self.btn_link = wx.Button(self, label="&+ Add/Replace Link")
-        self.btn_link.Bind(wx.EVT_BUTTON, self.make_link)
-        self.btn_delete = wx.Button(self, label="&- Discard Link")
-        self.btn_delete.Bind(wx.EVT_BUTTON, self.delete_link)
+        self.btn_match = wx.Button(self, label="&+ Add/Replace match")
+        self.btn_match.Bind(wx.EVT_BUTTON, self.make_match)
+        self.btn_delete = wx.Button(self, label="&- Discard match")
+        self.btn_delete.Bind(wx.EVT_BUTTON, self.delete_match)
 
-        self.btn_load = wx.Button(self, label="&Load Links")
-        self.btn_load.Bind(wx.EVT_BUTTON, self.load_links)
+        self.btn_load = wx.Button(self, label="&Load matches")
+        self.btn_load.Bind(wx.EVT_BUTTON, self.load_matches)
         self.btn_clear = wx.Button(self, label="&Clear All")
         self.btn_clear.Bind(wx.EVT_BUTTON, self.reset_all)
-        self.btn_save = wx.Button(self, label="&Save Links")
-        self.btn_save.Bind(wx.EVT_BUTTON, self.save_links)
+        self.btn_save = wx.Button(self, label="&Save matches")
+        self.btn_save.Bind(wx.EVT_BUTTON, self.save_matches)
         self.btn_quit = wx.Button(self, label="&Afsluiten")
         self.btn_quit.Bind(wx.EVT_BUTTON, self.close)
         self.btn_build = wx.Button(self, label="&Build CSV")
@@ -78,7 +81,7 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
 
         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
         hbox2.AddStretchSpacer()
-        hbox2.Add(wx.StaticText(self, label='Find text:'), 0, wx.ALIGN_CENTER_VERTICAL)
+        hbox2.Add(self.findkeybutton, 0, wx.ALIGN_CENTER_VERTICAL)
         hbox2.Add(self.findkeytext, 0, wx.ALIGN_CENTER_VERTICAL)
         hbox2.Add(self.nextkey, 0)
         hbox2.Add(self.prevkey, 0)
@@ -91,7 +94,7 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
 
         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
         hbox2.AddStretchSpacer()
-        hbox2.Add(wx.StaticText(self, label='Find text:'), 0, wx.ALIGN_CENTER_VERTICAL)
+        hbox2.Add(self.findcmdbutton, 0, wx.ALIGN_CENTER_VERTICAL)
         hbox2.Add(self.findcmdtext, 0, wx.ALIGN_CENTER_VERTICAL)
         hbox2.Add(self.nextcmd, 0)
         hbox2.Add(self.prevcmd, 0)
@@ -100,11 +103,11 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
         hbox.Add(vbox2, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
 
         vbox2 = wx.BoxSizer(wx.VERTICAL)
-        vbox2.Add(self.listlinks, 1, wx.EXPAND)
+        vbox2.Add(self.listmatches, 1, wx.EXPAND)
 
         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
         hbox2.AddStretchSpacer()
-        hbox2.Add(self.btn_link)
+        hbox2.Add(self.btn_match)
         hbox2.Add(self.btn_delete)
         hbox2.AddStretchSpacer()
         vbox2.Add(hbox2, 0, wx.EXPAND)
@@ -136,6 +139,13 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
         self.SetAcceleratorTable(accel_table)
         self.load_files()
 
+    def create_findbutton(self, columns):
+        """stel in waarop gezocht moet worden
+        """
+        control = wx.ComboBox(self, size=(120, -1), choices = ['Find ' + x for x in columns],
+                              style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        return control
+
     def clear_listkeys(self):
         "initialize the list of keycombos"
         self.listkeys.DeleteAllItems()
@@ -154,17 +164,17 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
         index = self.listcmds.InsertItem(self.listkeys.GetItemCount(), key)
         self.listcmds.SetItem(index, 1, value['oms'])
 
-    def clear_listlinks(self):
+    def clear_listmatches(self):
         "(re)initialize the list of mappings"
-        self.listlinks.DeleteAllItems()
+        self.listmatches.DeleteAllItems()
         for ix in range(self.listkeys.GetItemCount()):
             self.reset_listitem_icon(ix)
 
-    def add_listlinks_item(self, keytext, command):
+    def add_listmatches_item(self, keytext, command):
         "add an item to the list of mappings"
-        index = self.listlinks.InsertItem(self.listlinks.GetItemCount(), keytext)
-        self.listlinks.SetItem(index, 1, command)
-        return index  # self.listlinks.GetItem(index)
+        index = self.listmatches.InsertItem(self.listmatches.GetItemCount(), keytext)
+        self.listmatches.SetItem(index, 1, command)
+        return index  # self.listmatches.GetItem(index)
 
     def set_listitem_icon(self, ix):
         "set the check image for a keycombo list item"
@@ -186,9 +196,9 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
         cmdtext = self.listcmds.GetItemText(cmdchoice, 0)
         return cmdchoice, cmdtext
 
-    def get_selected_linkitem(self):
+    def get_selected_matchitem(self):
         "get the selected mapping item"
-        ix = self.listlinks.GetFirstSelected()
+        ix = self.listmatches.GetFirstSelected()
         if ix == -1:
             return None
         return ix
@@ -204,30 +214,30 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
            ix = -1  # item = None
         return ix
 
-    def find_in_listlinks(self, keytext):
+    def find_in_listmatches(self, keytext):
         "find a keycombo in the mappings list"
-        return self.find_in_list(self.listlinks, 0, keytext)
+        return self.find_in_list(self.listmatches, 0, keytext)
 
     def find_in_listkeys(self, keytext):
         "find a keycombo in the shortcuts list"
         return self.find_in_list(self.listkeys, 0, keytext)
 
-    def replace_linklist_item(self, itemindex, cmdtext):
+    def replace_matchlist_item(self, itemindex, cmdtext):
         "replace the command in a mapping item"
-        item = self.listlinks.GetItem(itemindex)
-        self.listlinks.SetItemText(item, 1, cmdtext)
+        item = self.listmatches.GetItem(itemindex)
+        self.listmatches.SetItemText(item, 1, cmdtext)
 
     def ensure_item_visible(self, ix, win=None):  # item):
         "make sure the selected mapping can be viewed in the list"
         if win == None:
-            win = self.listlinks
+            win = self.listmatches
         print(win.EnsureVisible(ix))  # item.GetId())
 
-    def remove_linkitem(self, itemindex):
+    def remove_matchitem(self, itemindex):
         "delete a mapping from the list"
-        # find = self.listlinks.GetItemText(item.GetId(), 0)
-        # self.listlinks.DeleteItem(find)
-        self.listlinks.DeleteItem(itemindex)  # item.GetId())
+        # find = self.listmatches.GetItemText(item.GetId(), 0)
+        # self.listmatches.DeleteItem(find)
+        self.listmatches.DeleteItem(itemindex)  # item.GetId())
 
     def reset_listitem_icon(self, ix):
         "find the corresponding keycombo item and unset the check image"
@@ -243,9 +253,9 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
         "shift focus for selecting a command item"
         self.listcmds.SetFocus()
 
-    def focuslinklist(self, event=None):
+    def focusmatchlist(self, event=None):
         "shift focus for selecting a mapping item"
-        self.listlinks.SetFocus()
+        self.listmatches.SetFocus()
 
     def focusfindkey(self, event=None):
         "shift focus to enter a keycombo search phrase"
@@ -264,10 +274,14 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
         "get a text entry field's text"
         return win.GetValue()
 
-    def find_listitems(self, win, search):
+    def get_search_choice(self, control):
+        "return the selected item's index for the given list"
+        return control.GetSelection()
+
+    def find_listitems(self, win, search, in_col=1):
         "find all items in a list that contain a search text"
         results = []
-        itemindex = self.find_in_list(win, 1, search, exact=False)
+        itemindex = self.find_in_list(win, in_col, search, exact=False)
         while itemindex != -1:
             print(itemindex)
             results.append(itemindex)
@@ -326,14 +340,14 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
         print('let`s try some more:', win.GetItem(ix, 0), win.GetItem(ix, 1),
               win.GetItem(ix).GetText())
 
-    def count_links(self):
+    def count_matches(self):
         "get the current number of mappings in the list"
-        return self.listlinks.GetItemCount()
+        return self.listmatches.GetItemCount()
 
-    def get_linkitem_data(self, itemindex):
+    def get_matchitem_data(self, itemindex):
         "get the texts for a mapping item"
-        return (self.get_item_text(self.listlinks, itemindex, 0),
-                self.get_item_text(self.listlinks, itemindex, 1))
+        return (self.get_item_text(self.listmatches, itemindex, 0),
+                self.get_item_text(self.listmatches, itemindex, 1))
 
     def reject(self):
         "discard the dialog"
