@@ -6,201 +6,34 @@ import collections
 import editor.gui
 
 
-def read_lines(fn):
-    "return lines read from file"
-    result = []
+def load_matchdata(matchfile):
+    "load matches from intermediate file"
     try:
-        with open(fn) as f_in:
-            result = f_in.readlines()
-    except UnicodeDecodeError:
-        with open(fn, encoding='latin-1') as f_in:
-            result = f_in.readlines()
-    return result
-
-
-def keymods(x):
-    """hulp bij omzetten keyboard.txt definitie in standaard definitie
-    """
-    extra = ""
-    if x[-1] == "+":
-        x = x[:-1]
-        extra = "+"
-    mods = ""
-    h = x.split("+", 1)
-    while len(h) > 1:
-        # if h[0] in ('SHIFT','ALT','CTRL'):
-        if h[0] in ('CTRL', 'ALT', 'SHIFT'):
-            mods += h[0][0]
-        h = h[1].split("+", 1)
-    keyc = h[0].replace(" ", "").capitalize() + extra
-    if keyc == '\\':
-        keyc = 'OEM_US\\|'
-    # keyc = ' + '.join((keyc,mods))
-    mods = mods.replace('SC', 'CS')
-    return keyc, mods
-
-
-def defaultcommands(root):
-    """mapping uit totalcmd.inc omzetten in een Python dict
-    """
-    cmdict = {'': {"oms": "no command available"}}
-    for x in read_lines(root):
-        h = x.strip()
-        if h == '' or h[0] == '[' or h[0] == ';':
-            continue
-        cm_naam, rest = h.split('=', 1)
-        cm_num, cm_oms = rest.split(';', 1)
-        cmdictitem = {"oms": cm_oms}
-        if int(cm_num) > 0:
-            cmdictitem["number"] = cm_num
-        if " <" in cm_naam:
-            cm_naam, argsitem = cm_naam.split(' <')
-            cmdictitem['args'] = argsitem.split('>')[0]
-        cmdict[cm_naam] = cmdictitem
-    return cmdict
-
-
-def defaultkeys(root):
-    """keydefs lezen uit keyboard.txt - mapping maken van deze op ...
-    vooralsnog alleen omschrijving
-    """
-    data = {}
-    ky = []
-    ky_desc = ''
-    join_keys = False
-    temp = read_lines(root)
-    for x in temp[6:]:
-        x = x.rstrip()
-        if x == "":
-            break
-        # if len(x) < 24:
-            # continue
-        deel1 = x[:23].strip()
-        deel2 = x[23:].strip()
-        if deel1 == '':
-            ky_desc += " " + deel2
-        elif join_keys:
-            join_keys = False
-            ky_desc += " " + deel2
-            ky[1] = deel1
-        else:
-            if ky:
-                for k in ky:
-                    h = k.rsplit('+', 1)
-                    if '/' in h[-1] and not h[-1].endswith('/'):
-                        hlp = h[-1].split('/')
-                        for it in hlp:
-                            data[keymods('+'.join((h[0], it)))] = {"oms": ky_desc}
-                    else:
-                        data[keymods(k)] = {"oms": ky_desc}
-            ky_desc = deel2
-            if " or " in deel1:
-                ky = deel1.split(" or ")
-                s2 = "+".join(ky[0].split("+")[:-1])
-                if s2 != "":
-                    for y in enumerate(ky[1:]):
-                        ky[y[0] + 1] = "+".join((s2, y[1]))
-            elif deel1.endswith(" or"):
-                ky = [deel1[:-3], ""]
-                join_keys = True
-            else:
-                ky = [deel1]
-    if ky:
-        for k in ky:
-            h = k.rsplit('+', 1)
-            if '/' in h[-1] and not h[-1].endswith('/'):
-                hlp = h[-1].split('/')
-                for it in hlp:
-                    data[keymods('+'.join((h[0], it)))] = {"oms": ky_desc}
-            else:
-                data[keymods(k)] = {"oms": ky_desc}
-    return data
-
-
-def usercommands(root):
-    """definities uit usercmd.ini omzetten in een Python dict compatible met die
-    voor de standaard commando's
-    """
-    ucmdict = collections.defaultdict(dict)
-    em_name = ""  # , em_value = {}
-    for x in read_lines(root):
-        if x.startswith("["):
-            # if em_name:
-            #     ucmdict[em_name] = em_value
-            em_name = x[1:].split("]")[0]  # x[1:-1] had ook gekund maar dit is safer
-            # em_value = {}
-        elif x.startswith("cmd"):
-            # em_value["cmd"] = x.strip().split("=")[1]
-            ucmdict[em_name]["cmd"] = x.strip().split("=")[1]
-        elif x.startswith("menu"):
-            # em_value["oms"] = x.strip().split("=")[1]
-            ucmdict[em_name]["oms"] = x.strip().split("=")[1]
-        elif x.startswith("param"):
-            # em_value["args"] = x.strip().split("=")[1]
-            ucmdict[em_name]["args"] = x.strip().split("=")[1]
-    # ucmdict[em_name] = em_value
-    return ucmdict
-
-
-def userkeys(root):
-    """user key definities uit wincmd.ini lezen - mapping maken van deze op...
-    vooralsnog alleen commandonaam
-    """
-    data = {}
-    in_user = in_win = False
-    for line in read_lines(root):
-        line = line.rstrip()
-        ## linesplit = line.split("=")
-        ## for symbol in ('+', '-', '/', '*'):
-            ## if linesplit[0].endswith(symbol):
-                ## linesplit[0] = linesplit[0][:-1] + 'NUM' + linesplit[0][-1]
-        if line.startswith("["):
-            in_user = in_win = False
-            if line.startswith("[Shortcuts]"):
-                in_user = True
-            elif line.startswith("[ShortcutsWin]"):
-                in_win = True
-        elif in_user or in_win:
-            key, cmd = line.split('=')
-            try:
-                mods, key = key.split('+')
-            except ValueError:
-                mods = ''
-            if in_win:
-                mods += 'W'
-            data[(key, mods)] = {'cm_name': cmd}
-        ## elif in_win:
-            ## key, cmd = line.split('=')
-                ## if not '+' in key:
-                    ## key = '+' + key
-                ## key = 'W' + key
-                ## data[key] = {'cm_name': cmd}
-    return data
-
-
-def translate_keyname(inp):
-    """helper function to convert text from settings into text for this app
-    """
-    convert = {'Pgup': 'PgUp', 'Pgdn': 'PgDn', 'Period': '.', 'Comma': ',',
-               'Plus': '+', 'Minus': '-', 'Backtick/Tilde': '`',
-               'Brackets open': '[', 'Brackets close': ']', 'Backslash/Pipe': '\\',
-               'Semicolon/colon': ';', 'Apostrophe/Quote': "'",
-               'Slash/Questionmark': '/', 'OEM_US\|': '\\'}
-    if inp in convert:
-        out = convert[inp]
+        _in = open(matchfile, 'r')
+    except FileNotFoundError:
+        data = []
     else:
-        out = inp
-    return out
+        with _in:
+            rdr = csv.reader(_in)
+            data = [row for row in rdr]
+    return data
 
 
-class TcMergeMixin:
+def save_matchdata(lines, matchfile):
+    "save matches in intermediate file"
+    with open(matchfile, "w") as _out:
+        writer = csv.writer(_out)
+        for keytext, cmdtext in lines:
+            writer.writerow((*keytext.split(' ', 1) , cmdtext))
+
+
+class MergeMixin:
     """Dialoog om een gedocumenteerde toetscombinatie te koppelen aan een commando
     Mixin class die de gezamenlijke code bevat
     """
     def __init__(self, parent):
         self.parent = parent
         self.master = parent
-        self.matchespad = os.path.join(os.path.dirname(__file__), 'tc_default_hotkeys_mapped.csv')
         self.keysearch = ['', 1]
         self.cmdsearch = ['', 1]
         self.keyresults, self.cmdresults = [], []
@@ -229,19 +62,13 @@ class TcMergeMixin:
 
     def load_files(self):
         """load definitions from the various input files"""
-        self.load_keys(self.parent.settings['KB_PAD'])
-        self.load_commands(self.parent.settings['CI_PAD'])
-
-        ## # user commands (should be added to right list box?)
-        ## self.usrdict, self.uomsdict = usercommands(self.parent.settings['UC_PAD'])
-
-        ## # user defined keys (should be added to left list box?)
-        ## self.usrkeys = dict(userkeys(self.parent.settings['TC_PAD']))
+        self.load_keys()
+        self.load_commands()
         self.clear_listmatches()
 
-    def load_keys(self, keyspad):
+    def load_keys(self):
         """load keyboard definitions"""
-        self.keydict = defaultkeys(keyspad)
+        self.keydict = {x: y for x, y in sorted(self.parent.keylist_data.items())}
         self.clear_listkeys()
         self.keydata, self.keytexts = [], []
         for key, value in sorted(self.keydict.items()):
@@ -250,9 +77,9 @@ class TcMergeMixin:
             self.keydata.append(keytext)
             self.keytexts.append(value['oms'])
 
-    def load_commands(self, cmdspad):
+    def load_commands(self):
         """load command definitions"""
-        self.cmddict = defaultcommands(cmdspad)
+        self.cmddict = {x: y for x, y in sorted(self.parent.cmdlist_data.items())}
         self.clear_listcmds()
         self.cmddata, self.cmdtexts = [], []
         for key, value in sorted(self.cmddict.items()):
@@ -263,16 +90,10 @@ class TcMergeMixin:
     def load_matches(self, event=None):
         "load keydefs from temp file"
         self.reset_all()
-        try:
-            _in = open(self.matchespad, 'r')
-        except FileNotFoundError:
+        if not self.parent.matchlist_data:
             editor.gui.show_message(self, text="No saved data found")
             return
-
-        with _in:
-            rdr = csv.reader(_in)
-            lines = [row for row in rdr]
-        for key, mods, command in sorted(lines):
+        for key, mods, command in sorted(self.parent.matchlist_data):
             keytext = ' '.join((key, mods))
             ix = self.add_listmatches_item(keytext, command)
             itemindex = self.find_in_listkeys(keytext)
@@ -320,11 +141,8 @@ class TcMergeMixin:
         if num_items == 0:
             editor.gui.show_message(self, text='No data to save')
             return
-        with open(self.matchespad, "w") as _out:
-            writer = csv.writer(_out)
-            for ix in range(num_items):
-                keytext, cmdtext = self.get_matchitem_data(ix)
-                writer.writerow((*keytext.split(' ', 1) , cmdtext))
+        save_matchdata([self.get_matchitem_data(ix) for ix in range(num_items)],
+                        self.parent.matchfile)
         editor.gui.show_message(self, text='Data saved')
 
     def focus_keylist(self, event=None):
@@ -468,7 +286,7 @@ class TcMergeMixin:
         editor.gui.show_message(self, text='No previous item found')
         return None
 
-    def select_match_fromkeys(self):
+    def select_match_fromkeys(self, event=None):
         "positioneer in matches lijst n.a.v. positioneren in keys lijst"
         if self.count_matches() == 0:
             return
@@ -479,7 +297,7 @@ class TcMergeMixin:
                 self.set_selected_item(self.listmatches, associated_matchitem)
             self.set_match_from_key = False
 
-    def select_match_from_cmds(self):
+    def select_match_from_cmds(self, event=None):
         "positioneer in matches lijst n.a.v. positioneren in commands lijst"
         if self.count_matches() == 0:
             return
@@ -490,7 +308,7 @@ class TcMergeMixin:
                 self.set_selected_item(self.listmatches, associated_matchitem)
             self.set_match_from_command = False
 
-    def select_listitems_from_matches(self):
+    def select_listitems_from_matches(self, event=None):
         "positioneer in lijsten n.a.v. positioneren in matches lijst"
         if self.count_matches() == 0:
             return
@@ -522,16 +340,7 @@ class TcMergeMixin:
         don't save to file; just assign to a global variable
         """
         print('in confirm')
-        shortcuts = {}
-        for ix in range(self.count_matches()):
-            keytext, cmd = self.get_matchitem_data(ix)
-            key, mods = keytext.split(' ', 1)
-            if cmd:
-                desc = self.cmddict[cmd]['oms']
-            else:
-                desc = self.keydict[(key, mods)]['oms']
-            shortcuts[ix] = (translate_keyname(key), mods, 'S', cmd, desc)
-        self.parent.tempdata = shortcuts
+        self.parent.tempdata = [self.get_matchitem_data(ix) for ix in range(num_items)]
         self.finish()
 
     def close(self, event=None):

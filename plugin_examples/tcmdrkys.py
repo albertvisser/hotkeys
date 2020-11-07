@@ -3,13 +3,25 @@
 import os
 import csv
 import editor.gui
-import editor.plugins.tcmdrkys_shared as shared
+import editor.plugins.mergetool_shared as shared
 from ..toolkit import toolkit
 if toolkit == 'qt':
-    from .tcmdrkys_qt import TcMergeDialog
+    from .mergetool_qt import MergeDialog
 elif toolkit == 'wx':
-    from .tcmdrkys_wx import TcMergeDialog
+    from .mergetool_wx import MergeDialog
 DFLT_TCLOC = "C:/totalcmd"
+
+
+def read_lines(fn):
+    "return lines read from file"
+    result = []
+    try:
+        with open(fn) as f_in:
+            result = f_in.readlines()
+    except UnicodeDecodeError:
+        with open(fn, encoding='latin-1') as f_in:
+            result = f_in.readlines()
+    return result
 
 
 def keymods_old(x):
@@ -28,13 +40,210 @@ def keymods_old(x):
     return keyc
 
 
+def keymods(x):
+    """hulp bij omzetten keyboard.txt definitie in standaard definitie
+    """
+    extra = ""
+    if x[-1] == "+":
+        x = x[:-1]
+        extra = "+"
+    mods = ""
+    h = x.split("+", 1)
+    while len(h) > 1:
+        # if h[0] in ('SHIFT','ALT','CTRL'):
+        if h[0] in ('CTRL', 'ALT', 'SHIFT'):
+            mods += h[0][0]
+        h = h[1].split("+", 1)
+    keyc = h[0].replace(" ", "").capitalize() + extra
+    if keyc == '\\':
+        keyc = 'OEM_US\\|'
+    # keyc = ' + '.join((keyc,mods))
+    mods = mods.replace('SC', 'CS')
+    return keyc, mods
+
+
+def defaultcommands(root):
+    """mapping uit totalcmd.inc omzetten in een Python dict
+    """
+    cmdict = {'': {"oms": "no command available"}}
+    for x in read_lines(root):
+        h = x.strip()
+        if h == '' or h[0] == '[' or h[0] == ';':
+            continue
+        cm_naam, rest = h.split('=', 1)
+        cm_num, cm_oms = rest.split(';', 1)
+        cmdictitem = {"oms": cm_oms}
+        if int(cm_num) > 0:
+            cmdictitem["number"] = cm_num
+        if " <" in cm_naam:
+            cm_naam, argsitem = cm_naam.split(' <')
+            cmdictitem['args'] = argsitem.split('>')[0]
+        cmdict[cm_naam] = cmdictitem
+    return cmdict
+
+
+def defaultkeys(root):
+    """keydefs lezen uit keyboard.txt - mapping maken van deze op ...
+    vooralsnog alleen omschrijving
+    """
+    data = {}
+    ky = []
+    ky_desc = ''
+    join_keys = False
+    temp = read_lines(root)
+    for x in temp[6:]:
+        x = x.rstrip()
+        if x == "":
+            break
+        # if len(x) < 24:
+            # continue
+        deel1 = x[:23].strip()
+        deel2 = x[23:].strip()
+        if deel1 == '':
+            ky_desc += " " + deel2
+        elif join_keys:
+            join_keys = False
+            ky_desc += " " + deel2
+            ky[1] = deel1
+        else:
+            if ky:
+                for k in ky:
+                    h = k.rsplit('+', 1)
+                    if '/' in h[-1] and not h[-1].endswith('/'):
+                        hlp = h[-1].split('/')
+                        for it in hlp:
+                            data[keymods('+'.join((h[0], it)))] = {"oms": ky_desc}
+                    else:
+                        data[keymods(k)] = {"oms": ky_desc}
+            ky_desc = deel2
+            if " or " in deel1:
+                ky = deel1.split(" or ")
+                s2 = "+".join(ky[0].split("+")[:-1])
+                if s2 != "":
+                    for y in enumerate(ky[1:]):
+                        ky[y[0] + 1] = "+".join((s2, y[1]))
+            elif deel1.endswith(" or"):
+                ky = [deel1[:-3], ""]
+                join_keys = True
+            else:
+                ky = [deel1]
+    if ky:
+        for k in ky:
+            h = k.rsplit('+', 1)
+            if '/' in h[-1] and not h[-1].endswith('/'):
+                hlp = h[-1].split('/')
+                for it in hlp:
+                    data[keymods('+'.join((h[0], it)))] = {"oms": ky_desc}
+            else:
+                data[keymods(k)] = {"oms": ky_desc}
+    return data
+
+
+def usercommands(root):
+    """definities uit usercmd.ini omzetten in een Python dict compatible met die
+    voor de standaard commando's
+    """
+    ucmdict = collections.defaultdict(dict)
+    em_name = ""  # , em_value = {}
+    for x in read_lines(root):
+        if x.startswith("["):
+            # if em_name:
+            #     ucmdict[em_name] = em_value
+            em_name = x[1:].split("]")[0]  # x[1:-1] had ook gekund maar dit is safer
+            # em_value = {}
+        elif x.startswith("cmd"):
+            # em_value["cmd"] = x.strip().split("=")[1]
+            ucmdict[em_name]["cmd"] = x.strip().split("=")[1]
+        elif x.startswith("menu"):
+            # em_value["oms"] = x.strip().split("=")[1]
+            ucmdict[em_name]["oms"] = x.strip().split("=")[1]
+        elif x.startswith("param"):
+            # em_value["args"] = x.strip().split("=")[1]
+            ucmdict[em_name]["args"] = x.strip().split("=")[1]
+    # ucmdict[em_name] = em_value
+    return ucmdict
+
+
+def userkeys(root):
+    """user key definities uit wincmd.ini lezen - mapping maken van deze op...
+    vooralsnog alleen commandonaam
+    """
+    data = {}
+    in_user = in_win = False
+    for line in read_lines(root):
+        line = line.rstrip()
+        ## linesplit = line.split("=")
+        ## for symbol in ('+', '-', '/', '*'):
+            ## if linesplit[0].endswith(symbol):
+                ## linesplit[0] = linesplit[0][:-1] + 'NUM' + linesplit[0][-1]
+        if line.startswith("["):
+            in_user = in_win = False
+            if line.startswith("[Shortcuts]"):
+                in_user = True
+            elif line.startswith("[ShortcutsWin]"):
+                in_win = True
+        elif in_user or in_win:
+            key, cmd = line.split('=')
+            try:
+                mods, key = key.split('+')
+            except ValueError:
+                mods = ''
+            if in_win:
+                mods += 'W'
+            data[(key, mods)] = {'cm_name': cmd}
+        ## elif in_win:
+            ## key, cmd = line.split('=')
+                ## if not '+' in key:
+                    ## key = '+' + key
+                ## key = 'W' + key
+                ## data[key] = {'cm_name': cmd}
+    return data
+
+
+def translate_keyname(inp):
+    """helper function to convert text from settings into text for this app
+    """
+    convert = {'Pgup': 'PgUp', 'Pgdn': 'PgDn', 'Period': '.', 'Comma': ',',
+               'Plus': '+', 'Minus': '-', 'Backtick/Tilde': '`',
+               'Brackets open': '[', 'Brackets close': ']', 'Backslash/Pipe': '\\',
+               'Semicolon/colon': ';', 'Apostrophe/Quote': "'",
+               'Slash/Questionmark': '/', 'OEM_US\|': '\\'}
+    if inp in convert:
+        out = convert[inp]
+    else:
+        out = inp
+    return out
+
+
 def buildcsv(page, showinfo=True):
     """implementation of generic function to build the csv file
+
+    zo geschreven komt her erop neer dat de te rebuilden gegevens in het match file zitten
+    (want alleen de settings- en help files zijn niet voldoende)
     """
+    # start bij loading the stuff we need for the dialog
+    page.matchfile = os.path.join(os.path.dirname(__file__), 'tc_default_hotkeys_mapped.csv')
+    page.keylist_data = defaultkeys(page.settings['KB_PAD'])
+    # user defined keys (should be added to left list box)
+    # page.keylist_data.update((userkeys(self.parent.settings['TC_PAD'])))
+    page.cmdlist_data = defaultcommands(page.settings['CI_PAD'])
+    # user commands (should be added to right list box)
+    # usrdict, uomsdict = usercommands(self.parent.settings['UC_PAD'])
+    # page.cmdlist_data.update({usrdict[y]: uomsdict[x] for x, y in usrdict.items()}
+    page.matchlist_data = shared.load_matchdata(page.matchfile)
+
     if showinfo:
-        ok = editor.gui.show_dialog(page, TcMergeDialog)
+        ok = editor.gui.show_dialog(page, MergeDialog)
         if ok:
-            shortcuts = page.tempdata
+            save_matchdata(page.tempdata, page.matchfile)
+            shortcuts = {}
+            for keytext, cmd in page.tempdata:
+                key, mods = keytext.split(' ', 1)
+                if cmd:
+                    desc = self.cmddict[cmd]['oms']
+                else:
+                    desc = self.keydict[(key, mods)]['oms']
+                shortcuts[ix] = (translate_keyname(key), mods, 'S', cmd, desc)
         else:
             # shortcuts = []
             return None

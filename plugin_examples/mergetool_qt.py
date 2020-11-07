@@ -3,12 +3,12 @@
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
-import editor.plugins.tcmdrkys_shared as shared
+import editor.plugins.mergetool_shared as shared
 OKICON = '/usr/share/icons/Adwaita/16x16/emblems/emblem-ok-symbolic.symbolic.png'
 TODOICON = '/usr/share/icons/Adwaita/16x16/emblems/emblem-new.png'
 
 
-class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
+class MergeDialog(shared.MergeMixin, qtw.QDialog):
     """Dialoog om een gedocumenteerde toetscombinatie te koppelen aan een commando
 
     In het ene ini bestand staat namelijk toets + omschrijving en in het andere
@@ -20,7 +20,7 @@ class TcMergeDialog(shared.TcMergeMixin, qtw.QDialog):
 
         parent is een SingleDataInterface, master is een HotKeyPanel
         """
-        shared.TcMergeMixin.__init__(self, master)
+        shared.MergeMixin.__init__(self, master)
         qtw.QDialog.__init__(self, parent)
         self.setWindowTitle("TCCM")
         self.okicon = gui.QIcon(OKICON)

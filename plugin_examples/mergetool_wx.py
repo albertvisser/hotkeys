@@ -1,11 +1,11 @@
 """Hotkeys plugin for Total Commander - wxPython specific code
 """
 import wx
-import editor.plugins.tcmdrkys_shared as shared
+import editor.plugins.mergetool_shared as shared
 from ..gui_wx import MyListCtrl     # wx.ListCtrl with mixins
 
 
-class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
+class MergeDialog(shared.MergeMixin, wx.Dialog):
     """Dialoog om een gedocumenteerde toetscombinatie te koppelen aan een commando
 
     In het ene ini bestand staat namelijk toets + omschrijving en in het andere
@@ -17,7 +17,7 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
 
         parent is een SingleDataInterface, master is een HotKeyPanel
         """
-        shared.TcMergeMixin.__init__(self, master)
+        shared.MergeMixin.__init__(self, master)
         wx.Dialog.__init__(self, parent, title="TCCM", size=(1000, 600),
                            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
         # image voor het vinkje opzetten dat m.b.v. SetItemColumnImage ingesteld kan worden
@@ -31,6 +31,7 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
         self.listkeys.InsertColumn(1, 'Description')
         self.listkeys.SetImageList(self.imglist, wx.IMAGE_LIST_SMALL)
         # self.listkeys.SetToolTip(self.popuptext)  -- nog iets op vinden
+        self.listkeys.Bind(wx.EVT_LIST_ITEM_SELECTED, self.select_match_fromkeys)
 
         self.findkeybutton = self.create_findbutton(columns=('key', 'text'))
         self.findkeybutton.SetSelection(1)
@@ -44,6 +45,7 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
         self.listcmds.InsertColumn(0, 'Command')
         self.listcmds.InsertColumn(1, 'Description')
         # self.listcmds.SetToolTip(self.popuptext)  -- nog iets op vinden
+        self.listcmds.Bind(wx.EVT_LIST_ITEM_SELECTED, self.select_match_from_cmds)
 
         self.findcmdbutton = self.create_findbutton(columns=('cmd', 'text'))
         self.findcmdbutton.SetSelection(1)
@@ -56,6 +58,7 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
         self.listmatches = MyListCtrl(self, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
         self.listmatches.InsertColumn(0, 'Key')
         self.listmatches.InsertColumn(1, 'Command')
+        self.listmatches.Bind(wx.EVT_LIST_ITEM_SELECTED, self.select_listitems_from_matches)
 
         self.btn_match = wx.Button(self, label="&+ Add/Replace match")
         self.btn_match.Bind(wx.EVT_BUTTON, self.make_match)
@@ -211,7 +214,7 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
                 # item = self.listkeys.GetItem(ix)
                 break
         else:
-           ix = -1  # item = None
+           ix = None  # -1  # item = None
         return ix
 
     def find_in_listmatches(self, keytext):
@@ -282,7 +285,7 @@ class TcMergeDialog(shared.TcMergeMixin, wx.Dialog):
         "find all items in a list that contain a search text"
         results = []
         itemindex = self.find_in_list(win, in_col, search, exact=False)
-        while itemindex != -1:
+        while itemindex is not None:  # != -1:
             print(itemindex)
             results.append(itemindex)
             itemindex = self.find_in_list(win, 1, search, start=itemindex + 1, exact=False)
