@@ -340,7 +340,6 @@ def analyze_keydefs(root):  # , cat_name):
             cmddesc = ' '.join([x.strip() for x in desctable if x.strip()]).strip(' .')
             if defkey:
                 allkeys = parse_keytext(defkey)
-                ## print(allkeys)
                 for key, mods in allkeys:
                     test = (_translate_keynames(key), mods)
                     dflt_assign[test].add(command)  # (command, cmddesc))
@@ -365,7 +364,7 @@ def get_shortcuts(keydata, stdkeys, definedkeys, cmddict, tbcmddict, defaults):
     for key, value in keydata.items():
         templist = list(value)
         keycombo = tuple([value[0], value[1], value[2].lower().replace('main', 'main_window')])
-        standard = 'S' if defaults.get(keycombo) == {value[3]} else ''
+        standard = 'S' if defaults.get(keycombo[:2]) == {value[3]} else ''
         desc = stdkeys.get(keycombo, '')
         if desc and value[3] in cmddict:
             if desc == cmddict[value[3]]:
@@ -549,7 +548,7 @@ def buildcsv(page, showinfo=True):
         rdr = csv.reader(_in)
         for key, oms in rdr:
             origdescdict[key] = oms
-    descdict = get_desc(page, showinfo, origdescdict, tobecompleted, cmddict)
+    descdict = get_desc(page, showinfo, origdescdict, tobecompleted, cmddict)       #8
     if descdict != origdescdict:
         if os.path.exists(dc_desc):
             shutil.copyfile(dc_desc, dc_desc + '~')
@@ -559,9 +558,9 @@ def buildcsv(page, showinfo=True):
                 if value:
                     writer.writerow((key, value))
 
-    cmddict, shortcuts = update_from_descdict(cmddict, shortcuts, descdict)
+    cmddict, shortcuts = update_from_descdict(cmddict, shortcuts, descdict)         #9
 
-    shortcuts, tobematched = match_stuff(page, showinfo, shortcuts, tobematched)
+    shortcuts, tobematched = match_stuff(page, showinfo, shortcuts, tobematched)    #10, 11?
 
     only_for = list(only_for)
     contexts = list(contexts)

@@ -54,5 +54,5 @@ class DcCompleteDialog(CompleteDialog):
         row = 0
         for key, desc in sorted(self.cmds.items()):
             self.p0list.SetCellValue(row, 0, key)
-            self.p0list.SetCellValue(row, 0, desc)
+            self.p0list.SetCellValue(row, 1, desc)
             row += 1
