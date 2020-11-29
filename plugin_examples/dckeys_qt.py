@@ -47,12 +47,16 @@ class DcCompleteDialog(CompleteDialog):
     def read_data(self):
         """lees eventuele extra commando's
         """
-        self.cmds =  self.master.dialog_data['descdict']
-        self.desc = self.master.dialog_data['omsdict']
+        self.cmds = self.master.dialog_data['descdict']
+        self.desc = self.master.dialog_data['cmddict']
         # nog niet eerder opgenomen lege beschrijvingen toevoegen
-        for key in self.desc:
-            if key not in self.cmds:
+        for key, value in self.desc.items():
+            if key not in self.cmds and not value:
                 self.cmds[key] = ''
+        # en andersom
+        for key, value in self.cmds.items():
+            if key not in self.desc and not value:
+                self.desc[key] = ''
 
     def build_table(self):
         "vul de tabel met in te voeren gegevens"

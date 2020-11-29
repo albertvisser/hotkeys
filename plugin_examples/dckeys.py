@@ -32,11 +32,9 @@ Two extra settings are used to extract the default mappings
 and the command definitions from the help files: DC_KEYS and
 DC_CMDS respectively.
 
-Two more settings are used to store and extract information
-that is needed but not (yet) provided in the above files:
-DC_DESC for missing descriptions and DC_MATCH for keydefs
-that can't be automatically matched to internal commands.
-These can be entered using extra dialogs that will be
+A setting named DC_DESC is used to store and extract some
+command descriptions that are not (yet) provided in the above
+files. These can be entered using an extra dialog that is
 presented following this message.
 
 Inside Double Commander, in Configuration > Options > Hot keys,
@@ -44,7 +42,7 @@ it's (theoretically) possible to select the shortcuts file, so
 support for using a name different from the DC_PATH setting is
 present.
 Do you want to select the shortcuts file yourself (choose "No"
-to stick to the DC_PATH setting)?"
+to stick to the DC_PATH setting)?
 """
 
 
@@ -71,12 +69,39 @@ def _shorten_mods(modifier_list):
 
 def _translate_keynames(inp):
     "translate cursor keys as shown in html to notation in xml"
-    convert = {'↑': 'Up', '↓': 'Down', '←': 'Left', '→': 'Right',
-               'Delete': 'Del', 'PgDown': 'PgDn'}
+    convert = {'↑': 'Up', '↓': 'Down', '←': 'Left', '→': 'Right', 'Delete': 'Del', 'С': 'C',
+               'Pgdown': 'PgDn', 'Pgup': 'PgUp', 'Num *': 'Num*', 'Num +': 'Num+', 'Num -': 'Num-'}
     try:
         return convert[inp.strip()]
     except KeyError:
         return inp.strip()
+
+
+def get_data_from_xml(filename):
+    return ET.parse(filename)
+
+
+def get_data_from_html(filename):
+    with open(filename) as doc:
+        soup = bs.BeautifulSoup(doc, 'lxml')
+    return soup
+
+
+def get_data_from_csv(filename):
+    result = []
+    with open(filename) as _in:
+        rdr = csv.reader(_in)
+        result = [line for line in rdr]
+    return result
+
+
+def save_list_to_csv(data, filename):
+    if os.path.exists(filename):
+        shutil.copyfile(filename, filename + '~')
+    with open(filename, 'w') as _out:
+        writer = csv.writer(_out)
+        for line in data:
+            writer.writerow(line)
 
 
 def parse_keytext(text):
@@ -87,6 +112,9 @@ def parse_keytext(text):
     """
     retval = []
 
+    # uitzondering op het onderstaande
+    if text.startswith('Esc, Q ('):  # uitgeprobeerd: toevoeging klopt niet (bij mij)
+        return [('Esc', ''), ('Q', '')]
     # split keycombos
     shortcuts = text.split(', ')
     for sc in shortcuts:
@@ -104,169 +132,6 @@ def parse_keytext(text):
         retval.append((keyname, _shorten_mods(modifiers)))
 
     return retval
-
-
-def get_keydefs(data):
-    """huidige keydefs afleiden
-
-    input:
-        met ElementTree ingelezen data volgens pad zoals opgegeven in DC_PATH
-        (shortcuts.scf in de settings directory)
-    resultaat:
-        een mapping met key = een volgnummer, value = een tuple van keyname,
-            modifiers, context, command, parameter en controls
-        een mapping met key = een tuple van keyname, modifiers en value = een tuple
-            van context en command
-
-    """
-    keydata = collections.OrderedDict()
-    keydata_2 = {}
-    all_contexts = set()
-    all_controls = set()
-    key = 0
-    root = data.getroot()
-    for form in list(root.find('Hotkeys')):
-        context = form.get('Name')
-        all_contexts.add(context)
-        for hotkey in form:
-            shortcut = hotkey.find('Shortcut').text
-            if shortcut.endswith('+'):
-                parts = shortcut[:-1].split('+')
-                parts[-1] += '+'
-            else:
-                parts = shortcut.split('+')
-            keyname = parts[-1]
-            modifiers = _shorten_mods(parts[:-1])
-            command = hotkey.find('Command').text
-            ## test = hotkey.find('Param')
-            test = hotkey.findall('Param')
-            if test is None:
-                parameter = ''
-            else:
-                parameter = ";".join([param.text for param in test])
-            ## test = hotkey.find('Control')
-            test = hotkey.findall('Control')
-            if test is None:
-                controls = ''
-                all_controls.add(controls)
-            else:
-                controls = []
-                for control in test:
-                    controls.append(control.text)
-                    all_controls.add(control.text)
-                controls = ';'.join(controls)
-            key += 1
-            keydata[key] = (keyname, modifiers, context, command, parameter, controls)
-            keydata_2[(keyname, modifiers, context)] = command
-
-    return keydata, keydata_2, all_contexts, all_controls
-
-
-def get_stdkeys(soup):
-    """determine standard keys
-
-    input:
-        met BeautifulSoup ingelezen data volgens pad zoals opgegeven in DC_KEYS
-        (shortcuts.html in de docs directory)
-    resultaat:
-        een mapping met key = een tuple van keyname, modifiers en value = een tuple
-            van context en omschrijving
-        een list met mogelijke contexts
-    """
-    stdkeys = {}
-    # newsoup = soup.find('div', class_='dchelpage')
-    sections = soup.find_all('div')
-    contexts_list = []
-    for div in sections:
-
-        context = div.select("h2 a")
-        if not context:
-            continue
-
-        context = context[0]['name']
-        if context in ("warning", "options"):
-            continue
-        contexts_list.append(context)
-
-        tbody = div.select('table tr')
-
-        for row in tbody:
-            if 'class' in row.attrs:
-                continue
-            keynames = ()
-            for col in row.select('td'):
-                ## if col['class'] == 'varcell':
-                if 'class' in col.attrs and 'varcell' in col['class']:
-                    keynames = parse_keytext(col.div.text)  # kan meer dan 1 key / keycombo bevatten
-                ## elif 'hintcell' in col['class']:
-                    ## print('hintcell')
-                else:
-                    oms = col.get_text()
-            if keynames:
-                for name, mods in keynames:
-                    stdkeys[(_translate_keynames(name), mods, context)] = oms
-
-    return stdkeys, contexts_list
-
-
-def get_cmddict(soup):
-    """build dictionary of commands with descriptions
-
-    input:
-        met BeautifulSoup ingelezen data volgens pad zoals opgegeven in DC_CMDS
-        (cmds.html in de docs directory)
-    resultaat:
-        een mapping met key = commandonaam en value = een tekst (de omschrijving)
-        een mapping met key = een tuple van keyname, modifiers en value = een list
-            (eigenlijk set) van commandonamen (meestal 1?)
-        een mapping met key = commandonaam en value = een list van tuples van
-            naam, waardebereik en omschrijving
-        een mapping met key = categorie en value = een list van commandonamen
-    """
-    newsoup = soup.select('div[class="dchelpage"]')[0]
-
-    categories = {}
-    cmddict, dflt_assign, cmdparms = {}, {}, {}
-    for div in newsoup.children:
-        if not div.name or div.name != 'div':
-            continue
-        for hx in div.children:
-            if not hx.name or hx.name != 'h2':
-                continue
-            for a in hx.children:
-                if a.name == 'a':
-                    cat = a['name']
-                    if cat.startswith('cat'):
-                        cat = cat[3:]
-                        cd, da, cp, cl = analyze_keydefs(div)  # , cat)
-                        cmddict.update(cd)
-                        dflt_assign.update(da)
-                        cmdparms.update(cp)
-                        categories[cat] = cl
-    return cmddict, dflt_assign, cmdparms, categories
-
-
-def get_toolbarcmds(data):
-    """lees de zelfgedefinieerde toolbar items
-
-    input:
-        met ElementTree ingelezen data volgens pad zoals opgegeven in DC_SETT
-        (doublecmd.xml in de settings directory)
-    resultaat:
-        een mapping met key = de parameter voor cm_ToolBarCmd
-        om de details in value te kunnen koppelen aan de betreffende keyboard shortcuts
-    """
-    root = data.getroot()
-    tbcmddict = collections.defaultdict(list)
-    for toolbar in list(root.find('Toolbars')):
-        for row in list(toolbar):
-            for item in row.findall('Program'):
-                key = item.find('ID').text
-                desc = item.find('Hint').text
-                cmd = item.find('Command').text
-                parm = item.find('Params').text
-                tbcmddict[key] = (desc, cmd, parm)
-    return tbcmddict
 
 
 def analyze_keydefs(root):  # , cat_name):
@@ -353,109 +218,6 @@ def analyze_keydefs(root):  # , cat_name):
     return cmddict, dflt_assign, cmdparms, command_list
 
 
-def get_shortcuts(keydata, stdkeys, definedkeys, cmddict, tbcmddict, defaults):
-    """combineer keydata met gegevens uit de dictionaries met omschrijvingen
-
-    bepaal tegelijkertijd of dit een standaard definitie is of een aangepaste
-    """
-    shortcuts = collections.OrderedDict()
-    tobecompleted = {}
-    tobematched = {}
-    for key, value in keydata.items():
-        templist = list(value)
-        keycombo = tuple([value[0], value[1], value[2].lower().replace('main', 'main_window')])
-        standard = 'S' if defaults.get(keycombo[:2]) == {value[3]} else ''
-        desc = stdkeys.get(keycombo, '')
-        if desc and value[3] in cmddict:
-            if desc == cmddict[value[3]]:
-                standard = 'S'
-            else:
-                tobematched[tuple(templist[:3])] = desc, value[3]  # voorgift
-        templist.insert(2, standard)
-        if templist[4] == 'cm_ExecuteToolbarItem':
-            templist[2] = 'U'
-            itemid = templist[5].split('=', 1)[1]
-            oms, cmd, parm = tbcmddict[itemid]
-            templist.append('{} ({} {})'.format(oms, cmd, parm))
-        else:
-            try:
-                oms = cmddict[value[3]]
-            except KeyError:
-                # let op: hier ontstaan ook nieuwe cmddict entries
-                oms = cmddict[value[3]] = tobecompleted[value[3]] = ''
-            templist.append(oms)
-        shortcuts[key] = tuple(templist)
-    for stdkey, value in stdkeys.items():
-        # definedkeys is een "dictionary versie" van keydata met dezelfde sleutel als stdkeys
-        context = stdkey[2].split('_')[0].title()
-        dictkey = tuple([stdkey[0], stdkey[1], context])
-        if dictkey not in definedkeys:
-            key += 1
-            shortcuts[key] = (stdkey[0], stdkey[1], 'S', context, '', '', '', value)
-    for value in shortcuts.values():
-        dictkey = tuple([value[0], value[1], value[3]])
-        if not value[2] and dictkey not in tobematched:
-            tobematched[dictkey] = value[-1], ''   # geen voorgift
-    return shortcuts, tobematched, tobecompleted, cmddict
-
-
-def get_desc(page, showinfo, descdict, tobecompleted, cmddict):
-    """load descriptions from file, update in dialog if requested, filter out stuff that's
-    already in standard
-    """
-    if showinfo:
-        # WIP: feed dialog with data instead of filename
-        page.dialog_data = {'descdict': descdict, 'omsdict': tobecompleted}
-        if show_dialog(page, DcCompleteDialog):
-            descdict = page.dialog_data
-    else:
-        # print('eigen descriptions:', descdict)
-        # print('dc commands:', cmddict)
-        iter_ = list(descdict.keys())
-        for key in iter_:
-            # print(key)
-            if key in cmddict and cmddict[key]:
-                # print(cmddict[key])
-                descdict.pop(key)
-        # print('eigen descriptions na schonen:', descdict)
-    return descdict
-
-
-def update_from_descdict(cmddict, shortcuts, descdict):
-    """add extra descriptions into keydefs and cmddict dictionaries
-    """
-    for key, value in shortcuts.items():
-        for cmnd, desc in descdict.items():
-            if value[4] == cmnd:
-                itemlist = list(value)
-                itemlist[-1] = desc
-                shortcuts[key] = tuple(itemlist)
-    cmddict.update(descdict)
-    return cmddict, shortcuts
-
-
-def match_stuff(page, showinfo, shortcuts, tobematched):
-    """match commands from cmddict (?) to commands from descriptions (?)
-    """
-    for key, value in tobematched.items():
-        keycombo, context = key[:2], key[2]
-        for item in shortcuts.values():
-            if keycombo == item[:2] and context == item[3] and not value[0]:
-                tobematched[key] = (item[-1], value[1])
-
-    # TODO build matcher dialog
-    # if showinfo:
-    #     page.dialog_data = {'matchfile': dc_match, 'matchict': tobematched}
-    #     if show_dialog(page, DcMatchDialog):
-    #         # opslaan vindt plaats in de dialoog, maar de data teruggeven scheelt weer I/O
-    #         matchdict = page.dialog_data
-    # for key, value in shortcuts.items():
-    #     keydict = (value[0], value[1], value[3])
-    #     if not value[2]:
-    #         shortcuts[key][2] = matchdict[dictkey]
-    return shortcuts, tobematched
-
-
 def buildcsv(page, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het csv bestand
@@ -463,115 +225,301 @@ def buildcsv(page, showinfo=True):
     input: het door de plugin gegenereerde scherm en een indicatie of het getoond
         moet worden
     returns: een mapping voor het csv file en een aantal hulptabellen
-
-    1. get keyboard definitions file name
-    2. get names of other settings files
-    3. map toetscombinatie, context, commandonaam, argumenten en venster op een
-       gezamenlijke sleutel (volgnummer)
-       map tevens context + commando op een toetscombinatie
-    4. map omschrijvingen op standaard toets definities
-    5. lees gegevens tbv sneltoetsen voor zelfgedefinieerde toolbar buttons
-    6. map omschrijvingen op commandonamen door de toets definities waar deze op gemapt
-       zijn te vergelijken
-       tevens staan er wat default assignments in dit file beschreven
-    7. vul definities aan en bepaal ontbrekende beschrijvingen
-    8. stuur dialoog aan om beschrijvingen aan te vullen
-    9. beschrijvingen aanvullen in shortcuts en cmddict
-    10. beschrijvingen aanvullen in tobematched
-    11. start matcher dialoog voor de entries die nog geen waarde voor "standard" hebben
-        dan wel een dialoog waarin je kunt aangeven welke definities je zelf gemaakt hebt
-        tobematched is een dictionary met sleutel key, modifiers en context
-        de waarde bestaat uit een omschrijving en eventueel een commando dat waarschijnlijk
-        hetgene is dat het moet zijn
     """
-    initial = page.settings.get('DC_PATH', '')
-    if initial:
-        kbfile = initial
-        new_setting = False
-    else:
-        initial = os.path.join(CONFPATH, 'shortcuts.scf')
-        new_setting = True
-    kbfile = initial
+    builder = CsvBuilder(page, showinfo)
+    kbfile, dc_keys, dc_cmds, dc_sett, dc_desc = builder.get_settings_pathnames()
     if showinfo:
-        # ok = show_cancel_message(page.gui, text=instructions)
-        ok, cancel = ask_ync_question(page.gui, text=instructions)
-        if cancel:
-            return None
-        if ok:
-            kbfile = get_file_to_open(page.gui, extension='SCF files (*.scf)', start=initial)
-    if not kbfile:
-        return None
-    if new_setting:
-        page.settings['DC_PATH'] = kbfile
-
-    dc_keys = page.settings.get('DC_KEYS', '')
-    if not dc_keys:
-        dc_keys = page_settings['DC_KEYS'] = os.path.join(DOCSPATH, 'shortcuts.html')
-    dc_cmds = page.settings.get('DC_CMDS', '')
-    if not dc_cmds:
-        dc_cmds = page.settings['DC_CMDS'] = os.path.join(DOCSPATH, 'cmds.html')
-    if dc_keys.startswith('http'):
-        # http://doublecmd.github.io/doc/en/shortcuts.html
-        # http://doublecmd.github.io/doc/en/cmds.html
-        if not os.path.exists('/tmp/dc_files/shortcuts.html'):
-            import subprocess
-            subprocess.run(['wget', '-i', dc_keys, '-P', '/tmp/dc_files', '-nc'])
-        dc_keys = os.path.join('/tmp/dc_files', os.path.basename(dc_keys))
-        dc_cmds = os.path.join('/tmp/dc_files', os.path.basename(dc_cmds))
-    dc_sett = page.settings.get('DC_SETT', '')
-    if not dc_sett:
-        dc_sett = page.settings['DC_SETT'] = os.path.join(CONFPATH, 'doublecmd.xml')
-    dc_desc = page.settings.get('DC_DESC', '')
-    if not dc_desc:
-        dc_desc = page.settings['DC_DESC'] = os.path.join(HERE, 'dc_descs.csv')
-    dc_match = page.settings.get('DC_MATCH', '')
-    if not dc_match:
-        dc_match = page.settings['DC_MATCH'] = os.path.join(HERE, 'dc_matches.csv')
-
-    keydata, definedkeys, contexts, only_for = get_keydefs(ET.parse(kbfile))  #3
-
-    with open(dc_keys) as doc:
-        soup = bs.BeautifulSoup(doc, 'lxml')
-    stdkeys, context_list = get_stdkeys(soup)  #4
-
-    tbcmddict = get_toolbarcmds(ET.parse(dc_sett))  #5
-
-    with open(dc_cmds) as doc:
-        soup = bs.BeautifulSoup(doc, 'lxml')
-    cmddict, defaults, params, catdict = get_cmddict(soup)  #6
-
-    shortcuts, tobematched, tobecompleted, cmddict = get_shortcuts(keydata, stdkeys, definedkeys,
-                                                                   cmddict, tbcmddict, defaults)  #7
-
-    origdescdict = {}
-    with open(dc_desc) as _in:
-        rdr = csv.reader(_in)
-        for key, oms in rdr:
-            origdescdict[key] = oms
-    descdict = get_desc(page, showinfo, origdescdict, tobecompleted, cmddict)       #8
-    if descdict != origdescdict:
-        if os.path.exists(dc_desc):
-            shutil.copyfile(dc_desc, dc_desc + '~')
-        with open(dc_desc, 'w') as _out:
-            writer = csv.writer(_out)
-            for key, value in new_data.items():
-                if value:
-                    writer.writerow((key, value))
-
-    cmddict, shortcuts = update_from_descdict(cmddict, shortcuts, descdict)         #9
-
-    shortcuts, tobematched = match_stuff(page, showinfo, shortcuts, tobematched)    #10, 11?
-
-    only_for = list(only_for)
-    contexts = list(contexts)
-    for name in context_list:
+        new_kbfile = builder.check_path_setting(kbfile)
+        if new_kbfile and not kbfile:
+            kbfile = page.settings['DC_PATH'] = new_kbfile
+    # map toets + context op o.a. commando
+    builder.get_keydefs(get_data_from_xml(kbfile))
+    # map omschrijvingen op standaard toets definities
+    builder.get_stdkeys(get_data_from_html(dc_keys))
+    # lees gegevens tbv sneltoetsen voor zelfgedefinieerde toolbar buttons
+    builder.get_toolbarcmds(get_data_from_xml(dc_sett))
+    # map omschrijvingen op commandonamen
+    builder.get_cmddict(get_data_from_html(dc_cmds))
+    # alles samenvoegen
+    builder.assemble_shortcuts()
+    # stuur dialoog aan om beschrijvingen aan te vullen
+    desclist = get_data_from_csv(dc_desc)
+    newdesclist = builder.add_missing_descriptions(desclist)
+    if newdesclist != desclist:
+        save_list_to_csv(newdesclist, dc_desc)
+    # op juiste formaat brengen
+    builder.format_shortcuts()
+    for name in builder.contexts_list:
         test = name.split('_')[0].title()
-        if test not in contexts:
-            contexts.append(test)
+        # if test not in builder.contexts:
+            # builder.contexts.append(test)
+        builder.contexts.add(test)
+    return builder.shortcuts, {'stdkeys': builder.stdkeys, 'defaults': builder.defaults,
+                               'cmddict': builder.cmddict, 'contexts': list(builder.contexts),
+                               'restrictions': list(builder.controls), 'cmdparms': builder.params,
+                               'catdict': builder.catdict}
 
-    return shortcuts, {'stdkeys': stdkeys, 'defaults': defaults, 'cmddict': cmddict,
-                       'contexts': contexts, 'restrictions': only_for, 'cmdparms': params,
-                       'catdict': catdict}
+
+class CsvBuilder:
+    """assemble data for csv file
+    """
+    def __init__(self, page, showinfo):
+        self.page = page
+        self.showinfo = showinfo
+        self.definedkeys, self.stdkeys, self.cmddict, self.tbcmddict = {}, {}, {}, {}
+        self.defaults, self.params, self.catdict, self.shortcuts = {}, {}, {}, {}
+        self.contexts, self.controls, self.contexts_list = set(), set(), []
+        self.tobematched, self.unlisted_cmds = {}, []
+
+    def get_settings_pathnames(self):
+        """get the paths for the settings files to read
+        """
+        kbfile = self.page.settings.get('DC_PATH', '')
+        if not kbfile:
+           kbfile = self.page.settings['DC_PATH'] = os.path.join(CONFPATH, 'shortcuts.scf')
+        dc_keys = self.page.settings.get('DC_KEYS', '')
+        if not dc_keys:
+            dc_keys = self.page_settings['DC_KEYS'] = os.path.join(DOCSPATH, 'shortcuts.html')
+        dc_cmds = self.page.settings.get('DC_CMDS', '')
+        if not dc_cmds:
+            dc_cmds = self.page.settings['DC_CMDS'] = os.path.join(DOCSPATH, 'cmds.html')
+        if dc_keys.startswith('http'):
+            # http://doublecmd.github.io/doc/en/shortcuts.html
+            # http://doublecmd.github.io/doc/en/cmds.html
+            if not os.path.exists('/tmp/dc_files/shortcuts.html'):
+                import subprocess
+                subprocess.run(['wget', '-i', dc_keys, '-P', '/tmp/dc_files', '-nc'])
+            dc_keys = os.path.join('/tmp/dc_files', os.path.basename(dc_keys))
+            dc_cmds = os.path.join('/tmp/dc_files', os.path.basename(dc_cmds))
+        dc_sett = self.page.settings.get('DC_SETT', '')
+        if not dc_sett:
+            dc_sett = self.page.settings['DC_SETT'] = os.path.join(CONFPATH, 'doublecmd.xml')
+        dc_desc = self.page.settings.get('DC_DESC', '')
+        if not dc_desc:
+            dc_desc = self.page.settings['DC_DESC'] = os.path.join(HERE, 'dc_descs.csv')
+        return kbfile, dc_keys, dc_cmds, dc_sett, dc_desc
+
+    def check_path_setting(self, initial):
+        """show instructions and ask for keyboard shortcuts file to use
+        """
+        kbfile = ''
+        ok, cancel = ask_ync_question(self.page.gui, text=instructions)
+        if ok:
+            kbfile = get_file_to_open(self.page.gui, extension='SCF files (*.scf)',
+                                      start=self.kbfile)
+        return kbfile
+
+    def get_keydefs(self, data):
+        """huidige keydefs afleiden
+
+        input: met ElementTree ingelezen data volgens pad zoals opgegeven in DC_PATH
+               (shortcuts.scf in de settings directory)
+        resultaat: een mapping van een tuple van keyname, modifiers en context op een dictionary met
+                       command string, parameter en controls
+                   een lijst van alle gevonden contexten
+                   een lijst van alle gevonden mogelijke controls
+        """
+        root = data.getroot()
+        for form in list(root.find('Hotkeys')):
+            ctx = form.get('Name')
+            self.contexts.add(ctx)
+            for hotkey in form:
+                shortcut = hotkey.find('Shortcut').text
+                if shortcut.endswith('+'):
+                    parts = shortcut[:-1].split('+')
+                    parts[-1] += '+'
+                else:
+                    parts = shortcut.split('+')
+                keyname = parts[-1]
+                modifiers = _shorten_mods(parts[:-1])
+                command = hotkey.find('Command').text
+                test = hotkey.findall('Param')
+                if test is None:
+                    parameter = ''
+                else:
+                    parameter = ";".join([param.text for param in test])
+                test = hotkey.findall('Control')
+                if test is None:
+                    ctrls = ''
+                    self.controls.add('')
+                else:
+                    ctrls = []
+                    for control in test:
+                        ctrls.append(control.text)
+                        self.controls.add(control.text)
+                    ctrls = ';'.join(ctrls)
+                self.definedkeys[(keyname, modifiers, ctx)] = {'cmd': command, 'param': parameter,
+                                                               'ctrl': ctrls}
+
+    def get_stdkeys(self, soup):
+        """determine standard keys
+
+        input: met BeautifulSoup ingelezen data volgens pad zoals opgegeven in DC_KEYS
+               (shortcuts.html in de docs directory)
+        resultaat: een mapping van een tuple van keyname, modifiers en context op omschrijving
+                   een list met mogelijke contexts
+        """
+        # newsoup = soup.find('div', class_='dchelpage')
+        sections = soup.find_all('div')
+        for div in sections:
+            context = div.select("h2 a")
+            if not context:
+                continue
+            context = context[0]['name']
+            if context in ("warning", "options"):
+                continue
+            context = context.replace('_window', '').title()
+            self.contexts_list.append(context)
+            tbody = div.select('table tr')
+            for row in tbody:
+                if 'class' in row.attrs:
+                    continue
+                keynames = ()
+                for col in row.select('td'):
+                    ## if col['class'] == 'varcell':
+                    if 'class' in col.attrs and 'varcell' in col['class']:
+                        keynames = parse_keytext(col.div.text)  # meer dan 1 key/keycombo mogelijk
+                    ## elif 'hintcell' in col['class']:
+                        ## print('hintcell')
+                    else:
+                        oms = col.get_text()
+                if keynames:
+                    for name, mods in keynames:
+                        self.stdkeys[(_translate_keynames(name), mods, context)] = oms
+
+    def get_cmddict(self, soup):
+        """build dictionary of commands with descriptions
+
+        input: met BeautifulSoup ingelezen data volgens pad zoals opgegeven in DC_CMDS
+               (cmds.html in de docs directory)
+        resultaat: een mapping met key = commandonaam en value = een tekst (de omschrijving)
+                   een mapping met key = een tuple van keyname, modifiers en value = een list
+                       (eigenlijk set) van commandonamen (meestal 1?)
+                   een mapping met key = commandonaam en value = een list van tuples van
+                       naam, waardebereik en omschrijving
+                   een mapping met key = categorie en value = een list van commandonamen
+        """
+        newsoup = soup.select('div[class="dchelpage"]')[0]
+        for div in newsoup.children:
+            if not div.name or div.name != 'div':
+                continue
+            for hx in div.children:
+                if not hx.name or hx.name != 'h2':
+                    continue
+                for a in hx.children:
+                    if a.name == 'a':
+                        cat = a['name']
+                        if cat.startswith('cat'):
+                            cat = cat[3:]
+                            cd, da, cp, cl = analyze_keydefs(div)  # , cat)
+                            self.cmddict.update(cd)
+                            self.defaults.update(da)
+                            self.params.update(cp)
+                            self.catdict[cat] = cl
+
+    def get_toolbarcmds(self, data):
+        """lees de zelfgedefinieerde toolbar items
+
+        input:
+            met ElementTree ingelezen data volgens pad zoals opgegeven in DC_SETT
+            (doublecmd.xml in de settings directory)
+        resultaat:
+            een mapping met key = de parameter voor cm_ToolBarCmd
+            om de details in value te kunnen koppelen aan de betreffende keyboard shortcuts
+        """
+        root = data.getroot()
+        for toolbar in list(root.find('Toolbars')):
+            for row in list(toolbar):
+                for item in row.findall('Program'):
+                    key = item.find('ID').text
+                    desc = item.find('Hint').text
+                    cmd = item.find('Command').text
+                    parm = item.find('Params').text
+                    self.tbcmddict[key] = (desc, cmd, parm)
+
+    def add_missing_descriptions(self, desclist):
+        """update missing descriptions in cmddict
+        """
+        if self.showinfo:
+            self.page.dialog_data = {'descdict': dict(desclist), 'cmddict': self.cmddict}
+            if show_dialog(self.page, DcCompleteDialog):
+                desclist = list(self.page.dialog_data.items())
+        for command, description in desclist:
+            if command not in self.cmddict or not self.cmddict[command]:
+                self.cmddict[command] = description
+        self.desclist = desclist
+        return desclist
+
+    def assemble_shortcuts(self):
+        """automatische mapping van bekende keycombo's op commando's d.m.v. gegevens uit de
+        dictionaries met omschrijvingen
+
+        bepaal tegelijkertijd of dit een standaard definitie is of een aangepaste
+
+        en tenslotte: ombouwen naar een dictionary die in het csv bestand kan worden ingelezen
+        """
+        for key_in_context, definitions_dict in self.definedkeys.items():
+            # bepalen of dit een standaard definitie is
+            definitions_dict['standard'] = ''
+            # we kunnen hiervoor kijken in defaults (bijproduct van het bepalen van cmddict)
+            if self.defaults.get(key_in_context[:2]) == {definitions_dict['cmd']}:
+                definitions_dict['standard'] = 'S'
+            # maar het leeuwendeel zit eigenlijk in stdkeys, daar zitten tevens de omschrijvingen
+            # in. In cmddict zitten ook omschrijvingen, deze kunnen verschillend zijn en in dat
+            # geval worden die uit cmddict overgenomen
+            stdkeys_oms = self.stdkeys.get(key_in_context, '')
+            if stdkeys_oms:
+                definitions_dict['desc'] = stdkeys_oms
+                definitions_dict['standard'] = 'S'
+            # toolbaritems zijn altijd eigen definities
+            if definitions_dict['cmd'] == 'cm_ExecuteToolbarItem':
+                definitions_dict['standard'] = 'U'
+                itemid = definitions_dict['param'].split('=', 1)[1]
+                oms, cmd, parm = self.tbcmddict[itemid]
+                definitions_dict['desc'] = '{} ({} {})'.format(oms, cmd, parm)
+            else:
+                # nu de omschrijving uit cmddict bekijken
+                cmddict_oms = self.cmddict.get(definitions_dict['cmd'], None)
+                if cmddict_oms is None:
+                    self.unlisted_cmds.append(definitions_dict['cmd'])
+                    cmddict_oms = ''
+                # stdkeys_oms = definitions_dict.get('desc', '')
+                if cmddict_oms and not stdkeys_oms:
+                    # als nog geen omschrijving bekend dan overnemen
+                    definitions_dict['desc'] = cmddict_oms
+                    # definitions_dict['standard'] = 'S'
+                elif not cmddict_oms:  #  and stdkeys_oms:
+                    # let op: hier ontstaan nieuwe of bijgewerkte cmddict entries
+                    self.cmddict[definitions_dict['cmd']] = stdkeys_oms
+                elif cmddict_oms and cmddict_oms != stdkeys_oms:
+                    # omschrijving verschillend - verzamelen om te kijken welke we willen gebruiken?
+                    self.tobematched[key_in_context] = {'stdkeys_oms': stdkeys_oms,
+                                                        'cmddict_oms': cmddict_oms}
+                    definitions_dict['desc'] = cmddict_oms
+            self.shortcuts[key_in_context] = definitions_dict
+        # nog even kijken naar wat er wel in stdkeys zit en niet in definedkeys
+        for stdkey, value in self.stdkeys.items():
+            if stdkey not in self.shortcuts:
+                self.shortcuts[stdkey] = {'cmd': '', 'param': '', 'ctrl': '', 'standard': 'S',
+                                           'desc': value}
+
+    def format_shortcuts(self):
+        # nou nog omwerken naar het gewenste formaat
+        new_shortcuts = {}
+        keyseq = 0
+        for keycombo, attrdict in self.shortcuts.items():
+            keyseq += 1
+            key, mods, context = keycombo
+            # laatste controle met commands dictionary
+            cmddict_desc = self.cmddict.get(attrdict['cmd'], '')
+            shortcut_desc = attrdict.get('desc', '')
+            if not cmddict_desc:
+                self.unlisted_cmds.append(attrdict['cmd'])
+            elif shortcut_desc != cmddict_desc:
+                attrdict['desc'] = cmddict_desc
+            new_shortcuts[keyseq] = (key, mods, attrdict['standard'], context, attrdict['cmd'],
+                                     attrdict['param'], attrdict['ctrl'], attrdict.get('desc', ''))
+        self.shortcuts = new_shortcuts
 
 
 how_to_save = """\
