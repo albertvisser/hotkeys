@@ -716,7 +716,9 @@ class HotkeyPanel:
                 context = item
                 self.gui.set_combobox_string(self.gui.cmb_context, context, self.contextslist)
                 self._origdata[self.ix_cntxt] = context
-            elif self.column_info[indx][0] == 'C_CMD' and self.commandslist:
+            elif self.column_info[indx][0] == 'C_CMD':
+                if not any((self.commandslist, self.contextactionsdict)):
+                    continue
                 command = item
                 if 'C_CNTXT' in self.fields:
                     self.gui.init_combobox(self.gui.cmb_commando)
@@ -749,7 +751,7 @@ class HotkeyPanel:
         other_item = other_cntxt = other_cmd = False
         key = mods = cmnd = context = ''
         # print(self.fields)
-        # print('check for changes:', self._origdata[self.ix_key], self._newdata[self.ix_key])
+        print('check for changes:', self._origdata[self.ix_key], self._newdata[self.ix_key])
         if 'C_KEY' in self.fields:
             origkey = self._origdata[self.ix_key]
             key = self._newdata[self.ix_key]
