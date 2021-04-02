@@ -971,13 +971,14 @@ class EntryDialog(qtw.QDialog):
         """send updates to parent and leave
         """
         new_values = collections.defaultdict(list)
+        display = False
         for rowid in range(self.p0list.rowCount()):
             for colid in range(self.p0list.columnCount()):
                 try:
                     value = self.p0list.item(rowid, colid).text()
                 except AttributeError:
                     value = ''
-                new_values[rowid + 1].append(value)
+                new_values[rowid + 1].append(value.replace('\\n', '\n'))
         self.master.book.page.data = new_values
         super().accept()
 

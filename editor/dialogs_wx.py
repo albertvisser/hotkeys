@@ -967,7 +967,11 @@ class EntryDialog(wx.Dialog):
         new_values = collections.defaultdict(list)
         for rowid in range(self.p0list.GetNumberRows()):
             for colid in range(self.p0list.GetNumberCols()):
-                new_values[rowid + 1].append(self.p0list.GetCellValue(rowid, colid))
+                try:
+                    value = self.p0list.GetCellValue(rowid, colid)
+                except IndexError:  # AttributeError:
+                    value = ''
+                new_values[rowid + 1].append(value.replace('\\n', '\n'))
         self.master.book.page.data = new_values
         return True
 

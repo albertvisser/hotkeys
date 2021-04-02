@@ -16,6 +16,7 @@ C_CODE Code
 C_CNTXT Context
 C_PLAT Platform
 C_FEAT Feature
+C_OPTS Option(s)
 C_PARMS Parameter(s)
 C_BPARMS Pre-parm(s)
 C_APARMS Post-parm(s)
