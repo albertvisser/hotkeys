@@ -11,15 +11,6 @@ this module contains the gui-toolkit specific part (in this case, for PyQT5)
 # win is a reference to the HotKeyPanel instance
 # box is a reference to the frame containing the screen fields
 
-# def add_extra_fields(win, box):
-#     """add fields specific to this plugin
-#     """
-#    win.fieldlabel = qtw.QLabel(box)
-#    win.fieldentry = qtw.QLineEdit(box)    # or ComboBox etc
-#    win.screenfields.append(win.fieldentry)
-#    win.ix_field = 1                       # number accordingly
-
-
 # def get_frameheight():
 #     "return the height for the descriptions field if different from the default"
 #     return x
@@ -54,9 +45,3 @@ this module contains the gui-toolkit specific part (in this case, for PyQT5)
 #     sizer.addWidget(win.fieldlabel)
 #     sizer.addWidget(win.fieldentry)
 #     box.addLayout(sizer)
-
-
-# def captions_extra_fields(win):
-#     "for plugin-specific fields, change the captions according to the language setting"
-#     win.fieldlabel.setText(win.captions['some_value'] + ':')
-

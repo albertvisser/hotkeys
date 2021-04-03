@@ -9,15 +9,6 @@ this module contains the gui-toolkit specific part (in this case, for wxPython)
 # win is a reference to the HotKeyPanel instance
 # box is a reference to the frame containing the screen fields
 
-# def add_extra_fields(win, box):
-#     """add fields specific to this plugin
-#     """
-#     win.fieldlabel = wx.StaticText(box)
-#     win.fieldentry = wx.TextCtrl(box)   # or ComboBox etc
-#     win.screenfields.append(win.fieldentry)
-#     win_ix_field = 1  # number accordingly
-
-
 # def get_frameheight():
 #     "return the height for the descriptions field if different from the default"
 #     return x
@@ -52,9 +43,3 @@ this module contains the gui-toolkit specific part (in this case, for wxPython)
 #     sizer.Add(win.fieldlabel, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.RIGHT, 2)
 #     sizer.Add(win.fieldname, wx.RIGHT, 2)
 #     box.Add(sizer, 0, wx.LEFT, 2)
-
-
-# def captions_extra_fields(win):
-#     "for plugin-specific fields, change the captions according to the language setting"
-#     win.fieldlabel.setText(win.captions['some_value'] + ':')
-

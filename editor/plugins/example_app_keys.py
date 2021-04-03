@@ -4,7 +4,7 @@ this module contains the general, non gui-toolkit specific part of the code
 """
 # uncomment these where appropriate
 # import collections
-# from example_app_keys_gui import add_extra_fields, layout_extra_fields_*, captions_extra_fields
+# from example_app_keys_gui import layout_extra_fields_*  # om dit beschikbaar te maken voor import
 
 # uncomment this to define a routine to (re)build the csv file from source data
 # showinfo is a switch for in case you want to show instructions
@@ -27,17 +27,6 @@ this module contains the general, non gui-toolkit specific part of the code
 #     """
 #     win.contextslist = win.otherstuff['...']
 #     win.commandslist = win.otherstuff['...']
-
-# def vul_extra_details(win, indx, item):
-#     """fill value for extra field (plugin-specific)
-#     indx refers to the sequence of the field in the screen table, item is the value contained
-#     """
-#     if win.column_info[indx][0] == 'some_value':
-#         win.fieldname.setText(item)
-#         win._origdata[win.fieldindex] = item
-
-# def lees_extra_details(win):
-#     ...
 
 # uncomment this to define a routine to write back the keydefs to the source data
 # ** corresponds to the RedefineKeys setting **
