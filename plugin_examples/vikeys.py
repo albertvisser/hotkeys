@@ -6,7 +6,7 @@ redefined keys are in ~/.vim/vimrc (map commands)
 import string
 import pathlib
 import collections
-from .vikeys_gui import add_extra_fields, layout_extra_fields_topline
+from .vikeys_gui import layout_extra_fields_topline
 # VI_VER = (pathlib.Path(__file__).parent / 'VI_VER').read_text().strip()
 
 

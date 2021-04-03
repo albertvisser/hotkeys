@@ -142,6 +142,40 @@ class SingleDataInterface(qtw.QFrame):
             self.screenfields.append(cb)
             self.cmb_commando = cb
 
+        if 'C_PARMS' in self.master.fields:
+            self.lbl_parms = qtw.QLabel(self.master.captions['C_PARMS'], box)
+            self.txt_parms = qtw.QLineEdit(box)
+            self.txt_parms.setMaximumWidth(280)
+            self.screenfields.append(self.txt_parms)
+
+        if 'C_CTRL' in self.master.fields:
+            self.lbl_controls = qtw.QLabel(self.master.captions['C_CTRL'], box)
+            cb = qtw.QComboBox(box)
+            cb.addItems(self.master.controlslist)
+            cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
+            self.screenfields.append(cb)
+            self.cmb_controls = cb
+
+        if 'C_BPARMS' in self.master.fields:
+            self.pre_parms_label = qtw.QLabel(box)
+            self.pre_parms_text = qtw.QLineEdit(box)
+            self.screenfields.append(self.pre_parms_text)
+
+        if 'C_APARMS' in self.master.fields:
+            self.post_parms_label = qtw.QLabel(box)
+            self.post_parms_text = qtw.QLineEdit(box)
+            self.screenfields.append(self.post_parms_text)
+
+        if 'C_FEAT' in self.master.fields:
+            self.feature_label = qtw.QLabel(box)
+            self.feature_select = qtw.QComboBox(box)
+            self.feature_select.addItems(self.master.featurelist)
+            self.screenfields.append(self.feature_select)
+
+        if 'C_DESC' in self.master.fields:
+            self.txt_oms = qtw.QTextEdit(box)
+            self.txt_oms.setReadOnly(True)
+
         self.b_save = qtw.QPushButton(self.master.captions['C_SAVE'], box)
         self.b_save.setEnabled(False)
         self.b_save.clicked.connect(self.on_update)
@@ -149,17 +183,6 @@ class SingleDataInterface(qtw.QFrame):
         self.b_del.setEnabled(False)
         self.b_del.clicked.connect(self.on_delete)
         self._savestates = (False, False)
-
-        if 'C_DESC' in self.master.fields:
-            self.txt_oms = qtw.QTextEdit(box)
-            self.txt_oms.setReadOnly(True)
-
-        try:
-            self.master.reader.add_extra_fields(self, box)  # user exit
-        except AttributeError:
-            shared.log_exc()
-
-        self.set_extrascreen_editable(bool(int(self.master.settings['RedefineKeys'])))
 
     def set_extrascreen_editable(self, switch):
         """open up fields in extra screen when applicable

@@ -178,6 +178,37 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
             self.screenfields.append(cb)
             self.cmb_commando = cb
 
+        if 'C_PARMS' in self.master.fields:
+            self.lbl_parms = wx.StaticText(box, label=self.master.captions['C_PARMS'])
+            self.txt_parms = wx.TextCtrl(box, size=(280, -1))
+            self.screenfields.append(self.txt_parms)
+
+        if 'C_CTRL' in self.master.fields:
+            self.lbl_controls = wx.StaticText(box, label=self.master.captions['C_CTRL'])
+            cb = wx.ComboBox(box, choices=self.master.controlslist, style=wx.CB_READONLY)
+            # cb.Bind(wx.EVT_COMBOBOX, functools.partial(on_combobox, self, cb, str))
+            self.screenfields.append(cb)
+            self.cmb_controls = cb
+
+        if 'C_BPARMS' in self.master.fields:
+            self.pre_parms_label = wx.StaticText(box)
+            self.pre_parms_text = wx.TextCtrl(box)
+            self.screenfields.append(self.pre_parms_text)
+
+        if 'C_APARMS' in self.master.fields:
+            self.post_parms_label = wx.StaticText(box)
+            self.post_parms_text = wx.TextCtrl(box)
+            self.screenfields.append(self.post_parms_text)
+
+        if 'C_FEAT' in self.master.fields:
+            self.feature_label = wx.StaticText(box)
+            self.feature_select = wx.ComboBox(box, choices=self.master.featurelist,
+                                              style=wx.CB_READONLY)
+            self.screenfields.append(self.feature_select)
+
+        if 'C_DESC' in self.master.fields:
+            self.txt_oms = wx.TextCtrl(box, size=(480, 40), style=wx.TE_MULTILINE | wx.TE_READONLY)
+
         self.b_save = wx.Button(box, label=self.master.captions['C_SAVE'])
         self.b_save.Enable(False)
         self.b_save.Bind(wx.EVT_BUTTON, self.on_update)
@@ -185,16 +216,6 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         self.b_del.Enable(False)
         self.b_del.Bind(wx.EVT_BUTTON, self.on_delete)
         self._savestates = (False, False)
-
-        if 'C_DESC' in self.master.fields:
-            self.txt_oms = wx.TextCtrl(box, size=(480, 40), style=wx.TE_MULTILINE | wx.TE_READONLY)
-
-        try:
-            self.master.reader.add_extra_fields(self, box)  # user exit
-        except AttributeError:
-            shared.log_exc()
-
-        self.set_extrascreen_editable(bool(int(self.master.settings['RedefineKeys'])))
 
     def set_extrascreen_editable(self, switch):
         """open up fields in extra screen when applicable

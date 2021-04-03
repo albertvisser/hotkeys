@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 import bs4 as bs  # import BeautifulSoup
 from ..gui import (show_cancel_message, get_file_to_open, get_file_to_save, show_dialog,
                    ask_ync_question)
-from .dckeys_gui import add_extra_fields, layout_extra_fields, DcCompleteDialog
+from .dckeys_gui import layout_extra_fields, DcCompleteDialog
 
 CONFPATH = '/home/albert/.config/doublecmd'
 DOCSPATH = '/usr/share/doublecmd/doc/en'
@@ -602,26 +602,3 @@ def get_frameheight():
     """return fixed height for extra panel
     """
     return 120
-
-
-def on_combobox(win, cb, text):
-    """callback from GUI
-    """
-    print('in dckeys on_combobox')
-    hlp = win.gui.get_combobox_selection(cb)
-    if text != hlp:
-        text = hlp
-    win.defchanged = False
-    if cb == win.gui.cmb_controls:
-        fieldindex = win.fieldindexes['C_CTRL']
-        cmdfldindex = win.fieldindexes['C_CMD']
-        if text != win._origdata[fieldindex]:
-            win._newdata[fieldindex] = text
-            if not win.gui.initializing_keydef:
-                win.defchanged = True
-                if 'C_CMD' in win.fields:
-                    win.gui.enable_save(True)
-        elif win.gui.get_combobox_text(win.cmb_commando) == win._origdata[cmdfldindex]:
-            win.defchanged = False
-            if 'C_CMD' in win.fields:
-                win.gui.enable_save(False)

@@ -8,19 +8,6 @@ import wx.grid as wxg
 from ..dialogs_wx import CompleteDialog
 
 
-def add_extra_fields(win, box):
-    """fields showing details for selected keydef, to make editing possible
-    """
-    win.lbl_parms = wx.StaticText(box, label=win.master.captions['C_PARMS'])
-    win.txt_parms = wx.TextCtrl(box, size=(280, -1))
-    win.screenfields.append(win.txt_parms)
-    win.lbl_controls = wx.StaticText(box, label=win.master.captions['C_CTRL'])
-    cb = wx.ComboBox(box, choices=win.master.controlslist, style=wx.CB_READONLY)
-    # cb.Bind(wx.EVT_COMBOBOX, functools.partial(on_combobox, win, cb, str))
-    win.screenfields.append(cb)
-    win.cmb_controls = cb
-
-
 def layout_extra_fields(win, layout):
     """add the extra fields to the layout
     """

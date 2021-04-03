@@ -441,6 +441,7 @@ class HotkeyPanel:
             self.fields = [x[0] for x in self.column_info]
             self.add_extra_attributes()
             self.gui.add_extra_fields()
+            self.gui.set_extrascreen_editable(bool(int(self.settings['RedefineKeys'])))
 
         self.gui.setup_list()
         if self.has_extrapanel:
@@ -602,53 +603,28 @@ class HotkeyPanel:
             return
         cb, text = self.gui.get_choice_value(*args)
         self.defchanged = False
-        try:
-            test_key = bool(self.gui.cmb_key)  # moet/kan dit met GetValue?
-        except AttributeError:
-            test_key = False
-        try:
-            test_cmd = bool(self.gui.cmb_commando)
-        except AttributeError:
-            test_cmd = False
-        try:
-            test_cnx = bool(self.gui.cmb_context)
-        except AttributeError:
-            test_cnx = False
-        if test_key and cb == self.gui.cmb_key:
+        if 'C_KEY' in self.fields and cb == self.gui.cmb_key:
             fieldindex = self.field_indexes['C_KEY']
             cmdfldindex = self.field_indexes['C_CMD']
             if text != self._origdata[fieldindex]:
                 self._newdata[fieldindex] = text
                 if not self.gui.initializing_keydef:
-                    self.defchanged = True
-                    if 'C_CMD' in self.fields:
-                        self.gui.enable_save(True)
+                    self.set_changed_indicators(True)
             elif self.gui.get_combobox_text(self.gui.cmb_commando) == self._origdata[cmdfldindex]:
-                self.defchanged = False
-                if 'C_CMD' in self.fields:
-                    self.gui.enable_save(False)
-        elif test_cnx and cb == self.gui.cmb_context:
+                self.set_changed_indicators(False)
+        elif 'C_CNTXT' in self.fields and cb == self.gui.cmb_context:
             fieldindex = self.field_indexes['C_CNTXT']
             cmdfldindex = self.field_indexes['C_CMD']
             if text != self._origdata[fieldindex]:
                 context = self._origdata[fieldindex] = self.gui.get_combobox_text(
                     self.gui.cmb_context)
-                self.gui.init_combobox(self.gui.cmb_commando)
-                # if self.contextactionsdict:
-                #     actionslist = self.contextactionsdict[context]
-                # else:
-                #     actionslist = self.commandslist
-                actionslist = self.contextactionsdict[context] or self.commandslist
-                self.gui.init_combobox(self.gui.cmb_commando, actionslist)
+                self.gui.init_combobox(self.gui.cmb_commando,
+                                       self.contextactionsdict[context] or self.commandslist)
                 if not self.gui.initializing_keydef:
-                    self.defchanged = True
-                    if 'C_CMD' in self.fields:
-                        self.gui.enable_save(True)
+                    self.set_changed_indicators(True)
             elif self.gui.get_combobox_text(self.gui.cmb_commando) == self._origdata[cmdfldindex]:
-                self.defchanged = False
-                if 'C_CMD' in self.fields:
-                    self.gui.enable_save(False)
-        elif test_cmd and cb == self.gui.cmb_commando:
+                self.set_changed_indicators(False)
+        elif 'C_CMD' in self.fields and cb == self.gui.cmb_commando:
             fieldindex = self.field_indexes['C_CMD']
             keyfldindex = self.field_indexes['C_KEY']
             if text != self._origdata[fieldindex]:
@@ -659,18 +635,23 @@ class HotkeyPanel:
                     text_to_set = self.captions['M_NODESC']
                 self.gui.set_textfield_value(self.gui.txt_oms, text_to_set)
                 if not self.gui.initializing_keydef:
-                    self.defchanged = True
-                    if 'C_CMD' in self.fields:
-                        self.gui.enable_save(True)
+                    self.set_changed_indicators(True)
             elif self.gui.get_combobox_text(self.gui.cmb_key) == self._origdata[keyfldindex]:
-                if 'C_CMD' in self.fields:
-                    self.gui.enable_save(False)
-        else:
-            # TODO: exit implementatie in dckeys.py hierheen halen
-            try:
-                self.reader.on_combobox(self, cb, text)  # user exit
-            except AttributeError:
-                shared.log_exc()
+                self.set_changed_indicators(False)
+        elif 'C_CTRL' in self.fields and cb == self.gui.cmb_controls:
+            fieldindex = self.fieldindexes['C_CTRL']
+            cmdfldindex = self.fieldindexes['C_CMD']
+            if text != self._origdata[fieldindex]:
+                self._newdata[fieldindex] = text
+                if not self.gui.initializing_keydef:
+                    self.set_changed_indicators(True)
+            elif self.gui.get_combobox_text(self.cmb_commando) == win._origdata[cmdfldindex]:
+                self.set_changed_indicators(False)
+
+    def set_changed_indicators(self, value):
+        self.defchanged = value
+        if 'C_CMD' in self.fields:
+            self.gui.enable_save(value)
 
     def on_checkbox(self, *args):
         """callback op het gebruik van een checkbox
@@ -777,11 +758,6 @@ class HotkeyPanel:
             elif self.column_info[indx][0] == 'C_FEAT':
                 self.gui.set_combobox_string(self.gui.feature_select, item, self.featurelist)
                 self._origdata[self.field_indexes['C_FEAT']] = item
-            else:
-                try:
-                    self.reader.vul_extra_details(self, indx, item)  # user exit
-                except AttributeError:
-                    shared.log_exc()
         self._newdata = self._origdata[:]
 
     def check_for_changes(self):
@@ -884,10 +860,6 @@ class HotkeyPanel:
         self._origdata[self.field_indexes['C_PARMS']] = newdata[self.field_indexes['C_PARMS']]
         self._origdata[self.field_indexes['C_CTRL']] = newdata[self.field_indexes['C_CTRL']]
         #
-        try:
-            self.reader.on_extra_selected(self, item)  # user exit
-        except AttributeError:
-            shared.log_exc()
         newitem = self.gui.get_keydef_at_position(pos)
         self.populate_list(pos)    # refresh
         return newitem
