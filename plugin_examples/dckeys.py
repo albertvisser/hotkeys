@@ -269,6 +269,8 @@ class CsvBuilder:
         self.definedkeys, self.stdkeys, self.cmddict, self.tbcmddict = {}, {}, {}, {}
         self.defaults, self.params, self.catdict, self.shortcuts = {}, {}, {}, {}
         self.contexts, self.controls, self.contexts_list = set(), set(), []
+        # volgens het toolbar definition scherm zijn voor controls drie waarden mogelijk:
+        self.controls = {'Command Line', 'Files panel', 'Quick Search'}
         self.tobematched, self.unlisted_cmds = {}, []
 
     def get_settings_pathnames(self):
@@ -587,7 +589,6 @@ def add_extra_attributes(win):
 
     key, mods, cmnd, params, controls
     """
-    win.init_origdata += ['', '']
     win.commandsdict = win.otherstuff['cmddict']
     win.commandslist = sorted(win.commandsdict.keys())
     win.descriptions = win.commandsdict  # is this correct?
@@ -612,41 +613,15 @@ def on_combobox(win, cb, text):
         text = hlp
     win.defchanged = False
     if cb == win.gui.cmb_controls:
-        if text != win._origdata[win.gui.ix_controls]:
-            win._newdata[win.gui.ix_controls] = text
+        fieldindex = win.fieldindexes['C_CTRL']
+        cmdfldindex = win.fieldindexes['C_CMD']
+        if text != win._origdata[fieldindex]:
+            win._newdata[fieldindex] = text
             if not win.gui.initializing_keydef:
                 win.defchanged = True
                 if 'C_CMD' in win.fields:
                     win.gui.enable_save(True)
-        elif win.gui.get_combobox_text(win.cmb_commando) == win._origdata[win.ix_cmd]:
+        elif win.gui.get_combobox_text(win.cmb_commando) == win._origdata[cmdfldindex]:
             win.defchanged = False
             if 'C_CMD' in win.fields:
                 win.gui.enable_save(False)
-
-
-def captions_extra_fields(gui):
-    """to be called on changing the language
-    """
-    win = gui.master
-    gui.set_label_text(gui.lbl_parms, win.captions['C_PARMS'])
-    gui.set_label_text(gui.lbl_controls, win.captions['C_CTRL'])
-
-
-def on_extra_selected(win, newdata):
-    """callback on selection of an item
-
-    velden op het hoofdscherm worden bijgewerkt vanuit de selectie"""
-    win._origdata[win.ix_parms] = newdata[win.ix_parms]
-    win._origdata[win.ix_controls] = newdata[win.ix_controls]
-
-
-def vul_extra_details(win, indx, item):
-    """refresh nonstandard fields on details screen
-    """
-    if win.column_info[indx][0] == 'C_PARMS':
-        win.gui.set_textfield_value(win.gui.txt_parms, item)
-        win._origdata[win.gui.ix_parms] = item
-    elif win.column_info[indx][0] == 'C_CTRL':
-        # ix = win.controlslist.index(item)  # TODO: adapt for multiple values
-        win.gui.set_combobox_string(win.gui.cmb_controls, item, win.controlslist)
-        win._origdata[win.gui.ix_controls] = item

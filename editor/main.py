@@ -471,7 +471,30 @@ class HotkeyPanel:
         self.captions = self.parent.parent.captions
         self.set_title()
         if self.has_extrapanel:
-            self.gui.captions_extra_fields()
+            if 'C_KEY' in self.fields:
+                self.gui.set_label_text(self.gui.lbl_key, self.captions['C_KTXT'])
+            if 'C_MODS' in self.fields:
+                self.gui.set_label_text(self.gui.cb_win, self.captions['M_WIN'].join(("+", "  ")))
+                self.gui.set_label_text(self.gui.cb_ctrl, self.captions['M_CTRL'].join(("+", "  ")))
+                self.gui.set_label_text(self.gui.cb_alt, self.captions['M_ALT'].join(("+", "  ")))
+                self.gui.set_label_text(self.gui.cb_shift, self.captions['M_SHFT'].join(("+", "  ")))
+            if 'C_CNTXT' in self.fields:
+                self.gui.set_label_text(self.gui.lbl_context, self.captions['C_CNTXT'] + ':')
+            if 'C_CMD' in self.fields:
+                self.gui.set_label_text(self.gui.txt_cmd, self.captions['C_CMD'])
+            if 'C_PARMS' in self.fields:
+                self.gui.set_label_text(self.gui.lbl_parms, self.captions['C_PARMS'])
+            if 'C_CTRL' in self.fields:
+                self.gui.set_label_text(self.gui.lbl_controls, self.captions['C_CTRL'])
+            if 'C_BPARMS' in self.fields:
+                self.gui.set_label_text(self.gui.pre_parms_label, self.captions['C_BPARMS'] + ':')
+            if 'C_APARMS' in self.fields:
+                self.gui.set_label_text(self.gui.post_parms_label, self.captions['C_APARMS'] + ':')
+            if 'C_FEAT' in self.fields:
+                self.gui.set_label_text(self.gui.feature_label, self.captions['C_FEAT'] + ':')
+            self.gui.set_label_text(self.gui.b_save, self.captions['C_SAVE'])
+            self.gui.set_label_text(self.gui.b_del, self.captions['C_DEL'])
+            self.gui.resize_if_necessary()
 
     def populate_list(self, pos=0):
         """vullen van de lijst
@@ -507,28 +530,24 @@ class HotkeyPanel:
         """helper stuff for selected keydef, to make editing possible
         """
         self.init_origdata = []
-        ix_item = 0
-        if 'C_KEY' in self.fields:
-            self.init_origdata.append('')
-            self.ix_key = ix_item
-            ix_item += 1
-            self.keylist = [x for x in string.ascii_uppercase] + \
-                [x for x in string.digits] + ["F" + str(i) for i in range(1, 13)] + \
-                named_keys + ['.', ',', '+', '=', '-', '`', '[', ']', '\\', ';', "'", '/']
-        if 'C_MODS' in self.fields:
-            self.init_origdata += [False, False, False, False]
-            self.ix_mods = []
-            for _ in range(4):
-                self.ix_mods.append(ix_item)
-                ix_item += 1
-        if 'C_CNTXT' in self.fields:
-            self.init_origdata.append('')
-            self.ix_cntxt = ix_item
-            ix_item += 1
-        if 'C_CMD' in self.fields:
-            self.init_origdata.append('')
-            self.ix_cmd = ix_item
-            ix_item += 1
+        self.field_indexes = {}
+        itemindex = 0
+        for text in ('C_KEY', 'C_MODS', 'C_CNTXT', 'C_CMD',
+                     'C_PARMS', 'C_CTRL', 'C_BPARMS', 'C_APARMS', 'C_FEAT'):
+            if text == 'C_MODS':
+                self.init_origdata += [False, False, False, False]
+                self.field_indexes[text] = [itemindex + 1, itemindex + 2, itemindex + 3,
+                                            itemindex + 4]
+                itemindex += 4
+            else:
+                self.init_origdata.append('')
+                self.field_indexes[text] = itemindex
+                itemindex += 1
+            if text == 'C_KEY':
+                self.keylist = [x for x in string.ascii_uppercase] + \
+                    [x for x in string.digits] + ["F" + str(i) for i in range(1, 13)] + \
+                    named_keys + ['.', ',', '+', '=', '-', '`', '[', ']', '\\', ';', "'", '/']
+
         self.contextslist = self.commandslist = self.defkeys = []
         self.contextactionsdict = self.omsdict = self.descriptions = {}
         try:
@@ -567,10 +586,10 @@ class HotkeyPanel:
         text = self.gui.get_widget_text(*args)
         self.defchanged = False
         if 'C_KEY' in self.fields:
-            if text == self._origdata[self.ix_key]:
+            if text == self._origdata[self.field_indexes['C_KEY']]:
                 self.defchanged = True
                 self.gui.enable_save(True)
-            elif text == self._origdata[self.ix_key]:
+            elif text == self._origdata[self.field_indexes['C_KEY']]:  # FIXME: dit is dezelfde conditie
                 self.defchanged = False
                 self.gui.enable_save(False)
 
@@ -596,20 +615,23 @@ class HotkeyPanel:
         except AttributeError:
             test_cnx = False
         if test_key and cb == self.gui.cmb_key:
-            keyitemindex = self.ix_key
-            if text != self._origdata[keyitemindex]:
-                self._newdata[keyitemindex] = text
+            fieldindex = self.field_indexes['C_KEY']
+            cmdfldindex = self.field_indexes['C_CMD']
+            if text != self._origdata[fieldindex]:
+                self._newdata[fieldindex] = text
                 if not self.gui.initializing_keydef:
                     self.defchanged = True
                     if 'C_CMD' in self.fields:
                         self.gui.enable_save(True)
-            elif self.gui.get_combobox_text(self.gui.cmb_commando) == self._origdata[self.ix_cmd]:
+            elif self.gui.get_combobox_text(self.gui.cmb_commando) == self._origdata[cmdfldindex]:
                 self.defchanged = False
                 if 'C_CMD' in self.fields:
                     self.gui.enable_save(False)
         elif test_cnx and cb == self.gui.cmb_context:
-            if text != self._origdata[self.ix_cntxt]:
-                context = self._origdata[self.ix_cntxt] = self.gui.get_combobox_text(
+            fieldindex = self.field_indexes['C_CNTXT']
+            cmdfldindex = self.field_indexes['C_CMD']
+            if text != self._origdata[fieldindex]:
+                context = self._origdata[fieldindex] = self.gui.get_combobox_text(
                     self.gui.cmb_context)
                 self.gui.init_combobox(self.gui.cmb_commando)
                 # if self.contextactionsdict:
@@ -622,14 +644,15 @@ class HotkeyPanel:
                     self.defchanged = True
                     if 'C_CMD' in self.fields:
                         self.gui.enable_save(True)
-            elif self.gui.get_combobox_text(self.gui.cmb_commando) == self._origdata[self.ix_cmd]:
+            elif self.gui.get_combobox_text(self.gui.cmb_commando) == self._origdata[cmdfldindex]:
                 self.defchanged = False
                 if 'C_CMD' in self.fields:
                     self.gui.enable_save(False)
         elif test_cmd and cb == self.gui.cmb_commando:
-            cmditemindex = self.ix_cmd
-            if text != self._origdata[cmditemindex]:
-                self._newdata[cmditemindex] = text
+            fieldindex = self.field_indexes['C_CMD']
+            keyfldindex = self.field_indexes['C_KEY']
+            if text != self._origdata[fieldindex]:
+                self._newdata[fieldindex] = text
                 try:
                     text_to_set = self.descriptions[text]
                 except KeyError:
@@ -639,10 +662,11 @@ class HotkeyPanel:
                     self.defchanged = True
                     if 'C_CMD' in self.fields:
                         self.gui.enable_save(True)
-            elif self.gui.get_combobox_text(self.gui.cmb_key) == self._origdata[self.ix_key]:
+            elif self.gui.get_combobox_text(self.gui.cmb_key) == self._origdata[keyfldindex]:
                 if 'C_CMD' in self.fields:
                     self.gui.enable_save(False)
         else:
+            # TODO: exit implementatie in dckeys.py hierheen halen
             try:
                 self.reader.on_combobox(self, cb, text)  # user exit
             except AttributeError:
@@ -657,7 +681,7 @@ class HotkeyPanel:
             return
         cb, state = self.gui.get_check_value(*args)
         for win, indx in zip((self.gui.cb_shift, self.gui.cb_ctrl,
-                              self.gui.cb_alt, self.gui.cb_win), self.ix_mods):
+                              self.gui.cb_alt, self.gui.cb_win), self.field_indexes['C_MODS']):
             if cb == win and state != self._origdata[indx]:
                 self._newdata[indx] = state
                 if not self.gui.initializing_keydef:
@@ -694,7 +718,7 @@ class HotkeyPanel:
                     self.gui.set_textfield_value(self.gui.txt_key, key)
                 else:
                     self.gui.set_combobox_string(self.gui.cmb_key, key, self.keylist)
-                self._origdata[self.ix_key] = key
+                self._origdata[self.field_indexes['C_KEY']] = key
             elif self.column_info[indx][0] == 'C_MODS':
                 mods = item
                 self.gui.set_checkbox_state(self.gui.cb_shift, False)
@@ -702,7 +726,7 @@ class HotkeyPanel:
                 self.gui.set_checkbox_state(self.gui.cb_alt, False)
                 self.gui.set_checkbox_state(self.gui.cb_win, False)
                 for x, y, z in zip('SCAW',
-                                   self.ix_mods,
+                                   self.field_indexes['C_MODS'],
                                    (self.gui.cb_shift, self.gui.cb_ctrl, self.gui.cb_alt,
                                     self.gui.cb_win)):
                     if x in mods:
@@ -715,7 +739,7 @@ class HotkeyPanel:
             elif self.column_info[indx][0] == 'C_CNTXT' and self.contextslist:
                 context = item
                 self.gui.set_combobox_string(self.gui.cmb_context, context, self.contextslist)
-                self._origdata[self.ix_cntxt] = context
+                self._origdata[self.field_indexes['C_CNTXT']] = context
             elif self.column_info[indx][0] == 'C_CMD':
                 if not any((self.commandslist, self.contextactionsdict)):
                     continue
@@ -733,10 +757,26 @@ class HotkeyPanel:
                 else:
                     valuelist = self.commandslist
                 self.gui.set_combobox_string(self.gui.cmb_commando, command, valuelist)
-                self._origdata[self.ix_cmd] = command
+                self._origdata[self.field_indexes['C_CMD']] = command
             elif self.column_info[indx][0] == 'C_DESC':
                 oms = item
                 self.gui.set_textfield_value(self.gui.txt_oms, oms)
+            elif self.column_info[indx][0] == 'C_PARMS':
+                self.gui.set_textfield_value(self.gui.txt_parms, item)
+                self._origdata[self.field_indexes['C_PARMS']] = item
+            elif self.column_info[indx][0] == 'C_CTRL':
+                # ix = win.controlslist.index(item)  # TODO: adapt for multiple values
+                self.gui.set_combobox_string(self.gui.cmb_controls, item, self.controlslist)
+                self._origdata[self.field_indexes['C_CTRL']] = item
+            elif self.column_info[indx][0] == 'C_BPARMS':
+                self.gui.set_textfield_value(self.gui.pre_parms_text, item)
+                self._origdata[self.field_indexes['C_BPARMS']] = item
+            elif self.column_info[indx][0] == 'C_APARMS':
+                self.gui.set_textfield_value(self.gui.post_parms_text, item)
+                self._origdata[self.field_indexes['C_APARMS']] = item
+            elif self.column_info[indx][0] == 'C_FEAT':
+                self.gui.set_combobox_string(self.gui.feature_select, item, self.featurelist)
+                self._origdata[self.field_indexes['C_FEAT']] = item
             else:
                 try:
                     self.reader.vul_extra_details(self, indx, item)  # user exit
@@ -746,29 +786,30 @@ class HotkeyPanel:
 
     def check_for_changes(self):
         "find out what has been changed"
-        # moet eigenlijk generieker want bij bv VI is alleen C_KEY aanwezig terwijl de rest
+        # TODO moet eigenlijk generieker want bij bv VI is alleen C_KEY aanwezig terwijl de rest
         # best belangrijk is
+        # dan moet dit ook naar andere rubrieken kijken die mogelijk zijn denk ik
         other_item = other_cntxt = other_cmd = False
         key = mods = cmnd = context = ''
         # print(self.fields)
-        print('check for changes:', self._origdata[self.ix_key], self._newdata[self.ix_key])
+        print('check for changes:', self._origdata[0], self._newdata[0])
         if 'C_KEY' in self.fields:
-            origkey = self._origdata[self.ix_key]
-            key = self._newdata[self.ix_key]
+            origkey = self._origdata[self.field_indexes['C_KEY']]
+            key = self._newdata[self.field_indexes['C_KEY']]
             other_item = key != origkey
         if 'C_MODS' in self.fields:
-            origmods = ''.join([y for x, y in zip(self.ix_mods, ('WCAS'))
+            origmods = ''.join([y for x, y in zip(self.field_indexes['C_MODS'], ('WCAS'))
                                 if self._origdata[x]])
-            mods = ''.join([y for x, y in zip(self.ix_mods, ('WCAS'))
+            mods = ''.join([y for x, y in zip(self.field_indexes['C_MODS'], ('WCAS'))
                             if self._newdata[x]])
             other_item = other_item or mods != origmods
         if 'C_CMD' in self.fields:
-            origcmd = self._origdata[self.ix_cmd]
-            cmnd = self._newdata[self.ix_cmd]
+            origcmd = self._origdata[self.field_indexes['C_CMD']]
+            cmnd = self._newdata[self.field_indexes['C_CMD']]
             other_cmd = cmnd != origcmd
         if 'C_CNTXT' in self.fields:
-            origcntxt = self._origdata[self.ix_cntxt]
-            context = self._newdata[self.ix_cntxt]
+            origcntxt = self._origdata[self.field_indexes['C_CNTXT']]
+            context = self._newdata[self.field_indexes['C_CNTXT']]
             other_cntxt = context != origcntxt
         return ((other_item, other_cmd, other_cntxt), (key, mods, cmnd, context))
 
@@ -818,6 +859,7 @@ class HotkeyPanel:
         else:
             # ordereddict opnieuw opbouwen
             newdata = [x for x in self.data.values()]
+            # dit is heel typisch specifiek voor één bepaalde plugin:
             newvalue = (key, mods, 'U', cmnd, self.omsdict[cmnd])
             newdata.append(newvalue)
             newdata.sort()
@@ -829,14 +871,19 @@ class HotkeyPanel:
         self.modified = True
         self._origdata = self.init_origdata
         if 'C_KEY' in self.fields:
-            self._origdata[self.ix_key] = key
+            self._origdata[self.field_indexes['C_KEY']] = key
         if 'C_MODS' in self.fields:
-            for mod, ix_mod in zip(('WCAS'), self.ix_mods):
+            for mod, ix_mod in zip(('WCAS'), self.field_indexes['C_MODS']):
                 self._origdata[ix_mod] = mod in mods
         if 'C_CMD' in self.fields:
-            self._origdata[self.ix_cmd] = cmnd
+            self._origdata[self.field_indexes['C_CMD']] = cmnd
         if 'C_CNTXT' in self.fields:
-            self._origdata[self.ix_cntxt] = context
+            self._origdata[self.field_indexes['C_CNTXT']] = context
+        # TODO: niet geïmplementeerd voor vikeys.py (is ook read only momenteel)
+        # de implementatie in dckeys.py is subtiel anders:
+        self._origdata[self.field_indexes['C_PARMS']] = newdata[self.field_indexes['C_PARMS']]
+        self._origdata[self.field_indexes['C_CTRL']] = newdata[self.field_indexes['C_CTRL']]
+        #
         try:
             self.reader.on_extra_selected(self, item)  # user exit
         except AttributeError:

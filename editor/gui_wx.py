@@ -281,28 +281,11 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         # bsizer.Fit(self._box)
         sizer.Add(self._box, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.EXPAND | wx.ALL, 2)
 
-    def captions_extra_fields(self):
+    def resize_if_necessary(self):
         """to be called on changing the language
         """
-        if 'C_KEY' in self.master.fields:
-            self.lbl_key.SetLabel(self.master.captions['C_KTXT'])
-        if 'C_MODS' in self.master.fields:
-            self.cb_win.SetLabel(self.master.captions['M_WIN'].join(("+", "  ")))
-            self.cb_ctrl.SetLabel(self.master.captions['M_CTRL'].join(("+", "  ")))
-            self.cb_alt.SetLabel(self.master.captions['M_ALT'].join(("+", "  ")))
-            self.cb_shift.SetLabel(self.master.captions['M_SHFT'].join(("+", "  ")))
-        if 'C_CNTXT' in self.master.fields:
-            self.lbl_context.SetLabel(self.master.captions['C_CNTXT'] + ':')
-        if 'C_CMD' in self.master.fields:
-            self.txt_cmd.SetLabel(self.master.captions['C_CTXT'])
-        self.b_save.SetLabel(self.master.captions['C_SAVE'])
-        self.b_del.SetLabel(self.master.captions['C_DEL'])
-
-        try:
-            self.master.reader.captions_extra_fields(self)  # user exit
-        except AttributeError:
-            shared.log_exc()
-        self.toplinesizer.Layout()
+        self.toplinesizer.Layout()  # misschien is dit bij wx variant nodig terwijl het bij de qt
+                                    # variant vanzelf gebeurt?
 
     def on_item_deselected(self, event):
         """callback op het niet meer geselecteerd zijn van een item

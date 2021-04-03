@@ -14,13 +14,11 @@ def add_extra_fields(win, box):
     win.lbl_parms = wx.StaticText(box, label=win.master.captions['C_PARMS'])
     win.txt_parms = wx.TextCtrl(box, size=(280, -1))
     win.screenfields.append(win.txt_parms)
-    win.ix_parms = 7
     win.lbl_controls = wx.StaticText(box, label=win.master.captions['C_CTRL'])
     cb = wx.ComboBox(box, choices=win.master.controlslist, style=wx.CB_READONLY)
     # cb.Bind(wx.EVT_COMBOBOX, functools.partial(on_combobox, win, cb, str))
     win.screenfields.append(cb)
     win.cmb_controls = cb
-    win.ix_controls = 8
 
 
 def layout_extra_fields(win, layout):

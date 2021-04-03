@@ -263,36 +263,5 @@ def buildcsv(page, showinfo=True):
 def add_extra_attributes(win):
     """define plugin-specific variables
     """
-    win.init_origdata += ['', '', '']
     win.keylist = win.otherstuff['keylist']
     win.featurelist = sorted(win.otherstuff['types'])
-
-
-def captions_extra_fields(win):
-    "for plugin-specific fields, change the captions according to the language setting"
-    win.set_label_text(win.pre_parms_label, win.master.captions['C_BPARMS'] + ':')
-    win.set_label_text(win.post_parms_label, win.master.captions['C_APARMS'] + ':')
-    win.set_label_text(win.feature_label, win.master.captions['C_FEAT'] + ':')
-
-
-# def on_combobox(self, cb, text):
-#     """handle a specific field in case it's a combobox
-#     cb refers to the widget, text to the choice made
-#     """
-# newdata is a tuple of values from a line in the screen table
-# def on_extra_selected(win, newdata):
-#     "callback on selection of an item - update specific field"
-#     win._origdata[win.fieldindex] = newdata[win.fieldindex]
-def vul_extra_details(win, indx, item):
-    """fill value for extra field (plugin-specific)
-    index refers to the sequence of the field in the screen table, item is the value contained
-    """
-    if win.column_info[indx][0] == 'C_BPARMS':
-        win.gui.set_textfield_value(win.gui.pre_parms_text, item)
-        win._origdata[win.gui.ix_pre_parms] = item
-    elif win.column_info[indx][0] == 'C_APARMS':
-        win.gui.set_textfield_value(win.gui.post_parms_text, item)
-        win._origdata[win.gui.ix_post_parms] = item
-    elif win.column_info[indx][0] == 'C_FEAT':
-        win.gui.set_combobox_string(win.gui.feature_select, item, win.featurelist)
-        win._origdata[win.gui.ix_feature_select] = item

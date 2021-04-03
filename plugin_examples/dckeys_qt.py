@@ -15,14 +15,12 @@ def add_extra_fields(win, box):
     win.txt_parms = qtw.QLineEdit(box)
     win.txt_parms.setMaximumWidth(280)
     win.screenfields.append(win.txt_parms)
-    win.ix_parms = 7
     win.lbl_controls = qtw.QLabel(win.master.captions['C_CTRL'], box)
     cb = qtw.QComboBox(box)
     cb.addItems(win.master.controlslist)
     cb.currentIndexChanged[str].connect(functools.partial(win.master.on_combobox, cb, str))
     win.screenfields.append(cb)
     win.cmb_controls = cb
-    win.ix_controls = 8
 
 
 def layout_extra_fields(win, layout):

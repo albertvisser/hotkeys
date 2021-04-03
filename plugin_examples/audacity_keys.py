@@ -93,7 +93,7 @@ def buildcsv(page, showinfo=True):
 how_to_save = """\
 Instructions to load the changed definitions back into Audacity.
 
-First you need to save the definitions, we'll get to that shortly.
+First you need to save the definitions.
 
 After that, perhaps it's sufficient to (re)start Audacity. Otherwise,
 select Edit > Preferences from the menu (or press Ctrl-P) and go to
@@ -115,6 +115,7 @@ def savekeys(parent):
     try:
         kbfile = parent.settings['AC_KEYS']
     except KeyError:
+        #TODO: bedenk een waarde voor initial, denk ik?
         kbfile = get_file_to_save(parent, extension='XML files (*.xml)', start=initial)
 
     root = ET.Element('audacitykeyboard')

@@ -249,26 +249,10 @@ class SingleDataInterface(qtw.QFrame):
         self._box.setLayout(bsizer)
         sizer.addWidget(self._box)
 
-    def captions_extra_fields(self):
+    def resize_if_necessary(self):
         """to be called on changing the language
         """
-        if 'C_KEY' in self.master.fields:
-            self.lbl_key.setText(self.master.captions['C_KTXT'])
-        if 'C_MODS' in self.master.fields:
-            self.cb_win.setText(self.master.captions['M_WIN'].join(("+", "  ")))
-            self.cb_ctrl.setText(self.master.captions['M_CTRL'].join(("+", "  ")))
-            self.cb_alt.setText(self.master.captions['M_ALT'].join(("+", "  ")))
-            self.cb_shift.setText(self.master.captions['M_SHFT'].join(("+", "  ")))
-        if 'C_CNTXT' in self.master.fields:
-            self.lbl_context.setText(self.master.captions['C_CNTXT'] + ':')
-        if 'C_CMD' in self.master.fields:
-            self.txt_cmd.setText(self.master.captions['C_CTXT'])
-        self.b_save.setText(self.master.captions['C_SAVE'])
-        self.b_del.setText(self.master.captions['C_DEL'])
-        try:
-            self.master.reader.captions_extra_fields(self)  # user exit
-        except AttributeError:
-            shared.log_exc()
+        # for compatibility: no actions needed here
 
     def on_item_selected(self, newitem, olditem):
         """callback on selection of an item
