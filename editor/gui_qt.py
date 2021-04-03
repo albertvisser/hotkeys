@@ -350,6 +350,7 @@ class SingleDataInterface(qtw.QFrame):
     def set_listitemtext(self, item, indx, value):
         "set the text for a list item"
         item.setText(indx, value)
+        item.setToolTip(indx, value)
 
     def add_listitem(self, new_item):
         "add an item to the list"
