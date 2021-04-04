@@ -610,7 +610,8 @@ class HotkeyPanel:
                 self._newdata[fieldindex] = text
                 if not self.gui.initializing_keydef:
                     self.set_changed_indicators(True)
-            elif self.gui.get_combobox_text(self.gui.cmb_commando) == self._origdata[cmdfldindex]:
+            elif hasattr(self.gui, 'cmb_commando') and self.gui.get_combobox_text(
+                    self.gui.cmb_commando) == self._origdata[cmdfldindex]:
                 self.set_changed_indicators(False)
         elif 'C_CNTXT' in self.fields and cb == self.gui.cmb_context:
             fieldindex = self.field_indexes['C_CNTXT']
@@ -622,7 +623,8 @@ class HotkeyPanel:
                                        self.contextactionsdict[context] or self.commandslist)
                 if not self.gui.initializing_keydef:
                     self.set_changed_indicators(True)
-            elif self.gui.get_combobox_text(self.gui.cmb_commando) == self._origdata[cmdfldindex]:
+            elif hasattr(self.gui, 'cmb_commando') and self.gui.get_combobox_text(
+                    self.gui.cmb_commando) == self._origdata[cmdfldindex]:
                 self.set_changed_indicators(False)
         elif 'C_CMD' in self.fields and cb == self.gui.cmb_commando:
             fieldindex = self.field_indexes['C_CMD']
@@ -636,7 +638,8 @@ class HotkeyPanel:
                 self.gui.set_textfield_value(self.gui.txt_oms, text_to_set)
                 if not self.gui.initializing_keydef:
                     self.set_changed_indicators(True)
-            elif self.gui.get_combobox_text(self.gui.cmb_key) == self._origdata[keyfldindex]:
+            elif hasattr(self.gui, 'cmb_key') and self.gui.get_combobox_text(
+                    self.gui.cmb_key) == self._origdata[keyfldindex]:
                 self.set_changed_indicators(False)
         elif 'C_CTRL' in self.fields and cb == self.gui.cmb_controls:
             fieldindex = self.fieldindexes['C_CTRL']
@@ -645,7 +648,8 @@ class HotkeyPanel:
                 self._newdata[fieldindex] = text
                 if not self.gui.initializing_keydef:
                     self.set_changed_indicators(True)
-            elif self.gui.get_combobox_text(self.cmb_commando) == win._origdata[cmdfldindex]:
+            elif hasattr(self.gui, 'cmb_commando') and self.gui.get_combobox_text(
+                    self.cmb_commando) == win._origdata[cmdfldindex]:
                 self.set_changed_indicators(False)
 
     def set_changed_indicators(self, value):
@@ -675,7 +679,7 @@ class HotkeyPanel:
                       self.gui.get_checkbox_state(self.gui.cb_ctrl),
                       self.gui.get_checkbox_state(self.gui.cb_alt),
                       self.gui.get_checkbox_state(self.gui.cb_win)]
-            if states == [self._origdata[x] for x in self.ix_mods]:
+            if states == [self._origdata[x] for x in self.field_indexes['C_MODS']]:
                 self.defchanged = False
                 if 'C_CMD' in self.fields:
                     self.gui.enable_save(False)
@@ -686,79 +690,69 @@ class HotkeyPanel:
         if not selitem:  # bv. bij p0list.clear()
             return
         seli = self.gui.get_itemdata(selitem)
-        keydefdata = self.data[seli]
+        keydefdata = {x: y for (x, y) in zip(self.fields, self.data[seli])}
+        print(keydefdata)
         if 'C_CMD' in self.fields:
             self.gui.enable_save(False)
             self.gui.enable_delete(False)
         self._origdata = self.init_origdata[:]
         # self._newdata = self.init_origdata[:]
-        for indx, item in enumerate(keydefdata):
-            if self.column_info[indx][0] == 'C_KEY':
-                key = item
-                if self.keylist is None:
-                    self.gui.set_textfield_value(self.gui.txt_key, key)
+        fieldnames = {'C_KEY': self.gui.cmb_key, 'C_CNTXT': getattr(self.gui, 'cmb_context', None),
+                      'C_CMD': getattr(self.gui,'cmb_commando', None),
+                      'C_DESC': getattr(self.gui,'txt_oms', None),
+                      'C_PARMS': getattr(self.gui,'txt_parms', None),
+                      'C_CTRL': getattr(self.gui,'cmb_controls', None),
+                      'C_BPARMS': getattr(self.gui,'pre_parms_text', None),
+                      'C_APARMS': getattr(self.gui,'post_parms_text', None),
+                      'C_FEAT': getattr(self.gui,'feature_select', None)}
+        for text in ('C_KEY', 'C_MODS', 'C_TYPE', 'C_CNTXT', 'C_CMD', 'C_DESC',
+                     'C_PARMS', 'C_CTRL', 'C_BPARMS', 'C_APARMS', 'C_FEAT'):
+            if text not in keydefdata:
+                continue
+            if text ==  'C_TYPE':
+                self.gui.enable_delete(keydefdata[text] == 'U')
+            elif text == 'C_MODS':
+                mods = keydefdata[text]
+                checkboxes = self.gui.cb_shift, self.gui.cb_ctrl, self.gui.cb_alt, self.gui.cb_win
+                # for cb in checkboxes:
+                #     self.gui.set_checkbox_state(cb, False)
+                for x, y, z in zip('SCAW', self.field_indexes['C_MODS'], checkboxes):
+                    self._origdata[y] = x in mods
+                    self.gui.set_checkbox_state(z, x in mods)
+            else:
+                if text != 'C_DESC':  # FIXME: waarom uitzondering? Deze is readonly bedoeld
+                    self._origdata[self.field_indexes[text]] = keydefdata[text]
+                if text == 'C_KEY' and self.keylist is None:
+                    self.gui.set_textfield_value(self.gui.txt_key, keydefdata[text])
+                elif text in ('C_KEY', 'C_CNTXT', 'C_CMD', 'C_CTRL', 'C_FEAT'):
+                    valuelist = self.get_valuelist(text)
+                    if valuelist:
+                        self.gui.set_combobox_string(fieldnames[text], keydefdata[text], valuelist)
                 else:
-                    self.gui.set_combobox_string(self.gui.cmb_key, key, self.keylist)
-                self._origdata[self.field_indexes['C_KEY']] = key
-            elif self.column_info[indx][0] == 'C_MODS':
-                mods = item
-                self.gui.set_checkbox_state(self.gui.cb_shift, False)
-                self.gui.set_checkbox_state(self.gui.cb_ctrl, False)
-                self.gui.set_checkbox_state(self.gui.cb_alt, False)
-                self.gui.set_checkbox_state(self.gui.cb_win, False)
-                for x, y, z in zip('SCAW',
-                                   self.field_indexes['C_MODS'],
-                                   (self.gui.cb_shift, self.gui.cb_ctrl, self.gui.cb_alt,
-                                    self.gui.cb_win)):
-                    if x in mods:
-                        self._origdata[y] = True
-                        self.gui.set_checkbox_state(z, True)
-            elif self.column_info[indx][0] == 'C_TYPE':
-                soort = item
-                if soort == 'U':
-                    self.gui.enable_delete(True)
-            elif self.column_info[indx][0] == 'C_CNTXT' and self.contextslist:
-                context = item
-                self.gui.set_combobox_string(self.gui.cmb_context, context, self.contextslist)
-                self._origdata[self.field_indexes['C_CNTXT']] = context
-            elif self.column_info[indx][0] == 'C_CMD':
-                if not any((self.commandslist, self.contextactionsdict)):
-                    continue
-                command = item
-                if 'C_CNTXT' in self.fields:
-                    self.gui.init_combobox(self.gui.cmb_commando)
-                    context = self.gui.get_combobox_selection(self.gui.cmb_context)
-                    if self.contextactionsdict:
-                        actionslist = self.contextactionsdict[context]
-                    else:
-                        actionslist = self.commandslist
-                    # actionslist = self.contextactionsdict[context] or self.commandslist
-                    self.gui.init_combobox(self.gui.cmb_commando, actionslist)
-                    valuelist = actionslist
-                else:
-                    valuelist = self.commandslist
-                self.gui.set_combobox_string(self.gui.cmb_commando, command, valuelist)
-                self._origdata[self.field_indexes['C_CMD']] = command
-            elif self.column_info[indx][0] == 'C_DESC':
-                oms = item
-                self.gui.set_textfield_value(self.gui.txt_oms, oms)
-            elif self.column_info[indx][0] == 'C_PARMS':
-                self.gui.set_textfield_value(self.gui.txt_parms, item)
-                self._origdata[self.field_indexes['C_PARMS']] = item
-            elif self.column_info[indx][0] == 'C_CTRL':
-                # ix = win.controlslist.index(item)  # TODO: adapt for multiple values
-                self.gui.set_combobox_string(self.gui.cmb_controls, item, self.controlslist)
-                self._origdata[self.field_indexes['C_CTRL']] = item
-            elif self.column_info[indx][0] == 'C_BPARMS':
-                self.gui.set_textfield_value(self.gui.pre_parms_text, item)
-                self._origdata[self.field_indexes['C_BPARMS']] = item
-            elif self.column_info[indx][0] == 'C_APARMS':
-                self.gui.set_textfield_value(self.gui.post_parms_text, item)
-                self._origdata[self.field_indexes['C_APARMS']] = item
-            elif self.column_info[indx][0] == 'C_FEAT':
-                self.gui.set_combobox_string(self.gui.feature_select, item, self.featurelist)
-                self._origdata[self.field_indexes['C_FEAT']] = item
+                    self.gui.set_textfield_value(fieldnames[text], keydefdata[text])
         self._newdata = self._origdata[:]
+
+    def get_valuelist(self, text):
+        if text == 'C_KEY':
+            return self.keylist
+        elif text == 'C_CNTXT':
+            return self.contextslist
+        elif text == 'C_CMD':
+            if 'C_CNTXT' in self.fields:
+                self.gui.init_combobox(self.gui.cmb_commando)
+                context = self.gui.get_combobox_selection(self.gui.cmb_context)
+                if self.contextactionsdict:
+                    actionslist = self.contextactionsdict[context]
+                else:
+                    actionslist = self.commandslist
+                self.gui.init_combobox(self.gui.cmb_commando, actionslist)
+                return actionslist
+            else:
+                return self.commandslist
+        elif text == 'C_CTRL':
+            return self.controlslist
+        elif text == 'C_FEAT':
+            return self.featurelist
 
     def check_for_changes(self):
         "find out what has been changed"
