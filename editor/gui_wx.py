@@ -324,38 +324,11 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
 
     def on_item_selected(self, event):
         """callback op het selecteren van een item
-
-        velden op het hoofdscherm worden bijgewerkt vanuit de selectie"""
-        # check: is het überhaupt nodig?
-        if not self.master.has_extrapanel:  # dit is hier wel voldoende
-            return
-        # check: zitten we niet te vroeg in het proces?
+        """
         item = event.GetItem()
-        if not item:  # bv. bij p0list.clear()
-            return
-        #  check 2: kunnen we wijzigen (hebben we een extra schermdeel is niet voldoende)
-        ## if not self.master.has_extrapanel:
-            ## return
-        if not bool(self.parent.master.page.settings[shared.SettType.RDEF.value]):
-            return
-        # print('in on_item_selected - has_extrapanel:', self.master.has_extrapanel, 'olditem is',
-        #       self.olditem)
-        self.initializing_keydef = True
-        any_change, changedata = self.master.check_for_changes()
-        found, indx = self.master.check_for_selected_keydef(changedata)
-        make_change = self.master.ask_what_to_do(any_change, found, item, self.olditem)
-        if make_change:
-            item = self.master.apply_changes(found, indx, changedata)
-        # if self.master.initializing_screen:
-        #     self.refresh_extrascreen(event.GetItem())  # newitem)
-        #     self.master.initializing_screen = False
-        #     return
-        # seli = self.p0list.GetItemData(event.GetEventObject().GetFirstSelected())  # Index())
-        ## print "Itemselected",seli,self.data[seli]
-        # self.refresh_extrascreen(seli)
-        self.master.refresh_extrascreen(item)  # newitem)
-        self.initializing_keydef = False
-        event.Skip()
+        if self.master.has_extrapanel and item:
+            self.master.process_changed_selection(item, self.olditem)
+            event.Skip()
 
     def on_item_activated(self, event):
         """callback op het activeren van een item (onderdeel van het selecteren)

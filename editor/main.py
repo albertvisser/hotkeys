@@ -642,14 +642,14 @@ class HotkeyPanel:
                     self.gui.cmb_key) == self._origdata[keyfldindex]:
                 self.set_changed_indicators(False)
         elif 'C_CTRL' in self.fields and cb == self.gui.cmb_controls:
-            fieldindex = self.fieldindexes['C_CTRL']
-            cmdfldindex = self.fieldindexes['C_CMD']
+            fieldindex = self.field_indexes['C_CTRL']
+            cmdfldindex = self.field_indexes['C_CMD']
             if text != self._origdata[fieldindex]:
                 self._newdata[fieldindex] = text
                 if not self.gui.initializing_keydef:
                     self.set_changed_indicators(True)
             elif hasattr(self.gui, 'cmb_commando') and self.gui.get_combobox_text(
-                    self.cmb_commando) == win._origdata[cmdfldindex]:
+                    self.gui.cmb_commando) == self._origdata[cmdfldindex]:
                 self.set_changed_indicators(False)
 
     def set_changed_indicators(self, value):
@@ -753,6 +753,27 @@ class HotkeyPanel:
             return self.controlslist
         elif text == 'C_FEAT':
             return self.featurelist
+
+    def process_changed_selection(self, newitem, olditem):
+        """bijwerken velden op het hoofdscherm na wijzigen van de selectie
+
+        bevat een soort detectie of de definitie gewijzigd is die rekening probeert
+        te houden met of een nieuwe keydef wordt aangemaakt die een kopie is van de
+        oude voor een andere keycombo - alleen die triggert ook bij opbouwen van
+        het scherm
+        """
+        # in de qt versie was deze controle op commentaar gezet
+        if not bool(self.parent.page.settings[shared.SettType.RDEF.value]):
+            return
+        self.gui.initializing_keydef = True
+        if not self.initializing_screen:  # in de wx versie zat deze conditie niet
+            any_change, changedata = self.check_for_changes()
+            found, indx = self.check_for_selected_keydef(changedata)
+            make_change = self.ask_what_to_do(any_change, found, newitem, olditem)
+            if make_change:
+                newitem = self.apply_changes(found, indx, changedata)
+        self.refresh_extrascreen(newitem)
+        self.gui.initializing_keydef = False
 
     def check_for_changes(self):
         "find out what has been changed"

@@ -279,29 +279,9 @@ class SingleDataInterface(qtw.QFrame):
 
     def on_item_selected(self, newitem, olditem):
         """callback on selection of an item
-
-        velden op het hoofdscherm worden bijgewerkt vanuit de selectie
-
-        bevat een soort detectie of de definitie gewijzigd is die rekening probeert
-        te houden met of een nieuwe keydef wordt aangemaakt die een kopie is van de
-        oude voor een andere keycombo - alleen die triggert ook bij opbouwen van
-        het scherm
         """
-        if not self.master.has_extrapanel:
-            return
-        # if not int(self.parent.master.page.settings[shared.SettType.RDEF.value]):
-        #     return
-        if not newitem:  # bv. bij p0list.clear()
-            return
-        self.initializing_keydef = True
-        if not self.master.initializing_screen:
-            any_change, changedata = self.master.check_for_changes()
-            found, indx = self.master.check_for_selected_keydef(changedata)
-            make_change = self.master.ask_what_to_do(any_change, found, newitem, olditem)
-            if make_change:
-                newitem = self.master.apply_changes(found, indx, changedata)
-        self.master.refresh_extrascreen(newitem)
-        self.initializing_keydef = False
+        if newitem and self.master.has_extrapanel:
+            self.master.process_changed_selection(newitem, olditem)
 
     def on_update(self):
         """callback for editing kb shortcut
