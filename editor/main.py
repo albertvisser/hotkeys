@@ -603,53 +603,37 @@ class HotkeyPanel:
             return
         cb, text = self.gui.get_choice_value(*args)
         self.defchanged = False
-        if 'C_KEY' in self.fields and cb == self.gui.cmb_key:
-            fieldindex = self.field_indexes['C_KEY']
-            cmdfldindex = self.field_indexes['C_CMD']
-            if text != self._origdata[fieldindex]:
-                self._newdata[fieldindex] = text
-                if not self.gui.initializing_keydef:
-                    self.set_changed_indicators(True)
-            elif hasattr(self.gui, 'cmb_commando') and self.gui.get_combobox_text(
-                    self.gui.cmb_commando) == self._origdata[cmdfldindex]:
+        for field, control in (('C_KEY', self.gui.cmb_key),
+                               ('C_CNTXT', self.gui.cmb_context),
+                               ('C_CMD', self.gui.cmb_commando),
+                               ('C_CTRL', self.gui.cmb_controls)):
+            command_changed = hasattr(self.gui, 'cmb_commando') and self.gui.get_combobox_text(
+                    self.gui.cmb_commando) == self._origdata[self.field_indexes['C_CMD']]
+            key_changed = hasattr(self.gui, 'cmb_key') and self.gui.get_combobox_text(
+                    self.gui.cmb_key) == self._origdata[self.field_indexes['C_KEY']]
+            if field in self.fields and cb == control:
+                fieldindex = self.field_indexes[field]
+                if text != self._origdata[fieldindex]:
+                    # if field != 'C_CNTXT':
+                    #     self._newdata[fieldindex] = text
+                    # else:
+                    #     context = self._newdata[fieldindex] = self.gui.get_combobox_text(
+                    #         self.gui.cmb_context)
+                    #     self.gui.init_combobox(self.gui.cmb_commando,
+                    #                            self.contextactionsdict[context] or
+                    #                            self.commandslist)
+                    self._newdata[fieldindex] = text
+                    if field == 'C_CNTXT':
+                        self.gui.init_combobox(self.gui.cmb_commando,
+                                               self.contextactionsdict[text] or self.commandslist)
+                    elif field == 'C_CMD':
+                        text_to_set = self.descriptions.get(text, self.captions['M_NODESC'])
+                        self.gui.set_textfield_value(self.gui.txt_oms, text_to_set)
+                    if not self.gui.initializing_keydef:
+                        self.set_changed_indicators(True)
+            elif field !=  'C_CMD' and command_changed:
                 self.set_changed_indicators(False)
-        elif 'C_CNTXT' in self.fields and cb == self.gui.cmb_context:
-            fieldindex = self.field_indexes['C_CNTXT']
-            cmdfldindex = self.field_indexes['C_CMD']
-            if text != self._origdata[fieldindex]:
-                context = self._origdata[fieldindex] = self.gui.get_combobox_text(
-                    self.gui.cmb_context)
-                self.gui.init_combobox(self.gui.cmb_commando,
-                                       self.contextactionsdict[context] or self.commandslist)
-                if not self.gui.initializing_keydef:
-                    self.set_changed_indicators(True)
-            elif hasattr(self.gui, 'cmb_commando') and self.gui.get_combobox_text(
-                    self.gui.cmb_commando) == self._origdata[cmdfldindex]:
-                self.set_changed_indicators(False)
-        elif 'C_CMD' in self.fields and cb == self.gui.cmb_commando:
-            fieldindex = self.field_indexes['C_CMD']
-            keyfldindex = self.field_indexes['C_KEY']
-            if text != self._origdata[fieldindex]:
-                self._newdata[fieldindex] = text
-                try:
-                    text_to_set = self.descriptions[text]
-                except KeyError:
-                    text_to_set = self.captions['M_NODESC']
-                self.gui.set_textfield_value(self.gui.txt_oms, text_to_set)
-                if not self.gui.initializing_keydef:
-                    self.set_changed_indicators(True)
-            elif hasattr(self.gui, 'cmb_key') and self.gui.get_combobox_text(
-                    self.gui.cmb_key) == self._origdata[keyfldindex]:
-                self.set_changed_indicators(False)
-        elif 'C_CTRL' in self.fields and cb == self.gui.cmb_controls:
-            fieldindex = self.field_indexes['C_CTRL']
-            cmdfldindex = self.field_indexes['C_CMD']
-            if text != self._origdata[fieldindex]:
-                self._newdata[fieldindex] = text
-                if not self.gui.initializing_keydef:
-                    self.set_changed_indicators(True)
-            elif hasattr(self.gui, 'cmb_commando') and self.gui.get_combobox_text(
-                    self.gui.cmb_commando) == self._origdata[cmdfldindex]:
+            elif field == 'C_CMD' and key_changed:
                 self.set_changed_indicators(False)
 
     def set_changed_indicators(self, value):

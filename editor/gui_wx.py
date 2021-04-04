@@ -458,7 +458,8 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
 
     def get_combobox_text(self, cb):
         "return the text entered/selected in a combobox"
-        return cb.GetText()
+        return cb.GetValue()
+        # return cb.GetText() - staat niet in de documentatie van dit ComboBox of TextEntry
 
     def init_combobox(self, cb, choices=None):
         "initialize combobox to a set of new values"
