@@ -103,8 +103,8 @@ class SingleDataInterface(qtw.QFrame):
                 cb = qtw.QComboBox(box)
                 cb.setMaximumWidth(90)
                 cb.addItems(self.master.keylist)  # niet sorteren
-                cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb,
-                                                                      str))
+                cb.currentIndexChanged[str].connect(
+                        functools.partial(self.master.on_combobox, cb, str))
                 self.screenfields.append(cb)
                 self.cmb_key = cb
 
@@ -128,7 +128,8 @@ class SingleDataInterface(qtw.QFrame):
             cb = qtw.QComboBox(box)
             cb.addItems(self.master.contextslist)
             cb.setMaximumWidth(110)
-            cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
+            cb.currentIndexChanged[str].connect(
+                    functools.partial(self.master.on_combobox, cb, str))
             self.screenfields.append(cb)
             self.cmb_context = cb
 
@@ -138,7 +139,8 @@ class SingleDataInterface(qtw.QFrame):
             cb.setMaximumWidth(150)
             if 'C_CNTXT' not in self.master.fields:  # load on choosing context
                 cb.addItems(self.master.commandslist)
-            cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
+            cb.currentIndexChanged[str].connect(
+                    functools.partial(self.master.on_combobox, cb, str))
             self.screenfields.append(cb)
             self.cmb_commando = cb
 
@@ -152,7 +154,8 @@ class SingleDataInterface(qtw.QFrame):
             self.lbl_controls = qtw.QLabel(self.master.captions['C_CTRL'], box)
             cb = qtw.QComboBox(box)
             cb.addItems(self.master.controlslist)
-            cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
+            cb.currentIndexChanged[str].connect(
+                    functools.partial(self.master.on_combobox, cb, str))
             self.screenfields.append(cb)
             self.cmb_controls = cb
 
