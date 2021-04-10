@@ -44,14 +44,17 @@ class DefaultKeys:
         self.read_data()
         keys, data = self.parse_data()
         self.keydefs = {}
-        self.kinds = set()
+        self.contexts = ['Normal mode', 'Insert mode', 'Visual mode', 'Command-line editing']
+        self.kinds = ['Window commands', 'Text objects']
         newkey = 0
         for key, values in keys.items():
-            newvalue = values
+            keydef, bparms, aparms = values
             for item, value in data[key].items():
-                self.kinds.add(item)
                 newkey += 1
-                self.keydefs[newkey] = newvalue + (item, value)
+                context = ''
+                if item in self.contexts:
+                    context, item = item, ''
+                self.keydefs[newkey] = (keydef, context, bparms, aparms, item, value)
 
     def read_data(self):
         """read the source file section for section and line by line
@@ -255,13 +258,15 @@ def buildcsv(page, showinfo=True):
     path = pathlib.Path(page.settings[settname])
     keyclass = DefaultKeys(path)
     keydefs = keyclass.keydefs
-    kinds = keyclass.kinds
+    contexts = keyclass.contexts + ['']
+    kinds = keyclass.kinds + ['']
     keylist = list(set(x[0] for x in keydefs.values()))
-    return keydefs, {'types': kinds, 'keylist': keylist}
+    return keydefs, {'contexts': contexts, 'types': kinds, 'keylist': keylist}
 
 
 def add_extra_attributes(win):
     """define plugin-specific variables
     """
     win.keylist = win.otherstuff['keylist']
+    win.contextslist = sorted(win.otherstuff['contexts'])
     win.featurelist = sorted(win.otherstuff['types'])
