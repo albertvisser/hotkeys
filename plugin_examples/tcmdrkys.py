@@ -286,6 +286,11 @@ def get_frameheight():
 def savekeys(parent):
     """schrijft de listbox data terug via een tckeys object
     """
+    save_message = '\n'.join(('Press "OK" to build and save the keyboard definitions files',
+                              'or "Cancel" to return to the main program'))
+    ok = editor.gui.show_cancel_message(parent, text=save_message)
+    if not ok:
+        return
     keydict = {}
     for val in parent.data.values():
         ky, mod, srt, cmd, desc = val
