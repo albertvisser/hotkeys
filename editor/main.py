@@ -455,7 +455,7 @@ class HotkeyPanel:
     def savekeys(self):
         """save modified keydef back
 
-        allows saving back to csv without (?) saving to the tool settings
+        plugin decides if they're also saved back into the tool settings
         """
         self.parent.data = self.data
         try:
@@ -537,8 +537,7 @@ class HotkeyPanel:
                      'C_PARMS', 'C_CTRL', 'C_BPARMS', 'C_APARMS', 'C_FEAT'):
             if text == 'C_MODS':
                 self.init_origdata += [False, False, False, False]
-                self.field_indexes[text] = [itemindex + 1, itemindex + 2, itemindex + 3,
-                                            itemindex + 4]
+                self.field_indexes[text] = [itemindex, itemindex + 1, itemindex + 2, itemindex + 3]
                 itemindex += 4
             else:
                 self.init_origdata.append('')
@@ -603,25 +602,20 @@ class HotkeyPanel:
             return
         cb, text = self.gui.get_choice_value(*args)
         self.defchanged = False
+        for attr in ('cmb_key', 'cmb_context', 'cmb_commando', 'cmb_controls'):
+            if not hasattr(self.gui, attr):
+                setattr(self.gui, attr, None)
         for field, control in (('C_KEY', self.gui.cmb_key),
                                ('C_CNTXT', self.gui.cmb_context),
                                ('C_CMD', self.gui.cmb_commando),
                                ('C_CTRL', self.gui.cmb_controls)):
-            command_changed = hasattr(self.gui, 'cmb_commando') and self.gui.get_combobox_text(
+            command_changed = self.gui.cmb_commando and self.gui.get_combobox_text(
                     self.gui.cmb_commando) == self._origdata[self.field_indexes['C_CMD']]
-            key_changed = hasattr(self.gui, 'cmb_key') and self.gui.get_combobox_text(
+            key_changed = self.gui.cmb_key and self.gui.get_combobox_text(
                     self.gui.cmb_key) == self._origdata[self.field_indexes['C_KEY']]
             if field in self.fields and cb == control:
                 fieldindex = self.field_indexes[field]
                 if text != self._origdata[fieldindex]:
-                    # if field != 'C_CNTXT':
-                    #     self._newdata[fieldindex] = text
-                    # else:
-                    #     context = self._newdata[fieldindex] = self.gui.get_combobox_text(
-                    #         self.gui.cmb_context)
-                    #     self.gui.init_combobox(self.gui.cmb_commando,
-                    #                            self.contextactionsdict[context] or
-                    #                            self.commandslist)
                     self._newdata[fieldindex] = text
                     if field == 'C_CNTXT':
                         self.gui.init_combobox(self.gui.cmb_commando,
@@ -675,13 +669,14 @@ class HotkeyPanel:
             return
         seli = self.gui.get_itemdata(selitem)
         keydefdata = {x: y for (x, y) in zip(self.fields, self.data[seli])}
-        print(keydefdata)
+        # print(keydefdata)
         if 'C_CMD' in self.fields:
             self.gui.enable_save(False)
             self.gui.enable_delete(False)
         self._origdata = self.init_origdata[:]
         # self._newdata = self.init_origdata[:]
-        fieldnames = {'C_KEY': self.gui.cmb_key, 'C_CNTXT': getattr(self.gui, 'cmb_context', None),
+        fieldnames = {'C_KEY': self.gui.cmb_key,
+                      'C_CNTXT': getattr(self.gui, 'cmb_context', None),
                       'C_CMD': getattr(self.gui,'cmb_commando', None),
                       'C_DESC': getattr(self.gui,'txt_oms', None),
                       'C_PARMS': getattr(self.gui,'txt_parms', None),
@@ -694,7 +689,8 @@ class HotkeyPanel:
             if text not in keydefdata:
                 continue
             if text ==  'C_TYPE':
-                self.gui.enable_delete(keydefdata[text] == 'U')
+                if bool(int(self.settings[shared.SettType.RDEF.value])):
+                    self.gui.enable_delete(keydefdata[text] == 'U')
             elif text == 'C_MODS':
                 mods = keydefdata[text]
                 checkboxes = self.gui.cb_shift, self.gui.cb_ctrl, self.gui.cb_alt, self.gui.cb_win
@@ -704,7 +700,7 @@ class HotkeyPanel:
                     self._origdata[y] = x in mods
                     self.gui.set_checkbox_state(z, x in mods)
             else:
-                if text != 'C_DESC':  # FIXME: waarom uitzondering? Deze is readonly bedoeld
+                if text != 'C_DESC':  # FIXME: waarom uitzondering? O, deze is readonly bedoeld
                     self._origdata[self.field_indexes[text]] = keydefdata[text]
                 if text == 'C_KEY' and self.keylist is None:
                     self.gui.set_textfield_value(self.gui.txt_key, keydefdata[text])
@@ -746,119 +742,148 @@ class HotkeyPanel:
         oude voor een andere keycombo - alleen die triggert ook bij opbouwen van
         het scherm
         """
-        # in de qt versie was deze controle op commentaar gezet
-        if not bool(self.parent.page.settings[shared.SettType.RDEF.value]):
-            return
         self.gui.initializing_keydef = True
-        if not self.initializing_screen:  # in de wx versie zat deze conditie niet
-            any_change, changedata = self.check_for_changes()
-            found, indx = self.check_for_selected_keydef(changedata)
-            make_change = self.ask_what_to_do(any_change, found, newitem, olditem)
-            if make_change:
-                newitem = self.apply_changes(found, indx, changedata)
+        # in de qt versie was deze controle op commentaar gezet
+        # in de __init__ is het scherm editable afhankelijk van de setting
+        # bool(int(self.settings['RedefineKeys']
+        if bool(int(self.settings[shared.SettType.RDEF.value])):
+            # eventuele wijzigingen in detailscherm checken
+            if not self.initializing_screen:  # in de wx versie zat deze conditie niet
+                # zoek naar wijzigingen in sleutelwaarden
+                any_change, changedata = self.check_for_changes()
+                # zoek de lijstentry behorende bij de nieuwe sleutelwaarden
+                found, indx = self.check_for_selected_keydef(changedata)
+                # vraag indien nodig of wijzigingen doorgevoerd moeten worden
+                make_change = self.ask_what_to_do(any_change, found, newitem, olditem)
+                if make_change:
+                    newitem = self.apply_changes(found, indx, changedata)
+        else:
+            newitem = self.gui.get_selected_keydef()
         self.refresh_extrascreen(newitem)
         self.gui.initializing_keydef = False
 
     def check_for_changes(self):
-        "find out what has been changed"
-        # TODO moet eigenlijk generieker want bij bv VI is alleen C_KEY aanwezig terwijl de rest
-        # best belangrijk is
-        # dan moet dit ook naar andere rubrieken kijken die mogelijk zijn denk ik
-        other_item = other_cntxt = other_cmd = False
-        key = mods = cmnd = context = ''
-        # print(self.fields)
-        print('check for changes:', self._origdata[0], self._newdata[0])
-        if 'C_KEY' in self.fields:
-            origkey = self._origdata[self.field_indexes['C_KEY']]
-            key = self._newdata[self.field_indexes['C_KEY']]
-            other_item = key != origkey
-        if 'C_MODS' in self.fields:
-            origmods = ''.join([y for x, y in zip(self.field_indexes['C_MODS'], ('WCAS'))
-                                if self._origdata[x]])
-            mods = ''.join([y for x, y in zip(self.field_indexes['C_MODS'], ('WCAS'))
-                            if self._newdata[x]])
-            other_item = other_item or mods != origmods
-        if 'C_CMD' in self.fields:
-            origcmd = self._origdata[self.field_indexes['C_CMD']]
-            cmnd = self._newdata[self.field_indexes['C_CMD']]
-            other_cmd = cmnd != origcmd
-        if 'C_CNTXT' in self.fields:
-            origcntxt = self._origdata[self.field_indexes['C_CNTXT']]
-            context = self._newdata[self.field_indexes['C_CNTXT']]
-            other_cntxt = context != origcntxt
-        return ((other_item, other_cmd, other_cntxt), (key, mods, cmnd, context))
+        "find out what has been changed in the key columns"
+        # other_item = other_cntxt = other_cmd = False
+        # key = mods = cmnd = context = ''
+        # if 'C_KEY' in self.fields:
+        #     origkey = self._origdata[self.field_indexes['C_KEY']]
+        #     key = self._newdata[self.field_indexes['C_KEY']]
+        #     other_item = key != origkey
+        # if 'C_MODS' in self.fields:
+        #     origmods = ''.join([y for x, y in zip(self.field_indexes['C_MODS'], ('WCAS'))
+        #                         if self._origdata[x]])
+        #     mods = ''.join([y for x, y in zip(self.field_indexes['C_MODS'], ('WCAS'))
+        #                     if self._newdata[x]])
+        #     other_item = other_item or mods != origmods
+        # # if 'C_CMD' in self.fields:
+        # #     origcmd = self._origdata[self.field_indexes['C_CMD']]
+        # #     cmnd = self._newdata[self.field_indexes['C_CMD']]
+        # #     other_cmd = cmnd != origcmd
+        # if 'C_CNTXT' in self.fields:
+        #     origcntxt = self._origdata[self.field_indexes['C_CNTXT']]
+        #     context = self._newdata[self.field_indexes['C_CNTXT']]
+        #     other_cntxt = context != origcntxt
+        # return ((other_item, other_cmd, other_cntxt), (key, mods, context))  # cmnd, context))
+        changed, changes = [], []
+        for text in ('C_KEY', 'C_MODS', 'C_CNTXT'):
+            fieldindex = self.field_indexes[text]
+            if text != 'C_MODS':
+                oldvalue = self._origdata[fieldindex]
+                newvalue = self._newdata[fieldindex]
+            else:
+                indexmap = {x: y for (x, y) in zip(self.field_indexes[text], ('SCAW'))}
+                oldvalue = [self._origdata[x] for x in fieldindex]
+                newvalue = [self._newdata[x] for x in fieldindex]
+            changed.append(newvalue == oldvalue)
+            changes.append(newvalue)
+        return changed, changes
 
     def check_for_selected_keydef(self, keydefdata):
         "find the keydef currently selected (if any)"
-        key, mods, cmnd, context = keydefdata
-        found, indx = False, -1
+        # key, mods, cmnd, context = keydefdata
+        # found, indx = False, -1
+        # for number, item in self.data.items():
+        #     keymatch = modmatch = cntxtmatch = True
+        #     if 'C_KEY' in self.fields and item[0] != key:
+        #         keymatch = False
+        #     if 'C_MODS' in self.fields and item[1] != mods:
+        #         modmatch = False
+        #     if 'C_CNTXT' in self.fields and item[2] != context:
+        #         cntxtmatch = False
+        #     if keymatch and modmatch and cntxtmatch:
+        #         found = True
+        #         indx = number
+        #         break
         for number, item in self.data.items():
-            keymatch = modmatch = cntxtmatch = True
-            if 'C_KEY' in self.fields and item[0] != key:
-                keymatch = False
-            if 'C_MODS' in self.fields and item[1] != mods:
-                modmatch = False
-            if 'C_CNTXT' in self.fields and item[2] != context:
-                cntxtmatch = False
-            if keymatch and modmatch and cntxtmatch:
-                found = True
-                indx = number
+            if all(('C_KEY' in self.fields and item[0] == keydefdata[0],
+                    'C_MODS' in self.fields and item[1] == keydefdata[1],
+                    'C_CNTXT' in self.fields and item[2] == keydefdata[2])):
+                found, indx = True, number
                 break
+        else:
+            found, indx = False, -1
         return found, indx
 
     def ask_what_to_do(self, changes, found, newitem, olditem):
         "get input on what to do next"
-        cursor_moved = True if newitem != olditem and olditem is not None else False
+        cursor_moved = newitem != olditem and olditem is not None
+        data_changed = self._newdata != self._origdata
         make_change = False
-        if any(changes):
+        if data_changed:  # any(changes):
             if cursor_moved:
-                make_change = gui.ask_question(self, "Q_SAVCHG")
-            elif changes[0]:
-                if found:
-                    make_change = gui.ask_question(self, "Q_DPLKEY")
-                else:
-                    make_change = True
+                make_change = gui.ask_question(self.gui, "Q_SAVCHG")
+            elif found:  # changes[0]:
+                # if found:
+                make_change = gui.ask_question(self.gui, "Q_DPLKEY")
+                # else:
+                #     make_change = True
             else:
                 make_change = True
         return make_change
 
     def apply_changes(self, found, indx, keydefdata):
         "effectuate the changes as indicated in the gui"
-        # TODO note this only works for one specific plugin (tcmdrkys) I think
-        # which is no problem as long as I don't modify keydefs
-        key, mods, cmnd, context = keydefdata
+        # key, mods, cmnd, context = keydefdata - we moeten kijken naar self._newdata (alles)
         item = self.gui.get_selected_keydef()
         pos = self.gui.get_keydef_position(item)
         if found:
-            self.data[indx] = (key, mods, 'U', cmnd, self.omsdict[cmnd])
+            # zo simpel is het helaas niet:
+            # self.data[indx] = self._newdata  #  (key, mods, 'U', cmnd, self.omsdict[cmnd])
+            for fieldnum, field in self.fields:
+                if field[0] == 'C_MODS':
+                    self.data[indx][self.fields.index(field)] = keydefdata[1]  # samengevoegde mods
+                else:
+                    self.data[indx][self.fields.index(field)] = self._newdata[
+                            self.field_indexes[field[0]]]
         else:
             # ordereddict opnieuw opbouwen
             newdata = [x for x in self.data.values()]
             # dit is heel typisch specifiek voor één bepaalde plugin:
-            newvalue = (key, mods, 'U', cmnd, self.omsdict[cmnd])
-            newdata.append(newvalue)
+            # newvalue = (key, mods, 'U', cmnd, self.omsdict[cmnd])
+            newdata.append(self._newdata)   # newvalue)
             newdata.sort()
             self.data.clear()
             for x, y in enumerate(newdata):
-                if y == newvalue:  # is dit nodig?
-                    indx = x       # want waar gebruik ik die indx verder?
+                # if y == newvalue:  # is dit nodig?
+                #     indx = x       # want waar gebruik ik die indx verder?
                 self.data[x] = y
         self.modified = True
-        self._origdata = self.init_origdata
-        if 'C_KEY' in self.fields:
-            self._origdata[self.field_indexes['C_KEY']] = key
-        if 'C_MODS' in self.fields:
-            for mod, ix_mod in zip(('WCAS'), self.field_indexes['C_MODS']):
-                self._origdata[ix_mod] = mod in mods
-        if 'C_CMD' in self.fields:
-            self._origdata[self.field_indexes['C_CMD']] = cmnd
-        if 'C_CNTXT' in self.fields:
-            self._origdata[self.field_indexes['C_CNTXT']] = context
-        # TODO: niet geïmplementeerd voor vikeys.py (is ook read only momenteel)
-        # de implementatie in dckeys.py is subtiel anders:
-        self._origdata[self.field_indexes['C_PARMS']] = newdata[self.field_indexes['C_PARMS']]
-        self._origdata[self.field_indexes['C_CTRL']] = newdata[self.field_indexes['C_CTRL']]
-        #
+        self._origdata = self._newdata  # self.init_origdata
+        # if 'C_KEY' in self.fields:
+        #     self._origdata[self.field_indexes['C_KEY']] = key
+        # if 'C_MODS' in self.fields:
+        #     for mod, ix_mod in zip(('WCAS'), self.field_indexes['C_MODS']):
+        #         self._origdata[ix_mod] = mod in mods
+        # if 'C_CMD' in self.fields:
+        #     self._origdata[self.field_indexes['C_CMD']] = cmnd
+        # if 'C_CNTXT' in self.fields:
+        #     self._origdata[self.field_indexes['C_CNTXT']] = context
+        # # TODO: niet geïmplementeerd voor vikeys.py (is ook read only momenteel)
+        # # de implementatie in dckeys.py is subtiel anders:
+        # self._origdata[self.field_indexes['C_PARMS']] = newdata[self.field_indexes['C_PARMS']]
+        # self._origdata[self.field_indexes['C_CTRL']] = newdata[self.field_indexes['C_CTRL']]
+        # #
         newitem = self.gui.get_keydef_at_position(pos)
         self.populate_list(pos)    # refresh
         return newitem
@@ -921,12 +946,14 @@ class ChoiceBook:
         """
         # no use finishing this method if certain conditions aren't met
         if self.parent.book is None:        # leaving: not done setting up this object yet?
+            # this can happen when the page_changed callback is set up during __init__
             return
-        page = self.gui.get_panel()
-        if page is None:                     # leaving: no page selected yet
+        win = self.gui.get_panel()
+        self.page = win.master              # change to new selection
+        if win is None:                     # leaving: no page selected yet
             return
-        if page.master.modified:
-            ok = page.exit()
+        if self.page.modified:
+            ok = win.exit()
             if not ok:                       # leaving: can't exit modified page yet
                 return
         self.parent.gui.statusbar_message(self.parent.captions["M_DESC"].format(
@@ -1199,23 +1226,6 @@ class Editor:
         self.ini["plugins"] = update_paths(name_path_list, newpathdata, self.ini["lang"])
         return True
 
-    def accept_csvsettings(self, cloc, ploc, title, rebuild, details, redef):
-        """check and confirm input from SetupDialog
-        """
-        if cloc == "":
-            gui.show_message(self.gui, 'I_NEEDNAME')
-            return False
-        cloc = os.path.abspath(cloc)
-        if os.path.exists(cloc):
-            gui.show_message(self.gui, 'I_GOTSETFIL', args=[cloc])
-            return False
-        if importlib.util.find_spec(ploc):
-            gui.show_message(self.gui, 'I_GOTPLGFIL', args=[ploc])
-            return False
-        self.gui.loc = cloc
-        self.gui.data = [ploc, title, int(rebuild), int(details), int(redef)]
-        return True
-
     def m_rebuild(self, event=None):
         """rebuild csv data from (updated) settings
         """
@@ -1248,6 +1258,23 @@ class Editor:
                 mld = self.captions['I_NOEXTRA']
             mld = self.captions['I_NORBLD'].format(self.captions['I_#FOUND'].format(mld))
         gui.show_message(self.gui, text=mld)
+
+    def accept_csvsettings(self, cloc, ploc, title, rebuild, details, redef):
+        """check and confirm input from SetupDialog
+        """
+        if cloc == "":
+            gui.show_message(self.gui, 'I_NEEDNAME')
+            return False
+        cloc = os.path.abspath(cloc)
+        if os.path.exists(cloc):
+            gui.show_message(self.gui, 'I_GOTSETFIL', args=[cloc])
+            return False
+        if importlib.util.find_spec(ploc):
+            gui.show_message(self.gui, 'I_GOTPLGFIL', args=[ploc])
+            return False
+        self.gui.loc = cloc
+        self.gui.data = [ploc, title, int(rebuild), int(details), int(redef)]
+        return True
 
     def m_tool(self, event=None):
         """define tool-specific settings
