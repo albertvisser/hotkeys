@@ -182,7 +182,8 @@ def analyze_keydefs(root):  # , cat_name):
                         if not item.name:
                             desctable.append(item)
                         elif item.name != 'table':
-                            desctable.append(item.get_text())
+                            desctable.append(' '.join([x.strip()
+                                                      for x in item.get_text().split('\n')]))
                         elif "innercmddesc" in item['class']:
                             for line in item.children:
                                 if line.name != 'tr': continue
@@ -270,7 +271,7 @@ class CsvBuilder:
         self.defaults, self.params, self.catdict, self.shortcuts = {}, {}, {}, {}
         self.contexts, self.controls, self.contexts_list = set(), set(), []
         # volgens het toolbar definition scherm zijn voor controls drie waarden mogelijk:
-        self.controls = {'Command Line', 'Files panel', 'Quick Search'}
+        self.controls = {'', 'Command Line', 'Files Panel', 'Quick Search'}
         self.tobematched, self.unlisted_cmds = {}, []
 
     def get_settings_pathnames(self):
@@ -308,7 +309,7 @@ class CsvBuilder:
         ok, cancel = ask_ync_question(self.page.gui, text=instructions)
         if ok:
             kbfile = get_file_to_open(self.page.gui, extension='SCF files (*.scf)',
-                                      start=self.kbfile)
+                                      start=initial)  # self.kbfile)
         return kbfile
 
     def get_keydefs(self, data):
@@ -384,7 +385,7 @@ class CsvBuilder:
                     ## elif 'hintcell' in col['class']:
                         ## print('hintcell')
                     else:
-                        oms = col.get_text()
+                        oms = '\n'.join([x.strip() for x in col.get_text().split('\n')])
                 if keynames:
                     for name, mods in keynames:
                         self.stdkeys[(_translate_keynames(name), mods, context)] = oms
