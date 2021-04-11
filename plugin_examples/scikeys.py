@@ -107,7 +107,38 @@ def read_docs(path):
     return keydefs
 
 
-def read_source_gtk(fname):
+def read_symbols(fname):
+    """read symbols for actions from "ItemFactory" tables
+
+    eventueel de SCI_* symbolen ook nog (zelfde nummerrange als Function, geen overlap)
+    """
+    symbols, functions = {}, {}
+    in_table = in_functions =  False
+    with open(fname) as source:
+        data = source.read()
+    source = data.split('\n')
+    for line in source:
+        line = line.strip()
+        if in_table:
+            if '};' in line:
+                in_table = False
+            elif line.startswith('{"IDM_'):
+                command, number = line[1:-2].split(',', 1)
+                symbols[number] = command.strip('"')
+        elif in_functions:
+            if '};' in line:
+                in_functions = False
+            else:
+                command, number = line[1:].split(',')[:2]
+                functions[number] = command.strip('"')
+        elif line.startswith('static IFaceConstant'):
+            in_table = True
+        elif line.startswith('static IFaceFunction'):
+            in_functions = True
+    return symbols, functions
+
+
+def read_menu_gtk(fname):
     """read keydefs from a given SciTE source file (Linux version)
     """
     menu_keys = []
@@ -145,7 +176,7 @@ def read_source_gtk(fname):
     return menu_keys
 
 
-def read_source_win(fname=''):
+def read_menu_win(fname=''):
     """get keydefs from a given SciTE source file (Windows version)
 
     definitions are like
@@ -472,6 +503,15 @@ class PropertiesFile():
         return regel
 
 
+def merge_command_dicts(dict_from_text, dict_from_src):
+    fromtext = {y[0]: (x, y[1]) for x, y in dict_from_text.items()}
+    fromsrc = {y: (x, '') for x, y in dict_from_src.items()}
+    numbers = {x: y[0] for x, y in fromsrc.items()}
+    fromsrc.update(fromtext)
+    newfromsrc = {x: (numbers[x] if x in numbers else y[0], y[1]) for x, y in fromsrc.items()}
+    return {y[0]: (x, y[1]) for x, y in newfromsrc.items()}
+
+
 def buildcsv(page, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het csv bestand
@@ -496,11 +536,20 @@ def buildcsv(page, showinfo=True):
     data = tarfile.open(settings['SCI_SRCE'])
     data.extractall(path='/tmp')
     if sys.platform.startswith('linux'):
-        menu_keys = read_source_gtk('/tmp/scite/gtk/SciTEGTK.cxx')
+        menu_keys = read_menu_gtk('/tmp/scite/gtk/SciTEGTK.cxx')
     elif sys.platform.startswith('win32'):
-        menu_keys = read_source_win('/tmp/scite/win32/SciTERes.rc')
+        menu_keys = read_menu_win('/tmp/scite/win32/SciTERes.rc')
+    all_menu_cmds, all_int_cmds = read_symbols('/tmp/scite/src/IFaceTable.cxx')  # ook in SciTE.h
+        # dit is een mapping van nummers op strings (geen omschrijvingen)
+        # samenvoegen met menu_commands resp. internal_commands
+        # resultaat is mappings van een nummer op een tuple van commando en omschrijving
+    menu_commands = merge_command_dicts(menu_commands, all_menu_cmds)
+    internal_commands = merge_command_dicts(internal_commands, all_int_cmds)
 
     keydefs = read_docs(settings['SCI_DOCS'])  # non menu keyboard bindings
+        # dit is een list van tuples van key, modifiers, description
+        # je zou nog een matcher kunnen definiëren om descriptions aan internal_commands
+        # toe te voegen
 
     global_keys = []
     root = os.path.dirname(settings['SCI_GLBL'])
@@ -599,6 +648,7 @@ def buildcsv(page, showinfo=True):
         elif test.startswith('IDM_BUFFER'):
             new_item[-1] = "Switch to buffer " + str(int(test[-1]) + 1)
         shortcuts[num] = new_item
+    print(menu_commands)
     return shortcuts, {'menucommands': menu_commands, 'internal_commands': internal_commands,
                        'contexts': list(contexts_list)}
 
@@ -610,8 +660,8 @@ def add_extra_attributes(win):
     win.contextslist = win.otherstuff['contexts']
     actionslist = [(x, y[0], y[1]) for x, y in win.otherstuff['menucommands'].items()]
     actionslist += [(x, y[0], y[1]) for x, y in win.otherstuff['internal_commands'].items()]
-    win.commandskeys = [x for x, y, z in actionslist]
-    win.commandslist = [y for x, y, z in actionslist]
+    win.commandskeys = [x for x, y, z in actionslist] + ['']
+    win.commandslist = [y for x, y, z in actionslist] + ['']
     win.contextactionsdict = {}
     win.descriptions = {y: z for x, y, z in actionslist}
     win.keylist.append('Movement')
