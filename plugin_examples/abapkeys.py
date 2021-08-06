@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 HotKeys plugin for SAP ABAP Editor
 
@@ -15,7 +14,6 @@ from it three csv files per editor mode (currently we have "SAPGUI" and "VS 98 l
     services the GUI. This one contains more keydefs than are in the xml however,
     menu shortcuts are also included so some differentiation may be useful
 """
-from __future__ import print_function
 ## import os
 ## import shutil
 import xml.etree.ElementTree as ET

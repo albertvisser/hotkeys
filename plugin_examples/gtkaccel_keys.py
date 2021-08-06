@@ -1,4 +1,3 @@
-# -*- coding: UTF-8 -*-
 """basic plugin for tool using a gtkaccel_map - PyQt5 version
 """
 import os.path

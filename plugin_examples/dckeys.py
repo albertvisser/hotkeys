@@ -2,8 +2,6 @@
 
 gebaseerd op versie 0.8
 """
-from __future__ import print_function
-
 import os
 import collections
 import shutil

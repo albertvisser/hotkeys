@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
 """Hotkeys plugin for SciTE
 """
-from __future__ import print_function
 import os
 import sys
 import logging
@@ -648,7 +646,6 @@ def buildcsv(page, showinfo=True):
         elif test.startswith('IDM_BUFFER'):
             new_item[-1] = "Switch to buffer " + str(int(test[-1]) + 1)
         shortcuts[num] = new_item
-    print(menu_commands)
     return shortcuts, {'menucommands': menu_commands, 'internal_commands': internal_commands,
                        'contexts': list(contexts_list)}
 

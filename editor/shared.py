@@ -1,4 +1,3 @@
-# -*- coding: UTF-8 -*-
 """HotKeys: non-gui and csv related functions
 """
 import os

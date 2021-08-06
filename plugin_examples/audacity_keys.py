@@ -1,4 +1,3 @@
-# -*- coding: UTF-8 -*-
 """HotKeys plugin for Audacity
 """
 ## import sys
