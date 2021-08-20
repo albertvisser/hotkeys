@@ -10,7 +10,8 @@ import xml.etree.ElementTree as ET
 import bs4 as bs  # import BeautifulSoup
 from ..gui import (show_cancel_message, get_file_to_open, get_file_to_save, show_dialog,
                    ask_ync_question)
-from .dckeys_gui import layout_extra_fields, DcCompleteDialog
+# from .dckeys_gui import layout_extra_fieldsd
+from .dckeys_gui import DcCompleteDialog
 
 CONFPATH = '/home/albert/.config/doublecmd'
 DOCSPATH = '/usr/share/doublecmd/doc/en'
@@ -277,7 +278,7 @@ class CsvBuilder:
         """
         kbfile = self.page.settings.get('DC_PATH', '')
         if not kbfile:
-           kbfile = self.page.settings['DC_PATH'] = os.path.join(CONFPATH, 'shortcuts.scf')
+            kbfile = self.page.settings['DC_PATH'] = os.path.join(CONFPATH, 'shortcuts.scf')
         dc_keys = self.page.settings.get('DC_KEYS', '')
         if not dc_keys:
             dc_keys = self.page_settings['DC_KEYS'] = os.path.join(DOCSPATH, 'shortcuts.html')
@@ -489,7 +490,7 @@ class CsvBuilder:
                     # als nog geen omschrijving bekend dan overnemen
                     definitions_dict['desc'] = cmddict_oms
                     # definitions_dict['standard'] = 'S'
-                elif not cmddict_oms:  #  and stdkeys_oms:
+                elif not cmddict_oms:  # and stdkeys_oms:
                     # let op: hier ontstaan nieuwe of bijgewerkte cmddict entries
                     self.cmddict[definitions_dict['cmd']] = stdkeys_oms
                 elif cmddict_oms and cmddict_oms != stdkeys_oms:
@@ -502,7 +503,7 @@ class CsvBuilder:
         for stdkey, value in self.stdkeys.items():
             if stdkey not in self.shortcuts:
                 self.shortcuts[stdkey] = {'cmd': '', 'param': '', 'ctrl': '', 'standard': 'S',
-                                           'desc': value}
+                                          'desc': value}
 
     def format_shortcuts(self):
         # nou nog omwerken naar het gewenste formaat

@@ -1,11 +1,8 @@
 """basic plugin for tool using a gtkaccel_map - PyQt5 version
 """
 import os.path
-## import sys
 import collections
-## import functools
 import string
-import pdb
 from .read_gtkaccel import read_keydefs_and_stuff
 from ..gui import get_file_to_open, get_file_to_save, show_dialog
 from .gtkaccel_keys_gui import AccelCompleteDialog

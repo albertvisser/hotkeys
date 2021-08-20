@@ -283,7 +283,7 @@ class MergeDialog(shared.MergeMixin, qtw.QDialog):
 
     def find_listitems(self, win, search, in_col=1):
         "find all items in a list that contain text in a given column"
-        return win.findItems(search, core.Qt.MatchContains, in_col)   #  1)
+        return win.findItems(search, core.Qt.MatchContains, in_col)   # 1)
 
     def get_selected_item(self, win):
         "get the selected item in a list"

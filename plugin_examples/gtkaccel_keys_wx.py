@@ -1,7 +1,5 @@
 """Hotkeys plugins voor gtk-accel based apps - GUI toolkit specifieke code
 """
-import wx
-import wx.grid as wxg
 from ..dialogs_wx import CompleteDialog
 
 

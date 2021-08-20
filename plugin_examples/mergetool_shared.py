@@ -1,8 +1,6 @@
 """Total  Commander plugin for HotKeys - shared code
 """
-import os
 import csv
-import collections
 import editor.gui
 
 
@@ -24,7 +22,7 @@ def save_matchdata(lines, matchfile):
     with open(matchfile, "w") as _out:
         writer = csv.writer(_out)
         for keytext, cmdtext in lines:
-            writer.writerow((*keytext.split(' ', 1) , cmdtext))
+            writer.writerow((*keytext.split(' ', 1), cmdtext))
 
 
 class MergeMixin:
@@ -134,16 +132,19 @@ class MergeMixin:
             if itemix:
                 self.reset_listitem_icon(itemix)
 
-    def save_matches(self, event=None):
+    def save_matches(self, event=None, tofile=True):
         """save the changes to a temp file
         """
         num_items = self.count_matches()
         if num_items == 0:
             editor.gui.show_message(self, text='No data to save')
             return
-        save_matchdata([self.get_matchitem_data(ix) for ix in range(num_items)],
-                        self.parent.matchfile)
-        editor.gui.show_message(self, text='Data saved')
+        matches = [self.get_matchitem_data(ix) for ix in range(num_items)]
+        if tofile:
+            save_matchdata(matches, self.parent.matchfile)
+            editor.gui.show_message(self, text='Data saved')
+        else:
+            self.parent.tempdata = matches
 
     def focus_keylist(self, event=None):
         "shift focus for selecting a keycombo item"
@@ -245,7 +246,7 @@ class MergeMixin:
             # print('    should be in', results)
             newix = results.index(current) + 1
             print('huidige positie:', results.index(current), len(results))
-            if newix >= len(results): # was <
+            if newix >= len(results):  # was <
                 newix = 0
             print('find next, setting current to', results[newix])
             if itemlist == self.listkeys:
@@ -340,7 +341,7 @@ class MergeMixin:
         don't save to file; just assign to a global variable
         """
         print('in confirm')
-        self.parent.tempdata = [self.get_matchitem_data(ix) for ix in range(num_items)]
+        self.save_matches(tofile=False)
         self.finish()
 
     def close(self, event=None):

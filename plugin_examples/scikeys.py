@@ -111,7 +111,7 @@ def read_symbols(fname):
     eventueel de SCI_* symbolen ook nog (zelfde nummerrange als Function, geen overlap)
     """
     symbols, functions = {}, {}
-    in_table = in_functions =  False
+    in_table = in_functions = False
     with open(fname) as source:
         data = source.read()
     source = data.split('\n')

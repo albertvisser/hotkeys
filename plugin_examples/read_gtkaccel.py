@@ -117,5 +117,3 @@ def readfile(filename):
                     keydefs.append((key, mods, new_id))
 
     return keydefs, actions, others
-
-

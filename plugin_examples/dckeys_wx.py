@@ -1,10 +1,6 @@
 """Hotkeys plugin voor Double Commander - qt specifieke code
 """
-import os.path
-import shutil
-import csv
 import wx
-import wx.grid as wxg
 from ..dialogs_wx import CompleteDialog
 
 

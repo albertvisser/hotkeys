@@ -24,7 +24,7 @@ class MergeDialog(shared.MergeMixin, wx.Dialog):
         self.imglist = wx.ImageList(16, 16)
         # self.todoimage = self.imglist.Add(wx.NullBitmap)
         self.okimage = self.imglist.Add(wx.ArtProvider.GetBitmap(wx.ART_TICK_MARK))
-        self.todoimage = self.imglist.Add(wx.ArtProvider.GetBitmap(wx.ART_DEL_BOOKMARK)) # ART_MINUS
+        self.todoimage = self.imglist.Add(wx.ArtProvider.GetBitmap(wx.ART_DEL_BOOKMARK))
 
         self.listkeys = MyListCtrl(self, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
         self.listkeys.InsertColumn(0, 'Key')
@@ -145,7 +145,7 @@ class MergeDialog(shared.MergeMixin, wx.Dialog):
     def create_findbutton(self, columns):
         """stel in waarop gezocht moet worden
         """
-        control = wx.ComboBox(self, size=(120, -1), choices = ['Find ' + x for x in columns],
+        control = wx.ComboBox(self, size=(120, -1), choices=['Find ' + x for x in columns],
                               style=wx.CB_DROPDOWN | wx.CB_READONLY)
         return control
 
@@ -214,7 +214,7 @@ class MergeDialog(shared.MergeMixin, wx.Dialog):
                 # item = self.listkeys.GetItem(ix)
                 break
         else:
-           ix = None  # -1  # item = None
+            ix = None  # -1  # item = None
         return ix
 
     def find_in_listmatches(self, keytext):
@@ -232,7 +232,7 @@ class MergeDialog(shared.MergeMixin, wx.Dialog):
 
     def ensure_item_visible(self, ix, win=None):  # item):
         "make sure the selected mapping can be viewed in the list"
-        if win == None:
+        if win is None:
             win = self.listmatches
         print(win.EnsureVisible(ix))  # item.GetId())
 

@@ -114,7 +114,7 @@ def savekeys(parent):
     try:
         kbfile = parent.settings['AC_KEYS']
     except KeyError:
-        #TODO: bedenk een waarde voor initial, denk ik?
+        # TODO: bedenk een waarde voor initial want dit werkt zo niet
         kbfile = get_file_to_save(parent, extension='XML files (*.xml)', start=initial)
 
     root = ET.Element('audacitykeyboard')

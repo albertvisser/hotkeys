@@ -1,7 +1,7 @@
 """Hotkeys plugin for Total Commander - general code
 """
 import os
-import csv
+import collections
 import editor.gui
 import editor.plugins.mergetool_shared as shared
 from ..toolkit import toolkit
@@ -235,14 +235,15 @@ def buildcsv(page, showinfo=True):
     if showinfo:
         ok = editor.gui.show_dialog(page, MergeDialog)
         if ok:
-            save_matchdata(page.tempdata, page.matchfile)
-            shortcuts = {}
+            shared.save_matchdata(page.tempdata, page.matchfile)
+            shortcuts, ix = {}, 0
             for keytext, cmd in page.tempdata:
                 key, mods = keytext.split(' ', 1)
                 if cmd:
-                    desc = self.cmddict[cmd]['oms']
+                    desc = page.cmdlist_data[cmd]['oms']  # self.cmddict
                 else:
-                    desc = self.keydict[(key, mods)]['oms']
+                    desc = page.keylist_data[(key, mods)]['oms']  # self.keydict
+                ix += 1
                 shortcuts[ix] = (translate_keyname(key), mods, 'S', cmd, desc)
         else:
             # shortcuts = []

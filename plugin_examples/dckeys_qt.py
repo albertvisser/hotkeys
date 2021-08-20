@@ -1,9 +1,5 @@
 """Hotkeys plugin voor Double Commander - qt specifieke code
 """
-import os.path
-import shutil
-import csv
-import functools
 import PyQt5.QtWidgets as qtw
 from ..dialogs_qt import CompleteDialog
 

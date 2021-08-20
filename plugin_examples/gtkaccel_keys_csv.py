@@ -30,4 +30,3 @@ def write_data(outfile, new_values):
         for key, value in new_values.items():
             if value:
                 writer.writerow((key, value))
-
