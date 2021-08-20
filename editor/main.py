@@ -610,9 +610,9 @@ class HotkeyPanel:
                                ('C_CMD', self.gui.cmb_commando),
                                ('C_CTRL', self.gui.cmb_controls)):
             command_changed = self.gui.cmb_commando and self.gui.get_combobox_text(
-                    self.gui.cmb_commando) == self._origdata[self.field_indexes['C_CMD']]
+                self.gui.cmb_commando) == self._origdata[self.field_indexes['C_CMD']]
             key_changed = self.gui.cmb_key and self.gui.get_combobox_text(
-                    self.gui.cmb_key) == self._origdata[self.field_indexes['C_KEY']]
+                self.gui.cmb_key) == self._origdata[self.field_indexes['C_KEY']]
             if field in self.fields and cb == control:
                 fieldindex = self.field_indexes[field]
                 if text != self._origdata[fieldindex]:
@@ -625,7 +625,7 @@ class HotkeyPanel:
                         self.gui.set_textfield_value(self.gui.txt_oms, text_to_set)
                     if not self.gui.initializing_keydef:
                         self.set_changed_indicators(True)
-            elif field !=  'C_CMD' and command_changed:
+            elif field != 'C_CMD' and command_changed:
                 self.set_changed_indicators(False)
             elif field == 'C_CMD' and key_changed:
                 self.set_changed_indicators(False)
@@ -677,18 +677,18 @@ class HotkeyPanel:
         # self._newdata = self.init_origdata[:]
         fieldnames = {'C_KEY': self.gui.cmb_key,
                       'C_CNTXT': getattr(self.gui, 'cmb_context', None),
-                      'C_CMD': getattr(self.gui,'cmb_commando', None),
-                      'C_DESC': getattr(self.gui,'txt_oms', None),
-                      'C_PARMS': getattr(self.gui,'txt_parms', None),
-                      'C_CTRL': getattr(self.gui,'cmb_controls', None),
-                      'C_BPARMS': getattr(self.gui,'pre_parms_text', None),
-                      'C_APARMS': getattr(self.gui,'post_parms_text', None),
-                      'C_FEAT': getattr(self.gui,'feature_select', None)}
+                      'C_CMD': getattr(self.gui, 'cmb_commando', None),
+                      'C_DESC': getattr(self.gui, 'txt_oms', None),
+                      'C_PARMS': getattr(self.gui, 'txt_parms', None),
+                      'C_CTRL': getattr(self.gui, 'cmb_controls', None),
+                      'C_BPARMS': getattr(self.gui, 'pre_parms_text', None),
+                      'C_APARMS': getattr(self.gui, 'post_parms_text', None),
+                      'C_FEAT': getattr(self.gui, 'feature_select', None)}
         for text in ('C_KEY', 'C_MODS', 'C_TYPE', 'C_CNTXT', 'C_CMD', 'C_DESC',
                      'C_PARMS', 'C_CTRL', 'C_BPARMS', 'C_APARMS', 'C_FEAT'):
             if text not in keydefdata:
                 continue
-            if text ==  'C_TYPE':
+            if text == 'C_TYPE':
                 if bool(int(self.settings[shared.SettType.RDEF.value])):
                     self.gui.enable_delete(keydefdata[text] == 'U')
             elif text == 'C_MODS':
@@ -855,7 +855,7 @@ class HotkeyPanel:
                     self.data[indx][self.fields.index(field)] = keydefdata[1]  # samengevoegde mods
                 else:
                     self.data[indx][self.fields.index(field)] = self._newdata[
-                            self.field_indexes[field[0]]]
+                        self.field_indexes[field[0]]]
         else:
             # ordereddict opnieuw opbouwen
             newdata = [x for x in self.data.values()]

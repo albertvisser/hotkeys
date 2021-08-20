@@ -85,8 +85,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         self.sm_dn = self.imglist.Add(smalldnarrow.GetBitmap())
 
         self.p0list = MyListCtrl(self, size=(1140, 594), style=wx.LC_REPORT | wx.BORDER_SUNKEN |
-                                                               # wx.LC_VRULES |
-                                                               wx.LC_HRULES | wx.LC_SINGLE_SEL)
+           wx.LC_HRULES | wx.LC_SINGLE_SEL)
         sizer = wx.BoxSizer(wx.VERTICAL)
         if self.master.column_info:
             for col, inf in enumerate(self.master.column_info):
@@ -370,7 +369,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         for indx, coldata in enumerate(self.master.column_info):
             hdr = self.p0list.GetColumn(indx)
             print(hdr, hdr.GetText(), headers[indx])
-            #if headers[indx] != hdr.GetText():
+            # if headers[indx] != hdr.GetText():
             hdr.SetText(headers[indx])
             hdr.SetWidth(coldata[1])
             self.p0list.SetColumn(indx, hdr)
@@ -789,8 +788,8 @@ class Gui(wx.Frame):
         wid = 1140 if shared.LIN else 688
         hig = 594
         super().__init__(None, size=(wid, hig), style=wx.DEFAULT_FRAME_STYLE |
-                                                      # wx.BORDER_SIMPLE |
-                                                      wx.NO_FULL_REPAINT_ON_RESIZE)
+            # wx.BORDER_SIMPLE |
+            wx.NO_FULL_REPAINT_ON_RESIZE)
         self.sb = self.CreateStatusBar()
         self.menu_bar = wx.MenuBar()
         self.menuitems = {}
