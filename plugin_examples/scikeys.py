@@ -72,12 +72,16 @@ def read_commands(path):
     menu_commands = {}
     count = 0
     for row in menus.find_all('tr'):
+        if row.parent.name =='thead':
+            continue
         command, text = [tag.string for tag in row.find_all('td')]
         count += 1
         menu_commands["{:0>4}".format(count)] = (command, text)
 
     internal_commands = {}
     for row in internals.find_all('tr'):
+        if row.parent.name =='thead':
+            continue
         key, command, text = [tag.string for tag in row.find_all('td')]
         internal_commands[key] = (command, text)
         # command_names[text] = (key, command)
