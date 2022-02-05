@@ -4,10 +4,10 @@ standard keys can be parsed in from /usr/share/vim/vim##/doc/index.txt
 redefined keys are in ~/.vim/vimrc (map commands)
 """
 import string
+import subprocess
 import pathlib
 import collections
 # from .vikeys_gui import layout_extra_fields_topline
-# VI_VER = (pathlib.Path(__file__).parent / 'VI_VER').read_text().strip()
 
 
 def convert_key(value):
@@ -241,21 +241,9 @@ class DefaultKeys:
 def buildcsv(page, showinfo=True):
     """build the datastructures for constructing the CSV file
     """
-    if 'extra' not in page.settings:
-        page.settings['extra'] = {}
-    settname = 'VI_VER'
-    if settname not in page.settings:
-        with (pathlib.Path.home() / '.viminfo').open(encoding='latin-1') as f:
-            line = f.readlines()[0]
-        page.settings[settname] = line.strip().rsplit('Vim ')[1][:-1]
-        page.settings['extra']['VI_VER'] = 'VI Version'
-    ver = page.settings[settname]
-    settname = 'VI_CMDREF'
-    if settname not in page.settings:
-        page.settings[settname] = '/usr/share/vim/vim{}/doc/index.txt'.format(ver)
-        oms = 'Name of file containing setting names and descriptions'
-        page.settings['extra'] = {settname: oms}
-    path = pathlib.Path(page.settings[settname])
+    command = [str(pathlib.Path(__file__).parent / 'vi_get_runtime')]
+    result = subprocess.run(command, capture_output=True)
+    path = pathlib.Path(result.stdout.decode().strip()) / 'doc' / 'index.txt'
     keyclass = DefaultKeys(path)
     keydefs = keyclass.keydefs
     contexts = keyclass.contexts + ['']
