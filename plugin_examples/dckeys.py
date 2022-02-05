@@ -4,6 +4,7 @@ gebaseerd op versie 0.8
 """
 import os
 import collections
+import subprocess
 import shutil
 import csv
 import xml.etree.ElementTree as ET
@@ -14,7 +15,8 @@ from ..gui import (show_cancel_message, get_file_to_open, get_file_to_save, show
 from .dckeys_gui import DcCompleteDialog
 
 CONFPATH = '/home/albert/.config/doublecmd'
-DOCSPATH = '/usr/share/doublecmd/doc/en'
+# DOCSPATH = '/usr/share/doublecmd/doc/en'
+DOCSPATH = 'https:/doublecmd.github.io/doc/en'
 HERE = os.path.dirname(__file__)
 
 instructions = """\
@@ -282,16 +284,16 @@ class CsvBuilder:
         dc_keys = self.page.settings.get('DC_KEYS', '')
         if not dc_keys:
             dc_keys = self.page_settings['DC_KEYS'] = os.path.join(DOCSPATH, 'shortcuts.html')
+        if dc_keys.startswith('http') and not os.path.exists('/tmp/dc_files/shortcuts.html'):
+            # http://doublecmd.github.io/doc/en/shortcuts.html
+            subprocess.run(['wget', dc_keys, '-P', '/tmp/dc_files', '-nc'])
+            dc_keys = os.path.join('/tmp/dc_files', os.path.basename(dc_keys))
         dc_cmds = self.page.settings.get('DC_CMDS', '')
         if not dc_cmds:
             dc_cmds = self.page.settings['DC_CMDS'] = os.path.join(DOCSPATH, 'cmds.html')
-        if dc_keys.startswith('http'):
-            # http://doublecmd.github.io/doc/en/shortcuts.html
+        if dc_cmds.startswith('http') and not os.path.exists('/tmp/dc_files/cmds.html'):
             # http://doublecmd.github.io/doc/en/cmds.html
-            if not os.path.exists('/tmp/dc_files/shortcuts.html'):
-                import subprocess
-                subprocess.run(['wget', '-i', dc_keys, '-P', '/tmp/dc_files', '-nc'])
-            dc_keys = os.path.join('/tmp/dc_files', os.path.basename(dc_keys))
+            subprocess.run(['wget', dc_cmds, '-P', '/tmp/dc_files', '-nc'])
             dc_cmds = os.path.join('/tmp/dc_files', os.path.basename(dc_cmds))
         dc_sett = self.page.settings.get('DC_SETT', '')
         if not dc_sett:
@@ -431,13 +433,15 @@ class CsvBuilder:
         """
         root = data.getroot()
         for toolbar in list(root.find('Toolbars')):
+            toolbarid = toolbar.tag
             for row in list(toolbar):
                 for item in row.findall('Program'):
                     key = item.find('ID').text
                     desc = item.find('Hint').text
                     cmd = item.find('Command').text
                     parm = item.find('Params').text
-                    self.tbcmddict[key] = (desc, cmd, parm)
+                    # self.tbcmddict[key] = (desc, cmd, parm)
+                    self.tbcmddict[(toolbarid, key)] = (desc, cmd, parm)
 
     def add_missing_descriptions(self, desclist):
         """update missing descriptions in cmddict
@@ -476,7 +480,13 @@ class CsvBuilder:
             # toolbaritems zijn altijd eigen definities
             if definitions_dict['cmd'] == 'cm_ExecuteToolbarItem':
                 definitions_dict['standard'] = 'U'
-                itemid = definitions_dict['param'].split('=', 1)[1]
+                # itemid = definitions_dict['param'].split('=', 1)[1]
+                parmdict = {}
+                parms = definitions_dict['param'].split(';')
+                for parm in parms:
+                    name, value = parm.split('=', 1)
+                    parmdict[name] = value.replace('TfrmOptionsToolbar', 'MainToolbar')
+                itemid = (parmdict['ToolBarID'], parmdict['ToolItemID'])
                 oms, cmd, parm = self.tbcmddict[itemid]
                 definitions_dict['desc'] = '{} ({} {})'.format(oms, cmd, parm)
             else:
