@@ -239,7 +239,7 @@ class DeleteDialog(wx.Dialog):
     """
     def __init__(self, parent):
         self.parent = parent
-        self.last_added = ''  # TODO uitzoeken: kan dit wel altijd
+        self.parent.master.last_added = ''  # TODO uitzoeken: kan dit wel altijd
         super().__init__(parent)
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -285,7 +285,7 @@ class FilesDialog(wx.Dialog):
         self.parent = parent
         self.master = master
         # self.title = self.master.title
-        self.last_added = ''
+        # self.last_added = ''
         self.code_to_remove = []
         self.data_to_remove = []
         super().__init__(parent, size=(680, 400), title=self.master.title)
@@ -386,7 +386,7 @@ class FilesDialog(wx.Dialog):
             if newtool == "":
                 show_message(self.parent, 'I_NEEDNAME')
                 return
-            self.last_added = newtool
+            self.master.last_added = newtool
             self.loc = prgloc = ""
             self.settingsdata[newtool] = (prgloc,)
             if ask_question(self.parent, 'P_INICSV'):

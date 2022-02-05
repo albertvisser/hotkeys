@@ -586,12 +586,15 @@ class HotkeyPanel:
         text = self.gui.get_widget_text(*args)
         self.defchanged = False
         if 'C_KEY' in self.fields:
-            if text == self._origdata[self.field_indexes['C_KEY']]:
-                self.defchanged = True
-                self.gui.enable_save(True)
-            elif text == self._origdata[self.field_indexes['C_KEY']]:  # FIXME: dit is dezelfde conditie
-                self.defchanged = False
-                self.gui.enable_save(False)
+            # if text == self._origdata[self.field_indexes['C_KEY']]:
+            #     self.defchanged = True
+            #     self.gui.enable_save(True)
+            # elif text == self._origdata[self.field_indexes['C_KEY']]:
+            #     self.defchanged = False
+            #     self.gui.enable_save(False)
+            state = text == self._origdata[self.field_indexes['C_KEY']]
+            self.defchanged = state
+            self.gui.enable_save(state)
 
     def on_combobox(self, *args):
         """callback op het gebruik van een combobox
@@ -1187,9 +1190,20 @@ class Editor:
     def accept_pathsettings(self, name_path_list, settingsdata, names_to_remove):
         """check and confirm input from FilesDialog
         """
+        # last_added leegmaken als deze niet meer bestaat
         if self.last_added not in [x[0] for x in name_path_list]:
             self.last_added = ''
-        # ? self.master.last_added = self.last_added
+
+        # dit is verplaatst vanuit de `exit` methode omdat het me hier beter op z'n plaats leek
+        # when setting is 'fixed', don't remember a startup tool that is removed from the config
+        mode = self.ini.get("startup", '')
+        pref = self.ini.get("initial", '')
+        if mode == shared.mode_f and pref not in [x[0] for x in self.ini['plugins']]:
+            oldmode, mode = mode, shared.mode_r
+            self.ini['startup'] = mode
+            self.change_setting('startup', oldmode, mode)
+        #
+
         for ix, entry in enumerate(name_path_list):
             name, csvname = entry
             if name not in [x for x, y in self.ini['plugins']]:
@@ -1533,12 +1547,6 @@ class Editor:
             return
         mode = self.ini.get("startup", '')
         pref = self.ini.get("initial", '')
-        # when setting is 'fixed', don't remember a startup tool that is removed from the config
-        # TODO: should actually be handled in the files definition dialog?
-        if mode == shared.mode_f and pref not in [x[0] for x in self.ini['plugins']]:
-            oldmode, mode = mode, shared.mode_r
-            self.ini['startup'] = mode
-            self.change_setting('startup', oldmode, mode)
         # when setting is 'remember', set the remembered tool to the current one
         if mode == shared.mode_r:
             try:

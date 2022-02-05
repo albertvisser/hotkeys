@@ -76,8 +76,8 @@ def defaultcommands(root):
         if int(cm_num) > 0:
             cmdictitem["number"] = cm_num
         if " <" in cm_naam:
-            cm_naam, argsitem = cm_naam.split(' <')
-            cmdictitem['args'] = argsitem.split('>')[0]
+            cm_naam, argsitem = cm_naam.split(' <', 1)
+            cmdictitem['args'] = argsitem.split('>')[0].replace('> <', ', ')
         cmdict[cm_naam] = cmdictitem
     return cmdict
 
