@@ -15,6 +15,8 @@ DFLT_TCLOC = "C:/totalcmd"
 def read_lines(fn):
     "return lines read from file"
     result = []
+    if not os.path.exists(fn):
+        fn = os.path.join(os.path.dirname(__file__), 'tc_fallback', os.path.basename(fn))
     try:
         with open(fn) as f_in:
             result = f_in.readlines()
