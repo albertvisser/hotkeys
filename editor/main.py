@@ -1307,7 +1307,7 @@ class Editor:
             indx, win = self.book.gui.get_selected_panel()
             if test_dets != self.book.page.has_extrapanel:
                 self.book.page.has_extrapanel = test_dets
-                newwin = HotkeyPanel(self.book, self.book.plugins[indx][1])
+                newwin = HotkeyPanel(self.book, self.ini["plugins"][indx][1])
                 self.book.gui.replace_panel(indx, win, newwin)
             elif test_redef != old_redef and test_dets:
                 self.book.gui.set_panel_editable(test_redef)
