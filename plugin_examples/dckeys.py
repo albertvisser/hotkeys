@@ -287,14 +287,14 @@ class CsvBuilder:
         if dc_keys.startswith('http') and not os.path.exists('/tmp/dc_files/shortcuts.html'):
             # http://doublecmd.github.io/doc/en/shortcuts.html
             subprocess.run(['wget', dc_keys, '-P', '/tmp/dc_files', '-nc'])
-            dc_keys = os.path.join('/tmp/dc_files', os.path.basename(dc_keys))
+        dc_keys = os.path.join('/tmp/dc_files', os.path.basename(dc_keys))
         dc_cmds = self.page.settings.get('DC_CMDS', '')
         if not dc_cmds:
             dc_cmds = self.page.settings['DC_CMDS'] = os.path.join(DOCSPATH, 'cmds.html')
         if dc_cmds.startswith('http') and not os.path.exists('/tmp/dc_files/cmds.html'):
             # http://doublecmd.github.io/doc/en/cmds.html
             subprocess.run(['wget', dc_cmds, '-P', '/tmp/dc_files', '-nc'])
-            dc_cmds = os.path.join('/tmp/dc_files', os.path.basename(dc_cmds))
+        dc_cmds = os.path.join('/tmp/dc_files', os.path.basename(dc_cmds))
         dc_sett = self.page.settings.get('DC_SETT', '')
         if not dc_sett:
             dc_sett = self.page.settings['DC_SETT'] = os.path.join(CONFPATH, 'doublecmd.xml')
