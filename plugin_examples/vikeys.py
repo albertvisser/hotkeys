@@ -241,9 +241,22 @@ class DefaultKeys:
 def buildcsv(page, showinfo=True):
     """build the datastructures for constructing the CSV file
     """
-    command = [str(pathlib.Path(__file__).parent / 'vi_get_runtime')]
-    result = subprocess.run(command, capture_output=True)
-    path = pathlib.Path(result.stdout.decode().strip()) / 'doc' / 'index.txt'
+    # command = 'vi_get_runtime'
+    # result = subprocess.run(command, capture_output=True)
+    # path = pathlib.Path(result.stdout.decode().strip()) / 'doc' / 'index.txt'
+    basedir = pathlib.Path('/usr/share/vim')
+    for item in basedir.iterdir():
+        if item.is_dir():
+            try:
+                ver = int(str(item.name)[3:])
+            except ValueError:
+                pass
+            else:
+                path = item / 'doc' / 'index.txt'
+                break
+        else:
+            shared.log('-------------------- Unable to determine VIM version ----------------')
+
     keyclass = DefaultKeys(path)
     keydefs = keyclass.keydefs
     contexts = keyclass.contexts + ['']
