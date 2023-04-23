@@ -703,7 +703,7 @@ class HotkeyPanel:
                     self._origdata[y] = x in mods
                     self.gui.set_checkbox_state(z, x in mods)
             else:
-                if text != 'C_DESC':  # FIXME: waarom uitzondering? O, deze is readonly bedoeld
+                if text != 'C_DESC':  # description is (vooralsnog) readonly bedoeld
                     self._origdata[self.field_indexes[text]] = keydefdata[text]
                 if text == 'C_KEY' and self.keylist is None:
                     self.gui.set_textfield_value(self.gui.txt_key, keydefdata[text])
@@ -851,8 +851,6 @@ class HotkeyPanel:
         item = self.gui.get_selected_keydef()
         pos = self.gui.get_keydef_position(item)
         if found:
-            # zo simpel is het helaas niet:
-            # self.data[indx] = self._newdata  #  (key, mods, 'U', cmnd, self.omsdict[cmnd])
             for fieldnum, field in self.fields:
                 if field[0] == 'C_MODS':
                     self.data[indx][self.fields.index(field)] = keydefdata[1]  # samengevoegde mods
