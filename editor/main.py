@@ -21,8 +21,8 @@ import importlib
 import importlib.util
 ## import shutil
 
-import editor.shared as shared
-import editor.gui as gui
+from editor import shared
+from editor import gui
 NO_PATH = 'NO_PATH'
 named_keys = ['Insert', 'Del', 'Home', 'End', 'PgUp', 'PgDn', 'Space', 'Backspace',
               'Tab', 'Num+', 'Num-', 'Num*', 'Num/', 'Enter', 'Esc', 'Left', 'Right',
@@ -151,7 +151,7 @@ def modify_settings(ini):
                 if 'PLUGINS' in line:
                     dontread = True
                     for name, path in ini["plugins"]:
-                        data.append('    ("{}", "{}"),\n'.format(name, path))
+                        data.append(f'    ("{name}", "{path}"),\n')
     with open(inifile, 'w') as _out:
         for line in data:
             _out.write(line)
@@ -169,7 +169,7 @@ def read_columntitledata(editor):
             line = line.strip()
             if line == '':
                 continue
-            elif line.startswith('#'):
+            if line.startswith('#'):
                 if in_section:
                     in_section = False
                 elif 'Keyboard mapping' in line:
@@ -201,7 +201,7 @@ def add_columntitledata(newdata):
                     in_section = True
                 elif in_section and line.strip() == '':
                     for textid, text in data.items():
-                        f_out.write('{} {}\n'.format(textid, text))
+                        f_out.write(f'{textid} {text}\n')
                     in_section = False
                 f_out.write(line)
 
@@ -251,12 +251,12 @@ def readcsv(pad):
     data = collections.OrderedDict()
     coldata = []
     settings = collections.OrderedDict()
-    try:
-        with open(pad, 'r') as _in:
-            rdr = csv.reader(_in)
-            rdrdata = [row for row in rdr]
-    except (FileNotFoundError, IsADirectoryError):
-        raise
+    # try:
+    with open(pad, 'r') as _in:
+        rdr = csv.reader(_in)
+        rdrdata = list(rdr)
+    # except (FileNotFoundError, IsADirectoryError):
+    #     raise
     key = 0
     ## first = True
     extrasettings = {}
@@ -317,7 +317,7 @@ def writecsv(pad, settings, coldata, data, lang):
         wrt.writerow([LineType.ORIG.value] + [int(x[2]) for x in coldata] +
                      [csvoms[LineType.ORIG.value]])
         for keydef in data.values():
-            row = [LineType.KEY.value] + [x for x in keydef]
+            row = [LineType.KEY.value] + list(keydef)
             wrt.writerow(row)
     if extrasettoms:
         settings['extra'] = extrasettoms
@@ -342,7 +342,7 @@ def quick_check(filename):
             shared.log_exc()
             print(key, data)
             raise
-    print('{}: No errors found'.format(filename))
+    print('{filename}: No errors found')
 
 
 class HotkeyPanel:
@@ -544,9 +544,9 @@ class HotkeyPanel:
                 self.field_indexes[text] = itemindex
                 itemindex += 1
             if text == 'C_KEY':
-                self.keylist = [x for x in string.ascii_uppercase] + \
-                    [x for x in string.digits] + ["F" + str(i) for i in range(1, 13)] + \
-                    named_keys + ['.', ',', '+', '=', '-', '`', '[', ']', '\\', ';', "'", '/']
+                self.keylist = (list(string.ascii_uppercase) + list(string.digits) +
+                                [f"F{i}" for i in range(1, 13)] + named_keys +
+                                ['.', ',', '+', '=', '-', '`', '[', ']', '\\', ';', "'", '/'])
 
         self.contextslist = self.commandslist = self.defkeys = []
         self.contextactionsdict = self.omsdict = self.descriptions = {}
@@ -634,6 +634,7 @@ class HotkeyPanel:
                 self.set_changed_indicators(False)
 
     def set_changed_indicators(self, value):
+        "mark shortcut as user defined or not"
         self.defchanged = value
         if 'C_CMD' in self.fields:
             self.gui.enable_save(value)
@@ -671,7 +672,7 @@ class HotkeyPanel:
         if not selitem:  # bv. bij p0list.clear()
             return
         seli = self.gui.get_itemdata(selitem)
-        keydefdata = {x: y for (x, y) in zip(self.fields, self.data[seli])}
+        keydefdata = dict(zip(self.fields, self.data[seli]))
         # print(keydefdata)
         if 'C_CMD' in self.fields:
             self.gui.enable_save(False)
@@ -718,9 +719,9 @@ class HotkeyPanel:
     def get_valuelist(self, text):
         if text == 'C_KEY':
             return self.keylist
-        elif text == 'C_CNTXT':
+        if text == 'C_CNTXT':
             return self.contextslist
-        elif text == 'C_CMD':
+        if text == 'C_CMD':
             if 'C_CNTXT' in self.fields:
                 self.gui.init_combobox(self.gui.cmb_commando)
                 context = self.gui.get_combobox_selection(self.gui.cmb_context)
@@ -730,12 +731,12 @@ class HotkeyPanel:
                     actionslist = self.commandslist
                 self.gui.init_combobox(self.gui.cmb_commando, actionslist)
                 return actionslist
-            else:
-                return self.commandslist
-        elif text == 'C_CTRL':
+            return self.commandslist
+        if text == 'C_CTRL':
             return self.controlslist
-        elif text == 'C_FEAT':
+        if text == 'C_FEAT':
             return self.featurelist
+        return []
 
     def process_changed_selection(self, newitem, olditem):
         """bijwerken velden op het hoofdscherm na wijzigen van de selectie
@@ -795,7 +796,7 @@ class HotkeyPanel:
                 oldvalue = self._origdata[fieldindex]
                 newvalue = self._newdata[fieldindex]
             else:
-                indexmap = {x: y for (x, y) in zip(self.field_indexes[text], ('SCAW'))}
+                indexmap = dict(zip(self.field_indexes[text], ('SCAW')))
                 oldvalue = [self._origdata[x] for x in fieldindex]
                 newvalue = [self._newdata[x] for x in fieldindex]
             changed.append(newvalue == oldvalue)
@@ -859,7 +860,7 @@ class HotkeyPanel:
                         self.field_indexes[field[0]]]
         else:
             # ordereddict opnieuw opbouwen
-            newdata = [x for x in self.data.values()]
+            newdata = list(self.data.values())
             # dit is heel typisch specifiek voor één bepaalde plugin:
             # newvalue = (key, mods, 'U', cmnd, self.omsdict[cmnd])
             newdata.append(self._newdata)   # newvalue)
@@ -894,11 +895,11 @@ class HotkeyPanel:
         item = self.gui.get_selected_keydef()
         pos = self.gui.get_keydef_position(item)
         indx = self.gui.get_itemdata(item)
-        if self.captions["{:03}".format(indx)] == 'C_TYPE':
+        if self.captions["{indx:03}"] == 'C_TYPE':
             if self.data[indx][1] == "S":  # can't delete standard key
                 gui.show_message(self.parent, 'I_STDDEF')
                 return
-        elif self.captions["{:03}".format(indx)] == 'C_KEY':
+        elif self.captions["{indx:03}"] == 'C_KEY':
             if self.data[indx][0] in self.defkeys:  # restore standard if any
                 cmnd = self.defkeys[self.data[indx][0]]
                 if cmnd in self.omsdict:
@@ -1050,6 +1051,7 @@ class Editor:
         ini = args.conf or CONF
         self.ini = read_settings(ini)
         self.readcaptions(self.ini['lang'])
+        startapp = args.start
         self.title = self.captions["T_MAIN"]
         self.pluginfiles = {}
         self.book = None
@@ -1062,10 +1064,16 @@ class Editor:
             self.book = ChoiceBook(self)
             self.gui.setup_tabs()
             start = 0
-            if 'title' in self.ini and self.ini['title']:
+            if self.ini.get('title', ''):
                 self.title = self.ini['title']
-            if 'initial' in self.ini and self.ini['initial'] != '':
-                start = [x for x, y in self.ini['plugins']].index(self.ini['initial'])
+            if startapp:
+                try:
+                    start = [x for x, y in self.ini['plugins']].index(startapp) + 1
+                except ValueError:
+                    pass
+            if not start and self.ini.get('initial', ''):
+                start = [x for x, y in self.ini['plugins']].index(self.ini['initial']) + 1
+            start -= 1
             self.book.gui.set_selected_tool(start)
             self.book.on_page_changed(start)
             self.setcaptions()
@@ -1151,7 +1159,7 @@ class Editor:
             hlpdict = {}
             self.book.gui.clear_selector()
 
-            current_items = reversed([(x, y) for x, y in enumerate(current_programs)])
+            current_items = reversed(list(enumerate(current_programs)))
             new_programs = [x for x, y in self.ini["plugins"]]
             new_paths = [y for x, y in self.ini["plugins"]]
             for indx, program in current_items:  # we need to do this in reverse
@@ -1565,17 +1573,17 @@ class Editor:
         for ix, line in enumerate(lines):
             if setting is not None and line.startswith(setting):
                 if not old:
-                    lines[ix] = line.replace("''", "'{}'".format(new))
+                    lines[ix] = line.replace("''", "'{new}'")
                 elif not new:
-                    lines[ix] = line.replace("'{}'".format(old), "''")
+                    lines[ix] = line.replace("'{old}'", "''")
                     if setting == 'TITLE':
                         lines[ix - 2: ix + 1] = [lines[ix - 2]]
                 else:
                     lines[ix] = line.replace(old, new)
                 break
         else:
-            lines.append('# {}\n'.format(self.captions['C_' + setting]))
-            lines.append("{} = '{}'\n".format(setting, new))
+            lines.append("# {self.captions['C_' + setting]}\n")
+            lines.append("{setting} = '{new}'\n")
         with open(inifile, 'w') as _out:
             _out.writelines(lines)
 

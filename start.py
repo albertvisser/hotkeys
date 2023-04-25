@@ -10,6 +10,7 @@ parser.add_argument('-c', '--config', dest='conf',
                          ' extension)')
 parser.add_argument('-q', '--quick-check', dest='check',
                     help='name of CSV file to check without starting up the GUI')
+parser.add_argument('-s', '--startapp', dest='start', help='name of tool to display on startup')
 args = parser.parse_args()
 if args.check:
     quick_check(args.check)
