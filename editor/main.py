@@ -408,16 +408,18 @@ class HotkeyPanel:
                 nodata = self.captions['I_NODATA'].replace('data', 'plugin code')
 
             self.parent.page = self
-            try:
-                test = self.reader.buildcsv
-            except AttributeError:
-                shared.log_exc()
-            else:
+            # try:
+            #     test = self.reader.buildcsv
+            # except AttributeError:
+            #     shared.log_exc()
+            # else:
+            if hasattr(self.reader, 'buildcsv'):
                 try:
                     self.otherstuff = self.reader.buildcsv(self, showinfo=False)[1]
-                except FileNotFoundError:
-                    shared.log_exc()
-                    nodata = self.captions['I_NOSETT'].format(modulename)
+                except FileNotFoundError as exception:
+                    # shared.log_exc()
+                    nodata = self.captions['I_NOSETT'].format(modulename) + f'\n{exception}'
+
 
         if nodata:
             # print('init HotkeyPanel with no data', nodata)
@@ -1252,14 +1254,14 @@ class Editor:
         if not self.book.page.settings:
             gui.show_message(self.gui, 'I_ADDSET')
             return
-        try:
-            newdata = self.book.page.reader.buildcsv(self.book.page)
-        except AttributeError:
-            shared.log_exc()
+        if hasattr(self.reader, 'buildcsv'):
+            try:
+                newdata = self.book.page.reader.buildcsv(self.book.page)
+            except FileNotFoundError as exception:
+                gui.show_message(self.gui, 'I_ERRRBLD' + '\n({exception})')
+                return
+        else:
             gui.show_message(self.gui, 'I_DEFRBLD')
-            return
-        except FileNotFoundError:
-            gui.show_message(self.gui, 'I_ERRRBLD')
             return
         if newdata is None:  # afgebroken
             return
@@ -1313,7 +1315,7 @@ class Editor:
             indx, win = self.book.gui.get_selected_panel()
             if test_dets != self.book.page.has_extrapanel:
                 self.book.page.has_extrapanel = test_dets
-                newwin = HotkeyPanel(self.book, self.ini["plugins"][indx][1])
+                newwin = HotkeyPanel(self.book, self.ini["plugins"][indx][1]).gui
                 self.book.gui.replace_panel(indx, win, newwin)
             elif test_redef != old_redef and test_dets:
                 self.book.gui.set_panel_editable(test_redef)

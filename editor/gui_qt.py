@@ -85,10 +85,11 @@ class SingleDataInterface(qtw.QFrame):
         self.screenfields = []
         self._box = box = qtw.QFrame(self)
         frameheight = 90
-        try:
+        # try:
+        if hasattr(self.master.reader, 'get_frameheight'):
             frameheight = self.master.reader.get_frameheight()  # user exit
-        except AttributeError:
-            shared.log_exc()
+        # except AttributeError:
+        #     shared.log_exc()
         box.setMaximumHeight(frameheight)
 
         if 'C_KEY' in self.master.fields:
@@ -238,20 +239,22 @@ class SingleDataInterface(qtw.QFrame):
             sizer2.addWidget(self.cmb_commando)
             sizer1.addLayout(sizer2)
 
-        try:
+        # try:
+        if hasattr(self.master.reader, 'extra_fields_topline'):
             self.master.reader.layout_extra_fields_topline(self, sizer1)  # user exit
-        except AttributeError:
-            shared.log_exc()
+        # except AttributeError:
+        #     shared.log_exc()
 
         sizer1.addWidget(self.b_save)
         sizer1.addWidget(self.b_del)
         bsizer.addLayout(sizer1)
 
-        try:
-            test = self.master.reader.layout_extra_fields_nextline
-        except AttributeError:
-            shared.log_exc()
-        else:
+        # try:
+        #    test = self.master.reader.layout_extra_fields_nextline
+        # except AttributeError:
+        #     shared.log_exc()
+        # else:
+        if hasattr(self.master.reader, 'extra_fields_nextline'):
             sizer1 = qtw.QHBoxLayout()
             self.master.reader.layout_extra_fields_nextline(self, sizer1)  # user exit
             bsizer.addLayout(sizer1)
@@ -262,10 +265,11 @@ class SingleDataInterface(qtw.QFrame):
             sizer2.addWidget(self.txt_oms)
             sizer1.addLayout(sizer2, 2)
 
-        try:
+        # try:
+        if hasattr(self.master.reader, 'extra_fields'):
             self.master.reader.layout_extra_fields(self, sizer1)  # user exit
-        except AttributeError:
-            shared.log_exc()
+        # except AttributeError:
+        #    shared.log_exc()
 
         bsizer.addLayout(sizer1)
 
