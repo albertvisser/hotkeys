@@ -1,5 +1,6 @@
 """HotKeys plugin for Audacity
 """
+import os.path
 ## import sys
 import shutil
 import xml.etree.ElementTree as ET
@@ -114,7 +115,7 @@ def savekeys(parent):
     try:
         kbfile = parent.settings['AC_KEYS']
     except KeyError:
-        # TODO: bedenk een waarde voor initial want dit werkt zo niet
+        initial = os.path.expanduser('~/.config/Audacity-keys.xml')
         kbfile = get_file_to_save(parent, extension='XML files (*.xml)', start=initial)
 
     root = ET.Element('audacitykeyboard')

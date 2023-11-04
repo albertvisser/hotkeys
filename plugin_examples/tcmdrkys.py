@@ -270,12 +270,12 @@ def add_extra_attributes(win):
     ## paden = [win.settings[x][0] for x in PATHS[:4]] + [win.pad]
     ## self.cmdict, self.omsdict, self.defkeys, _ = readkeys(paden)
     win.descriptions = {}
-    win.cmdict = shared.defaultcommands(win.settings['CI_PAD'])
+    win.cmdict = defaultcommands(win.settings['CI_PAD'])
     win.descriptions.update({x: y['oms'] for x, y in win.cmdict.items()})
-    win.ucmdict = shared.usercommands(win.settings['UC_PAD'])
+    win.ucmdict = usercommands(win.settings['UC_PAD'])
     win.descriptions.update({x: y['oms'] for x, y in win.ucmdict.items()})
-    win.defkeys = shared.defaultkeys(win.settings['KB_PAD'])
-    win.udefkeys = shared.userkeys(win.settings['TC_PAD'])
+    win.defkeys = defaultkeys(win.settings['KB_PAD'])
+    win.udefkeys = userkeys(win.settings['TC_PAD'])
 
     win.commandslist = list(win.cmdict.keys()) + list(win.ucmdict.keys())
 
