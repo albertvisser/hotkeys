@@ -178,14 +178,27 @@ def read_menu_gtk(fname):
     return menu_keys
 
 
-def read_menu_win(fname=''):
+def read_menu_win(fname):
     """get keydefs from a given SciTE source file (Windows version)
 
     definitions are like
     MENUITEM "Open Selected &Filename\tCtrl+Shift+O",	IDM_OPENSELECTED
     """
     menu_keys = []
-    # TODO: finish this method
+    with open(fname) as source:
+        data = source.read()
+    source = data.split('\n')
+    for line in source:
+        line = line.strip()
+        if line.startswith('MENUITEM'):
+            parts = line.split('"')
+            if len(parts) != 3:
+                continue
+            begin, menutext, command = line.split('"')
+            text, *keycombo = parts[1].split('\t', 1)
+            if keycombo:
+                key, mods = nicefy_props(keycombo)
+                menu_keys.append((key, mods, parts[2].strip()))
     return menu_keys
 
 
