@@ -30,19 +30,16 @@ def log_exc(message=''):
 
 
 def save_log():
-    """intention: rename previous log file
-    oddly enough, this renames the current log file immediately
-    also, log messages are written to it despite the name being changed...
+    """alter the log file name, adding a next-highest version number
+    currently caters for max. 100 versions
     """
-    if not LOGFILE.exists():  # dit is dus nooit aan de hand
-        return
     for last in reversed(sorted(LOGFILE.parent.glob(LOGFILE.name + '*'))):
-        break
+       break
     if last.suffix == LOGFILE.suffix:
         newlast = 0
     else:
         newlast = int(last.suffix[1:]) + 1
-    LOGFILE.rename(LOGFILE.with_suffix('.'.join((LOGFILE.suffix, str(newlast)))))
+    LOGFILE.rename(LOGFILE.with_suffix('.'.join((LOGFILE.suffix, f'{newlast:2}'))))
 
 
 class SettType(enum.Enum):
