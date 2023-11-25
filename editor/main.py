@@ -13,6 +13,7 @@ from types import SimpleNamespace
 import os
 # import sys
 import csv
+import json
 import enum
 import shutil
 import collections
@@ -218,14 +219,17 @@ def update_paths(paths, pathdata, lang):
     for name, loc in paths:
         newpaths.append((name, loc))
         if name in pathdata:
-            data = pathdata[name]       # bv. ['editor.plugins.gitrefs_keys', 'gitrefs hotkeys', 0, 0, 0]
+            data = pathdata[name]    # bv. ['editor.plugins.gitrefs_keys', 'gitrefs hotkeys', 0, 0, 0]
             parts = data[0].split('.')
             if parts[0] == '':
                 parts = parts[1:]
             newfile = BASE / ('/'.join(parts) + '.py')
             with newfile.open('w') as _out:
                 _out.write(plugin_skeleton)
-            initcsv(BASE / loc, data, lang)
+            if os.path.splitext(loc) == '.csv':
+                initcsv(BASE / loc, data, lang)
+            else:
+                initjson(BASE / loc, data)
     return newpaths
 
 
@@ -241,6 +245,16 @@ def initcsv(loc, data, lang):
             wrt.writerow([LineType.SETT.value, sett, data[indx], csv_oms[sett]])
         for row in build_csv_sample_data(lang):
             wrt.writerow(row)
+
+
+def initjson(loc, data):    # intended to replace the previous function
+    """Initialize json file
+
+    Save some basic settings together with some column info
+    """
+    writejson(loc, {x: data[i] for i, x in enumerate(shared.csv_settingnames)},
+              [["C_KEY", 120, False], ["C_MODS", 90, False], ["C_DESC", 292, False]],
+              {}, {})
 
 
 def readcsv(pad):
@@ -288,6 +302,32 @@ def readcsv(pad):
     return settings, coldata, data
 
 
+def readjson(pad):    # intended to replace the previous function
+    """lees het json bestand op het aangegeven pad en geeft de inhoud terug in diverse tabellen
+    """
+    plugin_name = os.path.splitext(os.path.basename(pad))[0]
+    with open(pad) as _in:
+        fulldict = json.load(_in)
+    settings = fulldict.pop('settings')
+    column_info = fulldict.pop('column_info')
+    keydata = fulldict.pop('keydata')
+    otherstuff = fulldict
+    for name, item in otherstuff.items():
+        if isinstance(item, set):
+            item = list(item)
+        if ((plugin_name == 'DC_hotkeys' and name in ('stdkeys', 'defaults'))
+                or (plugin_name == 'Nemo_hotkeys' and name == 'defaultkeys')):
+            newitem = {}
+            for key, value in item.items():
+                newkey = ' '.join(list(key))
+                if isinstance(value, set):
+                    value = list(value)
+                newitem[newkey] = value
+            item = newitem
+        otherstuff[name] = item
+    return settings, column_info, keydata, otherstuff
+
+
 def writecsv(pad, settings, coldata, data, lang):
     """schrijf de meegegeven data als csv bestand naar de aangegeven locatie
     """
@@ -314,13 +354,37 @@ def writecsv(pad, settings, coldata, data, lang):
         for ix, row in enumerate([[LineType.CAPT.value], [LineType.WID.value]]):
             row += [x[ix] for x in coldata] + [csvoms[row[0]]]
             wrt.writerow(row)
-        wrt.writerow([LineType.ORIG.value] + [int(x[2]) for x in coldata] +
-                     [csvoms[LineType.ORIG.value]])
+        wrt.writerow([LineType.ORIG.value] + [int(x[2]) for x in coldata]
+                     + [csvoms[LineType.ORIG.value]])
         for keydef in data.values():
             row = [LineType.KEY.value] + list(keydef)
             wrt.writerow(row)
     if extrasettoms:
         settings['extra'] = extrasettoms
+
+
+def writejson(pad, settings, coldata, data, otherstuff):  # intended to replace the previous function
+    """schrijf de meegegeven data als json bestand naar de aangegeven locatie
+    """
+    if os.path.exists(pad):
+        shutil.copyfile(pad, pad + '~')
+    plugin_name = os.path.splitext(os.path.basename(pad))[0]
+    fulldict = {'settings': settings, 'column_info': coldata, 'keydata': data}
+    for name, item in otherstuff.items():
+        if isinstance(item, set):
+            item = list(item)
+        if ((plugin_name == 'DC_hotkeys' and name in ('stdkeys', 'defaults'))
+                or (plugin_name == 'Nemo_hotkeys' and name == 'defaultkeys')):
+            newitem = {}
+            for key, value in item.items():
+                newkey = ' '.join(list(key))
+                if isinstance(value, set):
+                    value = list(value)
+                newitem[newkey] = value
+            item = newitem
+        fulldict[name] = item
+    with open(pad, 'w') as out:
+        json.dump(fulldict, out)
 
 
 def quick_check(filename):
@@ -329,7 +393,10 @@ def quick_check(filename):
     replicates some things that are done in building the list with keydefs
     so we can catch errors in advance
     """
-    _, column_info, data = readcsv(filename)
+    if os.path.splitext(filename) == '.csv':
+        _, column_info, data = readcsv(filename)
+    else:
+        column_info, data = readjson(filename)[1:3]
     items = data.items()
     if not items:   # if items is None or len(items) == 0:
         print('No keydefs found in this file')
@@ -376,7 +443,10 @@ class HotkeyPanel:
         nodata = ''
         if self.pad:
             try:
-                self.settings, self.column_info, self.data = readcsv(self.pad)
+                if os.path.splitext(self.pad)[1] == '.csv':
+                    self.settings, self.column_info, self.data = readcsv(self.pad)
+                else:
+                    self.settings, self.column_info, self.data, self.otherstuff = readjson(self.pad)
             except ValueError as e:
                 shared.log_exc()
                 nodata = self.captions['I_NOSET'].format(e, self.pad)
@@ -387,7 +457,6 @@ class HotkeyPanel:
             nodata = self.captions['I_NOSETFIL'].format(self.pad)
         if nodata:
             self.settings, self.column_info, self.data = {}, [], {}
-        self.otherstuff = {}  # ruimte voor zaken als een lijst met mogelijke commando's
 
         if not self.settings or not self.column_info:
             tmp = ":\n\n" + nodata if nodata else ""
@@ -413,18 +482,27 @@ class HotkeyPanel:
             # except AttributeError:
             #     shared.log_exc()
             # else:
-            if hasattr(self.reader, 'buildcsv'):
-                try:
-                    self.otherstuff = self.reader.buildcsv(self, showinfo=False)[1]
-                except FileNotFoundError as exception:
-                    # shared.log_exc()
-                    nodata = self.captions['I_NOSETT'].format(modulename) + f'\n{exception}'
-
+            # bij json hoeft otherstuff niet meer via buildcsv te worden opgehaald
+            if os.path.splitext(self.pad)[1] == '.csv':
+                self.otherstuff = {}  # ruimte voor zaken als een lijst met mogelijke commando's
+                if hasattr(self.reader, 'buildcsv'):
+                    try:
+                        self.otherstuff = self.reader.buildcsv(self, showinfo=False)[1]
+                    except FileNotFoundError as exception:
+                        # shared.log_exc()
+                        nodata = self.captions['I_NOSETT'].format(modulename) + f'\n{exception}'
 
         if nodata:
             # print('init HotkeyPanel with no data', nodata)
             self.gui.setup_empty_screen(nodata, self.title)
             return
+
+        # dump all data to a json file
+        # plugin_name = os.path.splitext(os.path.basename(self.pad))[0]
+        # with (BASE / f'{plugin_name}.pprint').open('w') as out:
+        #     pprint.pprint(self.otherstuff, width=80, stream=out)
+        # writejson(str(BASE / f'{plugin_name}.json'), self.settings, self.column_info, self.data,
+        #           self.otherstuff)
 
         try:
             self.has_extrapanel = bool(int(self.settings[shared.SettType.DETS.value]))
@@ -452,7 +530,10 @@ class HotkeyPanel:
 
     def readkeys(self):
         "(re)read the data for the keydef list"
-        self.data = readcsv(self.pad)[2]
+        if os.path.splitext(self.pad) == '.csv':
+            self.data = readcsv(self.pad)[2]
+        else:
+            self.data = readjson(self.pad)[2]
 
     def savekeys(self):
         """save modified keydef back
@@ -464,8 +545,11 @@ class HotkeyPanel:
             self.reader.savekeys(self)
         except AttributeError:
             shared.log_exc()
-        writecsv(self.pad, self.settings, self.column_info, self.data,
-                 self.parent.parent.ini['lang'])
+        if os.path.splitext(self.pad) == '.csv':
+            writecsv(self.pad, self.settings, self.column_info, self.data,
+                     self.parent.parent.ini['lang'])
+        else:
+            writejson(self.pad, self.settings, self.column_info, self.data, self.otherstuff)
         self.set_title(modified=False)
 
     def setcaptions(self):
@@ -546,9 +630,9 @@ class HotkeyPanel:
                 self.field_indexes[text] = itemindex
                 itemindex += 1
             if text == 'C_KEY':
-                self.keylist = (list(string.ascii_uppercase) + list(string.digits) +
-                                [f"F{i}" for i in range(1, 13)] + named_keys +
-                                ['.', ',', '+', '=', '-', '`', '[', ']', '\\', ';', "'", '/'])
+                self.keylist = (list(string.ascii_uppercase) + list(string.digits)
+                                + [f"F{i}" for i in range(1, 13)] + named_keys
+                                + ['.', ',', '+', '=', '-', '`', '[', ']', '\\', ';', "'", '/'])
 
         self.contextslist = self.commandslist = self.defkeys = []
         self.contextactionsdict = self.omsdict = self.descriptions = {}
@@ -719,6 +803,7 @@ class HotkeyPanel:
         self._newdata = self._origdata[:]
 
     def get_valuelist(self, text):
+        "iget list of values for a specific category"
         if text == 'C_KEY':
             return self.keylist
         if text == 'C_CNTXT':
@@ -735,9 +820,9 @@ class HotkeyPanel:
                 return actionslist
             return self.commandslist
         if text == 'C_CTRL':
-            return self.controlslist
+            return self.controlslist  # only defined in appropriate plugin
         if text == 'C_FEAT':
-            return self.featurelist
+            return self.featurelist  # only defined in appropriate plugin
         return []
 
     def process_changed_selection(self, newitem, olditem):
@@ -1222,7 +1307,10 @@ class Editor:
                 if not prgname:
                     # try to get the plugin name from the csv file
                     try:
-                        data = readcsv(csvname)
+                        if os.path.splitext(csvname) == '.csv':
+                            data = readcsv(csvname)
+                        else:
+                            data = readjson(csvname)
                     except (FileNotFoundError, IsADirectoryError, ValueError):
                         shared.log_exc()
                         gui.show_message(self.gui, text=self.captions['I_NOCSV'].format(csvname))
@@ -1254,7 +1342,8 @@ class Editor:
         if not self.book.page.settings:
             gui.show_message(self.gui, 'I_ADDSET')
             return
-        if hasattr(self.reader, 'buildcsv'):
+        # if hasattr(self.reader, 'buildcsv'):
+        if hasattr(self.book.page.reader, 'buildcsv'):
             try:
                 newdata = self.book.page.reader.buildcsv(self.book.page)
             except FileNotFoundError as exception:
@@ -1268,8 +1357,12 @@ class Editor:
         if newdata[0]:
             self.book.page.data = newdata[0]
             self.book.page.otherstuff = newdata[1]
-            writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
-                     self.book.page.data, self.ini['lang'])
+            if os.path.splitext(self.book.page.pad)[1] == '.csv':
+                writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
+                         self.book.page.data, self.ini['lang'])
+            else:
+                writejson(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
+                          self.book.page.data, self.book.page.otherstuff)
             self.book.page.populate_list()
             mld = self.captions['I_RBLD']
         else:
@@ -1305,8 +1398,12 @@ class Editor:
             self.book.page.settings = {x: '' for x in shared.csv_settingnames}
         old_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
         if gui.show_dialog(self, gui.ExtraSettingsDialog):
-            writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
-                     self.book.page.data, self.ini['lang'])
+            if os.path.splitext(self.book.page.pad)[1] == '.csv':
+                writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
+                         self.book.page.data, self.ini['lang'])
+            else:
+                writejson(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
+                          self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
             test_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
             test_dets = bool(int(self.book.page.settings[shared.SettType.DETS.value]))
             test_rbld = bool(int(self.book.page.settings[shared.SettType.RBLD.value]))
@@ -1384,10 +1481,12 @@ class Editor:
             gui.show_message(self.gui, 'I_NOCHG')
             return
 
-        writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
-                 self.book.page.data, self.ini['lang'])
-        # if not self.book.page.data:  # zeker weten dat we niet doorgaan als er geen data is?
-        #     return
+        if os.path.splitext(self.book.page.pad)[1] == '.csv':
+            writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
+                     self.book.page.data, self.ini['lang'])
+        else:
+            writejson(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
+                      self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
         headers = [self.captions[col[0]] for col in self.book.page.column_info]
         self.book.page.gui.update_columns(oldcolcount, len(headers))
         self.book.gui.refresh_locs(headers)
@@ -1487,8 +1586,12 @@ class Editor:
             return
         if gui.show_dialog(self, gui.EntryDialog):
             if self.book.page.data:
-                writecsv(self.book.page.pad, self.book.page.settings,
-                         self.book.page.column_info, self.book.page.data, self.ini['lang'])
+                if os.path.splitext(self.book.page.pad)[1] == '.csv':
+                    writecsv(self.book.page.pad, self.book.page.settings,
+                             self.book.page.column_info, self.book.page.data, self.ini['lang'])
+                else:
+                    writejson(self.book.page.pad, self.book.page.settings,
+                              self.book.page.column_info, self.book.page.data, self.otherstuff)
                 self.book.page.populate_list()
 
     def m_lang(self, event=None):
