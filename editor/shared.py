@@ -39,7 +39,7 @@ def save_log():
         newlast = 0
     else:
         newlast = int(last.suffix[1:]) + 1
-    LOGFILE.rename(LOGFILE.with_suffix('.'.join((LOGFILE.suffix, f'{newlast:2}'))))
+    LOGFILE.rename(LOGFILE.with_suffix('.'.join((LOGFILE.suffix, f'{newlast:02}'))))
 
 
 class SettType(enum.Enum):
