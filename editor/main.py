@@ -248,7 +248,7 @@ def update_paths(paths, pathdata, lang):
             newfile = BASE / ('/'.join(parts) + '.py')
             with newfile.open('w') as _out:
                 _out.write(plugin_skeleton)
-            if os.path.splitext(loc) == '.csv':
+            if os.path.splitext(loc)[1] == '.csv':
                 initcsv(BASE / loc, data, lang)
             else:
                 initjson(BASE / loc, data)
@@ -415,7 +415,7 @@ def quick_check(filename):
     replicates some things that are done in building the list with keydefs
     so we can catch errors in advance
     """
-    if os.path.splitext(filename) == '.csv':
+    if os.path.splitext(filename)[1] == '.csv':
         _, column_info, data = readcsv(filename)
     else:
         column_info, data = readjson(filename)[1:3]
@@ -552,7 +552,7 @@ class HotkeyPanel:
 
     def readkeys(self):
         "(re)read the data for the keydef list"
-        if os.path.splitext(self.pad) == '.csv':
+        if os.path.splitext(self.pad)[1] == '.csv':
             self.data = readcsv(self.pad)[2]
         else:
             self.data = readjson(self.pad)[2]
@@ -567,7 +567,7 @@ class HotkeyPanel:
             self.reader.savekeys(self)
         except AttributeError:
             shared.log_exc()
-        if os.path.splitext(self.pad) == '.csv':
+        if os.path.splitext(self.pad)[1] == '.csv':
             writecsv(self.pad, self.settings, self.column_info, self.data,
                      self.parent.parent.ini['lang'])
         else:
@@ -1329,7 +1329,7 @@ class Editor:
                 if not prgname:
                     # try to get the plugin name from the csv file
                     try:
-                        if os.path.splitext(csvname) == '.csv':
+                        if os.path.splitext(csvname)[1] == '.csv':
                             data = readcsv(csvname)
                         else:
                             data = readjson(csvname)
