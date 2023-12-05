@@ -12,6 +12,7 @@
 from types import SimpleNamespace
 import os
 # import sys
+import pathlib
 import csv
 import json
 import enum
@@ -20,7 +21,6 @@ import collections
 import string
 import importlib
 import importlib.util
-## import shutil
 
 from editor import shared
 from editor import gui
@@ -30,8 +30,9 @@ named_keys = ['Insert', 'Del', 'Home', 'End', 'PgUp', 'PgDn', 'Space', 'Backspac
               'Up', 'Down', 'Letter', 'Letter(s)']
 VRS = "2.1.x"
 AUTH = "(C) 2008-today Albert Visser"
-CONF = 'editor.hotkey_config'  # default configuration file
+# CONF = 'editor.hotkey_config'  # default configuration file
 BASE = shared.HERE.parent
+CONF = BASE / 'editor' / 'hotkey_config.json'
 plugin_skeleton = '''\n
 """
 See example_app_keys.py for a description of the plugin API.
@@ -40,6 +41,7 @@ for everything that's not in here
 the default code in the main program will be used.
 """
 '''
+initial_settings = {'plugins': [], 'lang': 'english.lng', 'startup': 'Remember', 'initial': ''}
 
 
 class LineType(enum.Enum):
@@ -135,8 +137,28 @@ def read_settings(ini):
     return settings
 
 
+def read_settings_json(ini):  # expects pathlib.Path
+    "read the application settings from a given file"
+    with ini.open() as _in:
+        fulldict = json.load(_in)
+    settings = {'filename': ini}
+    for name in initial_settings:
+        settings[name] = fulldict.get(name, '')
+    return settings
+
+
+def write_settings_json(settings, nobackup=False):  # expects settings, including path
+    "rewrite the application settings file"
+    inifile = settings.pop('filename')
+    if inifile.exists() and not nobackup:
+        shutil.copyfile(str(inifile), str(inifile) + '~')
+    with inifile.open('w') as _in:
+        json.dump(settings, _in)
+
+
 def modify_settings(ini):
-    "modify the settings file at the given location"
+    """modify the settings file (specifically the PLUGINS setting)
+    """
     inifile = ini['filename']
     shutil.copyfile(inifile, inifile + '.bak')
     data = []
@@ -1136,7 +1158,7 @@ class Editor:
     def __init__(self, args):
         shared.save_log()
         ini = args.conf or CONF
-        self.ini = read_settings(ini)
+        self.ini = read_settings_json(ini)
         self.readcaptions(self.ini['lang'])
         startapp = args.start
         self.title = self.captions["T_MAIN"]
@@ -1238,7 +1260,7 @@ class Editor:
         self.last_added = None  # wordt in de hierna volgende dialoog ingesteld
         if gui.show_dialog(self, gui.FilesDialog):
             selection = self.book.gui.get_selected_index()
-            modify_settings(self.ini)
+            write_settings_json(self.ini)  # modify_settings(self.ini)
 
             # update the screen(s)
             # clear the selector and the stackedwidget while pairing up programs and windows
@@ -1294,7 +1316,7 @@ class Editor:
         if mode == shared.mode_f and pref not in [x[0] for x in self.ini['plugins']]:
             oldmode, mode = mode, shared.mode_r
             self.ini['startup'] = mode
-            self.change_setting('startup', oldmode, mode)
+            write_settings_json(self.ini)  # self.change_setting('startup', oldmode, mode)
         #
 
         for ix, entry in enumerate(name_path_list):
@@ -1607,8 +1629,9 @@ class Editor:
         lang, ok = gui.get_choice(self.gui, self.captions["P_SELLNG"], self.title, choices,
                                   current=indx)
         if ok:
-            self.change_setting('lang', oldlang, lang)
+            # self.change_setting('lang', oldlang, lang)
             self.ini['lang'] = lang
+            write_settings_json(self.ini)
             self.readcaptions(lang)
             self.setcaptions()
 
@@ -1626,13 +1649,16 @@ class Editor:
         oldmode = self.ini.get("startup", None)
         self.prefs = oldmode, oldpref
         if gui.show_dialog(self, gui.InitialToolDialog):
+            changed = False
             mode, pref = self.prefs
             if mode:
                 self.ini['startup'] = mode
-                self.change_setting('startup', oldmode, mode)
+                changed = True  # self.change_setting('startup', oldmode, mode)
             if mode == 'Fixed':
                 self.ini['initial'] = pref
-                self.change_setting('initial', oldpref, pref)
+                changed = True  # self.change_setting('initial', oldpref, pref)
+            if changed:
+                write_settings_json(self.ini)
 
     def accept_startupsettings(self, fix, remember, pref):
         """check and confirm input from initialToolDialog
@@ -1661,10 +1687,14 @@ class Editor:
         # when setting is 'remember', set the remembered tool to the current one
         if mode == shared.mode_r:
             try:
-                oldpref, pref = pref, self.book.gui.get_selected_text()
-                self.change_setting('initial', oldpref, pref)
+                # oldpref, pref = pref, self.book.gui.get_selected_text()
+                self.ini['initial'] = self.book.gui.get_selected_text()
             except AttributeError:  # selector bestaat niet als er geen tool pages zijn
                 pass
+            else:
+                # self.change_setting('initial', oldpref, pref)
+                write_settings_json(self.ini, nobackup=True)
+
         # super().close()
         self.gui.close()
 
