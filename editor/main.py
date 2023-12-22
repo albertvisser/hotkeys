@@ -42,7 +42,7 @@ the default code in the main program will be used.
 """
 '''
 initial_settings = {'plugins': [], 'lang': 'english.lng', 'startup': 'Remember', 'initial': ''}
-
+initial_columns = ["C_KEY", 120, False], ["C_MODS", 90, False], ["C_DESC", 292, False]
 
 class LineType(enum.Enum):
     """Types of lines in the csv file (first value)
@@ -230,14 +230,10 @@ def add_columntitledata(newdata):
 
 
 def update_paths(paths, pathdata, lang):
-    """read the paths to the csv files from the data returned by the dialog
+    """read the paths to the csv/json files from the data returned by the dialog
     if applicable also write a skeleton plugin file
     """
     newpaths = []
-    print('in update_paths')
-    # for name, path in paths:
-    #     print(paths)
-    #     loc = path.input.text()         # bv editor/plugins/gitrefs_hotkeys.csv
     for name, loc in paths:
         newpaths.append((name, loc))
         if name in pathdata:
@@ -246,8 +242,9 @@ def update_paths(paths, pathdata, lang):
             if parts[0] == '':
                 parts = parts[1:]
             newfile = BASE / ('/'.join(parts) + '.py')
-            with newfile.open('w') as _out:
-                _out.write(plugin_skeleton)
+            # with newfile.open('w') as _out:
+            #    _out.write(plugin_skeleton)
+            newfile.write_text(plugin_skeleton)
             if os.path.splitext(loc)[1] == '.csv':
                 initcsv(BASE / loc, data, lang)
             else:
@@ -274,8 +271,7 @@ def initjson(loc, data):    # intended to replace the previous function
 
     Save some basic settings together with some column info
     """
-    writejson(loc, {x: data[i] for i, x in enumerate(shared.csv_settingnames)},
-              [["C_KEY", 120, False], ["C_MODS", 90, False], ["C_DESC", 292, False]],
+    writejson(loc, {x: data[i] for i, x in enumerate(shared.csv_settingnames)}, [initial_columns],
               {}, {})
 
 
@@ -335,8 +331,8 @@ def readjson(pad):    # intended to replace the previous function
     keydata = fulldict.pop('keydata')
     otherstuff = fulldict
     for name, item in otherstuff.items():
-        if isinstance(item, set):
-            item = list(item)
+        # if isinstance(item, set):
+        #     item = list(item)
         if ((plugin_name == 'DC_hotkeys' and name in ('stdkeys', 'defaults'))
                 or (plugin_name == 'Nemo_hotkeys' and name == 'defaultkeys')):
             newitem = {}
@@ -421,7 +417,7 @@ def quick_check(filename):
         column_info, data = readjson(filename)[1:3]
     items = data.items()
     if not items:   # if items is None or len(items) == 0:
-        print('No keydefs found in this file')
+        print(f'{filename}: No keydefs found in this file')
         return
     for key, data in items:
         try:
@@ -431,7 +427,7 @@ def quick_check(filename):
             shared.log_exc()
             print(key, data)
             raise
-    print('{filename}: No errors found')
+    print(f'{filename}: No errors found')
 
 
 class HotkeyPanel:
@@ -476,7 +472,7 @@ class HotkeyPanel:
                 shared.log_exc()
                 nodata = self.captions['I_NOSETFIL'].format(self.pad)
         else:
-            nodata = self.captions['I_NOSETFIL'].format(self.pad)
+            nodata = 'empty filename'  # self.captions['I_NOSETFIL'].format(pad)
         if nodata:
             self.settings, self.column_info, self.data = {}, [], {}
 
@@ -499,12 +495,6 @@ class HotkeyPanel:
                 nodata = self.captions['I_NODATA'].replace('data', 'plugin code')
 
             self.parent.page = self
-            # try:
-            #     test = self.reader.buildcsv
-            # except AttributeError:
-            #     shared.log_exc()
-            # else:
-            # bij json hoeft otherstuff niet meer via buildcsv te worden opgehaald
             if os.path.splitext(self.pad)[1] == '.csv':
                 self.otherstuff = {}  # ruimte voor zaken als een lijst met mogelijke commando's
                 if hasattr(self.reader, 'buildcsv'):
@@ -519,19 +509,12 @@ class HotkeyPanel:
             self.gui.setup_empty_screen(nodata, self.title)
             return
 
-        # dump all data to a json file
-        # plugin_name = os.path.splitext(os.path.basename(self.pad))[0]
-        # with (BASE / f'{plugin_name}.pprint').open('w') as out:
-        #     pprint.pprint(self.otherstuff, width=80, stream=out)
-        # writejson(str(BASE / f'{plugin_name}.json'), self.settings, self.column_info, self.data,
-        #           self.otherstuff)
-
-        try:
-            self.has_extrapanel = bool(int(self.settings[shared.SettType.DETS.value]))
-        except KeyError:
-            shared.log_exc()
-
-        self.title = self.settings["PanelName"]
+        # try:
+        #     self.has_extrapanel = bool(int(self.settings[shared.SettType.DETS.value]))
+        # except KeyError:
+        #     shared.log_exc()
+        self.has_extrapanel = bool(int(self.settings[shared.SettType.DETS.value]))
+        self.title = self.settings[shared.SettType.PNL.value]  # "PanelName"]
 
         # self.has_extrapanel controleert extra initialisaties en het opbouwen van het extra
         # schermdeel - het vullen van veldwaarden hierin gebeurt als gevolg van het vullen
@@ -543,7 +526,7 @@ class HotkeyPanel:
             self.fields = [x[0] for x in self.column_info]
             self.add_extra_attributes()
             self.gui.add_extra_fields()
-            self.gui.set_extrascreen_editable(bool(int(self.settings['RedefineKeys'])))
+            self.gui.set_extrascreen_editable(bool(int(self.settings[shared.SettType.RDEF.value])))
 
         self.gui.setup_list()
         if self.has_extrapanel:
