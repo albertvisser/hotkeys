@@ -33,11 +33,7 @@ def _translate_keyname(inp):
     """
     convert = {'Escape': 'Esc', 'Delete': 'Del', 'Return': 'Enter',
                'Page_up': 'PgUp', 'Page_down': 'PgDn', 'NUMPAD_ENTER': 'NumEnter'}
-    if inp in convert:
-        out = convert[inp]
-    else:
-        out = inp
-    return out
+    return = convert.get(inp, inp)
 
 
 def buildcsv(page, showinfo=True):

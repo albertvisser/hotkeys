@@ -209,12 +209,8 @@ def translate_keyname(inp):
                'Plus': '+', 'Minus': '-', 'Backtick/Tilde': '`',
                'Brackets open': '[', 'Brackets close': ']', 'Backslash/Pipe': '\\',
                'Semicolon/colon': ';', 'Apostrophe/Quote': "'",
-               'Slash/Questionmark': '/', 'OEM_US\|': '\\'}
-    if inp in convert:
-        out = convert[inp]
-    else:
-        out = inp
-    return out
+               'Slash/Questionmark': '/', 'OEM_US\\|': '\\'}
+    return convert.get(inp, inp)
 
 
 def buildcsv(page, showinfo=True):
@@ -241,10 +237,7 @@ def buildcsv(page, showinfo=True):
             shortcuts, ix = {}, 0
             for keytext, cmd in page.tempdata:
                 key, mods = keytext.split(' ', 1)
-                if cmd:
-                    desc = page.cmdlist_data[cmd]['oms']  # self.cmddict
-                else:
-                    desc = page.keylist_data[(key, mods)]['oms']  # self.keydict
+                desc = page.cmdlist_data[cmd]['oms'] if cmd else page.keylist_data[(key, mods)]['oms']
                 ix += 1
                 shortcuts[ix] = (translate_keyname(key), mods, 'S', cmd, desc)
         else:
@@ -289,15 +282,15 @@ def get_frameheight():
 def savekeys(parent):
     """schrijft de listbox data terug via een tckeys object
     """
-    save_message = '\n'.join(('Press "OK" to build and save the keyboard definitions files',
-                              'or "Cancel" to return to the main program'))
+    save_message = ('Press "OK" to build and save the keyboard definitions files\n'
+                    'or "Cancel" to return to the main program')
     ok = editor.gui.show_cancel_message(parent, text=save_message)
     if not ok:
         return
     keydict = {}
     for val in parent.data.values():
         ky, mod, srt, cmd, desc = val
-        hotkey = " + ".join((ky, mod)) if mod != '' else ky
+        hotkey = f"{ky} + {mod}" if mod != '' else ky
         keydict[hotkey] = (srt, desc, cmd)
         shortcuts, shortcutswin = [], []
         for key, item in keydict.items():
@@ -307,7 +300,7 @@ def savekeys(parent):
             test = [x for x in reversed(key.split())]
             ## print(test)
             if len(test) == 1:
-                shortcuts.append('{}={}\n'.format(test[0], item[2]))
+                shortcuts.append(f'{test[0]}={item[2]}\n')
             elif 'W' in test[0]:
                 if 'W+' in test[0]:
                     test[0] = test[0].replace('W+', '')

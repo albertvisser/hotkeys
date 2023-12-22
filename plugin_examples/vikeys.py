@@ -4,7 +4,6 @@ standard keys can be parsed in from /usr/share/vim/vim##/doc/index.txt
 redefined keys are in ~/.vim/vimrc (map commands)
 """
 import string
-import subprocess
 import pathlib
 import collections
 # from .vikeys_gui import layout_extra_fields_topline
@@ -123,9 +122,8 @@ class DefaultKeys:
             pass
         elif not line:
             self.add_line = not self.add_line
-        else:
-            if self.add_line:
-                self.command += items
+        elif self.add_line:
+            self.command += items
 
     def parse_data(self):
         """parse the commands into two dictionaries with matching keys:
@@ -139,9 +137,10 @@ class DefaultKeys:
             seq += 1
             newkeys[seq] = command
             if command[0] == '1':
-                cat, desc_1 = category, desc
+                desc_1 = desc
             elif command[0] in ('2', '3', '4', '5', '6', '7', '8', '9'):
                 to_change.append((seq, category))
+                desc_1 = '?'
             newdata[seq][category] = desc
         for key, category in to_change:
             newdata[key][category] = desc_1
@@ -182,7 +181,7 @@ class DefaultKeys:
         pre_params = ' '.join(['[%s]' % x for x in self.pre_params])
         post_params = ' '.join(['{%s}' % x for x in self.post_params])
         command = ' + '.join(self.components), pre_params, post_params
-        if desc.startswith('1 ') or desc.startswith('2 '):
+        if desc.startswith('1 ', '2 '):
             desc = desc[1:].lstrip()
         elif desc.startswith('1/2 '):
             desc = desc[3:].lstrip()
@@ -200,11 +199,10 @@ class DefaultKeys:
             if value[0] == '<':
                 part = convert_key(part)
                 self.components.append(part)
+            elif self.components:
+                self.post_params.append(part)
             else:
-                if self.components:
-                    self.post_params.append(part)
-                else:
-                    self.pre_params.append(part)
+                self.pre_params.append(part)
             value = value[pos + 1:].lstrip()
             skip = True
         return skip, value
@@ -255,7 +253,8 @@ def buildcsv(page, showinfo=True):
                 path = item / 'doc' / 'index.txt'
                 break
         else:
-            shared.log('-------------------- Unable to determine VIM version ----------------')
+            # shared.log('-------------------- Unable to determine VIM version ----------------')
+            return {}, {}
 
     keyclass = DefaultKeys(path)
     keydefs = keyclass.keydefs

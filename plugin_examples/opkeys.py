@@ -15,7 +15,7 @@ def get_keydefs(doc, soort, keydefs=None):
     for line in doc:
 
         line = line.strip()
-        if not line or line.startswith(';') or line.startswith('#'):
+        if not line or line.startswith(';', '#'):
             continue
         elif line.startswith('['):
             context = line.strip('[]')
@@ -29,7 +29,7 @@ def get_keydefs(doc, soort, keydefs=None):
             feature = ''
             if "=" in definition:
                 extra, definition = definition.split('=', 1)
-                keydata = '='.join((keydata, extra)).replace('"', ' ')
+                keydata = f'{keydata}={extra}'.replace('"', ' ')
             if ',' in keydata:
                 extra, keydata = keydata.split(',')
                 got_platform = got_feature = False
@@ -84,10 +84,9 @@ def savekeys(parent):
     contexts die aangepaste keydefs bevatten terugschrijven in door OP_USER
     aangegeven bestand
     """
-    pass
 
 
-class Settings(object):
+class Settings:
     """bevat de settings uit het aangegeven bestand
 
     self.std = waar het bestand met standaard definities staat

@@ -1,12 +1,12 @@
 """HotKeys main program - gui specific code - Qt5 version
 """
 import sys
-# import os
+import contextlib
 import functools
 import PyQt5.QtWidgets as qtw
 ## import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
-import editor.shared as shared
+from editor import shared
 
 
 class DummyPage(qtw.QFrame):
@@ -520,10 +520,8 @@ class TabbedInterface(qtw.QFrame):
             self.b_filter.setText(self.parent.editor.captions['C_FLTOFF'])
         else:
             self.b_filter.setText(self.parent.editor.captions['C_FILTER'])
-        try:
+        with contextlib.suppress(AttributeError):  # exit button bestaat nog niet bij initialisatie
             self.parent.b_exit.setText(self.parent.editor.captions['C_EXIT'])
-        except AttributeError:  # exit button bestaat nog niet tijdens initialisatie
-            pass
 
     # used by on_page_changed
     def get_panel(self):
@@ -745,9 +743,9 @@ class Gui(qtw.QMainWindow):
                     else:
                         submenu = menu.addMenu(self.editor.captions[sel])
                         self.menuitems[sel] = submenu
-                        for sel, values in callback:
+                        for subsel, values in callback:
                             callback, shortcut = values
-                            act = self.create_menuaction(sel, callback, shortcut)
+                            act = self.create_menuaction(subsel, callback, shortcut)
                             submenu.addAction(act)
                             self.menuitems[sel] = act
 
@@ -758,9 +756,8 @@ class Gui(qtw.QMainWindow):
         ## act.triggered.connect(functools.partial(callback, self))
         act.triggered.connect(callback)
         act.setShortcut(shortcut)
-        if sel == 'M_READ':
-            if not self.editor.book.page.data:
-                act.setEnabled(False)
+        if sel == 'M_READ' and not self.editor.book.page.data:
+            act.setEnabled(False)
         if sel == 'M_RBLD':
             try:
                 act.setEnabled(bool(int(self.editor.book.page.settings[shared.SettType.RBLD.value])))

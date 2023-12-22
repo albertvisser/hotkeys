@@ -169,9 +169,7 @@ def analyze_keydefs(root):  # , cat_name):
                     for item in col.children:
                         if not item.name or item.name != 'div':
                             continue
-                        if 'cmdname' in item['class']:
-                            command = item.a.text.strip('.')
-                        elif 'longcmdname' in item['class']:
+                        if 'cmdname' in item['class'] or 'longcmdname' in item['class']:
                             command = item.a.text.strip('.')
                         elif 'shrtctkey' in item['class']:
                             defkey = item.text
@@ -187,10 +185,12 @@ def analyze_keydefs(root):  # , cat_name):
                                                       for x in item.get_text().split('\n')]))
                         elif "innercmddesc" in item['class']:
                             for line in item.children:
-                                if line.name != 'tr': continue
+                                if line.name != 'tr':
+                                    continue
                                 name = value = desc = ''
                                 for cell in line.children:
-                                    if cell.name != 'td': continue
+                                    if cell.name != 'td':
+                                        continue
                                     if 'class' not in cell.attrs:
                                         desctable.append(cell.text)
                                         continue
@@ -286,14 +286,14 @@ class CsvBuilder:
             dc_keys = self.page_settings['DC_KEYS'] = os.path.join(DOCSPATH, 'shortcuts.html')
         if dc_keys.startswith('http') and not os.path.exists('/tmp/dc_files/shortcuts.html'):
             # http://doublecmd.github.io/doc/en/shortcuts.html
-            subprocess.run(['wget', dc_keys, '-P', '/tmp/dc_files', '-nc'])
+            subprocess.run(['wget', dc_keys, '-P', '/tmp/dc_files', '-nc'], check=False)
         dc_keys = os.path.join('/tmp/dc_files', os.path.basename(dc_keys))
         dc_cmds = self.page.settings.get('DC_CMDS', '')
         if not dc_cmds:
             dc_cmds = self.page.settings['DC_CMDS'] = os.path.join(DOCSPATH, 'cmds.html')
         if dc_cmds.startswith('http') and not os.path.exists('/tmp/dc_files/cmds.html'):
             # http://doublecmd.github.io/doc/en/cmds.html
-            subprocess.run(['wget', dc_cmds, '-P', '/tmp/dc_files', '-nc'])
+            subprocess.run(['wget', dc_cmds, '-P', '/tmp/dc_files', '-nc'], check=False)
         dc_cmds = os.path.join('/tmp/dc_files', os.path.basename(dc_cmds))
         dc_sett = self.page.settings.get('DC_SETT', '')
         if not dc_sett:
@@ -338,10 +338,8 @@ class CsvBuilder:
                 modifiers = _shorten_mods(parts[:-1])
                 command = hotkey.find('Command').text
                 test = hotkey.findall('Param')
-                if test is None:
-                    parameter = ''
-                else:
-                    parameter = ";".join([param.text for param in test])
+                parameter = '' if test is None else parameter = ";".join(
+                        [param.text for param in test])
                 test = hotkey.findall('Control')
                 if test is None:
                     ctrls = ''
@@ -488,7 +486,7 @@ class CsvBuilder:
                     parmdict[name] = value.replace('TfrmOptionsToolbar', 'MainToolbar')
                 itemid = (parmdict['ToolBarID'], parmdict['ToolItemID'])
                 oms, cmd, parm = self.tbcmddict[itemid]
-                definitions_dict['desc'] = '{} ({} {})'.format(oms, cmd, parm)
+                definitions_dict['desc'] = f'{oms} ({cmd} {parm})'
             else:
                 # nu de omschrijving uit cmddict bekijken
                 cmddict_oms = self.cmddict.get(definitions_dict['cmd'], None)

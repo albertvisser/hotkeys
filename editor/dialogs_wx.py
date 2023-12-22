@@ -6,7 +6,7 @@ import wx
 import wx.grid as wxg
 import wx.lib.filebrowsebutton as wxfb
 import wx.lib.scrolledpanel as wxsp
-import editor.shared as shared
+from editor import shared
 
 
 def show_message(win, message_id='', text='', args=None):
@@ -183,7 +183,7 @@ class SetupDialog(wx.Dialog):
         text = wx.StaticText(self, label=self.parent.master.captions['T_NAMOF'].format(
             self.parent.master.captions['S_PLGNAM'].lower(),
             self.parent.master.captions['T_ISMADE']))
-        self.t_program = wx.TextCtrl(self, value='editor.plugins.{}_keys'.format(name.lower()),
+        self.t_program = wx.TextCtrl(self, value=f'editor.plugins.{name.lower())_keys',
                                      size=(160, -1))
         grid.Add(text, 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP | wx.LEFT, 5)
         grid.Add(self.t_program, 0, wx.TOP | wx.RIGHT, 5)
@@ -291,7 +291,7 @@ class FilesDialog(wx.Dialog):
         super().__init__(parent, size=(680, 400), title=self.master.title)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        text = '\n'.join((self.master.captions['T_TOOLS'].split(' / ')))
+        text = '\n'.join(self.master.captions['T_TOOLS'].split(' / '))
         label = wx.StaticText(self, label=text)
         self.sizer.Add(label, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5)
 
@@ -419,13 +419,11 @@ class FilesDialog(wx.Dialog):
                             shared.log_exc('')
                         shared.log('csv name is %s', csv_name)
                         shared.log('prg name is %s', prg_name)
-                        if self.remove_data:
-                            if csv_name:
-                                self.data_to_remove.append(csv_name)
-                        if self.remove_code:
-                            if prg_name:
-                                self.code_to_remove.append(
-                                    prg_name.replace('.', '/') + '.py')
+                        if self.remove_data and csv_name:
+                            self.data_to_remove.append(csv_name)
+                        if self.remove_code and prg_name:
+                            self.code_to_remove.append(
+                                prg_name.replace('.', '/') + '.py')
                         self.delete_row(row)
 
     def accept(self):
@@ -507,7 +505,6 @@ class ColumnSettingsDialog(wx.Dialog):
         """create a row for defining column settings
         """
         self.rownum += 1
-        rownum = self.rownum
         colnum = 0
         check = wx.CheckBox(self.scrl, size=(20, -1))
         ghsizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -642,7 +639,7 @@ class NewColumnsDialog(wx.Dialog):
         super().__init__(parent, title=self.master.title)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        text = '\n'.join((self.master.captions['T_TRANS'].split(' / ')))
+        text = '\n'.join(self.master.captions['T_TRANS'].split(' / '))
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         hsizer.Add(wx.StaticText(self, label=text))
         self.sizer.Add(hsizer, 0, wx.ALL, 5)
@@ -877,10 +874,9 @@ class ExtraSettingsDialog(wx.Dialog):
         """alle aangevinkte items verwijderen uit self.gsizer"""
         test = [x.GetValue() for x in self.checks]
         checked = [x for x, y in enumerate(test) if y]
-        if any(test):
-            if ask_question(self.parent, 'Q_REMSET'):
-                for row in reversed(checked):
-                    self.delete_row(row)
+        if any(test) and ask_question(self.parent, 'Q_REMSET'):
+            for row in reversed(checked):
+                self.delete_row(row)
         # if self.rows_present > 1:
         #     self.Fit()
 
@@ -925,7 +921,7 @@ class EntryDialog(wx.Dialog):
         # use self.master.page.data to populate grid
         self.data = self.master.book.page.data
         num_rows = 0
-        for rowkey, row in self.data.items():
+        for row in self.data.values():
             for i, element in enumerate(row):
                 self.p0list.SetCellValue(num_rows, i, element)
             num_rows += 1
@@ -957,7 +953,7 @@ class EntryDialog(wx.Dialog):
 
     def delete_key(self, event):
         "remove selected line(s) from the grid"
-        selected_rows = []
+        # selected_rows = []
         for row in self.p0list.GetSelectedRows():  # moet misschien reversed?
             self.p0list.DeleteRows(row)
 

@@ -5,7 +5,7 @@ import collections
 import PyQt5.QtWidgets as qtw
 ## import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
-import editor.shared as shared
+from editor import shared
 
 
 def show_message(win, message_id='', text='', args=None):
@@ -184,7 +184,7 @@ class SetupDialog(qtw.QDialog):
         text = qtw.QLabel(self.parent.master.captions['T_NAMOF'].format(
             self.parent.master.captions['S_PLGNAM'].lower(),
             self.parent.master.captions['T_ISMADE']), self)
-        self.t_program = qtw.QLineEdit('editor.plugins.{}_keys'.format(name.lower()), self)
+        self.t_program = qtw.QLineEdit(f'editor.plugins.{name.lower()}_keys', self)
         grid.addWidget(text, 1, 0, 1, 3)
         grid.addWidget(self.t_program, 1, 3)  # , 1, 1)
         text = qtw.QLabel(self.parent.master.captions['S_PNLNAM'], self)
@@ -305,7 +305,7 @@ class FilesDialog(qtw.QDialog):
         self.setWindowTitle(self.master.title)
 
         self.sizer = qtw.QVBoxLayout()
-        text = '\n'.join((self.master.captions['T_TOOLS'].split(' / ')))
+        text = '\n'.join(self.master.captions['T_TOOLS'].split(' / '))
         hsizer = qtw.QHBoxLayout()
         label = qtw.QLabel(text, self)
         hsizer.addStretch()
@@ -426,13 +426,11 @@ class FilesDialog(qtw.QDialog):
                         shared.log_exc('')
                     shared.log('csv name is %s', csv_name)
                     shared.log('prg name is %s', prg_name)
-                    if self.remove_data:
-                        if csv_name:
-                            self.data_to_remove.append(csv_name)
-                    if self.remove_code:
-                        if prg_name:
-                            self.code_to_remove.append(
-                                prg_name.replace('.', '/') + '.py')
+                    if self.remove_data and csv_name:
+                        self.data_to_remove.append(csv_name)
+                    if self.remove_code and prg_name:
+                        self.code_to_remove.append(
+                            prg_name.replace('.', '/') + '.py')
                     self.delete_row(row)
 
     def accept(self):
@@ -638,7 +636,7 @@ class NewColumnsDialog(qtw.QDialog):
         self.setWindowTitle(self.master.title)
 
         self.sizer = qtw.QVBoxLayout()
-        text = '\n'.join((self.master.captions['T_TRANS'].split(' / ')))
+        text = '\n'.join(self.master.captions['T_TRANS'].split(' / '))
         hsizer = qtw.QHBoxLayout()
         hsizer.addWidget(qtw.QLabel(text, self))
         self.sizer.addLayout(hsizer)
@@ -867,10 +865,9 @@ class ExtraSettingsDialog(qtw.QDialog):
         """alle aangevinkte items verwijderen uit self.gsizer"""
         test = [x.isChecked() for x in self.checks]
         checked = [x for x, y in enumerate(test) if y]
-        if any(test):
-            if ask_question(self.parent, 'Q_REMSET'):
-                for row in reversed(checked):
-                    self.delete_row(row)
+        if any(test) and ask_question(self.parent, 'Q_REMSET'):
+            for row in reversed(checked):
+                self.delete_row(row)
 
     def accept(self):
         """update settings and leave
@@ -917,7 +914,7 @@ class EntryDialog(qtw.QDialog):
         # use self.master.page.data to populate grid
         self.data = self.master.book.page.data
         num_rows = 0
-        for rowkey, row in self.data.items():
+        for row in self.data.values():
             self.p0list.insertRow(num_rows)
             for i, element in enumerate(row):
                 new_item = qtw.QTableWidgetItem()
@@ -971,7 +968,6 @@ class EntryDialog(qtw.QDialog):
         """send updates to parent and leave
         """
         new_values = collections.defaultdict(list)
-        display = False
         for rowid in range(self.p0list.rowCount()):
             for colid in range(self.p0list.columnCount()):
                 try:

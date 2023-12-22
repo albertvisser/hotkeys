@@ -3,13 +3,14 @@
 import os
 import sys
 import pathlib
+import contextlib
 import enum
 import logging
 
 HERE = pathlib.Path(__file__).parent.resolve()  # os.path.abspath(os.path.dirname(__file__))
 HERELANG = HERE / 'languages'    # os.path.join(HERE, 'languages')
-WIN = True if sys.platform == "win32" else False
-LIN = True if os.name == 'posix' else False
+WIN = sys.platform == "win32"
+LIN = os.name == 'posix'
 
 LOGFILE = pathlib.Path('/tmp') / 'logs' / 'hotkeys.log'
 DO_LOGGING = os.environ.get("DEBUG", '') not in ('', "0")
@@ -35,10 +36,7 @@ def save_log():
     """
     for last in reversed(sorted(LOGFILE.parent.glob(LOGFILE.name + '*'))):
        break
-    if last.suffix == LOGFILE.suffix:
-        newlast = 0
-    else:
-        newlast = int(last.suffix[1:]) + 1
+    newlast = 0 if last.suffix == LOGFILE.suffix else int(last.suffix[1:]) + 1
     LOGFILE.rename(LOGFILE.with_suffix('.'.join((LOGFILE.suffix, f'{newlast:02}'))))
 
 
@@ -64,10 +62,8 @@ def get_text(win, message_id='', text='', args=None):
     try:
         win = win.editor
     except AttributeError:
-        try:
+        with contextlib.suppress(AttributeError):
             win = win.master
-        except AttributeError:
-            pass
     if message_id:
         text = win.captions[message_id].replace(' / ', '\n')
     elif not text:
@@ -83,7 +79,7 @@ def get_open_title(win, message_id, oms):
     """
     what = get_text(win, message_id)
     if oms:
-        what = ' - '.join((what, oms))
+        what = f'{what} - {oms}'
     return what
 
 

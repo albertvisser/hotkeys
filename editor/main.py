@@ -11,7 +11,6 @@
 """
 from types import SimpleNamespace
 import os
-# import sys
 import pathlib
 import csv
 import json
@@ -126,14 +125,10 @@ def read_settings(ini):
         settings['lang'] = sett.LANG
     except AttributeError:
         settings['lang'] = 'english.lng'
-    try:
+    with contextlib.suppress(AttributeError):
         settings['initial'] = sett.INITIAL
-    except AttributeError:
-        pass
-    try:
+    with contextlib.suppress(AttributeError):
         settings['startup'] = sett.STARTUP
-    except AttributeError:
-        pass
     return settings
 
 
@@ -284,7 +279,7 @@ def readcsv(pad):
     coldata = []
     settings = collections.OrderedDict()
     # try:
-    with open(pad, 'r') as _in:
+    with open(pad) as _in:
         rdr = csv.reader(_in)
         rdrdata = list(rdr)
     # except (FileNotFoundError, IsADirectoryError):
@@ -419,15 +414,13 @@ def quick_check(filename):
     if not items:   # if items is None or len(items) == 0:
         print(f'{filename}: No keydefs found in this file')
         return
-    for key, data in items:
-        try:
-            for indx, col in enumerate(column_info):
-                _ = data[indx]
-        except Exception:
-            shared.log_exc()
-            print(key, data)
-            raise
-    print(f'{filename}: No errors found')
+    for seq, keydef in items:
+        if len(keydef) != len(column_info):
+            print(f'inconsistent item lengths in {filename}')
+            print(seq, keydef)
+            break
+    else:
+        print(f'{filename}: No errors found')
 
 
 class HotkeyPanel:
@@ -719,9 +712,7 @@ class HotkeyPanel:
                         self.gui.set_textfield_value(self.gui.txt_oms, text_to_set)
                     if not self.gui.initializing_keydef:
                         self.set_changed_indicators(True)
-            elif field != 'C_CMD' and command_changed:
-                self.set_changed_indicators(False)
-            elif field == 'C_CMD' and key_changed:
+            elif (field != 'C_CMD' and command_changed) or (field == 'C_CMD' and key_changed):
                 self.set_changed_indicators(False)
 
     def set_changed_indicators(self, value):
@@ -1140,7 +1131,8 @@ class Editor:
     """
     def __init__(self, args):
         shared.save_log()
-        ini = args.conf or CONF
+        conf = args.conf if not args.conf or args.conf.startswith('/') else BASE / args.conf
+        ini = pathlib.Path(conf) or CONF
         self.ini = read_settings_json(ini)
         self.readcaptions(self.ini['lang'])
         startapp = args.start
@@ -1159,10 +1151,8 @@ class Editor:
             if self.ini.get('title', ''):
                 self.title = self.ini['title']
             if startapp:
-                try:
+                with contextlib.suppress(ValueError):
                     start = [x for x, y in self.ini['plugins']].index(startapp) + 1
-                except ValueError:
-                    pass
             if not start and self.ini.get('initial', ''):
                 start = [x for x, y in self.ini['plugins']].index(self.ini['initial']) + 1
             start -= 1
@@ -1206,9 +1196,8 @@ class Editor:
         if not self.book.page.settings:
             gui.show_message(self.gui, 'I_ADDSET')
             return
-        if not self.book.page.modified:
-            if not gui.ask_question(self.gui, 'Q_NOCHG'):
-                return
+        if not self.book.page.modified and not gui.ask_question(self.gui, 'Q_NOCHG'):
+            return
         self.book.page.readkeys()
         self.book.page.populate_list()
 
@@ -1218,9 +1207,8 @@ class Editor:
         vraagt eerst of het ok is om de hotkeys weg te schrijven
         vraagt daarna eventueel of de betreffende applicatie geherstart moet worden
         """
-        if not self.book.page.modified:
-            if not gui.ask_question(self.gui, 'Q_NOCHG'):
-                return
+        if not self.book.page.modified and not gui.ask_question(self.gui, 'Q_NOCHG'):
+            return
         try:
             self.book.page.savekeys()
         except AttributeError:
@@ -1297,12 +1285,11 @@ class Editor:
         mode = self.ini.get("startup", '')
         pref = self.ini.get("initial", '')
         if mode == shared.mode_f and pref not in [x[0] for x in self.ini['plugins']]:
-            oldmode, mode = mode, shared.mode_r
-            self.ini['startup'] = mode
+            self.ini['startup'] = shared.mode_r
             write_settings_json(self.ini)  # self.change_setting('startup', oldmode, mode)
         #
 
-        for ix, entry in enumerate(name_path_list):
+        for entry in name_path_list:
             name, csvname = entry
             if name not in [x for x, y in self.ini['plugins']]:
                 if not csvname:
@@ -1515,12 +1502,12 @@ class Editor:
             gui.show_message(self.gui, 'I_DPLCOL')
             return False, False  # not ok but continue with dialog
         # lastcol = -1
-        for ix, value in enumerate(sorted(data, key=lambda x: x[2])):
+        for value in sorted(data, key=lambda x: x[2]):
             name, width, colno, flag, old_colno = value
             if name in self.col_names:
                 name = self.col_textids[self.col_names.index(name)]
             else:
-                new_titles.append((name))
+                new_titles.append(name)
             column_info.append([name, width, flag, old_colno])
         if new_titles:
             languages = [x.name for x in shared.HERELANG.iterdir() if x.suffix == ".lng"]
@@ -1589,15 +1576,14 @@ class Editor:
         if not all((self.book.page.settings, self.book.page.column_info)):
             gui.show_message(self.gui, 'I_ADDCOL')
             return
-        if gui.show_dialog(self, gui.EntryDialog):
-            if self.book.page.data:
-                if os.path.splitext(self.book.page.pad)[1] == '.csv':
-                    writecsv(self.book.page.pad, self.book.page.settings,
-                             self.book.page.column_info, self.book.page.data, self.ini['lang'])
-                else:
-                    writejson(self.book.page.pad, self.book.page.settings,
-                              self.book.page.column_info, self.book.page.data, self.otherstuff)
-                self.book.page.populate_list()
+        if gui.show_dialog(self, gui.EntryDialog) and self.book.page.data:
+            if os.path.splitext(self.book.page.pad)[1] == '.csv':
+                writecsv(self.book.page.pad, self.book.page.settings,
+                         self.book.page.column_info, self.book.page.data, self.ini['lang'])
+            else:
+                writejson(self.book.page.pad, self.book.page.settings,
+                          self.book.page.column_info, self.book.page.data, self.otherstuff)
+            self.book.page.populate_list()
 
     def m_lang(self, event=None):
         """(menu) callback voor taalkeuze
@@ -1666,7 +1652,7 @@ class Editor:
         if not self.book.page.exit():
             return
         mode = self.ini.get("startup", '')
-        pref = self.ini.get("initial", '')
+        # pref = self.ini.get("initial", '')
         # when setting is 'remember', set the remembered tool to the current one
         if mode == shared.mode_r:
             try:

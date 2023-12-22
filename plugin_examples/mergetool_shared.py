@@ -7,7 +7,7 @@ import editor.gui
 def load_matchdata(matchfile):
     "load matches from intermediate file"
     try:
-        _in = open(matchfile, 'r')
+        _in = open(matchfile)
     except FileNotFoundError:
         data = []
     else:
@@ -92,8 +92,8 @@ class MergeMixin:
             editor.gui.show_message(self, text="No saved data found")
             return
         for key, mods, command in sorted(self.parent.matchlist_data):
-            keytext = ' '.join((key, mods))
-            ix = self.add_listmatches_item(keytext, command)
+            keytext = f'{key} {mods}'
+            # ix = self.add_listmatches_item(keytext, command)
             itemindex = self.find_in_listkeys(keytext)
             if itemindex is not None:  # != -1:
                 self.set_listitem_icon(itemindex)
@@ -350,5 +350,5 @@ class MergeMixin:
 
     def help(self, event=None):
         """help on shortcuts"""
-        text = '\n'.join(['{:30}{}'.format(x[2], x[3]) for x in self.getshortcuts()])
+        text = '\n'.join([f'{x[2]:30}{x[3]}' for x in self.getshortcuts()])
         editor.gui.show_message(self, text=text)

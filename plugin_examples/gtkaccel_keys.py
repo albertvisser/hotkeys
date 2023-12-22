@@ -3,6 +3,7 @@
 import os.path
 import collections
 import string
+import pprint
 from .read_gtkaccel import read_keydefs_and_stuff
 from ..gui import get_file_to_open, get_file_to_save, show_dialog
 from .gtkaccel_keys_gui import AccelCompleteDialog
@@ -16,11 +17,7 @@ def _translate_keyname(inp):
     """
     convert = {'Equal': '=', 'Escape': 'Esc', 'Delete': 'Del', 'Return': 'Enter',
                'Page_up': 'PgUp', 'Page_down': 'PgDn'}
-    if inp in convert:
-        out = convert[inp]
-    else:
-        out = inp
-    return out
+    return convert.get(inp, inp)
 
 
 def buildcsv(settnames, page, showinfo=True):
@@ -39,9 +36,9 @@ def buildcsv(settnames, page, showinfo=True):
             oms = ' - '.join((page.captions['C_SELFIL'], fdesc[ix]))
             if not initial:
                 initial = os.path.dirname(__file__)
-                fname = get_file_to_save(page.gui, oms=fdesc[ix], start=initial)
+                fname = get_file_to_save(page.gui, oms=oms, start=initial)
             else:
-                fname = get_file_to_open(page.gui, oms=fdesc[ix], start=initial)
+                fname = get_file_to_open(page.gui, oms=oms, start=initial)
             if fname and fname != initial:
                 page.settings[name] = fname
                 page.settings["extra"][name] = fdesc[ix]
@@ -71,11 +68,13 @@ def buildcsv(settnames, page, showinfo=True):
         elif showinfo:
             page.dialog_data = {'descdict': descdict, 'actions': actions}  # , 'omsdict': omsdict}
             if show_dialog(page, AccelCompleteDialog):
-                omsdict = page.dialog_data
-            if omsdict != descdict:
+                result = page.dialog_data
+            if result != descdict:
+                reverse_lookup = {'/'.join(y): x for x, y in actions.items()}
+                for key, value in result.items():
+                    omsdict[reverse_lookup[key]] = value
                 dml.write_data(descfile, omsdict)
 
-    # als er sprake is van others dan ook deze meenemen (Dia)
     lastkey = 0
     for key, mods, command in keydefs:
         lastkey += 1

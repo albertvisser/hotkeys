@@ -99,13 +99,13 @@ def test_write_settings_json(monkeypatch, capsys, tmp_path):
     def mock_dump(*args):
         print('called json.dump with arg', args[0])
     monkeypatch.setattr(testee.json, 'dump', mock_dump)
-    monkeypatch.setattr(testee.pathlib.Path, 'exists', lambda *x: False)
+    monkeypatch.setattr(testee.shared.pathlib.Path, 'exists', lambda *x: False)
     monkeypatch.setattr(testee, 'initial_settings', {'x': '', 'a': ''})
     ini = tmp_path / 'settingsfile'
     testee.write_settings_json(settings = {'a': 'b', 'filename': ini, 'x': 'y'})
     assert capsys.readouterr().out == "called json.dump with arg {'a': 'b', 'x': 'y'}\n"
     monkeypatch.setattr(testee.shutil, 'copyfile', mock_copy)
-    monkeypatch.setattr(testee.pathlib.Path, 'exists', lambda *x: True)
+    monkeypatch.setattr(testee.shared.pathlib.Path, 'exists', lambda *x: True)
     testee.write_settings_json(settings = {'a': 'b', 'filename': ini, 'x': 'y'})
     assert capsys.readouterr().out == (f"called shutil.copyfile with args ('{ini}',"
                                        f" '{str(ini) + '~'}')\n"
@@ -160,7 +160,7 @@ def test_update_paths(monkeypatch, capsys):
         print('called initcsv with args', args)
     def mock_initjson(*args):
         print('called initjson with args', args)
-    monkeypatch.setattr(testee.pathlib.Path, 'write_text', mock_write)
+    monkeypatch.setattr(testee.shared.pathlib.Path, 'write_text', mock_write)
     monkeypatch.setattr(testee, 'initcsv', mock_initcsv)
     monkeypatch.setattr(testee, 'initjson', mock_initjson)
     paths = (('xx', 'yy.csv'), ('aa', 'bb.json'))
@@ -221,10 +221,9 @@ def test_quick_check(monkeypatch, capsys):
     assert capsys.readouterr().out == ('called readjson with arg `plugin.json`\n'
                                        'plugin.json: No keydefs found in this file\n')
     monkeypatch.setattr(testee, 'readjson', mock_readjson_2)
-    with pytest.raises(Exception):
-        testee.quick_check('plugin.json')
+    testee.quick_check('plugin.json')
     assert capsys.readouterr().out == ('called readjson with arg `plugin.json`\n'
-                                       'called shared.log_exc\n'
+                                       'inconsistent item lengths in plugin.json\n'
                                        '1 []\n')
 
 class MockSDI:
@@ -485,7 +484,6 @@ def _test_hotkeypanel_apply_changes(monkeypatch, capsys):
 def _test_hotkeypanel_apply_deletion(monkeypatch, capsys):
     testobj.apply_deletion()
 
-
 def _test_choicebook_init(monkeypatch, capsys):
     testobj = testee.ChoiceBook()
 
@@ -503,7 +501,6 @@ def _test_choicebook_find_prev(monkeypatch, capsys):
 
 def _test_choicebook_filter(monkeypatch, capsys):
     testobj.filter(event=None)
-
 
 def _test_editor_init(monkeypatch, capsys):
     testobj = testee.Editor(args)

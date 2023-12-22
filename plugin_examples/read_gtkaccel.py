@@ -39,15 +39,15 @@ def read_keydefs_and_stuff(filename):
     result = {'keydefs': keydefs}
 
     actiondict = collections.defaultdict(list)
-    new_actions = collections.OrderedDict()
-    descriptions = collections.OrderedDict()
+    new_actions = {}  # collections.OrderedDict()
+    descriptions = {}  # collections.OrderedDict()
     for key, value in actions.items():
         context, action = value.lstrip('/').split('/', 1)
         actiondict[context].append(action)
         new_actions[key] = (context, action)
         descriptions[key] = ''
     actions = new_actions
-    contextlist = [x for x in actiondict.keys()]
+    contextlist = [x for x in actiondict]
     result.update({'actions': actions, 'actionscontext': actiondict,
                    'contexts': contextlist, 'descriptions': descriptions})
 
@@ -84,7 +84,7 @@ def readfile(filename):
                     line = line[1:].strip()
                 line = line.rsplit(')', 1)[0]
                 data = line.split(keydef_id, 1)[1].strip().split('" "')
-                if len(data) != 2:
+                if len(data) != len(['two', 'items']):
                     print(line)
                     print('contains more/less that 2 items, what to do?')
                     continue

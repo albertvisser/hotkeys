@@ -4,11 +4,12 @@
 # import sys
 # import functools
 import io
+import contextlib
 import wx
 import wx.adv
 import wx.lib.mixins.listctrl as listmix
 from wx.lib.embeddedimage import PyEmbeddedImage
-import editor.shared as shared
+from editor import shared
 
 
 def getbitmap(data):
@@ -611,10 +612,8 @@ class TabbedInterface(wx.Panel):
         self.b_next.SetLabel(self.parent.editor.captions['C_NEXT'])
         self.b_prev.SetLabel(self.parent.editor.captions['C_PREV'])
         self.headlinesizer.Layout()
-        try:
+        with contextlib.suppress(AttributeError):  # exit button bestaat nog niet bij initialisatie
             self.parent.b_exit.SetLabel(self.parent.editor.captions['C_EXIT'])
-        except AttributeError:  # exit button bestaat nog niet tijdens initialisatie
-            pass
 
     def after_changing_page(self, event):
         """callback for change in tool page selector
@@ -664,7 +663,7 @@ class TabbedInterface(wx.Panel):
         "return the items that contain the text to search for"
         result = []
         for i in range(page.gui.p0list.GetItemCount()):
-            item = page.gui.p0list.GetItem(i)
+            # item = page.gui.p0list.GetItem(i)
             if text in page.gui.p0list.GetItemText(i, self.master.zoekcol):
                 result.append(i)  # tem) - geen items maar indexes in de lijst opnemen
         return result
@@ -847,12 +846,12 @@ class Gui(wx.Frame):
                 if sel == -1:
                     menu.AppendSeparator()
                 else:
-                    sel, value = sel
+                    subsel, value = sel
                     callback, shortcut = value
                     if callable(callback):
-                        menutext = '\t'.join((self.editor.captions[sel], shortcut))
+                        menutext = '\t'.join((self.editor.captions[subsel], shortcut))
                         item = wx.MenuItem(None, -1, text=menutext)
-                        self.menuitems[sel] = item, shortcut
+                        self.menuitems[subsel] = item, shortcut
                         menu.Append(item)
                         self.Bind(wx.EVT_MENU, callback, id=item.GetId())
                     else:
@@ -865,7 +864,7 @@ class Gui(wx.Frame):
                             submenu.Append(item)
                             self.Bind(wx.EVT_MENU, callback_, id=item.GetId())
                         menu.AppendSubMenu(submenu, self.editor.captions[sel])
-                        self.menuitems[sel] = submenu, ''
+                        self.menuitems[subsel] = submenu, ''
             if has_items:
                 oldmenu = self.menu_bar.Replace(ix, menu, self.editor.captions[title])
                 oldmenu.Destroy()
@@ -878,22 +877,23 @@ class Gui(wx.Frame):
         "set title for menuitem or action"
         topmenus = [x[0] for x in self.menu_bar.GetMenus()]
         for menu, item in self.menuitems.items():
-            item, shortcut = item
+            subitem, shortcut = item
             try:
-                oldtitle = item.GetTitle()  # als deze kan dan is het een menu
+                oldtitle = subitem.GetTitle()  # als deze kan dan is het een menu
             except AttributeError:
-                item.SetText('\t'.join((self.editor.captions[menu], shortcut)))
+                subitem.SetText('\t'.join((self.editor.captions[menu], shortcut)))
             else:
                 # dit stelt de titel van het menu in
-                item.SetTitle(self.editor.captions[menu])
+                subitem.SetTitle(self.editor.captions[menu])
                 # maar ik zoek de titel van het bijbehorende menuitem (in het bovenliggende menu)
-                pmenu = item.GetParent()
+                pmenu = subitem.GetParent()
                 if pmenu:
                     for mitem in pmenu.GetMenuItems():
                         if mitem.IsSubMenu():
                             pmenu.SetLabel(mitem.GetId(), self.editor.captions[menu])
                 else:
-                    self.menu_bar.Replace(topmenus.index(item), item, self.editor.captions[menu])
+                    self.menu_bar.Replace(topmenus.index(subitem), subitem,
+                                          self.editor.captions[menu])
 
     # hulproutine t.b.v. managen tool specifieke settings
 

@@ -21,11 +21,7 @@ def _translate_keyname(inp):
     convert = {'Equal': '=', 'Escape': 'Esc', 'Delete': 'Del', 'Return': 'Enter',
                'BackSpace': 'Backspace', 'PageUp': 'PgUp', 'PageDown': 'PgDn', 'space': 'Space',
                'Keypad*': 'Num*', 'Keypad+': 'Num+', 'Keypad-': 'Num-', 'Keypad/': 'Num/', }
-    if inp in convert:
-        out = convert[inp]
-    else:
-        out = inp
-    return out
+    return convert.get(inp, inp)
 
 
 def nicefy_props(data):
@@ -202,7 +198,7 @@ def read_menu_win(fname):
     return menu_keys
 
 
-class PropertiesFile():
+class PropertiesFile:
     """# read properties and remember them
     so they can instantly substituted when needed
     """
@@ -308,8 +304,8 @@ class PropertiesFile():
                 if test[x + 2]:
                     test[x] = test[x].replace('&', '')
                     key, mods = nicefy_props(test[x + 2])
-                    self.data.append((key, mods, '*', platform, '', 'Show as '
-                                      '{} (*.{})'.format(test[x], test[x + 1])))
+                    self.data.append((key, mods, '*', platform, '',
+                                      f'Show as {test[x]} (*.{test[x + 1]})'))
 
         namedkeys = {'help': 'F1', 'compile': 'Ctrl+F7', 'build': 'F7',
                      'clean': 'Shift+F7', 'go': 'F5', 'print': 'Ctrl+P'}
@@ -689,4 +685,3 @@ def savekeys(parent):
     invoegen in SciTEUser.properties
     waren er niet nog meer mogelijkheden? Ja: menu.language en command.shortcut
     """
-    pass
