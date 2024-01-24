@@ -1131,8 +1131,9 @@ class Editor:
     """
     def __init__(self, args):
         shared.save_log()
-        conf = args.conf if not args.conf or args.conf.startswith('/') else BASE / args.conf
-        ini = pathlib.Path(conf) or CONF
+        ini = CONF
+        if args.conf:
+            ini = pathlib.Path(args.conf) if args.conf.startswith('/') else BASE / args.conf
         self.ini = read_settings_json(ini)
         self.readcaptions(self.ini['lang'])
         startapp = args.start
