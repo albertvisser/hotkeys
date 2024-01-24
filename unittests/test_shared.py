@@ -1,3 +1,5 @@
+"""unittests for ./editor/shared.py
+"""
 """HotKeys: non-gui and csv related functions
 """
 import pytest
@@ -6,7 +8,11 @@ import editor.shared as testee
 
 
 def test_log(monkeypatch, capsys):
+    """unittest for shared.log
+    """
     def mock_info(arg):
+        """stub
+        """
         print(f'called logging.info with arg `{arg}`')
     monkeypatch.setattr(testee.logging, 'info', mock_info)
     monkeypatch.setattr(testee, 'DO_LOGGING', True)
@@ -22,29 +28,43 @@ def test_log(monkeypatch, capsys):
 
 
 def test_log_exc(monkeypatch, capsys):
+    """unittest for shared.log_exc
+    """
     def mock_exception(arg):
+        """stub
+        """
         print(f'called logging.exception with arg `{arg}`')
     monkeypatch.setattr(testee.logging, 'exception', mock_exception)
     monkeypatch.setattr(testee, 'DO_LOGGING', True)
     testee.log_exc(message='error')
-    assert capsys.readouterr().out =='called logging.exception with arg `error`\n'
+    assert capsys.readouterr().out == 'called logging.exception with arg `error`\n'
     monkeypatch.setattr(testee, 'DO_LOGGING', False)
     testee.log_exc(message='error')
-    assert capsys.readouterr().out =='called logging.exception with arg `error`\n'
+    assert capsys.readouterr().out == 'called logging.exception with arg `error`\n'
 
 
 def test_save_log(monkeypatch, capsys):
+    """unittest for shared.save_log
+    """
     def mock_glob(path, pattern):
+        """stub
+        """
         print('called path.glob for pattern `{pattern}` in `{path}`')
         return []
     def mock_glob_1(path, pattern):
+        """stub
+        """
         fn = str(path / pattern[:-1])
         return [testee.pathlib.Path(fn)]
     def mock_glob_more(path, pattern):
+        """stub
+        """
         fn = str(path / pattern[:-1])
         return [testee.pathlib.Path(fn + '.01'), testee.pathlib.Path(fn),
                 testee.pathlib.Path(fn + '.02')]
     def mock_rename(old, new):
+        """stub
+        """
         print(f'called path.rename from `{old}` to `{new}`')
     monkeypatch.setattr(testee.pathlib.Path, 'rename', mock_rename)
     # monkeypatch.setattr(testee.pathlib.Path, 'glob', mock_glob)
@@ -62,6 +82,8 @@ def test_save_log(monkeypatch, capsys):
 
 
 def test_get_text(monkeypatch, capsys):
+    """unittest for shared.get_text
+    """
     captionshaver = types.SimpleNamespace(captions={'m_id': 'hello / world', 'I_NOMSG': 'gargl'})
     win = types.SimpleNamespace(editor=captionshaver)
     assert testee.get_text(win, message_id='m_id') == "hello\nworld"
@@ -80,7 +102,11 @@ def test_get_text(monkeypatch, capsys):
 
 
 def test_get_open_title(monkeypatch, capsys):
+    """unittest for shared.get_open_title
+    """
     def mock_get(*args):
+        """stub
+        """
         print('called get_text with args', args)
         return 'text'
     monkeypatch.setattr(testee, 'get_text', mock_get)
@@ -89,6 +115,8 @@ def test_get_open_title(monkeypatch, capsys):
 
 
 def test_get_title(monkeypatch, capsys):
+    """unittest for shared.get_title
+    """
     titlehaver = types.SimpleNamespace(title='mytitle')
     assert testee.get_title(titlehaver) == 'mytitle'
     assert testee.get_title(types.SimpleNamespace(editor=titlehaver)) == 'mytitle'
