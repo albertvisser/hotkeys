@@ -1,6 +1,6 @@
 """Hotkeys plugin example
 
-this module contains the gui-toolkit specific part (in this case, for PyQT5)
+this module contains the gui-toolkit specific part (in this case, for PyQt)
 """
 # import PyQt5.QtWidgets as qtw
 # import PyQt5.QtGui as gui

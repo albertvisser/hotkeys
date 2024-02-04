@@ -1,4 +1,4 @@
-"""HotKeys plugin for Double Commander PyQt5 version
+"""HotKeys plugin for Double Commander
 
 gebaseerd op versie 0.8
 """

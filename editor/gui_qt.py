@@ -1,4 +1,4 @@
-"""HotKeys main program - gui specific code - Qt5 version
+"""HotKeys main program - gui specific code - Qt version
 """
 import sys
 import contextlib

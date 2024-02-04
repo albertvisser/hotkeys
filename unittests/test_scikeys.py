@@ -1,7 +1,5 @@
 """unittests for ./editor/plugins/scikeys.py
 """
-"""test new dc_keys plugin
-"""
 # import types
 # import pytest
 import editor.plugins.scikeys as testee
