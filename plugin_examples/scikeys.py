@@ -7,7 +7,10 @@ import collections                  # tbv defaultdict
 import tarfile                      # t.b.v. read_source
 ## import xml.etree.ElementTree as et  # for xml parsing
 import bs4 as bs                  # import BeautifulSoup for html parsing
-logging.basicConfig(filename='/home/albert/projects/hotkeys/editor/logs/scikeys.log',
+LOGBASE = '/tmp/hotkeys'
+if not os.path.exists(LOGBASE):
+    os.mkdir(LOGBASE)
+logging.basicConfig(filename=os.path.join(LOGBASE, 'scikeys.log'),
                     format='%(asctime)s %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG)
 
