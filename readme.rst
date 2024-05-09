@@ -20,13 +20,14 @@ details of a shortcut key definition.
 
 To customize for a new tool, you have to add a plugin for it. At the moment
 this mechanism consists of a Python module that can contain some functions to be
-called by the main program, and a csv file containing the keyboard definitions and
+called by the main program, and a file containing the keyboard definitions and
 some tool-specifc settings. These can be generated in basic form from within the
 program and then customized by hand, also from within the program.
 
-Initially the plugin is just an empty python module. It can be extended to contain
-functions that (re)generate the keydef portion of the CSV file from the
-tool's configuration files, and to write modified keydefs back to them.
+Initially the new plugin is just an empty python module. 
+It can be extended to contain functions that (re)generate the keydef portion
+of the definitions file from the tool's configuration files, 
+and to write modified keydefs back to them.
 It's also meant for customisation of the editor part of this program.
 
 
@@ -34,6 +35,12 @@ Usage
 -----
 
 Simply call ``start.py`` in the top directory.
+Use ``toolkit.py`` in the program directory (``editor``) to define which gui toolkit to use.
+
+I started out using a csv file for the keyboard definitions and other settings, because tools
+like this one did that too I guess. 
+Later I found it a bit too complicated so I simplifed it and switched to a json format.
+No need or want to make this configurable.
 
 
 Requirements
@@ -41,5 +48,5 @@ Requirements
 
 - Python
 - PyQt(5) or wxPython (Phoenix) for the GUI part
-- the built in csv module for creating and reading the csv files
+- the built in csv and json modules for creating and reading the definition files
 - plugins may use BeautifulSoup (and lxml) for parsing HTML help files
