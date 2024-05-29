@@ -18,6 +18,7 @@ import enum
 import shutil
 import collections
 import string
+import contextlib
 import importlib
 import importlib.util
 
@@ -42,6 +43,7 @@ the default code in the main program will be used.
 '''
 initial_settings = {'plugins': [], 'lang': 'english.lng', 'startup': 'Remember', 'initial': ''}
 initial_columns = ["C_KEY", 120, False], ["C_MODS", 90, False], ["C_DESC", 292, False]
+
 
 class LineType(enum.Enum):
     """Types of lines in the csv file (first value)
@@ -96,16 +98,16 @@ def build_csv_sample_data(lang):
     return csv_sample_data
 
 
-def get_pluginname(csvname):
-    "return the plugin's filename from the plugin's module name"
-    with open(csvname) as _in:
-        for line in _in:
-            test = line.split(',')
-            if test[:2] == [LineType.SETT.value, shared.SettType.PLG.value]:
-                pl_name = test[2]
-                break
-    # ideally we should import the given module to determine the actual file name
-    return pl_name.replace('.', '/') + '.py'
+# def get_pluginname(csvname):
+#     "return the plugin's filename from the plugin's module name"
+#     with open(csvname) as _in:
+#         for line in _in:
+#             test = line.split(',')
+#             if test[:2] == [LineType.SETT.value, shared.SettType.PLG.value]:
+#                 pl_name = test[2]
+#                 break
+#     # ideally we should import the given module to determine the actual file name
+#     return pl_name.replace('.', '/') + '.py'
 
 
 def read_settings(ini):
@@ -490,9 +492,9 @@ class HotkeyPanel:
             self.parent.page = self
             if os.path.splitext(self.pad)[1] == '.csv':
                 self.otherstuff = {}  # ruimte voor zaken als een lijst met mogelijke commando's
-                if hasattr(self.reader, 'buildcsv'):
+                if hasattr(self.reader, 'build_data'):
                     try:
-                        self.otherstuff = self.reader.buildcsv(self, showinfo=False)[1]
+                        self.otherstuff = self.reader.build_data(self, showinfo=False)[1]
                     except FileNotFoundError as exception:
                         # shared.log_exc()
                         nodata = self.captions['I_NOSETT'].format(modulename) + f'\n{exception}'
@@ -587,7 +589,7 @@ class HotkeyPanel:
         self.gui.clear_list()
 
         items = self.data.items()
-        if not items:  # if items is None or len(items) == 0:
+        if not items:
             return
 
         for key, data in items:
@@ -646,7 +648,7 @@ class HotkeyPanel:
         if modified flag is not supplied, use its current state
         """
         if modified is not None:
-            self.modified = False
+            self.modified = modified  # False
         title = self.title
         if self.modified:
             title += ' ' + self.captions["T_MOD"]
@@ -670,13 +672,7 @@ class HotkeyPanel:
         text = self.gui.get_widget_text(*args)
         self.defchanged = False
         if 'C_KEY' in self.fields:
-            # if text == self._origdata[self.field_indexes['C_KEY']]:
-            #     self.defchanged = True
-            #     self.gui.enable_save(True)
-            # elif text == self._origdata[self.field_indexes['C_KEY']]:
-            #     self.defchanged = False
-            #     self.gui.enable_save(False)
-            state = text == self._origdata[self.field_indexes['C_KEY']]
+            state = text != self._origdata[self.field_indexes['C_KEY']]
             self.defchanged = state
             self.gui.enable_save(state)
 
@@ -734,9 +730,10 @@ class HotkeyPanel:
             if cb == win and state != self._origdata[indx]:
                 self._newdata[indx] = state
                 if not self.gui.initializing_keydef:
-                    self.defchanged = True
-                    if 'C_CMD' in self.fields:
-                        self.gui.enable_save(True)
+                    # self.defchanged = True
+                    # if 'C_CMD' in self.fields:
+                    #     self.gui.enable_save(True)
+                    self.set_changed_indicators(True)
                 break
         else:
             states = [self.gui.get_checkbox_state(self.gui.cb_shift),
@@ -841,7 +838,8 @@ class HotkeyPanel:
                 # zoek de lijstentry behorende bij de nieuwe sleutelwaarden
                 found, indx = self.check_for_selected_keydef(changedata)
                 # vraag indien nodig of wijzigingen doorgevoerd moeten worden
-                make_change = self.ask_what_to_do(any_change, found, newitem, olditem)
+                # make_change = self.ask_what_to_do(any_change, found, newitem, olditem)
+                make_change = self.ask_what_to_do(found, newitem, olditem)
                 if make_change:
                     newitem = self.apply_changes(found, indx, changedata)
         else:
@@ -880,9 +878,9 @@ class HotkeyPanel:
                 newvalue = self._newdata[fieldindex]
             else:
                 indexmap = dict(zip(self.field_indexes[text], ('SCAW')))
-                oldvalue = [self._origdata[x] for x in fieldindex]
-                newvalue = [self._newdata[x] for x in fieldindex]
-            changed.append(newvalue == oldvalue)
+                oldvalue = [self._origdata[x] for x in indexmap]  # fieldindex]
+                newvalue = [self._newdata[x] for x in indexmap]  # fieldindex]
+            changed.append(newvalue != oldvalue)
             changes.append(newvalue)
         return changed, changes
 
@@ -912,12 +910,13 @@ class HotkeyPanel:
             found, indx = False, -1
         return found, indx
 
-    def ask_what_to_do(self, changes, found, newitem, olditem):
+    # def ask_what_to_do(self, changes, found, newitem, olditem):
+    def ask_what_to_do(self, found, newitem, olditem):
         "get input on what to do next"
         cursor_moved = newitem != olditem and olditem is not None
-        data_changed = self._newdata != self._origdata
         make_change = False
-        if data_changed:  # any(changes):
+        # if any(changes):   # dit gaat alleen over de sleutelwaarden
+        if self._newdata != self._origdata:
             if cursor_moved:
                 make_change = gui.ask_question(self.gui, "Q_SAVCHG")
             elif found:  # changes[0]:
@@ -1034,9 +1033,9 @@ class ChoiceBook:
             # this can happen when the page_changed callback is set up during __init__
             return
         win = self.gui.get_panel()
-        self.page = win.master              # change to new selection
         if win is None:                     # leaving: no page selected yet
             return
+        self.page = win.master              # change to new selection
         if self.page.modified:
             ok = win.exit()
             if not ok:                       # leaving: can't exit modified page yet
@@ -1061,6 +1060,8 @@ class ChoiceBook:
             if self.page.captions[item[0]] == self.gui.get_search_col():
                 self.zoekcol = ix
                 break
+        else:
+            self.zoekcol = -1  # Is this even possible? And what does it mean?
         self.items_found = self.gui.find_items(self.page, text)
         self.gui.init_search_buttons()
         if self.items_found:
@@ -1136,7 +1137,6 @@ class Editor:
             ini = pathlib.Path(args.conf) if args.conf.startswith('/') else BASE / args.conf
         self.ini = read_settings_json(ini)
         self.readcaptions(self.ini['lang'])
-        startapp = args.start
         self.title = self.captions["T_MAIN"]
         self.pluginfiles = {}
         self.book = None
@@ -1151,6 +1151,7 @@ class Editor:
             start = 0
             if self.ini.get('title', ''):
                 self.title = self.ini['title']
+            startapp = args.start
             if startapp:
                 with contextlib.suppress(ValueError):
                     start = [x for x, y in self.ini['plugins']].index(startapp) + 1
@@ -1335,10 +1336,10 @@ class Editor:
         if not self.book.page.settings:
             gui.show_message(self.gui, 'I_ADDSET')
             return
-        # if hasattr(self.reader, 'buildcsv'):
-        if hasattr(self.book.page.reader, 'buildcsv'):
+        # if hasattr(self.reader, 'build_data'):
+        if hasattr(self.book.page.reader, 'build_data'):
             try:
-                newdata = self.book.page.reader.buildcsv(self.book.page)
+                newdata = self.book.page.reader.build_data(self.book.page)
             except FileNotFoundError as exception:
                 gui.show_message(self.gui, 'I_ERRRBLD' + '\n({exception})')
                 return
@@ -1615,8 +1616,8 @@ class Editor:
     def m_pref(self, event=None):
         """mogelijkheid bieden om een tool op te geven dat default getoond wordt
         """
-        oldpref = self.ini.get("initial", None)
         oldmode = self.ini.get("startup", None)
+        oldpref = self.ini.get("initial", None)
         self.prefs = oldmode, oldpref
         if gui.show_dialog(self, gui.InitialToolDialog):
             changed = False
@@ -1676,19 +1677,19 @@ class Editor:
         with open(inifile + '.bak') as _in:
             lines = _in.readlines()
         for ix, line in enumerate(lines):
-            if setting is not None and line.startswith(setting):
+            if line.startswith(setting):
                 if not old:
-                    lines[ix] = line.replace("''", "'{new}'")
+                    lines[ix] = line.replace("''", f"'{new}'")
                 elif not new:
-                    lines[ix] = line.replace("'{old}'", "''")
+                    lines[ix] = line.replace(f"'{old}'", "''")
                     if setting == 'TITLE':
                         lines[ix - 2: ix + 1] = [lines[ix - 2]]
                 else:
                     lines[ix] = line.replace(old, new)
                 break
         else:
-            lines.append("# {self.captions['C_' + setting]}\n")
-            lines.append("{setting} = '{new}'\n")
+            lines.append(f"# {self.captions['C_' + setting]}\n")
+            lines.append(f"{setting} = '{new}'\n")
         with open(inifile, 'w') as _out:
             _out.writelines(lines)
 
