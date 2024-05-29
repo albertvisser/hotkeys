@@ -183,7 +183,7 @@ class SetupDialog(wx.Dialog):
         text = wx.StaticText(self, label=self.parent.master.captions['T_NAMOF'].format(
             self.parent.master.captions['S_PLGNAM'].lower(),
             self.parent.master.captions['T_ISMADE']))
-        self.t_program = wx.TextCtrl(self, value=f'editor.plugins.{name.lower())_keys',
+        self.t_program = wx.TextCtrl(self, value=f'editor.plugins.{name.lower()}_keys',
                                      size=(160, -1))
         grid.Add(text, 0, wx.ALIGN_CENTER_VERTICAL | wx.TOP | wx.LEFT, 5)
         grid.Add(self.t_program, 0, wx.TOP | wx.RIGHT, 5)
