@@ -10,8 +10,8 @@ this module contains the general, non gui-toolkit specific part of the code
 # showinfo is a switch for in case you want to show instructions
 # otherstuff can be used to pass on things like a list of possible commands
 # to method add_extra_attributes
-# ** corresponds to the RebuildCSV setting **
-# def buildcsv(parent, showinfo=True):
+# ** corresponds to the Rebuild_data setting **
+# def build_data(parent, showinfo=True):
 #     shortcuts = collections.defaultdict()
 #     otherstuff = {}
 #     ...implement some logic here...
@@ -22,7 +22,7 @@ this module contains the general, non gui-toolkit specific part of the code
 # win is a reference to the HotKeyPanel instance
 # def add_extra_attributes(win):
 #     """add attributes specific to this plugin
-#     e.g a shorter name for a collection read from buildcsv's otherstuff
+#     e.g a shorter name for a collection read from build_data's otherstuff
 #     some of these are needed when filling fields in the details part of the screen
 #     """
 #     win.contextslist = win.otherstuff['...']

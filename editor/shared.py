@@ -45,7 +45,7 @@ class SettType(enum.Enum):
     """
     PLG = 'PluginName'
     PNL = 'PanelName'
-    RBLD = 'RebuildCSV'
+    RBLD = 'RebuildData'
     DETS = 'ShowDetails'
     RDEF = 'RedefineKeys'
 
