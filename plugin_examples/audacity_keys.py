@@ -33,10 +33,10 @@ def _translate_keyname(inp):
     """
     convert = {'Escape': 'Esc', 'Delete': 'Del', 'Return': 'Enter',
                'Page_up': 'PgUp', 'Page_down': 'PgDn', 'NUMPAD_ENTER': 'NumEnter'}
-    return = convert.get(inp, inp)
+    return convert.get(inp, inp)
 
 
-def buildcsv(page, showinfo=True):
+def build_data(page, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het csv bestand
     """

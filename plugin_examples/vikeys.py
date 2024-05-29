@@ -236,7 +236,7 @@ class DefaultKeys:
         return desc, value
 
 
-def buildcsv(page, showinfo=True):
+def build_data(page, showinfo=True):
     """build the datastructures for constructing the CSV file
     """
     # command = 'vi_get_runtime'

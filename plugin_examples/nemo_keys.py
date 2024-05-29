@@ -49,7 +49,7 @@ Return;S;;Open in new tab;
 """
 
 
-def buildcsv(parent, showinfo=True):
+def build_data(parent, showinfo=True):
     """read keydefs from input
     """
     keydefs = {}

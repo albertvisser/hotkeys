@@ -1,4 +1,4 @@
-"""basic plugin for tool using a gtkaccel_map - PyQt5 version
+"""basic plugin for tool using a gtkaccel_map
 """
 import os.path
 import collections
@@ -20,7 +20,7 @@ def _translate_keyname(inp):
     return convert.get(inp, inp)
 
 
-def buildcsv(settnames, page, showinfo=True):
+def build_data(settnames, page, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het csv bestand
     """

@@ -26,7 +26,7 @@ Instructions for rebuilding the keyboard shortcut definitions
 The keydefs are stored in a file called shortcuts.scf,
 located in ~/.config/doublecmd.
 For convenience sake, you can store this name in a setting
-named DC_PATH so that the buildcsv and savekeys functions
+named DC_PATH so that the build_data and savekeys functions
 don't have to ask for a filename every time.
 
 Two extra settings are used to extract the default mappings
@@ -220,7 +220,7 @@ def analyze_keydefs(root):  # , cat_name):
     return cmddict, dflt_assign, cmdparms, command_list
 
 
-def buildcsv(page, showinfo=True):
+def build_data(page, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het csv bestand
 
@@ -338,8 +338,7 @@ class CsvBuilder:
                 modifiers = _shorten_mods(parts[:-1])
                 command = hotkey.find('Command').text
                 test = hotkey.findall('Param')
-                parameter = '' if test is None else parameter = ";".join(
-                        [param.text for param in test])
+                parameter = '' if test is None else ";".join([param.text for param in test])
                 test = hotkey.findall('Control')
                 if test is None:
                     ctrls = ''

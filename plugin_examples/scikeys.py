@@ -526,7 +526,7 @@ def merge_command_dicts(dict_from_text, dict_from_src):
     return {y[0]: (x, y[1]) for x, y in newfromsrc.items()}
 
 
-def buildcsv(page, showinfo=True):
+def build_data(page, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het csv bestand
     """

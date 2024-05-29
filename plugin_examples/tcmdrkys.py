@@ -213,7 +213,7 @@ def translate_keyname(inp):
     return convert.get(inp, inp)
 
 
-def buildcsv(page, showinfo=True):
+def build_data(page, showinfo=True):
     """implementation of generic function to build the csv file
 
     zo geschreven komt her erop neer dat de te rebuilden gegevens in het match file zitten
