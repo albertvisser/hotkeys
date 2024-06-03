@@ -347,24 +347,12 @@ def writecsv(pad, settings, coldata, data, lang):
     """schrijf de meegegeven data als csv bestand naar de aangegeven locatie
     """
     csvoms = get_csv_oms(lang)
-    extrasettoms = ''
     if os.path.exists(pad):
         shutil.copyfile(pad, pad + '~')
-    try:
-        extrasettoms = settings.pop('extra')
-    except KeyError:
-        extrasettoms = ''
     with open(pad, "w") as _out:
         wrt = csv.writer(_out)
         for name, value in settings.items():
-            try:
-                settdesc = csvoms[name]
-            except KeyError:
-                try:
-                    settdesc = extrasettoms[name]
-                except KeyError:
-                    settdesc = ''
-            rowdata = LineType.SETT.value, name, value, settdesc
+            rowdata = LineType.SETT.value, name, value, getsettdesc(name, settings, csvoms)
             wrt.writerow(rowdata)
         for ix, row in enumerate([[LineType.CAPT.value], [LineType.WID.value]]):
             row += [x[ix] for x in coldata] + [csvoms[row[0]]]
@@ -374,8 +362,15 @@ def writecsv(pad, settings, coldata, data, lang):
         for keydef in data.values():
             row = [LineType.KEY.value] + list(keydef)
             wrt.writerow(row)
-    if extrasettoms:
-        settings['extra'] = extrasettoms
+
+
+def getsettdesc(name, settings, csvoms):
+    "try to get a setting's description from various sources"
+    extrasettoms = settings.get('extra', {})
+    settdesc = csvoms.get(name, '')
+    if not settdesc:
+        settdesc = extrasettoms.get(name, '')
+    return settdesc
 
 
 def writejson(pad, settings, coldata, data, otherstuff):  # intended to replace the previous function
@@ -387,7 +382,7 @@ def writejson(pad, settings, coldata, data, otherstuff):  # intended to replace 
     fulldict = {'settings': settings, 'column_info': coldata, 'keydata': data}
     for name, item in otherstuff.items():
         if isinstance(item, set):
-            item = list(item)
+            item = sorted(list(item))
         if ((plugin_name == 'DC_hotkeys' and name in ('stdkeys', 'defaults'))
                 or (plugin_name == 'Nemo_hotkeys' and name == 'defaultkeys')):
             newitem = {}
@@ -397,7 +392,9 @@ def writejson(pad, settings, coldata, data, otherstuff):  # intended to replace 
                     value = list(value)
                 newitem[newkey] = value
             item = newitem
-        fulldict[name] = item
+        if 'otherstuff' not in fulldict:
+            fulldict['otherstuff'] = {}
+        fulldict['otherstuff'][name] = item
     with open(pad, 'w') as out:
         json.dump(fulldict, out)
 
@@ -685,17 +682,17 @@ class HotkeyPanel:
             return
         cb, text = self.gui.get_choice_value(*args)
         self.defchanged = False
-        for attr in ('cmb_key', 'cmb_context', 'cmb_commando', 'cmb_controls'):
-            if not hasattr(self.gui, attr):
-                setattr(self.gui, attr, None)
+        command_changed = key_changed = False
+        if hasattr(self.gui, 'cmb_commando'):
+            newvalue = self.gui.get_combobox_text(self.gui.cmb_commando)
+            command_changed = newvalue != self._origdata[self.field_indexes['C_CMD']]
+        if hasattr(self.gui, 'cmb_key'):
+            newvalue = self.gui.get_combobox_text(self.gui.cmb_key)
+            key_changed == self._origdata[self.field_indexes['C_KEY']]
         for field, control in (('C_KEY', self.gui.cmb_key),
                                ('C_CNTXT', self.gui.cmb_context),
                                ('C_CMD', self.gui.cmb_commando),
                                ('C_CTRL', self.gui.cmb_controls)):
-            command_changed = self.gui.cmb_commando and self.gui.get_combobox_text(
-                self.gui.cmb_commando) == self._origdata[self.field_indexes['C_CMD']]
-            key_changed = self.gui.cmb_key and self.gui.get_combobox_text(
-                self.gui.cmb_key) == self._origdata[self.field_indexes['C_KEY']]
             if field in self.fields and cb == control:
                 fieldindex = self.field_indexes[field]
                 if text != self._origdata[fieldindex]:
@@ -741,9 +738,10 @@ class HotkeyPanel:
                       self.gui.get_checkbox_state(self.gui.cb_alt),
                       self.gui.get_checkbox_state(self.gui.cb_win)]
             if states == [self._origdata[x] for x in self.field_indexes['C_MODS']]:
-                self.defchanged = False
-                if 'C_CMD' in self.fields:
-                    self.gui.enable_save(False)
+                # self.defchanged = False
+                # if 'C_CMD' in self.fields:
+                #     self.gui.enable_save(False)
+                self.set_changed_indicators(True)
 
     def refresh_extrascreen(self, selitem):
         """show new values after changing kb shortcut
@@ -934,7 +932,7 @@ class HotkeyPanel:
         item = self.gui.get_selected_keydef()
         pos = self.gui.get_keydef_position(item)
         if found:
-            for fieldnum, field in self.fields:
+            for fieldnum, field in enumerate(self.fields):
                 if field[0] == 'C_MODS':
                     self.data[indx][self.fields.index(field)] = keydefdata[1]  # samengevoegde mods
                 else:
@@ -977,11 +975,11 @@ class HotkeyPanel:
         item = self.gui.get_selected_keydef()
         pos = self.gui.get_keydef_position(item)
         indx = self.gui.get_itemdata(item)
-        if self.captions["{indx:03}"] == 'C_TYPE':
+        if self.captions[f"{indx:03}"] == 'C_TYPE':
             if self.data[indx][1] == "S":  # can't delete standard key
                 gui.show_message(self.parent, 'I_STDDEF')
                 return
-        elif self.captions["{indx:03}"] == 'C_KEY':
+        elif self.captions[f"{indx:03}"] == 'C_KEY':
             if self.data[indx][0] in self.defkeys:  # restore standard if any
                 cmnd = self.defkeys[self.data[indx][0]]
                 if cmnd in self.omsdict:
@@ -1389,7 +1387,7 @@ class Editor:
         """define tool-specific settings
         """
         if not self.book.page.settings:
-            self.book.page.settings = {x: '' for x in shared.csv_settingnames}
+            self.book.page.settings = {x: 0 for x in shared.csv_settingnames}
         old_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
         if gui.show_dialog(self, gui.ExtraSettingsDialog):
             if os.path.splitext(self.book.page.pad)[1] == '.csv':
