@@ -455,6 +455,7 @@ class HotkeyPanel:
             try:
                 if os.path.splitext(self.pad)[1] == '.csv':
                     self.settings, self.column_info, self.data = readcsv(self.pad)
+                    self.otherstuff = {}
                 else:
                     self.settings, self.column_info, self.data, self.otherstuff = readjson(self.pad)
             except ValueError as e:
@@ -626,15 +627,18 @@ class HotkeyPanel:
                 self.init_origdata.append('')
                 self.field_indexes[text] = itemindex
                 itemindex += 1
-            if text == 'C_KEY':
-                self.keylist = (list(string.ascii_uppercase) + list(string.digits)
-                                + [f"F{i}" for i in range(1, 13)] + named_keys
-                                + ['.', ',', '+', '=', '-', '`', '[', ']', '\\', ';', "'", '/'])
+            # if text == 'C_KEY':
+            #     self.keylist = (list(string.ascii_uppercase) + list(string.digits)
+            #                     + [f"F{i}" for i in range(1, 13)] + named_keys
+            #                     + ['.', ',', '+', '=', '-', '`', '[', ']', '\\', ';', "'", '/'])
+        self.keylist = (list(string.ascii_uppercase) + list(string.digits)
+                        + [f"F{i}" for i in range(1, 13)] + named_keys
+                        + ['.', ',', '+', '=', '-', '`', '[', ']', '\\', ';', "'", '/'])
 
         self.contextslist = self.commandslist = self.defkeys = []
         self.contextactionsdict = self.omsdict = self.descriptions = {}
         try:
-            self.reader.add_extra_attributes(self)  # user exit
+            self.reader.add_extra_attributes(self)  # user exit, kan self.keylist leegmaken
         except AttributeError:
             shared.log_exc()
         if self.keylist:
@@ -683,12 +687,14 @@ class HotkeyPanel:
         cb, text = self.gui.get_choice_value(*args)
         self.defchanged = False
         command_changed = key_changed = False
-        if hasattr(self.gui, 'cmb_commando'):
+        # combobox attributen op None gezet zodat de loop verderop niet dumpt
+        # condities gewijzigd omdat hasattr nu altijd waar is
+        if 'C_CMD' in self.fields:  # hasattr(self.gui, 'cmb_commando'):
             newvalue = self.gui.get_combobox_text(self.gui.cmb_commando)
             command_changed = newvalue != self._origdata[self.field_indexes['C_CMD']]
-        if hasattr(self.gui, 'cmb_key'):
+        if 'C_KEY' in self.fields:  # hasattr(self.gui, 'cmb_key'):
             newvalue = self.gui.get_combobox_text(self.gui.cmb_key)
-            key_changed == self._origdata[self.field_indexes['C_KEY']]
+            key_changed = self._origdata[self.field_indexes['C_KEY']]
         for field, control in (('C_KEY', self.gui.cmb_key),
                                ('C_CNTXT', self.gui.cmb_context),
                                ('C_CMD', self.gui.cmb_commando),
@@ -748,49 +754,46 @@ class HotkeyPanel:
         """
         if not selitem:  # bv. bij p0list.clear()
             return
-        seli = self.gui.get_itemdata(selitem)
-        keydefdata = dict(zip(self.fields, self.data[seli]))
-        # print(keydefdata)
+        keydefdata = dict(zip(self.fields, self.data[self.gui.get_itemdata(selitem)]))
         if 'C_CMD' in self.fields:
             self.gui.enable_save(False)
             self.gui.enable_delete(False)
+        # C_TYPE heeft geen correponderend veld in het detailscherm
+        if 'C_TYPE' in self.fields and bool(int(self.settings[shared.SettType.RDEF.value])):
+            self.gui.enable_delete(keydefdata['C_TYPE'] == 'U')
         self._origdata = self.init_origdata[:]
-        # self._newdata = self.init_origdata[:]
-        fieldnames = {'C_KEY': self.gui.cmb_key,
-                      'C_CNTXT': getattr(self.gui, 'cmb_context', None),
-                      'C_CMD': getattr(self.gui, 'cmb_commando', None),
-                      'C_DESC': getattr(self.gui, 'txt_oms', None),
-                      'C_PARMS': getattr(self.gui, 'txt_parms', None),
-                      'C_CTRL': getattr(self.gui, 'cmb_controls', None),
-                      'C_BPARMS': getattr(self.gui, 'pre_parms_text', None),
-                      'C_APARMS': getattr(self.gui, 'post_parms_text', None),
-                      'C_FEAT': getattr(self.gui, 'feature_select', None)}
-        for text in ('C_KEY', 'C_MODS', 'C_TYPE', 'C_CNTXT', 'C_CMD', 'C_DESC',
-                     'C_PARMS', 'C_CTRL', 'C_BPARMS', 'C_APARMS', 'C_FEAT'):
-            if text not in keydefdata:
-                continue
-            if text == 'C_TYPE':
-                if bool(int(self.settings[shared.SettType.RDEF.value])):
-                    self.gui.enable_delete(keydefdata[text] == 'U')
-            elif text == 'C_MODS':
-                mods = keydefdata[text]
-                checkboxes = self.gui.cb_shift, self.gui.cb_ctrl, self.gui.cb_alt, self.gui.cb_win
-                # for cb in checkboxes:
-                #     self.gui.set_checkbox_state(cb, False)
+        if 'C_MODS' in self.fields:
+            mods = keydefdata['C_MODS']
+            checkboxes = (getattr(self.gui, 'cb_shift', None), getattr(self.gui, 'cb_ctrl', None),
+                          getattr(self.gui, 'cb_alt', None), getattr(self.gui, 'cb_win', None))
+            if all(checkboxes):
                 for x, y, z in zip('SCAW', self.field_indexes['C_MODS'], checkboxes):
                     self._origdata[y] = x in mods
                     self.gui.set_checkbox_state(z, x in mods)
+        for text, control in (('C_KEY', self.gui.cmb_key),  # deze is altijd aanwezig
+                              ('C_CNTXT', getattr(self.gui, 'cmb_context', None)),
+                              ('C_CMD', getattr(self.gui, 'cmb_commando', None)),
+                              ('C_DESC', getattr(self.gui, 'txt_oms', None)),
+                              ('C_PARMS', getattr(self.gui, 'txt_parms', None)),
+                              ('C_CTRL', getattr(self.gui, 'cmb_controls', None)),
+                              ('C_BPARMS', getattr(self.gui, 'pre_parms_text', None)),
+                              ('C_APARMS', getattr(self.gui, 'post_parms_text', None)),
+                              ('C_FEAT', getattr(self.gui, 'feature_select', None))):
+            if text not in keydefdata:
+                continue
+            if control is None:
+                print(f'{text} aanwezig in fields zonder corresponderend veld op scherm')
+                continue
+            if text != 'C_DESC':  # description is (vooralsnog) readonly bedoeld
+                self._origdata[self.field_indexes[text]] = keydefdata[text]
+            if text == 'C_KEY' and self.keylist is None:
+                self.gui.set_textfield_value(self.gui.txt_key, keydefdata[text])
+            elif text in ('C_KEY', 'C_CNTXT', 'C_CMD', 'C_CTRL', 'C_FEAT'):
+                valuelist = self.get_valuelist(text)
+                if valuelist:
+                    self.gui.set_combobox_string(control, keydefdata[text], valuelist)
             else:
-                if text != 'C_DESC':  # description is (vooralsnog) readonly bedoeld
-                    self._origdata[self.field_indexes[text]] = keydefdata[text]
-                if text == 'C_KEY' and self.keylist is None:
-                    self.gui.set_textfield_value(self.gui.txt_key, keydefdata[text])
-                elif text in ('C_KEY', 'C_CNTXT', 'C_CMD', 'C_CTRL', 'C_FEAT'):
-                    valuelist = self.get_valuelist(text)
-                    if valuelist:
-                        self.gui.set_combobox_string(fieldnames[text], keydefdata[text], valuelist)
-                else:
-                    self.gui.set_textfield_value(fieldnames[text], keydefdata[text])
+                self.gui.set_textfield_value(control, keydefdata[text])
         self._newdata = self._origdata[:]
 
     def get_valuelist(self, text):
@@ -833,6 +836,7 @@ class HotkeyPanel:
             if not self.initializing_screen:  # in de wx versie zat deze conditie niet
                 # zoek naar wijzigingen in sleutelwaarden
                 any_change, changedata = self.check_for_changes()
+                # >> is het nog ergens goed voor om die any_chnge uit te vragen??
                 # zoek de lijstentry behorende bij de nieuwe sleutelwaarden
                 found, indx = self.check_for_selected_keydef(changedata)
                 # vraag indien nodig of wijzigingen doorgevoerd moeten worden
@@ -934,10 +938,11 @@ class HotkeyPanel:
         if found:
             for fieldnum, field in enumerate(self.fields):
                 if field[0] == 'C_MODS':
-                    self.data[indx][self.fields.index(field)] = keydefdata[1]  # samengevoegde mods
+                    # self.data[indx][self.fields.index(field)] = keydefdata[1]  # samengevoegde mods
+                    self.data[indx][fieldnum] = keydefdata[1]  # samengevoegde mods
                 else:
-                    self.data[indx][self.fields.index(field)] = self._newdata[
-                        self.field_indexes[field[0]]]
+                    # self.data[indx][self.fields.index(field)] = self._newdata[
+                    self.data[indx][fieldnum] = self._newdata[self.field_indexes[field[0]]]
         else:
             # ordereddict opnieuw opbouwen
             newdata = list(self.data.values())
@@ -992,7 +997,7 @@ class HotkeyPanel:
                 del self.data[indx]
                 ## pos -= 1
         self.gui.enable_save(False)
-        self.gui.enable_deleted(False)
+        self.gui.enable_delete(False)
         self.set_title(modified=True)
         self.populate_list(pos)    # refresh
 
@@ -1233,45 +1238,56 @@ class Editor:
             selection = self.book.gui.get_selected_index()
             write_settings_json(self.ini)  # modify_settings(self.ini)
 
-            # update the screen(s)
-            # clear the selector and the stackedwidget while pairing up programs and windows
-            # that need to be kept or replaced
-            hlpdict = {}
-            self.book.gui.clear_selector()
-
-            current_items = reversed(list(enumerate(current_programs)))
-            new_programs = [x for x, y in self.ini["plugins"]]
-            new_paths = [y for x, y in self.ini["plugins"]]
-            for indx, program in current_items:  # we need to do this in reverse
-                # NB niet alleen de Gui, ook het HotkeyPanel verwijderen
-                test = self.book.gui.remove_tool(indx, program, new_programs)
-                if test:
-                    hlpdict[program] = test
-                else:
-                    self.pluginfiles.pop(program)
-
-            # add new ones, modify existing or leave them alone
-            for indx, program in enumerate(new_programs):
-                if program in current_programs:
-                    # compare the new and the existing path
-                    old_loc = current_paths[current_programs.index(program)]
-                    new_loc = new_paths[new_programs.index(program)]
-                    if new_loc == old_loc:  # unchanged
-                        win = hlpdict[program]
-                    else:  # take data from different location
-                        win = HotkeyPanel(self.book, new_loc)
-                else:  # new entry
-                    loc = new_paths[indx]
-                    if not os.path.exists(loc):
-                        loc = str(BASE / loc)
-                    win = HotkeyPanel(self.book, loc)
-                self.book.gui.add_tool(program, win)
-
+            items_to_retain = self.clear_book(current_programs)
+            self.rebuild_book(current_programs, current_paths, items_to_retain)
             if self.last_added:
                 selection = self.book.gui.get_new_selection(self.last_added)
             if selection > len(self.ini['plugins']) - 1:
                 selection -= 1
             self.book.gui.set_selected_tool(selection)
+
+    def clear_book(self, current_programs):
+        """ clear the selector and the stackedwidget
+        while pairing up programs and windows that need to be kept or replaced
+        """
+        items_to_retain = {}
+        new_programs = [x for x, y in self.ini["plugins"]]
+        self.book.gui.clear_selector()
+
+        current_items = reversed(list(enumerate(current_programs)))
+        for indx, program in current_items:  # we need to do this in reverse
+            # NB niet alleen de Gui, ook het HotkeyPanel verwijderen
+            # put_it_back = self.book.gui.remove_tool(indx, program, new_programs)
+            # if put_it_back:
+            if (put_it_back := self.book.gui.remove_tool(indx, program, new_programs)):
+                items_to_retain[program] = put_it_back
+            else:
+                # self.pluginfiles.pop(program)
+                self.pluginfiles.pop(indx)
+        return items_to_retain
+
+    def rebuild_book(self, current_programs, current_paths, items_to_retain):
+        """add new tools; modify existing if needed and puth them back
+        """
+        new_programs = [x for x, y in self.ini["plugins"]]
+        new_paths = [y for x, y in self.ini["plugins"]]
+        for indx, program in enumerate(new_programs):
+            if program in current_programs:
+                # compare the new and the existing path
+                old_loc = current_paths[current_programs.index(program)]
+                new_loc = new_paths[new_programs.index(program)]
+                if new_loc == old_loc:  # unchanged
+                    win = items_to_retain[program]
+                else:  # take data from different location
+                    # if not os.path.exists(new_loc):  - moet dit niet ook
+                    #     loc = str(BASE / new_loc)      net als hieronder?
+                    win = HotkeyPanel(self.book, new_loc)
+            else:  # new entry
+                loc = new_paths[indx]
+                if not os.path.exists(loc):
+                    loc = str(BASE / loc)
+                win = HotkeyPanel(self.book, loc)
+            self.book.gui.add_tool(program, win)
 
     def accept_pathsettings(self, name_path_list, settingsdata, names_to_remove):
         """check and confirm input from FilesDialog
@@ -1280,52 +1296,57 @@ class Editor:
         if self.last_added not in [x[0] for x in name_path_list]:
             self.last_added = ''
 
-        # dit is verplaatst vanuit de `exit` methode omdat het me hier beter op z'n plaats leek
         # when setting is 'fixed', don't remember a startup tool that is removed from the config
+        # moet dit niet wachten tot na de controles? En is die write (dan) wel nodig?
         mode = self.ini.get("startup", '')
         pref = self.ini.get("initial", '')
         if mode == shared.mode_f and pref not in [x[0] for x in self.ini['plugins']]:
             self.ini['startup'] = shared.mode_r
             write_settings_json(self.ini)  # self.change_setting('startup', oldmode, mode)
-        #
 
         for entry in name_path_list:
-            name, csvname = entry
+            name, datafilename = entry
             if name not in [x for x, y in self.ini['plugins']]:
-                if not csvname:
-                    gui.show_message(self.gui, text=self.captions['I_FILLALL'])
+                if not self.check_plugin_settings(name, datafilename, settingsdata[name]):
                     return False
-                prgname = settingsdata[name][0]
-                if not prgname:
-                    # try to get the plugin name from the csv file
-                    try:
-                        if os.path.splitext(csvname)[1] == '.csv':
-                            data = readcsv(csvname)
-                        else:
-                            data = readjson(csvname)
-                    except (FileNotFoundError, IsADirectoryError, ValueError):
-                        shared.log_exc()
-                        gui.show_message(self.gui, text=self.captions['I_NOCSV'].format(csvname))
-                        return False
-                    try:
-                        prgname = data[0][shared.SettType.PLG.value]
-                    except KeyError:
-                        shared.log_exc()
-                        gui.show_message(self.gui, text=self.captions['I_NOPLNAM'].format(csvname))
-                        return False
-                if len(settingsdata[name]) == 1:  # existing plugin
-                    try:
-                        _ = importlib.import_module(prgname)
-                    except ImportError:
-                        shared.log_exc()
-                        gui.show_message(self.gui, text=self.captions['I_NOPLREF'].format(csvname))
-                        return False
-
-                self.pluginfiles[name] = prgname
+                self.pluginfiles[name] = settingsdata[name][0]
         for filename in names_to_remove:
             os.remove(filename)
         newpathdata = {name: entry for name, entry in settingsdata.items() if len(entry) > 1}
         self.ini["plugins"] = update_paths(name_path_list, newpathdata, self.ini["lang"])
+        return True
+
+    def check_plugin_settings(self, name, datafilename, settingsdata):
+        """check if data for the plugin was entered correctly and is usable
+        """
+        if not datafilename:
+            gui.show_message(self.gui, text=self.captions['I_FILLALL'])
+            return False
+        prgname = settingsdata[0]
+        if not prgname:
+            # try to get the plugin name from the csv file
+            try:
+                if os.path.splitext(datafilename)[1] == '.csv':
+                    data = readcsv(datafilename)
+                else:
+                    data = readjson(datafilename)
+            except (FileNotFoundError, IsADirectoryError, ValueError):
+                # shared.log_exc()
+                gui.show_message(self.gui, text=self.captions['I_NOCSV'].format(datafilename))
+                return False
+            try:
+                prgname = data[0][shared.SettType.PLG.value]
+            except KeyError:
+                # shared.log_exc()
+                gui.show_message(self.gui, text=self.captions['I_NOPLNAM'].format(datafilename))
+                return False
+        if len(settingsdata) == 1:  # existing plugin
+            try:
+                _ = importlib.import_module(prgname)
+            except ImportError:
+                # shared.log_exc()
+                gui.show_message(self.gui, text=self.captions['I_NOPLREF'].format(datafilename))
+                return False
         return True
 
     def m_rebuild(self, event=None):
@@ -1339,7 +1360,7 @@ class Editor:
             try:
                 newdata = self.book.page.reader.build_data(self.book.page)
             except FileNotFoundError as exception:
-                gui.show_message(self.gui, 'I_ERRRBLD' + '\n({exception})')
+                gui.show_message(self.gui, text=self.captions['I_ERRRBLD'] + f'\n({exception})')
                 return
         else:
             gui.show_message(self.gui, 'I_DEFRBLD')
@@ -1412,7 +1433,7 @@ class Editor:
     def accept_extrasettings(self, program, title, rebuild, showdet, redef, data):
         "check and confirm the input from ExtraSettingsDialog"
         if redef and not showdet:
-            gui.show_message(self, "I_NODET")
+            gui.show_message(self.gui, "I_NODET")
             return False
         if showdet:
             try:
@@ -1434,15 +1455,22 @@ class Editor:
         for name, value, desc in data:
             settingsdict[name] = value
             settdescdict[name] = desc
+        self.remove_custom_settings()
+        self.book.page.settings.update(settingsdict)
+        self.book.page.settings['extra'] = settdescdict
+        return True
+
+    def remove_custom_settings(self):
+        """keep only settingtypes that are globally defined
+
+        non-globally defined settingtypes that are needed will be restored when merging them back in
+        """
         todelete = []
         for setting in self.book.page.settings:
             if setting not in shared.csv_settingnames:
                 todelete.append(setting)
         for setting in todelete:
             del self.book.page.settings[setting]
-        self.book.page.settings.update(settingsdict)
-        self.book.page.settings['extra'] = settdescdict
-        return True
 
     def m_col(self, event=None):
         """define tool-specific settings: column properties
@@ -1453,37 +1481,39 @@ class Editor:
             return
         oldcolcount = len(self.book.page.column_info)
         if not gui.show_dialog(self, gui.ColumnSettingsDialog):
-            # strip off old colno and exit
-            self.book.page.column_info = [x[:-1] for x in self.book.page.column_info]
             return
-        if self.modified:
-            new_pagedata = {}
-            for key, value in self.book.page.data.items():
-                newvalue = []
-                for colinf in self.book.page.column_info:
-                    test = colinf[-1]
-                    if test == 'new':
-                        newvalue.append('')
-                    else:
-                        newvalue.append(value[test])
-                new_pagedata[key] = newvalue
-            self.book.page.data = new_pagedata
-        self.book.page.column_info = [x[:-1] for x in self.book.page.column_info]
-        if not self.modified:
+        if [x[:-1] for x in self.book.page.new_column_info] == self.book.page.column_info:
             gui.show_message(self.gui, 'I_NOCHG')
             return
+        self.book.page.data = self.build_new_pagedata()
+        self.book.page.column_info = [x[:-1] for x in self.book.page.new_column_info]
 
         if os.path.splitext(self.book.page.pad)[1] == '.csv':
             writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
                      self.book.page.data, self.ini['lang'])
         else:
             writejson(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
-                      self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
+                      self.book.page.data, self.book.page.otherstuff)
         headers = [self.captions[col[0]] for col in self.book.page.column_info]
         self.book.page.gui.update_columns(oldcolcount, len(headers))
         self.book.gui.refresh_locs(headers)
         self.book.page.gui.refresh_headers(headers)
         self.book.page.populate_list()
+
+    def build_new_pagedata(self):
+        """rebuild the keydef data, removing deleted columns and adding empty values for new ones
+        """
+        new_pagedata = {}
+        for key, value in self.book.page.data.items():
+            newvalue = []
+            for colinf in self.book.page.column_info:
+                test = colinf[-1]
+                if test == 'new':
+                    newvalue.append('')
+                else:
+                    newvalue.append(value[test])
+            new_pagedata[key] = newvalue
+        return new_pagedata
 
     def accept_columnsettings(self, data):
         "check and confirm input from columnsettings dialog"
@@ -1493,7 +1523,8 @@ class Editor:
         if len(set(test)) != len(test):
             gui.show_message(self.gui, 'I_DPLNAM')
             return False, False  # not ok but continue with dialog
-        if len([x for x in test if x]) != len(test):
+        # if len([x for x in test if x]) != len(test):
+        if not all(test):
             gui.show_message(self.gui, 'I_MISSNAM')
             return False, False  # not ok but continue with dialog
         # checken op dubbele kolomnummers
@@ -1501,7 +1532,8 @@ class Editor:
         if len(set(test)) != len(test):
             gui.show_message(self.gui, 'I_DPLCOL')
             return False, False  # not ok but continue with dialog
-        # lastcol = -1
+        # colno wordt alleen gebruikt voor het sorteren
+        # old_colno hebben we nog nodig voor build_new_pagedata
         for value in sorted(data, key=lambda x: x[2]):
             name, width, colno, flag, old_colno = value
             if name in self.col_names:
@@ -1510,33 +1542,40 @@ class Editor:
                 new_titles.append(name)
             column_info.append([name, width, flag, old_colno])
         if new_titles:
-            languages = [x.name for x in shared.HERELANG.iterdir() if x.suffix == ".lng"]
-            for indx, name in enumerate(languages):
-                if name == self.ini['lang']:
-                    colno = indx + 1
-                    break
-            self.dialog_data = {'textid': 'C_XXX', 'new_titles': new_titles,
-                                'languages': languages, 'colno': colno}
-            if not gui.show_dialog(self, gui.NewColumnsDialog):
+            canceled, titles, colinfo = self.build_data_for_new_titles(new_titles, column_info)
+            if canceled:
                 # gui.show_message(self.gui, 'T_CANCLD')
                 return False, True  # not ok, do not continue with dialog
-            for item in column_info:
-                for key, value in self.dialog_data[self.ini['lang']].items():
-                    if item[0] == value:
-                        item[0] = key
-                        break
-            add_columntitledata(self.dialog_data)
-            for ix, item in enumerate(new_titles):
-                for name, value in self.dialog_data[self.ini['lang']].items():
-                    if value == item:
-                        new_titles[ix] = (name, item)
-                        break
-        self.modified = self.book.page.column_info != column_info
-        self.book.page.column_info = column_info
-        for id_, name in new_titles:
+        self.book.page.new_column_info = colinfo
+        for id_, name in titles:
             self.captions[id_] = name
             self.book.page.captions[id_] = name
         return True, False  # ok, done with dialog (but not canceled)
+
+    def build_data_for_new_titles(self, new_titles, column_info):
+        """ask for column details, ids for new titles etc.
+        """
+        languages = [x.name for x in shared.HERELANG.iterdir() if x.suffix == ".lng"]
+        for indx, name in enumerate(languages):
+            if name == self.ini['lang']:
+                colno = indx + 1
+                break
+        self.dialog_data = {'textid': 'C_XXX', 'new_titles': new_titles,
+                            'languages': languages, 'colno': colno}
+        if not gui.show_dialog(self, gui.NewColumnsDialog):
+            return True, None, None  # dialog was canceled
+        for item in column_info:
+            for key, value in self.dialog_data[self.ini['lang']].items():
+                if item[0] == value:
+                    item[0] = key
+                    break
+        add_columntitledata(self.dialog_data)
+        for ix, item in enumerate(new_titles):
+            for name, value in self.dialog_data[self.ini['lang']].items():
+                if value == item:
+                    new_titles[ix] = (name, item)
+                    break
+        return False, new_titles, column_info  # not canceled
 
     def accept_newcolumns(self, entries):
         "check and confirm input from newcolumns dialog"
@@ -1549,7 +1588,7 @@ class Editor:
                 if line.strip() and not line.startswith('#'):
                     used_symbols.append(line.split()[0])
         # check and process the information entered
-        print('accepting', entries)
+        # print('accepting', entries)
         self.dialog_data = collections.defaultdict(dict)
         for row in entries:
             for colno, col in enumerate(row):
@@ -1582,7 +1621,7 @@ class Editor:
                          self.book.page.column_info, self.book.page.data, self.ini['lang'])
             else:
                 writejson(self.book.page.pad, self.book.page.settings,
-                          self.book.page.column_info, self.book.page.data, self.otherstuff)
+                          self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
             self.book.page.populate_list()
 
     def m_lang(self, event=None):
