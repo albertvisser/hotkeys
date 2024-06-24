@@ -63,7 +63,7 @@ C_FIND Find text in
 C_SELFIL Choose a file
 C_PRGNAM Program
 C_CSVLOC Location of the CSV-file
-T_TOOLS Using this dialog you can determine for which programs keyboard definitions will be shown / and where these are located (in the form of csv files)
+T_TOOLS Using this dialog you can determine for which programs keyboard definitions will be shown / and where these are located (in the form of csv/json files)
 T_SHORT A hotkey viewer/editor
 T_LONG Originally built for Total Commander / extended for use with all your favourite applications
 T_XTRASET Define extra settings (e.g. location of keyboard config files) for {}
@@ -81,7 +81,7 @@ T_TRANS Enter a translation id for each new column name / as well as the necessa
 Q_SAVCHG Previously selected definition was changed - save now?
 
 # remove dialog
-Q_REMCSV Also remove keydefs data (csv)
+Q_REMCSV Also remove keydefs data (csv/json)
 Q_REMPLG Also remove plugin code
 
 # messages
@@ -104,7 +104,7 @@ S_DETS show keydef details in a separate part of the screen
 Q_SAVLOC Where do you want to store this file?
 I_RSTRT You may need to restart the other program for the changes to take effect
 I_NEEDNAME Sorry, can't continue without a name - please enter one or cancel
-P_INICSV Initialize new csv file for this application?
+P_INICSV Initialize new csv/json file for this application?
 I_NOSETFIL CSV file {} not found
 I_GOTSETFIL CSV file {} already exists
 I_GOTPLGFIL plugin module {} already exists
@@ -124,11 +124,11 @@ Q_REMPRG Are you sure you want to remove the checked programs?
 I_#FOUND {} items found
 Q_REMSET Are you sure you want to remove the checked settings?
 Q_REMCOL Are you sure you want to remove the checked column settings?
-I_ADDSET Please add settings information to csv file first
-I_ADDCOL Please add settings and column information to csv file first
+I_ADDSET Please add settings information to plugin settings file first
+I_ADDCOL Please add settings and column information to plugin settings file first
 I_DEFSAV Please define savekeys function in plugin or disable this option
 I_DEFRBLD Please define rebuild function in plugin or disable this option
-I_ERRRBLD Error rebuilding csv file (check filenames in plugin settings)
+I_ERRRBLD Error rebuilding plugin settings file (check filenames)
 I_NORBLD CSV not (re)built - {}
 I_DPLCOL Can't save this: identical values for column numbers
 I_DPLNAM Can't save this: identical values for column names
@@ -144,7 +144,7 @@ I_STITLE Using standard titlei
 I_NOPATH No path data for HotKeyPanel
 I_NOSETT Can't build/get settings for {}
 I_FILLALL Please fill out all the filenames
-I_NOCSV {} does not seem to be a usable csv file
+I_NOCSV {} does not seem to be a usable plugin settings file
 I_NOPLNAM {} does not contain a reference to a plugin (PluginName setting)
 I_NOPLREF {} does not contain a reference to a valid plugin
 I_RBLD Keyboard definitions rebuilt

@@ -63,7 +63,7 @@ C_FIND Zoek tekst in
 C_SELFIL Selecteer een bestand
 C_PRGNAM Programma
 C_CSVLOC Locatie van het CSV-bestand
-T_TOOLS Met deze dialoog kun je bepalen voor welke tools keyboarddefinities getoond worden / en waar deze staan (in de vorm van csv bestanden)
+T_TOOLS Met deze dialoog kun je bepalen voor welke tools keyboarddefinities getoond worden / en waar deze staan (in de vorm van csv/json bestanden)
 T_SHORT Een hotkey viewer/editor
 T_LONG oorspronkelijk gebouwd voor Total Commander / uitgebreid om te gebruiken bij al je favoriete tools
 T_XTRASET Definieer extra instellingen (bijv.. plaats van toetsdefinitie bestanden) voor {}
@@ -81,7 +81,7 @@ T_TRANS Geef voor elke nieuwe kolomnaam een id op voor in het (ver)taalbestand /
 Q_SAVCHG Eerder gekozen definitie is gewijzigd - nu opslaan?
 
 # remove dialog
-Q_REMCSV keydef data (csv) ook verwijderen
+Q_REMCSV keydef data (csv/json bestand) ook verwijderen
 Q_REMPLG plugin code ook verwijderen
 
 # boodschappen
@@ -124,11 +124,11 @@ Q_REMPRG Wil je de aangekruiste programma's echt verwijderen?
 I_#FOUND {} items gevonden
 Q_REMSET Wil je de aangekruiste instellingen echt verwijderen?
 Q_REMCOL Wil je de aangekruiste kolominstellingen echt verwijderen?
-I_ADDSET  Eerst settings informatie aan csv bestand toevoegen
-I_ADDCOL  Eerst settings en kolom informatie aan csv bestand toevoegen
+I_ADDSET  Eerst settings informatie aan csv/json bestand toevoegen
+I_ADDCOL  Eerst settings en kolom informatie aan csv/json bestand toevoegen
 I_DEFSAV  Eerst savekeys functie in plugin definiëren of deze keuze deactiveren
 I_DEFRBLD Eerst rebuild functie in plugin definiëren of deze keuze deactiveren
-I_ERRRBLD Fout bij opbouwen csv file (controleer bestandsnamen in plugin settings)
+I_ERRRBLD Fout bij opbouwen csv/json bestand (controleer bestandsnamen in plugin settings)
 I_NORBLD CSV niet op(nieuw) aangemaakt - {}
 I_DPLCOL  Opslaan niet mogelijk: gelijke waarden voor kolomnummers
 I_DPLNAM  Opslaan niet mogelijk: gelijke waarden voor kolomnnamen
@@ -144,7 +144,7 @@ I_STITLE Standaard titel wordt gebruikt
 I_NOPATH Geen pad gegevens for HotKeyPanel
 I_NOSETT Settings voor {} kunnen niet opgehaald/gegenereerd worden
 I_FILLALL Alle bestandsnamen invullen graag
-I_NOCSV  {} ziet er niet uit als een bruikbaar csv bestand
+I_NOCSV  {} ziet er niet uit als een bruikbaar csv/json bestand
 I_NOPLNAM {} bevat geen verwijzing naar een plugin (PluginName setting)
 I_NOPLREF {} bevat geen verwijzing naar een valide plugin
 I_RBLD Toetsen definities opnieuw opgebouwd
