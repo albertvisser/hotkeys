@@ -79,16 +79,19 @@ def _translate_keynames(inp):
 
 
 def get_data_from_xml(filename):
+    "gegevens in xml bestand bewerkbaar maken"
     return ET.parse(filename)
 
 
 def get_data_from_html(filename):
+    "gegevens in html bestand bewerkbaar maken"
     with open(filename) as doc:
         soup = bs.BeautifulSoup(doc, 'lxml')
     return soup
 
 
 def get_data_from_csv(filename):
+    "gegevens uit csv bestand lezen en bewerkbaar maken"
     result = []
     with open(filename) as _in:
         rdr = csv.reader(_in)
@@ -97,6 +100,7 @@ def get_data_from_csv(filename):
 
 
 def save_list_to_csv(data, filename):
+    "gegevens omzetten in csv formaat en opslaan"
     if os.path.exists(filename):
         shutil.copyfile(filename, filename + '~')
     with open(filename, 'w') as _out:
@@ -176,8 +180,8 @@ def analyze_keydefs(root):  # , cat_name):
                 elif "cmdhintcell" in col['class']:
                     desctable = []
                     for item in col.children:
-                        ## if command == 'cm_DirHistory':
-                            ## print(item.name, end=', ')
+                        # if command == 'cm_DirHistory':
+                        #     print(item.name, end=', ')
                         if not item.name:
                             desctable.append(item)
                         elif item.name != 'table':
@@ -201,8 +205,8 @@ def analyze_keydefs(root):  # , cat_name):
                                     elif "innerdescdesccell" in cell['class']:
                                         desc = cell.get_text()
                                 params.append((name, value, desc))
-                        ## else:
-                            ## print(item)
+                        # else:
+                        #     print(item)
 
             cmddesc = ' '.join([x.strip() for x in desctable if x.strip()]).strip(' .')
             if defkey:
@@ -513,7 +517,7 @@ class CsvBuilder:
                                           'desc': value}
 
     def format_shortcuts(self):
-        # nou nog omwerken naar het gewenste formaat
+        "ingelezen keydefs omwerken naar het intern gebruikte formaat"
         new_shortcuts = {}
         keyseq = 0
         for keycombo, attrdict in self.shortcuts.items():
@@ -529,6 +533,42 @@ class CsvBuilder:
             new_shortcuts[keyseq] = (key, mods, attrdict['standard'], context, attrdict['cmd'],
                                      attrdict['param'], attrdict['ctrl'], attrdict.get('desc', ''))
         self.shortcuts = new_shortcuts
+
+
+def update_otherstuff_inbound(otherstuff):
+    """convert dict keys from space-separated string to key-modifier-context format
+    """
+    newstuff = {}
+    for key, value in otherstuff['stdkeys'].items():
+        newkey = key.split(' ')  # split explicitely on one space
+        newstuff[newkey] = value
+    otherstuff['stdkeys'] = newstuff
+    newstuff = {}
+    for key, value in otherstuff['defaults'].items():
+        newkey = key.split(' ')  # split explicitely on one space
+        newstuff[newkey] = value
+    otherstuff['defaults'] = newstuff
+    return otherstuff
+
+
+def update_otherstuff_outbound(otherstuff):
+    """modify dict keys from list to space-separated string to accomodate json format
+    """
+    newstuff = {}
+    for key, value in otherstuff['stdkeys'].items():
+        newkey = ' '.join(list(key))
+        if isinstance(value, set):
+            value = list(value)
+        newstuff[newkey] = value
+    otherstuff['stdkeys'] = newstuff
+    newstuff = {}
+    for key, value in otherstuff['defaults'].items():
+        newkey = ' '.join(list(key))
+        if isinstance(value, set):
+            value = list(value)
+        newstuff[newkey] = value
+    otherstuff['defaults'] = newstuff
+    return otherstuff
 
 
 how_to_save = """\

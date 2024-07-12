@@ -75,6 +75,30 @@ def build_data(parent, showinfo=True):
                      'sections': list(sections), 'descriptions': descs}
 
 
+def _update_otherstuff_inbound(otherstuff):
+    """convert dict keys from space-separated string to key-modifier-context format
+    """
+    newstuff = {}
+    for key, value in otherstuff['defaultkeys'].items():
+        newkey = key.split(' ')  # split explicitely on one space
+        newstuff[newkey] = value
+    otherstuff['defaultkeys'] = newstuff
+    return otherstuff
+
+
+def _update_otherstuff_outbound(otherstuff):
+    """modify dict keys from list to space-separated string to accomodate json format
+    """
+    newstuff = {}
+    for key, value in otherstuff['defaultkeys'].items():
+        newkey = ' '.join(list(key))
+        if isinstance(value, set):
+            value = list(value)
+        newstuff[newkey] = value
+    otherstuff['defaultkeys'] = newstuff
+    return otherstuff
+
+
 def add_extra_attributes(win):
     """add attributes specific to this plugin
     """

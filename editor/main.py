@@ -268,8 +268,8 @@ def initjson(loc, data):    # intended to replace the previous function
 
     Save some basic settings together with some column info
     """
-    writejson(loc, {x: data[i] for i, x in enumerate(shared.csv_settingnames)}, [initial_columns],
-              {}, {})
+    writejson(loc, None, {x: data[i] for i, x in enumerate(shared.csv_settingnames)},
+              [initial_columns], {}, {})
 
 
 def readcsv(pad):
@@ -328,17 +328,16 @@ def readjson(pad):    # intended to replace the previous function
     keydata = fulldict.pop('keydata')
     otherstuff = fulldict
     for name, item in otherstuff.items():
-        # if isinstance(item, set):
-        #     item = list(item)
-        if ((plugin_name == 'DC_hotkeys' and name in ('stdkeys', 'defaults'))
-                or (plugin_name == 'Nemo_hotkeys' and name == 'defaultkeys')):
-            newitem = {}
-            for key, value in item.items():
-                newkey = ' '.join(list(key))
-                if isinstance(value, set):
-                    value = list(value)
-                newitem[newkey] = value
-            item = newitem
+        # verplaatsen naar betreffende plugins
+        # if ((plugin_name == 'DC_hotkeys' and name in ('stdkeys', 'defaults'))
+        #         or (plugin_name == 'Nemo_hotkeys' and name == 'defaultkeys')):
+        #     newitem = {}
+        #     for key, value in item.items():
+        #         newkey = ' '.join(list(key))
+        #         if isinstance(value, set):
+        #             value = list(value)
+        #         newitem[newkey] = value
+        #     item = newitem
         otherstuff[name] = item
     return settings, column_info, keydata, otherstuff
 
@@ -373,25 +372,28 @@ def getsettdesc(name, settings, csvoms):
     return settdesc
 
 
-def writejson(pad, settings, coldata, data, otherstuff):  # intended to replace the previous function
+def writejson(pad, reader, settings, coldata, data, otherstuff):
     """schrijf de meegegeven data als json bestand naar de aangegeven locatie
     """
     if os.path.exists(pad):
         shutil.copyfile(pad, pad + '~')
     plugin_name = os.path.splitext(os.path.basename(pad))[0]
     fulldict = {'settings': settings, 'column_info': coldata, 'keydata': data}
+    if reader and hasattr(reader, 'update_otherstuff_outbound'):
+        otherstuff = reader.update_otherstuff_outbound(otherstuff)
     for name, item in otherstuff.items():
         if isinstance(item, set):
             item = sorted(list(item))
-        if ((plugin_name == 'DC_hotkeys' and name in ('stdkeys', 'defaults'))
-                or (plugin_name == 'Nemo_hotkeys' and name == 'defaultkeys')):
-            newitem = {}
-            for key, value in item.items():
-                newkey = ' '.join(list(key))
-                if isinstance(value, set):
-                    value = list(value)
-                newitem[newkey] = value
-            item = newitem
+        # verplaatsen naar betreffende plugins
+        # if ((plugin_name == 'DC_hotkeys' and name in ('stdkeys', 'defaults'))
+        #         or (plugin_name == 'Nemo_hotkeys' and name == 'defaultkeys')):
+        #     newitem = {}
+        #     for key, value in item.items():
+        #         newkey = ' '.join(list(key))
+        #         if isinstance(value, set):
+        #             value = list(value)
+        #         newitem[newkey] = value
+        #     item = newitem
         if 'otherstuff' not in fulldict:
             fulldict['otherstuff'] = {}
         fulldict['otherstuff'][name] = item
@@ -486,16 +488,19 @@ class HotkeyPanel:
                     nodata = True
             if nodata:
                 nodata = self.captions['I_NODATA'].replace('data', 'plugin code')
-
-            self.parent.page = self
-            if os.path.splitext(self.pad)[1] == '.csv':
-                self.otherstuff = {}  # ruimte voor zaken als een lijst met mogelijke commando's
-                if hasattr(self.reader, 'build_data'):
-                    try:
-                        self.otherstuff = self.reader.build_data(self, showinfo=False)[1]
-                    except FileNotFoundError as exception:
-                        # shared.log_exc()
-                        nodata = self.captions['I_NOSETT'].format(modulename) + f'\n{exception}'
+            else:
+                self.parent.page = self
+                if os.path.splitext(self.pad)[1] == '.csv':
+                    self.otherstuff = {}  # ruimte voor zaken als een lijst met mogelijke commando's
+                    if hasattr(self.reader, 'build_data'):
+                        try:
+                            self.otherstuff = self.reader.build_data(self, showinfo=False)[1]
+                        except FileNotFoundError as exception:
+                            # shared.log_exc()
+                            nodata = self.captions['I_NOSETT'].format(modulename) + f'\n{exception}'
+                else:
+                    if hasattr(self.reader, 'update_otherstuff_inbound'):
+                        self.otherstuff = self.reader.update_otherstuff_inbound(self.otherstuff)
 
         if nodata:
             # print('init HotkeyPanel with no data', nodata)
@@ -547,7 +552,8 @@ class HotkeyPanel:
             writecsv(self.pad, self.settings, self.column_info, self.data,
                      self.parent.parent.ini['lang'])
         else:
-            writejson(self.pad, self.settings, self.column_info, self.data, self.otherstuff)
+            writejson(self.pad, self.reader, self.settings, self.column_info, self.data,
+                      self.otherstuff)
         self.set_title(modified=False)
 
     def setcaptions(self):
@@ -1374,8 +1380,8 @@ class Editor:
                 writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
                          self.book.page.data, self.ini['lang'])
             else:
-                writejson(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
-                          self.book.page.data, self.book.page.otherstuff)
+                writejson(self.book.page.pad, self.book.page.reader, self.book.page.settings,
+                          self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
             self.book.page.populate_list()
             mld = self.captions['I_RBLD']
         else:
@@ -1415,7 +1421,7 @@ class Editor:
                 writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
                          self.book.page.data, self.ini['lang'])
             else:
-                writejson(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
+                writejson(self.book.page.pad, self.book.page.reader, self.book.page.settings,
                           self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
             test_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
             test_dets = bool(int(self.book.page.settings[shared.SettType.DETS.value]))
@@ -1492,8 +1498,8 @@ class Editor:
             writecsv(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
                      self.book.page.data, self.ini['lang'])
         else:
-            writejson(self.book.page.pad, self.book.page.settings, self.book.page.column_info,
-                      self.book.page.data, self.book.page.otherstuff)
+            writejson(self.book.page.pad, self.book.page.reader, self.book.page.settings,
+                      self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
         headers = [self.captions[col[0]] for col in self.book.page.column_info]
         self.book.page.gui.update_columns(oldcolcount, len(headers))
         self.book.gui.refresh_locs(headers)
@@ -1620,7 +1626,7 @@ class Editor:
                 writecsv(self.book.page.pad, self.book.page.settings,
                          self.book.page.column_info, self.book.page.data, self.ini['lang'])
             else:
-                writejson(self.book.page.pad, self.book.page.settings,
+                writejson(self.book.page.pad, self.book.page.reader, self.book.page.settings,
                           self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
             self.book.page.populate_list()
 

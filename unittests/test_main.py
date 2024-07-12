@@ -74,6 +74,9 @@ class MockReader2:
     """
     def build_data(self):
         pass
+    def update_otherstuff_inbound(self, data):
+        print('called Reader.update_otherstuff_inbound with arg', data)
+        return data
 
 
 def test_readlang(monkeypatch, tmp_path):
@@ -310,7 +313,7 @@ def test_initjson(monkeypatch, capsys):
     monkeypatch.setattr(testee, 'initial_columns', (('a', 1, True), 'b', 2, False))
     testee.initjson('settfile', ['xxx', 'yyy'])
     assert capsys.readouterr().out == ("called writejson with args"
-                                       " ('settfile', {'x': 'xxx', 'y': 'yyy'},"
+                                       " ('settfile', None, {'x': 'xxx', 'y': 'yyy'},"
                                        " [(('a', 1, True), 'b', 2, False)], {}, {})\n")
 
 # niet meer nodig als ik alleen nog maar met json werk
@@ -433,22 +436,52 @@ def test_getsettdesc():
     csvoms = {'xxx': 'zzzzzz'}
     assert testee.getsettdesc('xxx', settings, csvoms) == 'zzzzzz'
 
-def test_writejson(tmp_path):
+def test_writejson(tmp_path, capsys):
     """unittest for main.writejson
     """
+    def mock_update(data):
+        print('called Reader.update_otherstuff_outbound with arg', data)
+        return data
     plgfile = tmp_path / 'test' / 'plugin.json'
     plgfile.parent.mkdir()
-    testee.writejson(plgfile, {'settings': 'dict'}, [['column', 'info']], {'keycombo': 'dict'}, {})
+    reader = MockReader()
+    testee.writejson(plgfile, reader, {'settings': 'dict'}, [['column', 'info']],
+                     {'keycombo': 'dict'}, {})
     assert plgfile.read_text() == ('{"settings": {"settings": "dict"},'
                                    ' "column_info": [["column", "info"]],'
                                    ' "keydata": {"keycombo": "dict"}}')
-    testee.writejson(str(plgfile), {'settings': 'dict'}, [['column', 'info']], {'keycombo': 'dict'},
+    assert capsys.readouterr().out == ''
+    testee.writejson(str(plgfile), reader, {'settings': 'dict'}, [['column', 'info']],
+                     {'keycombo': 'dict'},
                      {'xxx': {'a', 'b', 'c'}, 'yyy': ['q', 'r'], 'zzz': {'m': 'n'}})
     assert plgfile.read_text() == ('{"settings": {"settings": "dict"},'
                                    ' "column_info": [["column", "info"]],'
                                    ' "keydata": {"keycombo": "dict"},'
                                    ' "otherstuff": {"xxx": ["a", "b", "c"], "yyy": ["q", "r"],'
                                    ' "zzz": {"m": "n"}}}')
+    assert capsys.readouterr().out == ''
+    reader.update_otherstuff_outbound = mock_update
+    otherstuff = {'xxx': {'a', 'b', 'c'}, 'yyy': ['q', 'r'], 'zzz': {'m': 'n'}}
+    testee.writejson(str(plgfile), reader, {'settings': 'dict'}, [['column', 'info']],
+                     {'keycombo': 'dict'},
+                     {'xxx': {'a', 'b', 'c'}, 'yyy': ['q', 'r'], 'zzz': {'m': 'n'}})
+    assert plgfile.read_text() == ('{"settings": {"settings": "dict"},'
+                                   ' "column_info": [["column", "info"]],'
+                                   ' "keydata": {"keycombo": "dict"},'
+                                   ' "otherstuff": {"xxx": ["a", "b", "c"], "yyy": ["q", "r"],'
+                                   ' "zzz": {"m": "n"}}}')
+    assert capsys.readouterr().out == (
+            f"called Reader.update_otherstuff_outbound with arg {otherstuff}\n")
+    reader = None
+    testee.writejson(str(plgfile), reader, {'settings': 'dict'}, [['column', 'info']],
+                     {'keycombo': 'dict'},
+                     {'xxx': {'a', 'b', 'c'}, 'yyy': ['q', 'r'], 'zzz': {'m': 'n'}})
+    assert plgfile.read_text() == ('{"settings": {"settings": "dict"},'
+                                   ' "column_info": [["column", "info"]],'
+                                   ' "keydata": {"keycombo": "dict"},'
+                                   ' "otherstuff": {"xxx": ["a", "b", "c"], "yyy": ["q", "r"],'
+                                   ' "zzz": {"m": "n"}}}')
+    assert capsys.readouterr().out == ''
 
 def test_quick_check(monkeypatch, capsys):
     """unittest for main.quick_check
@@ -631,6 +664,7 @@ def test_hotkeypanel_init(monkeypatch, capsys):
 
     monkeypatch.setattr(testee, 'readjson', mock_readjson)
     testobj = testee.HotkeyPanel(parent, 'plugin.json')
+    # testobj.reader = types.SimpleNamespace()
     assert (testobj.settings, testobj.column_info, testobj.data) == ({'x': 'y'}, [[], []], {})
     assert capsys.readouterr().out == ('called SingleDataInterface.__init__ with args'
                                        f" ('parent gui', {testobj})\n"
@@ -690,6 +724,27 @@ def test_hotkeypanel_init(monkeypatch, capsys):
                                        "called SDI.setup_list\n"
                                        "called HotkeyPanel.refresh_extrascreen with arg first_item\n")
 
+    monkeypatch.setattr(testee.importlib, 'import_module', mock_import_ok_2)
+    testobj = testee.HotkeyPanel(parent, 'plugin.json')
+    assert (testobj.settings, testobj.column_info, testobj.data) == (
+            {'PluginName': 'plugin', 'PanelName': 'A Panel', 'ShowDetails': '1', 'RedefineKeys': '0'},
+            [['x', 0], ['y', 1]], {})
+    assert testobj.has_extrapanel
+    assert testobj.title == 'A Panel'
+    assert not testobj.initializing_screen
+    assert capsys.readouterr().out == ("called SingleDataInterface.__init__ with args"
+                                       f" ('parent gui', {testobj})\n"
+                                       "called shared.log with arg `plugin.json`\n"
+                                       "called readjson with arg `plugin.json`\n"
+                                       "called importlib.import_module with args ('plugin',)\n"
+                                       "called Reader.update_otherstuff_inbound with arg {}\n"
+                                       "called HotkeyPanel.add_extra_attributes\n"
+                                       "called SDI.add_extra_fields\n"
+                                       "called SDI.set_extrascreen_editable with args (False,)\n"
+                                       "called SDI.setup_list\n"
+                                       "called HotkeyPanel.refresh_extrascreen with arg first_item\n")
+
+    monkeypatch.setattr(testee.importlib, 'import_module', mock_import_ok)
     monkeypatch.setattr(testee, 'readcsv', mock_readcsv_2)
     testobj = testee.HotkeyPanel(parent, 'plugin.csv')
     assert capsys.readouterr().out == ('called SingleDataInterface.__init__ with args'
@@ -809,7 +864,8 @@ def test_hotkeypanel_savekeys(monkeypatch, capsys):
     testobj.pad = 'xxxx.json'
     testobj.savekeys()
     assert capsys.readouterr().out == (f"called Reader.savekeys with arg {testobj}\n"
-                                       "called writejson with args ('xxxx.json', ['settings'],"
+                                       f"called writejson with args ('xxxx.json', {testobj.reader},"
+                                       " ['settings'],"
                                        " ['column', 'info'], ['data'], ['other', 'stuff'])\n"
                                        "called HotkeyPanel.set_title with args {'modified': False}\n")
 
@@ -2543,7 +2599,7 @@ def test_editor_m_rebuild(monkeypatch, capsys):
     testobj.m_rebuild()
     assert capsys.readouterr().out == (
             "called Plugin.build_data with arg '<HotkeyPanel ''>'\n"
-            "called writejson with args ('testfile.json',"
+            f"called writejson with args ('testfile.json', {testobj.book.page.reader},"
             " {'plugin': 'settings'}, {'column': 'info'}, {'key': 'def'}, {'other': 'stuff'})\n"
             "called HotkeyPanel.populate_list\n"
             f"called gui.show_message with args ({testobj.gui},) {{'text': 'RBLD'}}\n")
@@ -2621,13 +2677,14 @@ def test_editor_m_tool(monkeypatch, capsys):
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_show_2)
     testobj.book.page.settings = {}
     testobj.book.page.has_extrapanel = False
+    testobj.book.page.reader = MockReader()
     testobj.m_tool()
     assert testobj.book.page.has_extrapanel
     assert capsys.readouterr().out == (
             f"called gui.show_dialog with args ({testobj}, {testee.gui.ExtraSettingsDialog})\n"
-            "called writejson with args ('path/to/data.json',"
+            f"called writejson with args ('path/to/data.json', {testobj.book.page.reader},"
             " {'RedefineKeys': 1, 'ShowDetails': 1, 'RebuildData': 1},"
-            " ['x'], ['x'], {1: ['y', 'z']}, {'a': {'b': 'c'}})\n"
+            " ['x'], {1: ['y', 'z']}, {'a': {'b': 'c'}})\n"
             "called SingleDataInterface.modify_menu_item with args ('M_SAVE', True)\n"
             "called SingleDataInterface.modify_menu_item with args ('M_RBLD', True)\n"
             "called TabbedInterface.get_selected_panel\n"
@@ -2641,9 +2698,9 @@ def test_editor_m_tool(monkeypatch, capsys):
     assert testobj.book.page.has_extrapanel
     assert capsys.readouterr().out == (
             f"called gui.show_dialog with args ({testobj}, {testee.gui.ExtraSettingsDialog})\n"
-            "called writejson with args ('path/to/data.json',"
+            f"called writejson with args ('path/to/data.json', {testobj.book.page.reader},"
             " {'RedefineKeys': 1, 'ShowDetails': 1, 'RebuildData': 1},"
-            " ['x'], ['x'], {1: ['y', 'z']}, {'a': {'b': 'c'}})\n"
+            " ['x'], {1: ['y', 'z']}, {'a': {'b': 'c'}})\n"
             "called SingleDataInterface.modify_menu_item with args ('M_SAVE', True)\n"
             "called SingleDataInterface.modify_menu_item with args ('M_RBLD', True)\n"
             "called TabbedInterface.get_selected_panel\n"
@@ -2795,13 +2852,15 @@ def test_editor_m_col(monkeypatch, capsys):
     testobj.book.page.pad = 'testfile.json'
     testobj.book.page.settings = {'page': 'settings'}
     testobj.book.page.column_info = [('xx', 10, False)]
+    testobj.book.page.reader = MockReader()
     testobj.m_col()
     assert testobj.book.page.column_info == [('xx', 10, False), ('yy', 15, False)]
     assert capsys.readouterr().out == (
             f"called Editor.read_columntitledata with arg '{testobj}'\n"
             f"called gui.show_dialog with args ({testobj}, {testee.gui.ColumnSettingsDialog})\n"
             "called Editor.build_new_pagedata\n"
-            "called writejson with args ('testfile.json', {'page': 'settings'},"
+            f"called writejson with args ('testfile.json', {testobj.book.page.reader},"
+            " {'page': 'settings'},"
             " [('xx', 10, False), ('yy', 15, False)], None, {'other': 'stuff'})\n"
             "called SingleDataInterface.update_colums with args (1, 2)\n"
             "called TabbedInterface.refresh_locs with arg '['aaa', 'bbb']'\n"
@@ -3033,10 +3092,12 @@ def test_editor_m_entry(monkeypatch, capsys):
                                        " <class 'editor.dialogs_qt.EntryDialog'>)\n")
 
     testobj.book.page.data = {'a': 'b'}
+    testobj.book.page.reader = MockReader()
     testobj.m_entry()
     assert capsys.readouterr().out == (f"called gui.show_dialog with args ({testobj},"
                                        " <class 'editor.dialogs_qt.EntryDialog'>)\n"
                                        "called writejson with args ('settings.json',"
+                                       f" {testobj.book.page.reader},"
                                        " {'x': 'y'}, [('column', 'info')], {'a': 'b'},"
                                        " {'other': 'stuff'})\n"
                                        "called HotkeyPanel.populate_list\n")
