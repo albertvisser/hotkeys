@@ -233,12 +233,12 @@ class SetupDialog(qtw.QDialog):
         write the settings to this file along with some sample data - deferred to
         confirmation of the filesdialog
         """
-        ok = self.parent.master.accept_csvsettings(self.t_loc.input.text(),
-                                                   self.t_program.text(),
-                                                   self.t_title.text(),
-                                                   self.c_rebuild.isChecked(),
-                                                   self.c_details.isChecked(),
-                                                   self.c_redef.isChecked())
+        ok = self.parent.master.accept_pluginsettings(self.t_loc.input.text(),
+                                                      self.t_program.text(),
+                                                      self.t_title.text(),
+                                                      self.c_rebuild.isChecked(),
+                                                      self.c_details.isChecked(),
+                                                      self.c_redef.isChecked())
         if ok:
             super().accept()
 

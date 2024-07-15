@@ -226,12 +226,12 @@ class SetupDialog(wx.Dialog):
         write the settings to this file along with some sample data - deferred to
         confirmation of the filesdialog
         """
-        return self.parent.master.accept_csvsettings(self.t_loc.GetValue(),
-                                                     self.t_program.GetValue(),
-                                                     self.t_title.GetValue(),
-                                                     self.c_rebuild.GetValue(),
-                                                     self.c_details.GetValue(),
-                                                     self.c_redef.GetValue())
+        return self.parent.master.accept_pluginsettings(self.t_loc.GetValue(),
+                                                        self.t_program.GetValue(),
+                                                        self.t_title.GetValue(),
+                                                        self.c_rebuild.GetValue(),
+                                                        self.c_details.GetValue(),
+                                                        self.c_redef.GetValue())
 
 
 class DeleteDialog(wx.Dialog):
