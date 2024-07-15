@@ -98,44 +98,8 @@ def build_csv_sample_data(lang):
     return csv_sample_data
 
 
-# def get_pluginname(csvname):
-#     "return the plugin's filename from the plugin's module name"
-#     with open(csvname) as _in:
-#         for line in _in:
-#             test = line.split(',')
-#             if test[:2] == [LineType.SETT.value, shared.SettType.PLG.value]:
-#                 pl_name = test[2]
-#                 break
-#     # ideally we should import the given module to determine the actual file name
-#     return pl_name.replace('.', '/') + '.py'
-
-
 def read_settings(ini):
-    "get application settings from a given location"
-    settings = {}
-    try:
-        sett = importlib.import_module(ini)
-        settings['filename'] = sett.__file__
-    except ImportError:
-        shared.log_exc()
-        sett = None
-    try:
-        settings['plugins'] = sett.PLUGINS
-    except AttributeError:
-        settings['plugins'] = []
-    try:
-        settings['lang'] = sett.LANG
-    except AttributeError:
-        settings['lang'] = 'english.lng'
-    with contextlib.suppress(AttributeError):
-        settings['initial'] = sett.INITIAL
-    with contextlib.suppress(AttributeError):
-        settings['startup'] = sett.STARTUP
-    return settings
-
-
-def read_settings_json(ini):  # expects pathlib.Path
-    "read the application settings from a given file"
+    "read the application settings from a given path"
     with ini.open() as _in:
         fulldict = json.load(_in)
     settings = {'filename': ini}
@@ -144,37 +108,13 @@ def read_settings_json(ini):  # expects pathlib.Path
     return settings
 
 
-def write_settings_json(settings, nobackup=False):  # expects settings, including path
+def write_settings(settings, nobackup=False):
     "rewrite the application settings file"
     inifile = settings.pop('filename')
     if inifile.exists() and not nobackup:
         shutil.copyfile(str(inifile), str(inifile) + '~')
     with inifile.open('w') as _in:
         json.dump(settings, _in)
-
-
-def modify_settings(ini):
-    """modify the settings file (specifically the PLUGINS setting)
-    """
-    inifile = ini['filename']
-    shutil.copyfile(inifile, inifile + '.bak')
-    data = []
-    dontread = False
-    with open(inifile + '.bak') as _in:
-        for line in _in:
-            if dontread:
-                if line.strip() == ']':
-                    data.append(line)
-                    dontread = False
-            else:
-                data.append(line)
-                if 'PLUGINS' in line:
-                    dontread = True
-                    for name, path in ini["plugins"]:
-                        data.append(f'    ("{name}", "{path}"),\n')
-    with open(inifile, 'w') as _out:
-        for line in data:
-            _out.write(line)
 
 
 def read_columntitledata(editor):
@@ -320,7 +260,6 @@ def readcsv(pad):
 def readjson(pad):    # intended to replace the previous function
     """lees het json bestand op het aangegeven pad en geeft de inhoud terug in diverse tabellen
     """
-    plugin_name = os.path.splitext(os.path.basename(pad))[0]
     with open(pad) as _in:
         fulldict = json.load(_in)
     settings = fulldict.pop('settings')
@@ -328,16 +267,6 @@ def readjson(pad):    # intended to replace the previous function
     keydata = fulldict.pop('keydata')
     otherstuff = fulldict
     for name, item in otherstuff.items():
-        # verplaatsen naar betreffende plugins
-        # if ((plugin_name == 'DC_hotkeys' and name in ('stdkeys', 'defaults'))
-        #         or (plugin_name == 'Nemo_hotkeys' and name == 'defaultkeys')):
-        #     newitem = {}
-        #     for key, value in item.items():
-        #         newkey = ' '.join(list(key))
-        #         if isinstance(value, set):
-        #             value = list(value)
-        #         newitem[newkey] = value
-        #     item = newitem
         otherstuff[name] = item
     return settings, column_info, keydata, otherstuff
 
@@ -377,23 +306,12 @@ def writejson(pad, reader, settings, coldata, data, otherstuff):
     """
     if os.path.exists(pad):
         shutil.copyfile(pad, pad + '~')
-    plugin_name = os.path.splitext(os.path.basename(pad))[0]
     fulldict = {'settings': settings, 'column_info': coldata, 'keydata': data}
     if reader and hasattr(reader, 'update_otherstuff_outbound'):
         otherstuff = reader.update_otherstuff_outbound(otherstuff)
     for name, item in otherstuff.items():
         if isinstance(item, set):
             item = sorted(list(item))
-        # verplaatsen naar betreffende plugins
-        # if ((plugin_name == 'DC_hotkeys' and name in ('stdkeys', 'defaults'))
-        #         or (plugin_name == 'Nemo_hotkeys' and name == 'defaultkeys')):
-        #     newitem = {}
-        #     for key, value in item.items():
-        #         newkey = ' '.join(list(key))
-        #         if isinstance(value, set):
-        #             value = list(value)
-        #         newitem[newkey] = value
-        #     item = newitem
         if 'otherstuff' not in fulldict:
             fulldict['otherstuff'] = {}
         fulldict['otherstuff'][name] = item
@@ -688,36 +606,53 @@ class HotkeyPanel:
 
         zorgt ervoor dat de buttons ge(de)activeerd worden
         """
-        if self.initializing_screen:
+        if self.initializing_screen or self.gui.initializing_keydef:
             return
         cb, text = self.gui.get_choice_value(*args)
         self.defchanged = False
-        command_changed = key_changed = False
-        # combobox attributen op None gezet zodat de loop verderop niet dumpt
-        # condities gewijzigd omdat hasattr nu altijd waar is
-        if 'C_CMD' in self.fields:  # hasattr(self.gui, 'cmb_commando'):
-            newvalue = self.gui.get_combobox_text(self.gui.cmb_commando)
-            command_changed = newvalue != self._origdata[self.field_indexes['C_CMD']]
-        if 'C_KEY' in self.fields:  # hasattr(self.gui, 'cmb_key'):
-            newvalue = self.gui.get_combobox_text(self.gui.cmb_key)
-            key_changed = self._origdata[self.field_indexes['C_KEY']]
-        for field, control in (('C_KEY', self.gui.cmb_key),
-                               ('C_CNTXT', self.gui.cmb_context),
-                               ('C_CMD', self.gui.cmb_commando),
-                               ('C_CTRL', self.gui.cmb_controls)):
-            if field in self.fields and cb == control:
-                fieldindex = self.field_indexes[field]
-                if text != self._origdata[fieldindex]:
-                    self._newdata[fieldindex] = text
-                    if field == 'C_CNTXT':
-                        self.gui.init_combobox(self.gui.cmb_commando,
-                                               self.contextactionsdict[text] or self.commandslist)
-                    elif field == 'C_CMD':
-                        text_to_set = self.descriptions.get(text, self.captions['M_NODESC'])
-                        self.gui.set_textfield_value(self.gui.txt_oms, text_to_set)
-                    if not self.gui.initializing_keydef:
-                        self.set_changed_indicators(True)
-            elif (field != 'C_CMD' and command_changed) or (field == 'C_CMD' and key_changed):
+        fieldindex = -1
+        if 'C_KEY' in self.fields and cb == self.gui.cmb_key:
+            fieldindex = self.field_indexes['C_KEY']
+        elif 'C_CNTXT' in self.fields and cb == self.gui.cmb_context:
+            fieldindex = self.field_indexes['C_CNTXT']
+        elif 'C_CMD' in self.fields and cb == self.gui.cmb_commando:
+            fieldindex = self.field_indexes['C_CMD']
+        elif 'C_CTRL' in self.fields and cb == self.gui.cmb_controls:
+            fieldindex = self.field_indexes['C_CTRL']
+        if fieldindex == -1:
+            return
+        if text != self._origdata[fieldindex]:
+            self._newdata[fieldindex] = text
+            self.adjust_other_fields_if_needed(cb, text)
+            self.set_changed_indicators(True)
+        else:
+            self.reset_changed_indicators_if_needed(cb)
+
+    def adjust_other_fields_if_needed(self, cb, text):
+        "changing some fields influence the conmtents of other fields"
+        with contextlib.suppress(AttributeError):
+            if cb == self.gui.cmb_context:
+                value = self.contextactionsdict.get(text, None)
+                if value is None:
+                    value = self.commandslist
+                self.gui.init_combobox(self.gui.cmb_commando, value)
+            if cb == self.gui.cmb_commando:
+                if text in self.descriptions:
+                    text_to_set = self.descriptions[text]
+                else:
+                    text_to_set = self.captions['M_NODESC']
+                self.gui.set_textfield_value(self.gui.txt_oms, text_to_set)
+
+    def reset_changed_indicators_if_needed(self, cb):
+        "in some cases the buttons must be turned off again"
+        with contextlib.suppress(AttributeError):
+            if cb == self.gui.cmb_commando:
+                choice_to_check = self.gui.cmb_key
+                checkfieldindex = self.field_indexes['C_KEY']
+            else:
+                choice_to_check = self.gui.cmb_commando
+                checkfieldindex = self.field_indexes['C_CMD']
+            if self.gui.get_combobox_value(choice_to_check) == self._origdata[checkfieldindex]:
                 self.set_changed_indicators(False)
 
     def set_changed_indicators(self, value):
@@ -1144,7 +1079,7 @@ class Editor:
         ini = CONF
         if args.conf:
             ini = pathlib.Path(args.conf) if args.conf.startswith('/') else BASE / args.conf
-        self.ini = read_settings_json(ini)
+        self.ini = read_settings(ini)
         self.readcaptions(self.ini['lang'])
         self.title = self.captions["T_MAIN"]
         self.pluginfiles = {}
@@ -1242,7 +1177,7 @@ class Editor:
         self.last_added = None  # wordt in de hierna volgende dialoog ingesteld
         if gui.show_dialog(self, gui.FilesDialog):
             selection = self.book.gui.get_selected_index()
-            write_settings_json(self.ini)  # modify_settings(self.ini)
+            write_settings(self.ini)
 
             items_to_retain = self.clear_book(current_programs)
             self.rebuild_book(current_programs, current_paths, items_to_retain)
@@ -1308,7 +1243,7 @@ class Editor:
         pref = self.ini.get("initial", '')
         if mode == shared.mode_f and pref not in [x[0] for x in self.ini['plugins']]:
             self.ini['startup'] = shared.mode_r
-            write_settings_json(self.ini)  # self.change_setting('startup', oldmode, mode)
+            write_settings(self.ini)  # self.change_setting('startup', oldmode, mode)
 
         for entry in name_path_list:
             name, datafilename = entry
@@ -1386,14 +1321,12 @@ class Editor:
             mld = self.captions['I_RBLD']
         else:
             mld = self.captions['I_NODEFS']
-            try:
-                test = newdata[1]
-            except IndexError:
+            if len(newdata) < 2:
                 mld = self.captions['I_NOEXTRA']
             mld = self.captions['I_NORBLD'].format(self.captions['I_#FOUND'].format(mld))
         gui.show_message(self.gui, text=mld)
 
-    def accept_csvsettings(self, cloc, ploc, title, rebuild, details, redef):
+    def accept_pluginsettings(self, cloc, ploc, title, rebuild, details, redef):
         """check and confirm input from SetupDialog
         """
         if cloc == "":
@@ -1442,9 +1375,7 @@ class Editor:
             gui.show_message(self.gui, "I_NODET")
             return False
         if showdet:
-            try:
-                test = self.book.page.reader.add_extra_attributes
-            except AttributeError:
+            if not hasattr(self.book.page.reader, 'add_extra_attributes'):
                 shared.log_exc()
                 gui.show_message(self.gui, "I_IMPLXTRA")
                 return False
@@ -1548,7 +1479,7 @@ class Editor:
                 new_titles.append(name)
             column_info.append([name, width, flag, old_colno])
         if new_titles:
-            canceled, titles, colinfo = self.build_data_for_new_titles(new_titles, column_info)
+            canceled, titles, colinfo = self.build_new_title_data(new_titles, column_info)
             if canceled:
                 # gui.show_message(self.gui, 'T_CANCLD')
                 return False, True  # not ok, do not continue with dialog
@@ -1558,7 +1489,7 @@ class Editor:
             self.book.page.captions[id_] = name
         return True, False  # ok, done with dialog (but not canceled)
 
-    def build_data_for_new_titles(self, new_titles, column_info):
+    def build_new_title_data(self, new_titles, column_info):
         """ask for column details, ids for new titles etc.
         """
         languages = [x.name for x in shared.HERELANG.iterdir() if x.suffix == ".lng"]
@@ -1645,7 +1576,7 @@ class Editor:
         if ok:
             # self.change_setting('lang', oldlang, lang)
             self.ini['lang'] = lang
-            write_settings_json(self.ini)
+            write_settings(self.ini)
             self.readcaptions(lang)
             self.setcaptions()
 
@@ -1672,7 +1603,7 @@ class Editor:
                 self.ini['initial'] = pref
                 changed = True  # self.change_setting('initial', oldpref, pref)
             if changed:
-                write_settings_json(self.ini)
+                write_settings(self.ini)
 
     def accept_startupsettings(self, fix, remember, pref):
         """check and confirm input from initialToolDialog
@@ -1707,7 +1638,7 @@ class Editor:
                 pass
             else:
                 # self.change_setting('initial', oldpref, pref)
-                write_settings_json(self.ini, nobackup=True)
+                write_settings(self.ini, nobackup=True)
 
         # super().close()
         self.gui.close()

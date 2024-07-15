@@ -127,54 +127,16 @@ def test_build_csv_sample_data(monkeypatch, capsys):
                                                   ['orig', 0, 0, 0, 'colind option']]
     assert capsys.readouterr().out == 'called get_csv_oms with arg `en`\n'
 
-# wordt niet (meer) gebruikt
-# def _test_get_pluginname(monkeypatch, capsys):
-#     """unittest for main.get_pluginname
-#     """
-#     testee.get_pluginname('csvname')
-
-# te vervangen door de hierna volgende
-def _test_read_settings(monkeypatch, capsys, tmp_path):
+def test_read_settings(monkeypatch, tmp_path):
     """unittest for main.read_settings
-    """
-    # zolang ik dit met een python module doe moet ik dit importeren
-    # ik kan het dan niet testen met behulp van tmp_path omdat die niet in het zoekpad zit
-    # het probleem is dat deze bij opnieuw proberen om en om failt en niet failt
-    # zolang dat niet gefikst is deze test maar uitgeschakeld
-    def mock_log_exc():
-        """stub
-        """
-        print('called shared.log_exc')
-    monkeypatch.setattr(testee.shared, 'log_exc', mock_log_exc)
-    with open('fake_module.py', 'w') as f:
-        f.write('"""settings for hotkeys\n"""\n')
-    assert testee.read_settings('fake_module') == {
-            'filename': '/home/albert/projects/hotkeys/fake_module.py',
-            'plugins': [], 'lang': 'english.lng'}
-
-    with open('fake_module_2.py', 'w') as f:
-        f.write('"""settings for hotkeys\n"""\nPLUGINS = ["x", "y"]\nLANG = "z"\n'
-                'INITIAL = "a"\nSTARTUP = "b"\n')
-    # breakpoint()
-    assert testee.read_settings('fake_module_2') == {
-            'filename': '/home/albert/projects/hotkeys/fake_module_2.py',
-            'plugins': ['x', 'y'], 'lang': 'z', 'initial': 'a', 'startup': 'b'}
-
-    assert testee.read_settings('fake_module_3') == {'plugins': [], 'lang': 'english.lng'}
-
-    testee.os.remove('fake_module.py')
-    testee.os.remove('fake_module_2.py')
-
-def test_read_settings_json(monkeypatch, tmp_path):
-    """unittest for main.read_settings_json
     """
     monkeypatch.setattr(testee, 'initial_settings', {'x': '', 'a': ''})
     ini = tmp_path / 'settingsfile'
     ini.write_text('{"a": "b", "q": "r"}\n')
-    assert testee.read_settings_json(ini) == {'a': 'b', 'filename': ini, 'x': ''}
+    assert testee.read_settings(ini) == {'a': 'b', 'filename': ini, 'x': ''}
 
-def test_write_settings_json(monkeypatch, capsys, tmp_path):
-    """unittest for main.write_settings_json
+def test_write_settings(monkeypatch, capsys, tmp_path):
+    """unittest for main.write_settings
     """
     def mock_copy(*args):
         """stub
@@ -188,26 +150,16 @@ def test_write_settings_json(monkeypatch, capsys, tmp_path):
     monkeypatch.setattr(testee.shared.pathlib.Path, 'exists', lambda *x: False)
     monkeypatch.setattr(testee, 'initial_settings', {'x': '', 'a': ''})
     ini = tmp_path / 'settingsfile'
-    testee.write_settings_json(settings={'a': 'b', 'filename': ini, 'x': 'y'})
+    testee.write_settings(settings={'a': 'b', 'filename': ini, 'x': 'y'})
     assert capsys.readouterr().out == "called json.dump with arg {'a': 'b', 'x': 'y'}\n"
     monkeypatch.setattr(testee.shutil, 'copyfile', mock_copy)
     monkeypatch.setattr(testee.shared.pathlib.Path, 'exists', lambda *x: True)
-    testee.write_settings_json(settings={'a': 'b', 'filename': ini, 'x': 'y'})
+    testee.write_settings(settings={'a': 'b', 'filename': ini, 'x': 'y'})
     assert capsys.readouterr().out == (f"called shutil.copyfile with args ('{ini}',"
                                        f" '{str(ini) + '~'}')\n"
                                        "called json.dump with arg {'a': 'b', 'x': 'y'}\n")
-    testee.write_settings_json(settings={'a': 'b', 'filename': ini, 'x': 'y'}, nobackup=True)
+    testee.write_settings(settings={'a': 'b', 'filename': ini, 'x': 'y'}, nobackup=True)
     assert capsys.readouterr().out == "called json.dump with arg {'a': 'b', 'x': 'y'}\n"
-
-def test_modify_settings(tmp_path):
-    """unittest for main.modify_settings
-    """
-    ini = {'filename': str(tmp_path / 'settings'), 'plugins': [('x', 'y'), ('a', 'b')]}
-    (tmp_path / 'settings').write_text('ppp\n\nPLUGINS\nqqq\n  ]  \nrrr\nsss\n')
-    testee.modify_settings(ini)
-    assert (tmp_path / 'settings.bak').read_text() == 'ppp\n\nPLUGINS\nqqq\n  ]  \nrrr\nsss\n'
-    assert (tmp_path / 'settings').read_text() == ('ppp\n\nPLUGINS\n    ("x", "y"),\n'
-                                                   '    ("a", "b"),\n  ]  \nrrr\nsss\n')
 
 def test_read_columntitledata(monkeypatch, capsys, tmp_path):
     """unittest for main.read_columntitledata
@@ -1151,30 +1103,28 @@ def test_hotkeypanel_on_text(monkeypatch, capsys):
     assert capsys.readouterr().out == ("called HotkeyPanelGui.get_widget_text with args ('xx',)\n"
                                        "called HotkeyPanelGui.enable_save with arg False\n")
 
-def _test_hotkeypanel_on_combobox(monkeypatch, capsys):
+def test_hotkeypanel_on_combobox(monkeypatch, capsys):
     """unittest for main.HotkeyPanel.on_combobox
     """
     def mock_set(value):
         print(f'called HotkeyPanel.set_changed_indicators with arg {value}')
+    def mock_adjust(*args):
+        print('called HotkeyPanel.adjust_other_fields_if_needed with args', args)
+    def mock_reset(value):
+        print(f'called HotkeyPanel.reset_changed_indicators_if_needed with arg {value}')
     def mock_get_value(*args):
         print('called SingleDataInterface.get_choice_value with args', args)
         return args[0], 'abcdef'
-    def mock_get_text(*args):
-        print('called SingleDataInterface.get_combobox_text with args', args)
-        return 'asdfgh'
     testobj = setup_hotkeypanel(monkeypatch, capsys)
-    testobj.gui.cmb_key = None
+    testobj.gui.cmb_key = types.SimpleNamespace(name='C_KEY')
+    testobj.gui.cmb_commando = types.SimpleNamespace(name='C_CMD')
     testobj.gui.cmb_context = types.SimpleNamespace(name='C_CNTXT')
-    testobj.gui.cmb_commando = None
     testobj.gui.cmb_controls = types.SimpleNamespace(name='C_CTRL')
     testobj.gui.get_choice_value = mock_get_value
-    testobj.gui.get_combobox_text = mock_get_text
     testobj.set_changed_indicators = mock_set
+    testobj.reset_changed_indicators_if_needed = mock_reset
+    testobj.adjust_other_fields_if_needed = mock_adjust
     testobj.field_indexes = {'C_KEY': 0, 'C_CNTXT': 1, 'C_CMD': 2, 'C_CTRL': 3}
-    testobj.contextactionsdict = {}
-    testobj.commandslist = {'x': 'y'}
-    testobj.descriptions = {}
-    testobj.captions = {'M_NODESC': 'xxx'}
     testobj.fields = ['C_KEY', 'C_CNTXT', 'C_CMD', 'C_CTRL']
     testobj._origdata = ['', '', '', '']
     testobj._newdata = ['', '', '', '']
@@ -1182,30 +1132,135 @@ def _test_hotkeypanel_on_combobox(monkeypatch, capsys):
     testobj.initializing_screen = True
     testobj.gui.initializing_keydef = True
     testobj.on_combobox()
-    testobj.initializing_screen = False
     assert capsys.readouterr().out == ""
+    testobj.initializing_screen = False
+    testobj.on_combobox()
+    assert capsys.readouterr().out == ""
+    testobj.gui.initializing_keydef = False
 
     testobj.on_combobox('None')
-    assert testobj._newdata == ['', '', '', '']
     assert capsys.readouterr().out == (
-            "called SingleDataInterface.get_choice_value with args ('None',)\n"
-            f"called SingleDataInterface.get_combobox_text with args ({testobj.gui.cmb_commando},)\n"
-            f"called SingleDataInterface.get_combobox_text with args ({testobj.gui.cmb_key},)\n")
+        "called SingleDataInterface.get_choice_value with args ('None',)\n")
 
-    testobj.gui.cmb_key = types.SimpleNamespace(name='C_KEY')
-    testobj.gui.cmb_commando = types.SimpleNamespace(name='C_CMD')
     testobj.on_combobox(testobj.gui.cmb_key)
-    assert testobj._newdata == ['', '', '', '']
-    assert capsys.readouterr().out == ("")
+    assert testobj._newdata == ['abcdef', '', '', '']
+    assert capsys.readouterr().out == (
+        f"called SingleDataInterface.get_choice_value with args ({testobj.gui.cmb_key},)\n"
+        f"called HotkeyPanel.adjust_other_fields_if_needed with args ({testobj.gui.cmb_key},"
+        " 'abcdef')\n"
+        "called HotkeyPanel.set_changed_indicators with arg True\n")
+    testobj._newdata = ['', '', '', '']
     testobj.on_combobox(testobj.gui.cmb_context)
-    assert testobj._newdata == ['', '', '', '']
-    assert capsys.readouterr().out == ("")
+    assert testobj._newdata == ['', 'abcdef', '', '']
+    assert capsys.readouterr().out == (
+        f"called SingleDataInterface.get_choice_value with args ({testobj.gui.cmb_context},)\n"
+        f"called HotkeyPanel.adjust_other_fields_if_needed with args ({testobj.gui.cmb_context},"
+        " 'abcdef')\n"
+        "called HotkeyPanel.set_changed_indicators with arg True\n")
+    testobj._newdata = ['', '', '', '']
     testobj.on_combobox(testobj.gui.cmb_commando)
-    assert testobj._newdata == ['', '', '', '']
-    assert capsys.readouterr().out == ("")
+    assert testobj._newdata == ['', '', 'abcdef', '']
+    assert capsys.readouterr().out == (
+        f"called SingleDataInterface.get_choice_value with args ({testobj.gui.cmb_commando},)\n"
+        f"called HotkeyPanel.adjust_other_fields_if_needed with args ({testobj.gui.cmb_commando},"
+        " 'abcdef')\n"
+        "called HotkeyPanel.set_changed_indicators with arg True\n")
+    testobj._newdata = ['', '', '', '']
     testobj.on_combobox(testobj.gui.cmb_controls)
-    assert testobj._newdata == ['', '', '', '']
+    assert testobj._newdata == ['', '', '', 'abcdef']
+    assert capsys.readouterr().out == (
+        f"called SingleDataInterface.get_choice_value with args ({testobj.gui.cmb_controls},)\n"
+        f"called HotkeyPanel.adjust_other_fields_if_needed with args ({testobj.gui.cmb_controls},"
+        " 'abcdef')\n"
+        "called HotkeyPanel.set_changed_indicators with arg True\n")
+    testobj._origdata = ['', '', '', 'abcdef']
+    # breakpoint()
+    testobj.on_combobox(testobj.gui.cmb_controls)
+    assert capsys.readouterr().out == (
+        f"called SingleDataInterface.get_choice_value with args ({testobj.gui.cmb_controls},)\n"
+        "called HotkeyPanel.reset_changed_indicators_if_needed with arg namespace(name='C_CTRL')\n")
+
+def test_hotkeypanel_adjust_other_fields_if_needed(monkeypatch, capsys):
+    """unittest for main.HotkeyPanel.adjust_other_fields_if_needed
+    """
+    def mock_init(*args):
+        print('called SingleDataInterface.init_combobox with args', args)
+    def mock_set(*args):
+        print('called SingleDataInterface.set_textbox_value with args', args)
+    testobj = setup_hotkeypanel(monkeypatch, capsys)
+    testobj.gui.init_combobox = mock_init
+    testobj.gui.set_textfield_value = mock_set
+    testobj.captions = {'M_NODESC': 'no desc'}
+    testobj.adjust_other_fields_if_needed("", '')
     assert capsys.readouterr().out == ("")
+    testobj.gui.cmb_context = types.SimpleNamespace(name='C_CNTXT')
+    testobj.adjust_other_fields_if_needed(testobj.gui.cmb_context, '')
+    assert capsys.readouterr().out == ("")
+    testobj.contextactionsdict = {}
+    testobj.adjust_other_fields_if_needed(testobj.gui.cmb_context, '')
+    assert capsys.readouterr().out == ("")
+    testobj.commandslist = ['xx']
+    testobj.adjust_other_fields_if_needed(testobj.gui.cmb_context, '')
+    assert capsys.readouterr().out == ("")
+    testobj.gui.cmb_commando = types.SimpleNamespace(name='C_CMD')
+    testobj.adjust_other_fields_if_needed(testobj.gui.cmb_context, '')
+    assert capsys.readouterr().out == ("called SingleDataInterface.init_combobox with args"
+                                       " (namespace(name='C_CMD'), ['xx'])\n")
+    testobj.contextactionsdict = {'yy': ['zz']}
+    testobj.adjust_other_fields_if_needed(testobj.gui.cmb_context, 'yy')
+    assert capsys.readouterr().out == ("called SingleDataInterface.init_combobox with args"
+                                       " (namespace(name='C_CMD'), ['zz'])\n")
+    testobj.descriptions = {}
+    testobj.adjust_other_fields_if_needed(testobj.gui.cmb_commando, '')
+    assert capsys.readouterr().out == ("")
+    testobj.gui.txt_oms = types.SimpleNamespace(name='C_TEXT')
+    testobj.adjust_other_fields_if_needed(testobj.gui.cmb_commando, '')
+    assert capsys.readouterr().out == ("called SingleDataInterface.set_textbox_value with args"
+                                       " (namespace(name='C_TEXT'), 'no desc')\n")
+    testobj.descriptions = {'qq': 'rrrr'}
+    testobj.adjust_other_fields_if_needed(testobj.gui.cmb_commando, 'qq')
+    assert capsys.readouterr().out == ("called SingleDataInterface.set_textbox_value with args"
+                                       " (namespace(name='C_TEXT'), 'rrrr')\n")
+
+def test_hotkeypanel_reset_changed_indicators_if_needed(monkeypatch, capsys):
+    """unittest for main.HotkeyPanel.reset_changed_indicators_if_needed
+    """
+    def mock_get(arg):
+        print('called SingleDataInterface.get_combobox_value with arg', arg)
+        return arg.name
+    def mock_set(arg):
+        print('called SingleDataInterface.set_changed_indicators with arg', arg)
+    testobj = setup_hotkeypanel(monkeypatch, capsys)
+    testobj.gui.get_combobox_value = mock_get
+    testobj.set_changed_indicators = mock_set
+    testobj.field_indexes = {'C_KEY': 3, 'C_CMD': 2}
+    testobj._origdata = ['1', '2', '3', '4']
+    testobj.reset_changed_indicators_if_needed("")
+    assert capsys.readouterr().out == ("")
+    testobj.gui.cmb_commando = types.SimpleNamespace(name='C_CMD')
+    testobj.reset_changed_indicators_if_needed("")
+    assert capsys.readouterr().out == (
+            "called SingleDataInterface.get_combobox_value with arg namespace(name='C_CMD')\n")
+    testobj.gui.cmb_key = types.SimpleNamespace(name='C_KEY')
+    testobj.reset_changed_indicators_if_needed("")
+    assert capsys.readouterr().out == (
+            "called SingleDataInterface.get_combobox_value with arg namespace(name='C_CMD')\n")
+    testobj.reset_changed_indicators_if_needed(testobj.gui.cmb_commando)
+    assert capsys.readouterr().out == (
+            "called SingleDataInterface.get_combobox_value with arg namespace(name='C_KEY')\n")
+    testobj.reset_changed_indicators_if_needed(testobj.gui.cmb_key)
+    assert capsys.readouterr().out == (
+            "called SingleDataInterface.get_combobox_value with arg namespace(name='C_CMD')\n")
+    testobj._origdata = ['1', '2', 'C_CMD', 'C_KEY']
+    testobj.reset_changed_indicators_if_needed(testobj.gui.cmb_commando)
+    assert capsys.readouterr().out == (
+            "called SingleDataInterface.get_combobox_value with arg namespace(name='C_KEY')\n"
+            "called SingleDataInterface.set_changed_indicators with arg False\n")
+    testobj.reset_changed_indicators_if_needed(testobj.gui.cmb_key)
+    assert capsys.readouterr().out == (
+            "called SingleDataInterface.get_combobox_value with arg namespace(name='C_CMD')\n"
+            "called SingleDataInterface.set_changed_indicators with arg False\n")
+
 
 def test_hotkeypanel_set_changed_indicators(monkeypatch, capsys):
     """unittest for main.HotkeyPanel.set_changed_indicators
@@ -2091,13 +2146,13 @@ def test_editor_init(monkeypatch, capsys):
     def mock_save_log():
         print('called shared.save_log')
     def mock_read(arg):
-        print(f"called read_settings_json with arg '{arg}'")
+        print(f"called read_settings with arg '{arg}'")
         return {'lang': 'en', 'title': '', 'initial': '', 'plugins': []}
     def mock_read_2(arg):
-        print(f"called read_settings_json with arg '{arg}'")
+        print(f"called read_settings with arg '{arg}'")
         return {'lang': 'en', 'title': '', 'initial': 'y', 'plugins': [('x', 'xxx'), ('y', 'yyy')]}
     def mock_read_3(arg):
-        print(f"called read_settings_json with arg '{arg}'")
+        print(f"called read_settings with arg '{arg}'")
         return {'lang': 'en', 'title': 'qqq', 'initial': 'x', 'plugins': [('x', 'xxx')]}
     def mock_readcaptions(self, arg):
         print(f"called Editor.readcaptions with arg '{arg}'")
@@ -2107,7 +2162,7 @@ def test_editor_init(monkeypatch, capsys):
     def mock_set(self):
         print('called Editor.setcaptions')
     monkeypatch.setattr(testee.shared, 'save_log', mock_save_log)
-    monkeypatch.setattr(testee, 'read_settings_json', mock_read)
+    monkeypatch.setattr(testee, 'read_settings', mock_read)
     monkeypatch.setattr(testee.Editor, 'show_empty_screen', mock_show)
     monkeypatch.setattr(testee.Editor, 'readcaptions', mock_readcaptions)
     monkeypatch.setattr(testee.gui, 'Gui', MockGui)
@@ -2122,12 +2177,12 @@ def test_editor_init(monkeypatch, capsys):
     assert testobj.book is None
     assert isinstance(testobj.gui, testee.gui.Gui)
     assert capsys.readouterr().out == ("called shared.save_log\n"
-                                       "called read_settings_json with arg 'mock_conf'\n"
+                                       "called read_settings with arg 'mock_conf'\n"
                                        "called Editor.readcaptions with arg 'en'\n"
                                        f"called Gui.__init__ with arg {testobj}\n"
                                        "called Editor.show_empty_screen\n"
                                        "called Gui.go\n")
-    monkeypatch.setattr(testee, 'read_settings_json', mock_read_2)
+    monkeypatch.setattr(testee, 'read_settings', mock_read_2)
     args = types.SimpleNamespace(conf='other_conf', start='y')
     testobj = testee.Editor(args)
     assert testobj.ini == {'initial': 'y', 'lang': 'en', 'title': '', 'plugins': [('x', 'xxx'),
@@ -2137,7 +2192,7 @@ def test_editor_init(monkeypatch, capsys):
     assert isinstance(testobj.book, testee.ChoiceBook)
     assert capsys.readouterr().out == (
             "called shared.save_log\n"
-            "called read_settings_json with arg '/confbase/other_conf'\n"
+            "called read_settings with arg '/confbase/other_conf'\n"
             "called Editor.readcaptions with arg 'en'\n"
             f"called Gui.__init__ with arg {testobj}\n"
             "called Gui.set_window_title with arg 'maintitle'\n"
@@ -2149,7 +2204,7 @@ def test_editor_init(monkeypatch, capsys):
             "called ChoiceBook.on_page_changed with arg '1'\n"
             "called Editor.setcaptions\n"
             "called Gui.go\n")
-    monkeypatch.setattr(testee, 'read_settings_json', mock_read_3)
+    monkeypatch.setattr(testee, 'read_settings', mock_read_3)
     args = types.SimpleNamespace(conf='/yet/another/conf', start='')
     testobj = testee.Editor(args)
     assert testobj.ini == {'initial': 'x', 'lang': 'en', 'title': 'qqq', 'plugins': [('x', 'xxx')]}
@@ -2158,7 +2213,7 @@ def test_editor_init(monkeypatch, capsys):
     assert isinstance(testobj.book, testee.ChoiceBook)
     assert capsys.readouterr().out == (
             "called shared.save_log\n"
-            "called read_settings_json with arg '/yet/another/conf'\n"
+            "called read_settings with arg '/yet/another/conf'\n"
             "called Editor.readcaptions with arg 'en'\n"
             f"called Gui.__init__ with arg {testobj}\n"
             "called Gui.set_window_title with arg 'maintitle'\n"
@@ -2333,7 +2388,7 @@ def test_editor_m_loc(monkeypatch, capsys):
         args[0].ini['plugins'] = [('x', 'y'), ('a', 'b')]
         return True
     def mock_write(name):
-        print(f"called Editor.write_settings_json with arg '{name}'")
+        print(f"called Editor.write_settings with arg '{name}'")
     def mock_clear(arg):
         print('called Editor.clear_book with arg {arg}')
         return []
@@ -2341,7 +2396,7 @@ def test_editor_m_loc(monkeypatch, capsys):
         print('called Editor.rebuild_book with args', args)
         return []
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_show)
-    monkeypatch.setattr(testee, 'write_settings_json', mock_write)
+    monkeypatch.setattr(testee, 'write_settings', mock_write)
     testobj = setup_editor(monkeypatch, capsys)
     testobj.clear_book = mock_clear
     testobj.rebuild_book = mock_rebuild
@@ -2354,7 +2409,7 @@ def test_editor_m_loc(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             f"called gui.show_dialog with args ({testobj}, {testee.gui.FilesDialog})\n"
             "called TabbedInterface.get_selected_index\n"
-            "called Editor.write_settings_json with arg '{'plugins': [('x', 'y')]}'\n"
+            "called Editor.write_settings with arg '{'plugins': [('x', 'y')]}'\n"
             "called Editor.clear_book with arg {arg}\n"
             "called Editor.rebuild_book with args (['p', 'r'], ['q', 's'], [])\n"
             "called TabbedInterface.set_selected_tool with arg '1'\n")
@@ -2364,7 +2419,7 @@ def test_editor_m_loc(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             f"called gui.show_dialog with args ({testobj}, {testee.gui.FilesDialog})\n"
             "called TabbedInterface.get_selected_index\n"
-            "called Editor.write_settings_json with arg '{'plugins': [('x', 'y'), ('a', 'b')]}'\n"
+            "called Editor.write_settings with arg '{'plugins': [('x', 'y'), ('a', 'b')]}'\n"
             "called Editor.clear_book with arg {arg}\n"
             "called Editor.rebuild_book with args (['p', 'r'], ['q', 's'], [])\n"
             "called TabbedInterface.get_new_selection with arg 'last added'\n"
@@ -2411,7 +2466,7 @@ def test_editor_accept_pathsettings(monkeypatch, capsys, tmp_path):
     """unittest for main.Editor.accept_pathsettings
     """
     def mock_write(data):
-        print(f"called write_settings_json with arg '{data}'")
+        print(f"called write_settings with arg '{data}'")
     def mock_update(*args):
         print('called update_paths with args', args)
         return []
@@ -2421,7 +2476,7 @@ def test_editor_accept_pathsettings(monkeypatch, capsys, tmp_path):
     def mock_check_2(*args):
         print('called Editor.check_plugin_settings with args', args)
         return True
-    monkeypatch.setattr(testee, 'write_settings_json', mock_write)
+    monkeypatch.setattr(testee, 'write_settings', mock_write)
     monkeypatch.setattr(testee, 'update_paths', mock_update)
     testobj = setup_editor(monkeypatch, capsys)
     testobj.check_plugin_settings = mock_check
@@ -2443,7 +2498,7 @@ def test_editor_accept_pathsettings(monkeypatch, capsys, tmp_path):
     assert testobj.ini["startup"] == testee.shared.mode_r
     assert testobj.pluginfiles == {}
     assert capsys.readouterr().out == (
-            "called write_settings_json with arg '{'lang': 'en', 'plugins': [('zz', 'path/to/zz')],"
+            "called write_settings with arg '{'lang': 'en', 'plugins': [('zz', 'path/to/zz')],"
             " 'startup': 'Remember', 'initial': 'yy'}'\n"
             "called Editor.check_plugin_settings with args ('xx', 'path/to/xx', 'path/to/xx')\n")
 
@@ -2478,9 +2533,20 @@ def test_editor_check_plugin_settings(monkeypatch, capsys):
     def mock_readjson_4(filename):
         print(f"called readjson with arg '{filename}'")
         return ({testee.shared.SettType.PLG.value: 'prog'},)
+    def mock_import_nok(*args):
+        """stub
+        """
+        print('called importlib.import_module with args', args)
+        raise ImportError
+    def mock_import_ok(*args):
+        """stub
+        """
+        print('called importlib.import_module with args', args)
+        return MockReader()
     monkeypatch.setattr(testee.gui, 'show_message', mock_show)
     monkeypatch.setattr(testee, 'readcsv', mock_readcsv)
     monkeypatch.setattr(testee, 'readjson', mock_readjson)
+    monkeypatch.setattr(testee.importlib, 'import_module', mock_import_nok)
     testobj = setup_editor(monkeypatch, capsys)
     testobj.captions = {'I_FILLALL': 'fillall error', 'I_NOCSV': 'nocsv error: {}',
                         'I_NOPLNAM': 'noplnam error: {}', 'I_NOPLREF': 'noplref error: {}'}
@@ -2513,14 +2579,19 @@ def test_editor_check_plugin_settings(monkeypatch, capsys):
     assert not testobj.check_plugin_settings('pluginname', 'datafilename.json', ('',))
     assert capsys.readouterr().out == (
             "called readjson with arg 'datafilename.json'\n"
+            "called importlib.import_module with args ('prog',)\n"
             f"called gui.show_message with args ({testobj.gui},)"
             " {'text': 'noplref error: datafilename.json'}\n")
     monkeypatch.setattr(testee, 'readjson', mock_readjson_3)
+    monkeypatch.setattr(testee.importlib, 'import_module', mock_import_nok)
     assert not testobj.check_plugin_settings('pluginname', 'datafilename.json', ('prgname',))
     assert capsys.readouterr().out == (
+            "called importlib.import_module with args ('prgname',)\n"
             f"called gui.show_message with args ({testobj.gui},)"
             " {'text': 'noplref error: datafilename.json'}\n")
-    # nou nog een situatie dat de import goed gaat
+    monkeypatch.setattr(testee.importlib, 'import_module', mock_import_ok)
+    assert testobj.check_plugin_settings('pluginname', 'datafilename.json', ('prgname',))
+    assert capsys.readouterr().out == "called importlib.import_module with args ('prgname',)\n"
 
 def test_editor_m_rebuild(monkeypatch, capsys):
     """unittest for main.Editor.m_rebuild
@@ -2604,14 +2675,41 @@ def test_editor_m_rebuild(monkeypatch, capsys):
             "called HotkeyPanel.populate_list\n"
             f"called gui.show_message with args ({testobj.gui},) {{'text': 'RBLD'}}\n")
 
-def _test_editor_accept_csvsettings(monkeypatch, capsys):
-    """unittest for main.Editor.accept_csvsettings
+def test_editor_accept_pluginsettings(monkeypatch, capsys, tmp_path):
+    """unittest for main.Editor.accept_pluginsettings
     """
-    def mock_show(*args):
-        print('called gui.show_message with args', args)
+    def mock_show(*args, **kwargs):
+        print('called gui.show_message with args', args, kwargs)
+    def mock_find(arg):
+        print(f"called importlib.util.find_spec with arg '{arg}'")
+        return arg
+    def mock_find_2(arg):
+        print(f"called importlib.util.find_spec with arg '{arg}'")
+        return ''
+    clocpath = tmp_path / 'cloc'
     monkeypatch.setattr(testee.gui, 'show_message', mock_show)
+    monkeypatch.setattr(testee.importlib.util, 'find_spec', mock_find)
     testobj = setup_editor(monkeypatch, capsys)
-    testobj.accept_csvsettings(cloc, ploc, title, rebuild, details, redef)
+    assert not testobj.accept_pluginsettings('', 'ploc', 'title', '0', '1', '0')
+    assert capsys.readouterr().out == (
+            f"called gui.show_message with args ({testobj.gui}, 'I_NEEDNAME') {{}}\n")
+    clocpath.touch()
+    assert not testobj.accept_pluginsettings(str(clocpath), 'ploc', 'title', '0', '1', '0')
+    assert capsys.readouterr().out == (
+            f"called gui.show_message with args ({testobj.gui}, 'I_GOTSETFIL')"
+            f" {{'args': ['{clocpath}']}}\n")
+    clocpath.unlink()
+    # breakpoint()
+    assert not testobj.accept_pluginsettings(str(clocpath), 'ploc', 'title', '0', '1', '0')
+    assert capsys.readouterr().out == (
+            "called importlib.util.find_spec with arg 'ploc'\n"
+            f"called gui.show_message with args ({testobj.gui}, 'I_GOTPLGFIL')"
+            f" {{'args': ['ploc']}}\n")
+    monkeypatch.setattr(testee.importlib.util, 'find_spec', mock_find_2)
+    assert testobj.accept_pluginsettings(str(clocpath), 'ploc', 'title', '0', '1', '0')
+    assert testobj.gui.loc == f'{clocpath}'
+    assert testobj.gui.data == ['ploc', 'title', 0, 1, 0]
+    assert capsys.readouterr().out == "called importlib.util.find_spec with arg 'ploc'\n"
 
 def test_editor_m_tool(monkeypatch, capsys):
     """unittest for main.Editor.m_tool
@@ -2883,10 +2981,10 @@ def test_editor_accept_columnsettings(monkeypatch, capsys):
     def mock_show(*args, **kwargs):
         print('called gui.show_message with args', args, kwargs)
     def mock_build(*args):
-        print('called Editor.build_data_for_new_titles with args', args)
+        print('called Editor.build_new_title_data with args', args)
         return True, [], []  # canceled
     def mock_build_2(*args):
-        print('called Editor.build_data_for_new_titles with args', args)
+        print('called Editor.build_new_title_data with args', args)
         return False, [('ID1', 'title1'), ('ID2', 'title2')], ['col', 'info']  # continue
     monkeypatch.setattr(testee.gui, 'show_message', mock_show)
     testobj = setup_editor(monkeypatch, capsys)
@@ -2895,7 +2993,7 @@ def test_editor_accept_columnsettings(monkeypatch, capsys):
             f"called HotkeyPanel.__init__ with args ({testobj.book}, '')\n")
     testobj.captions = {}
     testobj.book.page.captions = {}
-    testobj.build_data_for_new_titles = mock_build
+    testobj.build_new_title_data = mock_build
     data = [('x', 'a', 0), ('y', 'b', 1), ('x', 'c', 2)]
     assert testobj.accept_columnsettings(data) == (False, False)
     assert testobj.captions == {}
@@ -2918,20 +3016,20 @@ def test_editor_accept_columnsettings(monkeypatch, capsys):
     assert testobj.accept_columnsettings(data) == (False, True)
     assert testobj.captions == {}
     assert capsys.readouterr().out == (
-            "called Editor.build_data_for_new_titles with args (['q'], [['xxx', 'a', False, 0],"
+            "called Editor.build_new_title_data with args (['q'], [['xxx', 'a', False, 0],"
             " ['q', 'd', False, 'new'], ['yyy', 'b', False, 1], ['zzz', 'c', False, 2]])\n")
     testobj.captions = {}
-    testobj.build_data_for_new_titles = mock_build_2
+    testobj.build_new_title_data = mock_build_2
     assert testobj.accept_columnsettings(data) == (True, False)
     assert testobj.book.page.new_column_info == ['col', 'info']
     assert testobj.captions == {'ID1': 'title1', 'ID2': 'title2'}
     assert testobj.book.page.captions == {'ID1': 'title1', 'ID2': 'title2'}
     assert capsys.readouterr().out == (
-            "called Editor.build_data_for_new_titles with args (['q'], [['xxx', 'a', False, 0],"
+            "called Editor.build_new_title_data with args (['q'], [['xxx', 'a', False, 0],"
             " ['q', 'd', False, 'new'], ['yyy', 'b', False, 1], ['zzz', 'c', False, 2]])\n")
 
-def test_editor_build_data_for_new_titles(monkeypatch, capsys, tmp_path):
-    """unittest for main.Editor.accept_columnsettings
+def test_editor_build_new_title_data(monkeypatch, capsys, tmp_path):
+    """unittest for main.Editor.build_new_title_data
     """
     def mock_show(*args):
         print('called gui.show_dialog with args', args)
@@ -2941,16 +3039,16 @@ def test_editor_build_data_for_new_titles(monkeypatch, capsys, tmp_path):
         args[0].dialog_data = {'en.lng': {'C_NEW1': 'xxx_nl', 'C_NEW2': 'yyy_nl'},
                                'nl.lng': {'C_NEW1': 'xxx_en', 'C_NEW2': 'yyy_en'}}
         return True
-    def mock_build(*args):
+    def mock_add(*args):
         print('called add_columntitledata with args', args)
     monkeypatch.setattr(testee.shared, 'HERELANG', tmp_path)
     (tmp_path / 'en.lng').touch()
     (tmp_path / 'nl.lng').touch()
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_show)
-    monkeypatch.setattr(testee, 'add_columntitledata', mock_build)
+    monkeypatch.setattr(testee, 'add_columntitledata', mock_add)
     testobj = setup_editor(monkeypatch, capsys)
     testobj.ini = {'lang': 'en.lng'}
-    assert testobj.build_data_for_new_titles([], []) == (True, None, None)
+    assert testobj.build_new_title_data([], []) == (True, None, None)
     assert testobj.dialog_data == {'textid': 'C_XXX', 'new_titles': [],
                                    'languages': ['en.lng', 'nl.lng'], 'colno': 1}
     assert capsys.readouterr().out == (
@@ -2959,7 +3057,7 @@ def test_editor_build_data_for_new_titles(monkeypatch, capsys, tmp_path):
     titles = ['xxx_nl', 'yyy_nl']
     coldata = [['xxx_nl', 10, False], ['yyy_nl', 10, False]]
     # breakpoint()
-    canceled, title_list, column_info = testobj.build_data_for_new_titles(titles, coldata)
+    canceled, title_list, column_info = testobj.build_new_title_data(titles, coldata)
     assert not canceled
     assert title_list == [('C_NEW1', 'xxx_nl'), ('C_NEW2', 'yyy_nl')]
     assert column_info == [['C_NEW1', 10, False], ['C_NEW2', 10, False]]
@@ -3120,12 +3218,12 @@ def test_editor_m_lang(monkeypatch, capsys, tmp_path):
         print('called gui.get_choice with args', args, kwargs)
         return 'xx', True
     def mock_write(arg):
-        print(f"called write_settings_json with arg '{arg}'")
+        print(f"called write_settings with arg '{arg}'")
     def mock_read(arg):
         print(f"called Editor.readcaptions with arg '{arg}'")
     def mock_set():
         print("called Editor.setcaptions")
-    monkeypatch.setattr(testee, 'write_settings_json', mock_write)
+    monkeypatch.setattr(testee, 'write_settings', mock_write)
     monkeypatch.setattr(testee.gui, 'get_choice', mock_choice)
     langdir = tmp_path
     (langdir / 'en.lng').touch()
@@ -3156,7 +3254,7 @@ def test_editor_m_lang(monkeypatch, capsys, tmp_path):
     assert capsys.readouterr().out == (
             "called gui.get_choice with args"
             f" ({testobj.gui}, 'xxx', 'hello', ['en.lng', 'nl.lng']) {{'current': 1}}\n"
-            "called write_settings_json with arg '{'lang': 'xx'}'\n"
+            "called write_settings with arg '{'lang': 'xx'}'\n"
             "called Editor.readcaptions with arg 'xx'\n"
             "called Editor.setcaptions\n")
 
@@ -3199,9 +3297,9 @@ def test_editor_m_pref(monkeypatch, capsys):
         args[0].prefs = ('Fixed', 'changed')
         return True
     def mock_write(arg):
-        print(f"called write_settings_json with arg '{arg}'")
+        print(f"called write_settings with arg '{arg}'")
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog)
-    monkeypatch.setattr(testee, 'write_settings_json', mock_write)
+    monkeypatch.setattr(testee, 'write_settings', mock_write)
     testobj = setup_editor(monkeypatch, capsys)
     testobj.ini = {'startup': 'Fixed', 'initial': 'unchanged'}
     testobj.m_pref()
@@ -3219,7 +3317,7 @@ def test_editor_m_pref(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             "called gui.show_dialog with args"
             f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-            "called write_settings_json with arg"
+            "called write_settings with arg"
             " '{'startup': 'Remember', 'initial': 'unchanged'}'\n")
 
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_3)
@@ -3230,7 +3328,7 @@ def test_editor_m_pref(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             "called gui.show_dialog with args"
             f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-            "called write_settings_json with arg"
+            "called write_settings with arg"
             " '{'startup': 'Fixed', 'initial': 'unchanged'}'\n")
 
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_4)
@@ -3241,7 +3339,7 @@ def test_editor_m_pref(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             "called gui.show_dialog with args"
             f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-            "called write_settings_json with arg"
+            "called write_settings with arg"
             " '{'startup': 'Remember', 'initial': 'unchanged'}'\n")
 
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_5)
@@ -3252,7 +3350,7 @@ def test_editor_m_pref(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             "called gui.show_dialog with args"
             f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-            "called write_settings_json with arg"
+            "called write_settings with arg"
             " '{'startup': 'Fixed', 'initial': 'changed'}'\n")
 
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_2)
@@ -3263,7 +3361,7 @@ def test_editor_m_pref(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             "called gui.show_dialog with args"
             f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-            "called write_settings_json with arg"
+            "called write_settings with arg"
             " '{'startup': 'Remember', 'initial': 'unchanged'}'\n")
 
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_3)
@@ -3274,7 +3372,7 @@ def test_editor_m_pref(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             "called gui.show_dialog with args"
             f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-            "called write_settings_json with arg"
+            "called write_settings with arg"
             " '{'startup': 'Fixed', 'initial': 'unchanged'}'\n")
 
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_4)
@@ -3285,7 +3383,7 @@ def test_editor_m_pref(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             "called gui.show_dialog with args"
             f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-            "called write_settings_json with arg"
+            "called write_settings with arg"
             " '{'startup': 'Remember', 'initial': 'unchanged'}'\n")
 
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_5)
@@ -3296,7 +3394,7 @@ def test_editor_m_pref(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             "called gui.show_dialog with args"
             f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-            "called write_settings_json with arg"
+            "called write_settings with arg"
             " '{'startup': 'Fixed', 'initial': 'changed'}'\n")
 
 def test_editor_accept_startupsettings(monkeypatch, capsys):
@@ -3334,13 +3432,13 @@ def test_editor_exit(monkeypatch, capsys):
         print('called HotkeyPanel.exit')
         return True
     def mock_write(*args, **kwargs):
-        print('called write_settings_json with args', args, kwargs)
+        print('called write_settings with args', args, kwargs)
     def mock_get():
         print('called SingledataInterface.get_selected_text')
         return 'xxx'
     monkeypatch.setattr(testee.shared, 'mode_f', 'fixed')
     monkeypatch.setattr(testee.shared, 'mode_r', 'remember')
-    monkeypatch.setattr(testee, 'write_settings_json', mock_write)
+    monkeypatch.setattr(testee, 'write_settings', mock_write)
     testobj = setup_editor(monkeypatch, capsys)
     testobj.book.page = types.SimpleNamespace(exit=mock_exit)
     testobj.ini = {}
@@ -3358,7 +3456,7 @@ def test_editor_exit(monkeypatch, capsys):
     assert testobj.ini['initial'] == 'xxx'
     assert capsys.readouterr().out == ("called HotkeyPanel.exit\n"
                                        "called SingledataInterface.get_selected_text\n"
-                                       "called write_settings_json with args"
+                                       "called write_settings with args"
                                        " ({'startup': 'remember', 'initial': 'xxx'},)"
                                        " {'nobackup': True}\n"
                                        "called Gui.close\n")
@@ -3368,7 +3466,7 @@ def test_editor_exit(monkeypatch, capsys):
     assert testobj.ini['initial'] == 'xxx'
     assert capsys.readouterr().out == ("called HotkeyPanel.exit\n"
                                        "called SingledataInterface.get_selected_text\n"
-                                       "called write_settings_json with args"
+                                       "called write_settings with args"
                                        " ({'startup': 'remember', 'initial': 'xxx'},)"
                                        " {'nobackup': True}\n"
                                        "called Gui.close\n")
