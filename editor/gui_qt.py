@@ -92,6 +92,7 @@ class SingleDataInterface(qtw.QFrame):
         #     shared.log_exc()
         box.setMaximumHeight(frameheight)
 
+        self.cmb_key = self.cmb_context = self.cmb_commando = self.cmb_controls = None
         if 'C_KEY' in self.master.fields:
             self.lbl_key = qtw.QLabel(self.master.captions['C_KTXT'] + " ", box)
             if self.master.keylist is None:
@@ -240,7 +241,7 @@ class SingleDataInterface(qtw.QFrame):
             sizer1.addLayout(sizer2)
 
         # try:
-        if hasattr(self.master.reader, 'extra_fields_topline'):
+        if hasattr(self.master.reader, 'layout_extra_fields_topline'):
             self.master.reader.layout_extra_fields_topline(self, sizer1)  # user exit
         # except AttributeError:
         #     shared.log_exc()
@@ -254,7 +255,7 @@ class SingleDataInterface(qtw.QFrame):
         # except AttributeError:
         #     shared.log_exc()
         # else:
-        if hasattr(self.master.reader, 'extra_fields_nextline'):
+        if hasattr(self.master.reader, 'layout_extra_fields_nextline'):
             sizer1 = qtw.QHBoxLayout()
             self.master.reader.layout_extra_fields_nextline(self, sizer1)  # user exit
             bsizer.addLayout(sizer1)
@@ -266,7 +267,7 @@ class SingleDataInterface(qtw.QFrame):
             sizer1.addLayout(sizer2, 2)
 
         # try:
-        if hasattr(self.master.reader, 'extra_fields'):
+        if hasattr(self.master.reader, 'layout_extra_fields'):
             self.master.reader.layout_extra_fields(self, sizer1)  # user exit
         # except AttributeError:
         #    shared.log_exc()
