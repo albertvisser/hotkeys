@@ -166,7 +166,7 @@ M_SETT2 &Settings
 M_TITLE &Screen Title
 M_LOC &File locations
 M_LANG &Language
-M_PREF Set &Preferred Tool
+M_PREF Set Preferred Tool
 M_TOOL &Tool Specific
 M_COL &Columns
 M_MISC &Misc
