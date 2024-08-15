@@ -600,6 +600,8 @@ class HotkeyPanel:
             state = text != self._origdata[self.field_indexes['C_KEY']]
             self.defchanged = state
             self.gui.enable_save(state)
+            if self.defchanged:
+                self._newdata[self.field_indexes['C_KEY']] = text
 
     def on_combobox(self, *args):
         """callback op het gebruik van een combobox

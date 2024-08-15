@@ -1080,6 +1080,7 @@ def test_hotkeypanel_on_text(monkeypatch, capsys):
     testobj.gui.enable_save = mock_enable
     testobj.field_indexes = {'C_KEY': 1}
     testobj._origdata = ['', 'snork']
+    testobj._newdata = ['', '']
     testobj.initializing_screen = True
     testobj.fields = []
     testobj.defchanged = True
@@ -1090,16 +1091,20 @@ def test_hotkeypanel_on_text(monkeypatch, capsys):
     testobj.defchanged = True
     testobj.on_text('xx')
     assert not testobj.defchanged
+    assert testobj._newdata == ['', '']
     assert capsys.readouterr().out == "called HotkeyPanelGui.get_widget_text with args ('xx',)\n"
     testobj.fields = ['C_KEY']
     # breakpoint()
     testobj.on_text('xx')
     assert testobj.defchanged
+    assert testobj._newdata == ['', 'snark']
     assert capsys.readouterr().out == ("called HotkeyPanelGui.get_widget_text with args ('xx',)\n"
                                        "called HotkeyPanelGui.enable_save with arg True\n")
     testobj._origdata = ['', 'snark']
+    testobj._newdata = ['', '']
     testobj.on_text('xx')
     assert not testobj.defchanged
+    assert testobj._newdata == ['', '']
     assert capsys.readouterr().out == ("called HotkeyPanelGui.get_widget_text with args ('xx',)\n"
                                        "called HotkeyPanelGui.enable_save with arg False\n")
 
