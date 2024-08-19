@@ -49,20 +49,36 @@ class MockSDI:
         """
         return 'first_item'
     def init_combobox(self, *args):
+        """stub
+        """
         print('called SingleDataInterface.init_combobox with args', args)
     def set_textfield_value(self, *args):
+        """stub
+        """
         print('called SingleDataInterface.set_textfield_value with args', args)
     def set_checkbox_state(self, *args):
+        """stub
+        """
         print('called SingleDataInterface.set_checkbox_state with args', args)
     def set_combobox_string(self, *args):
+        """stub
+        """
         print('called SingleDataInterface.set_combobox_string with args', args)
     def enable_save(self, value):
+        """stub
+        """
         print(f"called SingleDataInterface.enable_save with arg {value}")
     def enable_delete(self, value):
+        """stub
+        """
         print(f"called SingleDataInterface.enable_delete with arg {value}")
     def update_columns(self, *args):
+        """stub
+        """
         print("called SingleDataInterface.update_colums with args", args)
     def refresh_headers(self, headers):
+        """stub
+        """
         print(f"called SingleDataInterface.refresh_headers with arg {headers}")
 
 class MockReader:
@@ -73,8 +89,11 @@ class MockReader2:
     """stub for plugin program
     """
     def build_data(self):
-        pass
+        """stub
+        """
     def update_otherstuff_inbound(self, data):
+        """stub
+        """
         print('called Reader.update_otherstuff_inbound with arg', data)
         return data
 
@@ -1482,50 +1501,90 @@ class MockTabGui:
         print('called TabbedInterface.__init__ with args', args)
         self._removecounter = 0
     def setup_selector(self):
+        """stub
+        """
         print('called TabbedInterface.setup_selector')
     def clear_selector(self):
+        """stub
+        """
         print('called TabbedInterface.clear_selector')
     def setup_search(self):
+        """stub
+        """
         print('called TabbedInterface.setup_search')
     def add_subscreen(self, win):
+        """stub
+        """
         print(f'called TabbedInterface.add_subscreen with arg of type {type(win)}')
     def add_to_selector(self, txt):
+        """stub
+        """
         print(f"called TabbedInterface.add_to_selector with arg '{txt}'")
     def format_screen(self):
+        """stub
+        """
         print("called TabbedInterface.format_screen")
     def update_search(self, arg):
+        """stub
+        """
         print("called TabbedInterface.update_search with arg", arg)
     def init_search_buttons(self):
+        """stub
+        """
         print("called TabbedInterface.init_search_buttons")
     def set_selected_tool(self, arg):
+        """stub
+        """
         print(f"called TabbedInterface.set_selected_tool with arg '{arg}'")
     def set_selected_panel(self, *args):
+        """stub
+        """
         print("called TabbedInterface.set_selected_panel with args", args)
     def set_selected_keydef_item(self, *args):
+        """stub
+        """
         print("called TabbedInterface.set_selected_keydef_item with args", args)
     def enable_search_buttons(self, **kwargs):
+        """stub
+        """
         print("called TabbedInterface.enable_search_buttons with args", kwargs)
     def enable_search_text(self, state):
+        """stub
+        """
         print(f"called TabbedInterface.enable_search_text with arg {state}")
     def set_found_keydef_position(self, *args):
+        """stub
+        """
         print("called TabbedInterface.set_found_keydef_position with args", args)
     def set_filter_state_text(self, text):
+        """stub
+        """
         print(f"called TabbedInterface.set_filter_state_text with arg {text}")
     def get_selected_index(self):
+        """stub
+        """
         print('called TabbedInterface.get_selected_index')
         return 2
     def get_new_selection(self, arg):
+        """stub
+        """
         print(f"called TabbedInterface.get_new_selection with arg '{arg}'")
         return 1
     def remove_tool(self, *args):
+        """stub
+        """
         print('called TabbedInterface.remove_tool with args', args)
         self._removecounter += 1
         if self._removecounter % 2 == 0:
             return None
         return f'item #{self._removecounter}'
     def add_tool(self, *args):
+        """stub
+        """
         print('called TabbedInterface.add_tool with args', args)
     def refresh_locs(self, headers):
+        """stub
+        """
         print(f"called TabbedInterface.refresh_locs with arg '{headers}'")
 
 
@@ -1540,14 +1599,24 @@ class MockHotkeyPanel:
         if testee.os.path.basename(args[1]) == 'itsnotthere':
             self.settings[testee.shared.SettType.PLG.value] = 'xxx'
     def __repr__(self):
+        """stub
+        """
         return f"<HotkeyPanel '{self._name}'>"
     def readkeys(self):
+        """stub
+        """
         print('called HotkeyPanel.readkeys')
     def populate_list(self):
+        """stub
+        """
         print('called HotkeyPanel.populate_list')
     def setcaptions(self):
+        """stub
+        """
         print('called HotkeyPanel.setcaptions')
     def set_title(self):
+        """stub
+        """
         print('called HotkeyPanel.set_title')
 
 
@@ -1863,16 +1932,28 @@ class MockGui:
     def __init__(self, arg):
         print(f'called Gui.__init__ with arg {arg}')
     def set_window_title(self, text):
+        """stub
+        """
         print(f"called Gui.set_window_title with arg '{text}'")
     def statusbar_message(self, *args):
+        """stub
+        """
         print('called Gui.statusbar_message with args', args)
     def setup_tabs(self):
+        """stub
+        """
         print('called Gui.setup_tabs')
     def go(self):
+        """stub
+        """
         print('called Gui.go')
     def resize_empty_screen(self, *args):
+        """stub
+        """
         print('called Gui.resize_empty_screen with args', args)
     def close(self):
+        """stub
+        """
         print('called Gui.close')
 
 
@@ -1882,6 +1963,8 @@ class MockChoiceBook:
         print(f"called ChoiceBook.__init__ with arg '{arg}'")
         self.gui = MockTabGui()
     def on_page_changed(self, start):
+        """stub
+        """
         print(f"called ChoiceBook.on_page_changed with arg '{start}'")
 
 
@@ -2437,8 +2520,7 @@ def test_editor_accept_pluginsettings(monkeypatch, capsys, tmp_path):
             f" {{'args': ['ploc']}}\n")
     monkeypatch.setattr(testee.importlib.util, 'find_spec', mock_find_2)
     assert testobj.accept_pluginsettings(str(clocpath), 'ploc', 'title', '0', '1', '0')
-    assert testobj.gui.loc == f'{clocpath}'
-    assert testobj.gui.data == ['ploc', 'title', 0, 1, 0]
+    assert testobj.gui.data == [f'{clocpath}', 'ploc', 'title', 0, 1, 0]
     assert capsys.readouterr().out == "called importlib.util.find_spec with arg 'ploc'\n"
 
 def test_editor_m_tool(monkeypatch, capsys):

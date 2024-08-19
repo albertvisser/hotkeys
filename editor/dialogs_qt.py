@@ -401,14 +401,15 @@ class FilesDialog(qtw.QDialog):
                 show_message(self.parent, 'I_NEEDNAME')
                 return
             self.master.last_added = newtool
-            self.loc = prgloc = ""
+            dataloc = prgloc = ""
             self.settingsdata[newtool] = (prgloc,)
             if ask_question(self.parent, 'P_INIKDEF'):
                 ok = SetupDialog(self, newtool).exec_()
                 if ok:
-                    self.settingsdata[newtool] = self.parent.data
-                    prgloc = self.parent.data[0]
-            self.add_row(newtool, path=self.loc)
+                    self.settingsdata[newtool] = self.parent.data[1:]
+                    prgloc = self.parent.data[1]
+                    dataloc = self.parent.data[0]
+            self.add_row(newtool, path=dataloc)
 
     def remove_programs(self):
         """alle aangevinkte items verwijderen uit self.gsizer"""

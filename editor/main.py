@@ -1186,8 +1186,7 @@ class Editor:
         if importlib.util.find_spec(ploc):
             gui.show_message(self.gui, 'I_GOTPLGFIL', args=[ploc])
             return False
-        self.gui.loc = cloc
-        self.gui.data = [ploc, title, int(rebuild), int(details), int(redef)]
+        self.gui.data = [cloc, ploc, title, int(rebuild), int(details), int(redef)]
         return True
 
     def m_tool(self, event=None):

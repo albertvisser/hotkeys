@@ -387,7 +387,7 @@ class FilesDialog(wx.Dialog):
                 show_message(self.parent, 'I_NEEDNAME')
                 return
             self.master.last_added = newtool
-            self.loc = prgloc = ""
+            dataloc = prgloc = ""
             self.settingsdata[newtool] = (prgloc,)
             if ask_question(self.parent, 'P_INIKDEF'):
                 with SetupDialog(self, newtool) as dlg:
@@ -399,9 +399,10 @@ class FilesDialog(wx.Dialog):
                             if not dlg.accept():
                                 send = True
                             else:
-                                self.settingsdata[newtool] = self.parent.data
-                                prgloc = self.parent.data[0]
-            self.add_row(newtool, path=self.loc)
+                                self.settingsdata[newtool] = self.parent.data[1:]
+                                dataloc = self.parent.data[0]
+                                prgloc = self.parent.data[1]
+            self.add_row(newtool, path=dataloc)
 
     def remove_programs(self, event):
         """alle aangevinkte items verwijderen uit self.gsizer"""
