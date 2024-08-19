@@ -62,8 +62,8 @@ C_SELPRG Select tool:
 C_FIND Find text in
 C_SELFIL Choose a file
 C_PRGNAM Program
-C_CSVLOC Location of the CSV-file
-T_TOOLS Using this dialog you can determine for which programs keyboard definitions will be shown / and where these are located (in the form of csv/json files)
+C_KDEFLOC Location of the keydef file
+T_TOOLS Using this dialog you can determine for which programs keyboard definitions will be shown / and where these are located (in the form of files containing json data)
 T_SHORT A hotkey viewer/editor
 T_LONG Originally built for Total Commander / extended for use with all your favourite applications
 T_XTRASET Define extra settings (e.g. location of keyboard config files) for {}
@@ -81,7 +81,7 @@ T_TRANS Enter a translation id for each new column name / as well as the necessa
 Q_SAVCHG Previously selected definition was changed - save now?
 
 # remove dialog
-Q_REMCSV Also remove keydefs data (csv/json)
+Q_REMKDEF Also remove keydefs data
 Q_REMPLG Also remove plugin code
 
 # messages
@@ -89,7 +89,7 @@ I_STDDEF Can't delete standard (builtin) definition
 Q_SAVXIT Definitions have been changed - save now?
 I_NOMSG No message to show
 P_SELLNG Choose a language file
-T_INICSV Create Initial version of CSV file
+T_INIKDEF Create Initial version of keydef file
 S_PLGNAM Module containing toolspecific code
 T_ISMADE will also create it
 T_NOPY without .py
@@ -104,11 +104,11 @@ S_DETS show keydef details in a separate part of the screen
 Q_SAVLOC Where do you want to store this file?
 I_RSTRT You may need to restart the other program for the changes to take effect
 I_NEEDNAME Sorry, can't continue without a name - please enter one or cancel
-P_INICSV Initialize new csv/json file for this application?
-I_NOSETFIL CSV file {} not found
-I_GOTSETFIL CSV file {} already exists
+P_INIKDEF Initialize new keydef file for this application?
+I_NOSETFIL Keydef file {} not found
+I_GOTSETFIL Keydef file {} already exists
 I_GOTPLGFIL plugin module {} already exists
-I_NOSET Unknown setting type `{}` in CSV file {}
+I_NOSET Unknown setting type `{}` in keydef file {}
 Q_NOCHG You haven't made any changes. Are you sure you want to do this?
 I_NOCHG Nothing was changed
 I_NODATA No data for this program
@@ -129,7 +129,7 @@ I_ADDCOL Please add settings and column information to plugin settings file firs
 I_DEFSAV Please define savekeys function in plugin or disable this option
 I_DEFRBLD Please define rebuild function in plugin or disable this option
 I_ERRRBLD Error rebuilding plugin settings file (check filenames)
-I_NORBLD CSV not (re)built - {}
+I_NORBLD Keydefs not (re)built - {}
 I_DPLCOL Can't save this: identical values for column numbers
 I_DPLNAM Can't save this: identical values for column names
 I_MISSNAM Can't save this: not all column names are entered
@@ -144,7 +144,7 @@ I_STITLE Using standard titlei
 I_NOPATH No path data for HotKeyPanel
 I_NOSETT Can't build/get settings for {}
 I_FILLALL Please fill out all the filenames
-I_NOCSV {} does not seem to be a usable plugin settings file
+I_NOKDEF {} does not seem to be a usable plugin settings file
 I_NOPLNAM {} does not contain a reference to a plugin (PluginName setting)
 I_NOPLREF {} does not contain a reference to a valid plugin
 I_RBLD Keyboard definitions rebuilt

@@ -88,45 +88,6 @@ def test_readlang(monkeypatch, tmp_path):
     (mock_lang / 'en').write_text("#deze overslaan\n\ncode text\n\nalso a code with text\n")
     assert testee.readlang('en') == {'code': 'text', 'also': 'a code with text'}
 
-def test_get_csv_oms(monkeypatch, capsys):
-    """unittest for main.get_csv_oms
-    """
-    def mock_read(lang):
-        """stub
-        """
-        print(f'called readlang with arg `{lang}`')
-        return {'T_NAMOF': '{} {} name', 'S_PLGNAM': 'plugin', 'T_NOPY': 'module',
-                'T_INSEL': '{} name', 'S_PNLNAM': 'panel', 'T_BOOL': '{} option',
-                'S_RBLD': 'rebuild', 'S_DETS': 'details', 'S_RSAV': 'resave', 'T_COLTTL': 'coltitle',
-                'T_COLWID': 'colwidth', 'T_COLIND': 'colind'}
-    monkeypatch.setattr(testee, 'readlang', mock_read)
-    monkeypatch.setattr(testee.shared, 'SettType', MockSettType)
-    monkeypatch.setattr(testee, 'LineType', MockLineType)
-    assert testee.get_csv_oms('x') == {'plg': 'plugin module name', 'pnl': 'panel name',
-                                       'rbld': 'rebuild option', 'dets': 'details option',
-                                       'rdef': 'resave option', 'capt': 'coltitle',
-                                       'wid': 'colwidth', 'orig': 'colind option'}
-    assert capsys.readouterr().out == 'called readlang with arg `x`\n'
-
-# niet meer nodig als ik alleen nog maar met json werk
-def test_build_csv_sample_data(monkeypatch, capsys):
-    """unittest for main.build_csv_sample_data
-    """
-    def mock_get(lang):
-        """stub
-        """
-        print(f'called get_csv_oms with arg `{lang}`')
-        return {'plg': 'plugin module name', 'pnl': 'panel name', 'rbld': 'rebuild option',
-                'dets': 'details option', 'rdef': 'resave option', 'capt': 'coltitle',
-                'wid': 'colwidth', 'orig': 'colind option'}
-    monkeypatch.setattr(testee, 'get_csv_oms', mock_get)
-    monkeypatch.setattr(testee.shared, 'SettType', MockSettType)
-    monkeypatch.setattr(testee, 'LineType', MockLineType)
-    assert testee.build_csv_sample_data('en') == [['capt', 'C_KEY', 'C_MODS', 'C_DESC', 'coltitle'],
-                                                  ['wid', 120, 90, 292, 'colwidth'],
-                                                  ['orig', 0, 0, 0, 'colind option']]
-    assert capsys.readouterr().out == 'called get_csv_oms with arg `en`\n'
-
 def test_read_settings(monkeypatch, tmp_path):
     """unittest for main.read_settings
     """
@@ -206,52 +167,23 @@ def test_update_paths(monkeypatch, capsys):
         """stub
         """
         print('called path.write with args', args)
-    def mock_initcsv(*args):
-        """stub
-        """
-        print('called initcsv with args', args)
     def mock_initjson(*args):
         """stub
         """
         print('called initjson with args', args)
     monkeypatch.setattr(testee.shared.pathlib.Path, 'write_text', mock_write)
-    monkeypatch.setattr(testee, 'initcsv', mock_initcsv)
     monkeypatch.setattr(testee, 'initjson', mock_initjson)
-    paths = (('xx', 'yy.csv'), ('aa', 'bb.json'))
+    paths = (('xx', 'yy.json'), ('aa', 'bb.json'))
     pathdata = {'xx': ['xx.yy.zz', 'xxx', 1, 0, 0], 'aa': ['.bb.cc', 'aaa', 1, 1, 1]}
-    assert testee.update_paths(paths, pathdata, 'en') == [('xx', 'yy.csv'), ('aa', 'bb.json')]
+    assert testee.update_paths(paths, pathdata, 'en') == [('xx', 'yy.json'), ('aa', 'bb.json')]
     assert capsys.readouterr().out == (
             f"called path.write with args ({testee.BASE / 'xx' / 'yy' / 'zz.py'!r},"
             f" {testee.plugin_skeleton!r})\n"
-            f"called initcsv with args ({testee.BASE / 'yy.csv'!r},"
-            " ['xx.yy.zz', 'xxx', 1, 0, 0], 'en')\n"
+            f"called initjson with args ({testee.BASE / 'yy.json'!r},"
+            " ['xx.yy.zz', 'xxx', 1, 0, 0])\n"
             f"called path.write with args ({testee.BASE / 'bb' / 'cc.py'!r},"
             f" {testee.plugin_skeleton!r})\n"
             f"called initjson with args ({testee.BASE / 'bb.json'!r}, ['.bb.cc', 'aaa', 1, 1, 1])\n")
-
-# niet meer nodig als ik alleen nog maar met json werk
-def test_initcsv(monkeypatch, capsys, tmp_path):
-    """unittest for main.initcsv
-    """
-    def mock_get_oms(lang):
-        print(f"called get_csv_oms with arg '{lang}'")
-        return {'sett1': 'first setting', 'sett2': 'second setting', 'sett3': 'third setting'}
-    def mock_build(lang):
-        print(f"called build_csv_sample_data with arg '{lang}'")
-        return [('sample', 'line', '1'), ('sample', 'line', '2')]
-    monkeypatch.setattr(testee, 'get_csv_oms', mock_get_oms)
-    monkeypatch.setattr(testee, 'build_csv_sample_data', mock_build)
-    monkeypatch.setattr(testee.shared, 'csv_settingnames', ['sett1', 'sett2', 'sett3'])
-    loc = tmp_path / 'mock_init.csv'
-    data = ['value1', 'value2', 'value3']
-    testee.initcsv(loc, data, 'nl')
-    assert loc.read_text() == ("Setting,sett1,value1,first setting\n"
-                               "Setting,sett2,value2,second setting\n"
-                               "Setting,sett3,value3,third setting\n"
-                               "sample,line,1\n"
-                               "sample,line,2\n")
-    assert capsys.readouterr().out == ("called get_csv_oms with arg 'nl'\n"
-                                       "called build_csv_sample_data with arg 'nl'\n")
 
 def test_initjson(monkeypatch, capsys):
     """unittest for main.initjson
@@ -261,36 +193,12 @@ def test_initjson(monkeypatch, capsys):
         """
         print('called writejson with args', args)
     monkeypatch.setattr(testee, 'writejson', mock_write)
-    monkeypatch.setattr(testee.shared, 'csv_settingnames', ['x', 'y'])
+    monkeypatch.setattr(testee.shared, 'settingnames', ['x', 'y'])
     monkeypatch.setattr(testee, 'initial_columns', (('a', 1, True), 'b', 2, False))
     testee.initjson('settfile', ['xxx', 'yyy'])
     assert capsys.readouterr().out == ("called writejson with args"
                                        " ('settfile', None, {'x': 'xxx', 'y': 'yyy'},"
                                        " [(('a', 1, True), 'b', 2, False)], {}, {})\n")
-
-# niet meer nodig als ik alleen nog maar met json werk
-def test_readcsv(monkeypatch, tmp_path):
-    """unittest for main.readcsv
-    """
-    path = tmp_path / 'settings.csv'
-    path.touch()
-    assert testee.readcsv(path) == ({}, [], {})
-    monkeypatch.setattr(testee.shared, 'csv_settingnames', ['xxx'])
-    path.write_text('# comment\n#comment\noops\n')
-    with pytest.raises(ValueError) as exc:
-        testee.readcsv(path)
-    assert str(exc.value) == 'oops'
-    path.write_text(f'{testee.LineType.SETT.value},xxx,x-value,setting\n'
-                    f'{testee.LineType.SETT.value},yyy,y-value,extrasetting\n'
-                    f'{testee.LineType.CAPT.value},aaa,bbb,column names\n'
-                    f'{testee.LineType.WID.value},10,20,column widths\n'
-                    f'{testee.LineType.ORIG.value},0,1,column types\n'
-                    f'{testee.LineType.KEY.value},key-1,,desc\n'
-                    f'{testee.LineType.KEY.value},key-2,modifiers,description\n')
-    assert testee.readcsv(path) == (
-            {'xxx': 'x-value', 'yyy': 'y-value', 'extra': {'yyy': 'extrasetting'}},
-            [['aaa', 10, False], ['bbb', 20, True]],
-            {1: ['key-1', '', 'desc'], 2: ['key-2', 'modifiers', 'description']})
 
 def test_readjson(tmp_path):
     """unittest for main.readjson
@@ -301,92 +209,6 @@ def test_readjson(tmp_path):
                        ' "keydata": {"keycombo": "dict"}, "otherstuff": {}}')
     assert testee.readjson(plgfile) == ({"settings": "dict"}, [["column", "info"]],
                                         {"keycombo": "dict"}, {"otherstuff": {}})
-
-# niet meer nodig als ik alleen nog maar met json werk
-def test_writecsv(monkeypatch, capsys, tmp_path):
-    """unittest for main.writecsv
-    """
-    class MockWriter:
-        """stub for csv.writer
-        """
-        def __init__(self, *args):
-            print('called csv.writer with args', args)
-        def writerow(self, line):
-            print('called csv.writer.writerow with arg', line)
-    def mock_copy(*args):
-        print('called shutil.copyfile with args', args)
-    def mock_get_oms(lang):
-        print(f"called get_csv_oms with arg '{lang}'")
-        return {testee.LineType.CAPT.value: 'ppp',
-                testee.LineType.WID.value: 'qqq',
-                testee.LineType.ORIG.value: 'rrr'}
-    def mock_get_desc(*args):
-        print("called get_settdesc with args", args)
-        return 'sett desc'
-    monkeypatch.setattr(testee, 'get_csv_oms', mock_get_oms)
-    monkeypatch.setattr(testee.shutil, 'copyfile', mock_copy)
-    monkeypatch.setattr(testee, 'getsettdesc', mock_get_desc)
-    monkeypatch.setattr(testee.csv, 'writer', MockWriter)
-    plgfile = tmp_path / 'test' / 'plugin.csv'
-    bakfile = plgfile.with_suffix('.csv~')
-    plgfile.parent.mkdir()
-    settings = {'xx': 'xxxx', 'yy': 'yyyy'}
-    coldata = [('aaa', 1, '0'), ('bbb', 2, '1')]
-    data = {1: ('O', 'C', 'Open'), 2: ('S', 'C', 'Save')}
-    # first time: plugin data file does not exist
-    testee.writecsv(str(plgfile), settings, coldata, data, 'lang')
-    assert capsys.readouterr().out == (
-            "called get_csv_oms with arg 'lang'\n"
-            "called csv.writer with args"
-            f" (<_io.TextIOWrapper name='{plgfile}' mode='w' encoding='UTF-8'>,)\n"
-            "called get_settdesc with args ('xx', {'xx': 'xxxx', 'yy': 'yyyy'},"
-            " {'Title': 'ppp', 'Width': 'qqq', 'is_type': 'rrr'})\n"
-            "called csv.writer.writerow with arg ('Setting', 'xx', 'xxxx', 'sett desc')\n"
-            "called get_settdesc with args ('yy', {'xx': 'xxxx', 'yy': 'yyyy'},"
-            " {'Title': 'ppp', 'Width': 'qqq', 'is_type': 'rrr'})\n"
-            "called csv.writer.writerow with arg ('Setting', 'yy', 'yyyy', 'sett desc')\n"
-            "called csv.writer.writerow with arg ['Title', 'aaa', 'bbb', 'ppp']\n"
-            "called csv.writer.writerow with arg ['Width', 1, 2, 'qqq']\n"
-            "called csv.writer.writerow with arg ['is_type', 0, 1, 'rrr']\n"
-            "called csv.writer.writerow with arg ['Keydef', 'O', 'C', 'Open']\n"
-            "called csv.writer.writerow with arg ['Keydef', 'S', 'C', 'Save']\n")
-    # second time: plugin data file exists
-    settings = {'xx': 'xxxx', 'yy': 'yyyy', 'extra': 'asdf'}
-    coldata = [('aaa', 1, '0'), ('bbb', 2, '1')]
-    data = {1: ('O', 'C', 'Open'), 2: ('S', 'C', 'Save')}
-    testee.writecsv(str(plgfile), settings, coldata, data, 'lang')
-    assert capsys.readouterr().out == (
-            "called get_csv_oms with arg 'lang'\n"
-            f"called shutil.copyfile with args ('{plgfile}', '{bakfile}')\n"
-            "called csv.writer with args"
-            f" (<_io.TextIOWrapper name='{plgfile}' mode='w' encoding='UTF-8'>,)\n"
-            "called get_settdesc with args ('xx', {'xx': 'xxxx', 'yy': 'yyyy', 'extra': 'asdf'},"
-            " {'Title': 'ppp', 'Width': 'qqq', 'is_type': 'rrr'})\n"
-            "called csv.writer.writerow with arg ('Setting', 'xx', 'xxxx', 'sett desc')\n"
-            "called get_settdesc with args ('yy', {'xx': 'xxxx', 'yy': 'yyyy', 'extra': 'asdf'},"
-            " {'Title': 'ppp', 'Width': 'qqq', 'is_type': 'rrr'})\n"
-            "called csv.writer.writerow with arg ('Setting', 'yy', 'yyyy', 'sett desc')\n"
-            "called get_settdesc with args ('extra', {'xx': 'xxxx', 'yy': 'yyyy', 'extra': 'asdf'},"
-            " {'Title': 'ppp', 'Width': 'qqq', 'is_type': 'rrr'})\n"
-            "called csv.writer.writerow with arg ('Setting', 'extra', 'asdf', 'sett desc')\n"
-            "called csv.writer.writerow with arg ['Title', 'aaa', 'bbb', 'ppp']\n"
-            "called csv.writer.writerow with arg ['Width', 1, 2, 'qqq']\n"
-            "called csv.writer.writerow with arg ['is_type', 0, 1, 'rrr']\n"
-            "called csv.writer.writerow with arg ['Keydef', 'O', 'C', 'Open']\n"
-            "called csv.writer.writerow with arg ['Keydef', 'S', 'C', 'Save']\n")
-
-def test_getsettdesc():
-    """unittest for main.getsettdesc
-    """
-    settings = {}
-    csvoms = {}
-    assert testee.getsettdesc('xxx', settings, csvoms) == ''
-    settings = {'extra': {}}
-    assert testee.getsettdesc('xxx', settings, csvoms) == ''
-    settings = {'extra': {'xxx': 'yyyyyy'}}
-    assert testee.getsettdesc('xxx', settings, csvoms) == 'yyyyyy'
-    csvoms = {'xxx': 'zzzzzz'}
-    assert testee.getsettdesc('xxx', settings, csvoms) == 'zzzzzz'
 
 def test_writejson(tmp_path, capsys):
     """unittest for main.writejson
@@ -442,11 +264,6 @@ def test_quick_check(monkeypatch, capsys):
         """stub
         """
         print('called shared.log_exc')
-    def mock_readcsv(arg):
-        """stub
-        """
-        print(f'called readcsv with arg `{arg}`')
-        return {}, [[], []], {1: ['x', 'y'], 2: ['a', 'b']}
     def mock_readjson(arg):
         """stub
         """
@@ -457,12 +274,13 @@ def test_quick_check(monkeypatch, capsys):
         """
         print(f'called readjson with arg `{arg}`')
         return {}, [[], []], {1: [], 2: []}, {}
+    def mock_readjson_3(arg):
+        """stub
+        """
+        print(f'called readjson with arg `{arg}`')
+        return {}, [[], []], {1: ['x', 'y'], 2: ['a', 'b']}, {}
     monkeypatch.setattr(testee.shared, 'log_exc', mock_log_exc)
-    monkeypatch.setattr(testee, 'readcsv', mock_readcsv)
     monkeypatch.setattr(testee, 'readjson', mock_readjson)
-    testee.quick_check('plugin.csv')
-    assert capsys.readouterr().out == ('called readcsv with arg `plugin.csv`\n'
-                                       'plugin.csv: No errors found\n')
     testee.quick_check('plugin.json')
     assert capsys.readouterr().out == ('called readjson with arg `plugin.json`\n'
                                        'plugin.json: No keydefs found in this file\n')
@@ -471,6 +289,10 @@ def test_quick_check(monkeypatch, capsys):
     assert capsys.readouterr().out == ('called readjson with arg `plugin.json`\n'
                                        'inconsistent item lengths in plugin.json\n'
                                        '1 []\n')
+    monkeypatch.setattr(testee, 'readjson', mock_readjson_3)
+    testee.quick_check('plugin.json')
+    assert capsys.readouterr().out == ('called readjson with arg `plugin.json`\n'
+                                       'plugin.json: No errors found\n')
 
 
 def test_hotkeypanel_init(monkeypatch, capsys):
@@ -484,17 +306,6 @@ def test_hotkeypanel_init(monkeypatch, capsys):
         """stub
         """
         print('called shared.log_exc')
-    def mock_readcsv(arg):
-        """stub
-        """
-        print(f'called readcsv with arg `{arg}`')
-        return {'x': 'y'}, [], {1: ['x', 'y'], 2: ['a', 'b']}
-    def mock_readcsv_2(arg):
-        """stub
-        """
-        print(f'called readcsv with arg `{arg}`')
-        return ({'PluginName': 'plugin', 'PanelName': 'A Panel', 'ShowDetails': '0'}, ['qq', 'rr'],
-                {1: ['x', 'y'], 2: ['a', 'b']})
     def mock_readjson_exc_1(arg):
         """stub
         """
@@ -542,12 +353,6 @@ def test_hotkeypanel_init(monkeypatch, capsys):
         """stub
         """
         print(f'called HotkeyPanel.refresh_extrascreen with arg {arg}')
-    def mock_build(self, *args, **kwargs):
-        print('called Reader.build_data with args', args, kwargs)
-        return 'x', 'otherstuff'
-    def mock_build_2(self, *args, **kwargs):
-        print('called Reader.build_data with args', args, kwargs)
-        raise FileNotFoundError('zzz')
     pad = 'NO_PATH'
     parent = types.SimpleNamespace(parent=types.SimpleNamespace(title='A title',
                                                                 captions={'I_NOPATH': 'no path',
@@ -559,7 +364,7 @@ def test_hotkeypanel_init(monkeypatch, capsys):
     monkeypatch.setattr(testee.gui, 'SingleDataInterface', MockSDI)
     monkeypatch.setattr(testee.shared, 'log_exc', mock_log_exc)
     monkeypatch.setattr(testee.shared, 'log', mock_log)
-    monkeypatch.setattr(testee, 'readcsv', mock_readcsv)
+    monkeypatch.setattr(testee, 'readjson', mock_readjson)
     testobj = testee.HotkeyPanel(parent, pad)
     assert testobj.pad == pad
     assert testobj.parent == parent
@@ -575,7 +380,6 @@ def test_hotkeypanel_init(monkeypatch, capsys):
                                        'called SDI.setup_empty_screen with args'
                                        " ('no path', 'A title')\n")
 
-    monkeypatch.setattr(testee, 'readjson', mock_readjson)
     testobj = testee.HotkeyPanel(parent, '')
     assert (testobj.settings, testobj.column_info, testobj.data) == ({}, [], {})
     assert capsys.readouterr().out == ('called SingleDataInterface.__init__ with args'
@@ -604,16 +408,6 @@ def test_hotkeypanel_init(monkeypatch, capsys):
                                        'called SDI.setup_empty_screen with args'
                                        " ('no data:\\n\\nplugin.json not found', 'A title')\n")
 
-    testobj = testee.HotkeyPanel(parent, 'plugin.csv')
-    assert (testobj.settings, testobj.column_info, testobj.data) == ({'x': 'y'}, [],
-                                                                     {1: ['x', 'y'], 2: ['a', 'b']})
-    assert capsys.readouterr().out == ('called SingleDataInterface.__init__ with args'
-                                       f" ('parent gui', {testobj})\n"
-                                       'called shared.log with arg `plugin.csv`\n'
-                                       'called readcsv with arg `plugin.csv`\n'
-                                       'called SDI.setup_empty_screen with args'
-                                       " ('no data', 'A title')\n")
-
     monkeypatch.setattr(testee, 'readjson', mock_readjson)
     testobj = testee.HotkeyPanel(parent, 'plugin.json')
     # testobj.reader = types.SimpleNamespace()
@@ -639,8 +433,7 @@ def test_hotkeypanel_init(monkeypatch, capsys):
                                        'called shared.log_exc\n'
                                        'called SDI.setup_empty_screen with args'
                                        " ('no plugin code', 'A title')\n")
-    # eigenlijk nog 2 of 3 pogingen met csv voor aanroepen van buildcsv
-    # omdat ik dat weg ga gooien laat ik het even zitten
+
     monkeypatch.setattr(testee.importlib, 'import_module', mock_import_ok)
     monkeypatch.setattr(testee.HotkeyPanel, 'add_extra_attributes', mock_add)
     monkeypatch.setattr(testee.HotkeyPanel, 'refresh_extrascreen', mock_refresh)
@@ -696,40 +489,6 @@ def test_hotkeypanel_init(monkeypatch, capsys):
                                        "called SDI.setup_list\n"
                                        "called HotkeyPanel.refresh_extrascreen with arg first_item\n")
 
-    monkeypatch.setattr(testee.importlib, 'import_module', mock_import_ok)
-    monkeypatch.setattr(testee, 'readcsv', mock_readcsv_2)
-    testobj = testee.HotkeyPanel(parent, 'plugin.csv')
-    assert capsys.readouterr().out == ('called SingleDataInterface.__init__ with args'
-                                       f" ('parent gui', {testobj})\n"
-                                       'called shared.log with arg `plugin.csv`\n'
-                                       'called readcsv with arg `plugin.csv`\n'
-                                       "called importlib.import_module with args ('plugin',)\n"
-                                       "called SDI.setup_list\n")
-
-    monkeypatch.setattr(MockReader2, 'build_data', mock_build)
-    monkeypatch.setattr(testee.importlib, 'import_module', mock_import_ok_2)
-    testobj = testee.HotkeyPanel(parent, 'plugin.csv')
-    assert capsys.readouterr().out == ('called SingleDataInterface.__init__ with args'
-                                       f" ('parent gui', {testobj})\n"
-                                       'called shared.log with arg `plugin.csv`\n'
-                                       'called readcsv with arg `plugin.csv`\n'
-                                       "called importlib.import_module with args ('plugin',)\n"
-                                       f"called Reader.build_data with args ({testobj},)"
-                                       " {'showinfo': False}\n"
-                                       "called SDI.setup_list\n")
-
-    monkeypatch.setattr(MockReader2, 'build_data', mock_build_2)
-    testobj = testee.HotkeyPanel(parent, 'plugin.csv')
-    assert capsys.readouterr().out == ('called SingleDataInterface.__init__ with args'
-                                       f" ('parent gui', {testobj})\n"
-                                       'called shared.log with arg `plugin.csv`\n'
-                                       'called readcsv with arg `plugin.csv`\n'
-                                       "called importlib.import_module with args ('plugin',)\n"
-                                       f"called Reader.build_data with args ({testobj},)"
-                                       " {'showinfo': False}\n"
-                                       'called SDI.setup_empty_screen with args'
-                                       " ('plugin no settings\\nzzz', 'A title')\n")
-
 def setup_hotkeypanel(monkeypatch, capsys):
     """stub for initializing main.HotKeyPanel when needed
     """
@@ -749,23 +508,13 @@ def setup_hotkeypanel(monkeypatch, capsys):
 def test_hotkeypanel_readkeys(monkeypatch, capsys):
     """unittest for main.HotkeyPanel.readkeys
     """
-    def mock_readcsv(arg):
-        """stub
-        """
-        print(f'called readcsv with arg `{arg}`')
-        return {}, [], 'csvdata'
     def mock_readjson(arg):
         """stub
         """
         print(f'called readjson with arg `{arg}`')
         return {}, [], 'jsondata', {}
-    monkeypatch.setattr(testee, 'readcsv', mock_readcsv)
     monkeypatch.setattr(testee, 'readjson', mock_readjson)
     testobj = setup_hotkeypanel(monkeypatch, capsys)
-    testobj.pad = 'plugin.csv'
-    testobj.readkeys()
-    assert testobj.data == 'csvdata'
-    assert capsys.readouterr().out == 'called readcsv with arg `plugin.csv`\n'
     testobj.pad = 'plugin.json'
     testobj.readkeys()
     assert testobj.data == 'jsondata'
@@ -776,8 +525,6 @@ def test_hotkeypanel_savekeys(monkeypatch, capsys):
     """
     def mock_logexc():
         print('called shared.log_exc')
-    def mock_writecsv(*args):
-        print('called writecsv with args', args)
     def mock_writejson(*args):
         print('called writejson with args', args)
     def mock_savekeys(arg):
@@ -788,11 +535,10 @@ def test_hotkeypanel_savekeys(monkeypatch, capsys):
     def mock_set_title(**kwargs):
         print('called HotkeyPanel.set_title with args', kwargs)
     monkeypatch.setattr(testee.shared, 'log_exc', mock_logexc)
-    monkeypatch.setattr(testee, 'writecsv', mock_writecsv)
     monkeypatch.setattr(testee, 'writejson', mock_writejson)
     testobj = setup_hotkeypanel(monkeypatch, capsys)
     testobj.reader.savekeys = mock_savekeys
-    testobj.pad = 'xxxx.csv'
+    testobj.pad = 'xxxx.json'
     testobj.settings = ['settings']
     testobj.column_info = ['column', 'info']
     testobj.data = ['data']
@@ -802,18 +548,12 @@ def test_hotkeypanel_savekeys(monkeypatch, capsys):
     testobj.savekeys()
     assert capsys.readouterr().out == (f"called Reader.savekeys with arg {testobj}\n"
                                        "called shared.log_exc\n"
-                                       "called writecsv with args ('xxxx.csv',"
-                                       " ['settings'], ['column', 'info'], ['data'], 'en')\n"
+                                       f"called writejson with args ('xxxx.json', {testobj.reader},"
+                                       " ['settings'],"
+                                       " ['column', 'info'], ['data'], ['other', 'stuff'])\n"
                                        "called HotkeyPanel.set_title with args {'modified': False}\n")
 
     testobj.reader.savekeys = mock_savekeys_2
-    testobj.savekeys()
-    assert capsys.readouterr().out == (f"called Reader.savekeys with arg {testobj}\n"
-                                       "called writecsv with args ('xxxx.csv',"
-                                       " ['settings'], ['column', 'info'], ['data'], 'en')\n"
-                                       "called HotkeyPanel.set_title with args {'modified': False}\n")
-
-    testobj.pad = 'xxxx.json'
     testobj.savekeys()
     assert capsys.readouterr().out == (f"called Reader.savekeys with arg {testobj}\n"
                                        f"called writejson with args ('xxxx.json', {testobj.reader},"
@@ -2523,9 +2263,6 @@ def test_editor_check_plugin_settings(monkeypatch, capsys):
     """
     def mock_show(*args, **kwargs):
         print('called gui.show_message with args', args, kwargs)
-    def mock_readcsv(filename):
-        print(f"called readjson with arg '{filename}'")
-        raise FileNotFoundError
     def mock_readjson(filename):
         print(f"called readjson with arg '{filename}'")
         raise IsADirectoryError
@@ -2549,11 +2286,10 @@ def test_editor_check_plugin_settings(monkeypatch, capsys):
         print('called importlib.import_module with args', args)
         return MockReader()
     monkeypatch.setattr(testee.gui, 'show_message', mock_show)
-    monkeypatch.setattr(testee, 'readcsv', mock_readcsv)
     monkeypatch.setattr(testee, 'readjson', mock_readjson)
     monkeypatch.setattr(testee.importlib, 'import_module', mock_import_nok)
     testobj = setup_editor(monkeypatch, capsys)
-    testobj.captions = {'I_FILLALL': 'fillall error', 'I_NOCSV': 'nocsv error: {}',
+    testobj.captions = {'I_FILLALL': 'fillall error', 'I_NOKDEF': 'nokeydef error: {}',
                         'I_NOPLNAM': 'noplnam error: {}', 'I_NOPLREF': 'noplref error: {}'}
     assert not testobj.check_plugin_settings('pluginname', '', [])
     assert capsys.readouterr().out == (
@@ -2562,18 +2298,18 @@ def test_editor_check_plugin_settings(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             "called readjson with arg 'datafilename'\n"
             f"called gui.show_message with args ({testobj.gui},)"
-            " {'text': 'nocsv error: datafilename'}\n")
+            " {'text': 'nokeydef error: datafilename'}\n")
     assert not testobj.check_plugin_settings('pluginname', 'datafilename.csv', ('',))
     assert capsys.readouterr().out == (
             "called readjson with arg 'datafilename.csv'\n"
             f"called gui.show_message with args ({testobj.gui},)"
-            " {'text': 'nocsv error: datafilename.csv'}\n")
+            " {'text': 'nokeydef error: datafilename.csv'}\n")
     monkeypatch.setattr(testee, 'readjson', mock_readjson_2)
     assert not testobj.check_plugin_settings('pluginname', 'datafilename.json', ('',))
     assert capsys.readouterr().out == (
             "called readjson with arg 'datafilename.json'\n"
             f"called gui.show_message with args ({testobj.gui},)"
-            " {'text': 'nocsv error: datafilename.json'}\n")
+            " {'text': 'nokeydef error: datafilename.json'}\n")
     monkeypatch.setattr(testee, 'readjson', mock_readjson_3)
     assert not testobj.check_plugin_settings('pluginname', 'datafilename.json', ('',))
     assert capsys.readouterr().out == (
@@ -2603,8 +2339,6 @@ def test_editor_m_rebuild(monkeypatch, capsys):
     """
     def mock_show(*args, **kwargs):
         print('called gui.show_message with args', args, kwargs)
-    def mock_writecsv(*args):
-        print("called writecsv with args", args)
     def mock_writejson(*args):
         print("called writejson with args", args)
     def mock_build(arg):
@@ -2623,7 +2357,6 @@ def test_editor_m_rebuild(monkeypatch, capsys):
         print(f"called Plugin.build_data with arg '{arg}'")
         return {'key': 'def'}, {'other': 'stuff'}
     monkeypatch.setattr(testee.gui, 'show_message', mock_show)
-    monkeypatch.setattr(testee, 'writecsv', mock_writecsv)
     monkeypatch.setattr(testee, 'writejson', mock_writejson)
     testobj = setup_editor(monkeypatch, capsys)
     testobj.book.page = MockHotkeyPanel(testobj.book, '')
@@ -2663,14 +2396,6 @@ def test_editor_m_rebuild(monkeypatch, capsys):
             f"called gui.show_message with args ({testobj.gui},)"
             " {'text': 'NORBLD #FOUND NOEXTRA'}\n")
     testobj.book.page.reader.build_data = mock_build_5
-    testobj.book.page.pad = 'testfile.csv'
-    testobj.m_rebuild()
-    assert capsys.readouterr().out == (
-            "called Plugin.build_data with arg '<HotkeyPanel ''>'\n"
-            "called writecsv with args ('testfile.csv',"
-            " {'plugin': 'settings'}, {'column': 'info'}, {'key': 'def'}, 'en')\n"
-            "called HotkeyPanel.populate_list\n"
-            f"called gui.show_message with args ({testobj.gui},) {{'text': 'RBLD'}}\n")
     testobj.book.page.pad = 'testfile.json'
     testobj.m_rebuild()
     assert capsys.readouterr().out == (
@@ -2733,21 +2458,8 @@ def test_editor_m_tool(monkeypatch, capsys):
         win.book.page.data = {1: ['y', 'z']}
         win.book.page.otherstuff = {'a': {'b': 'c'}}
         return True
-    def mock_show_3(*args):
-        print('called gui.show_dialog with args', args)
-        win = args[0]
-        win.book.page.pad = 'path/to/data.csv'
-        win.book.page.settings = {testee.shared.SettType.RDEF.value: 0,
-                                  testee.shared.SettType.DETS.value: 0,
-                                  testee.shared.SettType.RBLD.value: 0}
-        win.book.page.column_info = ['x']
-        win.book.page.data = {1: ['y', 'z']}
-        win.ini['lang'] = 'en'
-        return True
     def mock_writejson(*args):
         print('called writejson with args', args)
-    def mock_writecsv(*args):
-        print('called writecsv with args', args)
     def mock_modify(*args):
         print('called SingleDataInterface.modify_menu_item with args', args)
     def mock_get_panel():
@@ -2761,7 +2473,6 @@ def test_editor_m_tool(monkeypatch, capsys):
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_show)
     monkeypatch.setattr(testee, 'HotkeyPanel', MockHotkeyPanel)
     monkeypatch.setattr(testee, 'writejson', mock_writejson)
-    monkeypatch.setattr(testee, 'writecsv', mock_writecsv)
     testobj = setup_editor(monkeypatch, capsys)
     testobj.ini = {'plugins': [('a', 'aaa'), ('b', 'bbb'), ('c', 'ccc')]}
     testobj.book.page = MockHotkeyPanel(testobj.book, '')
@@ -2808,19 +2519,6 @@ def test_editor_m_tool(monkeypatch, capsys):
             "called SingleDataInterface.modify_menu_item with args ('M_RBLD', True)\n"
             "called TabbedInterface.get_selected_panel\n"
             "called TabbedInterface.set_panel_editable with arg True\n")
-    monkeypatch.setattr(testee.gui, 'show_dialog', mock_show_3)
-    testobj.book.page.settings = {}
-    testobj.book.page.has_extrapanel = False
-    testobj.m_tool()
-    assert not testobj.book.page.has_extrapanel
-    assert capsys.readouterr().out == (
-            f"called gui.show_dialog with args ({testobj}, {testee.gui.ExtraSettingsDialog})\n"
-            "called writecsv with args ('path/to/data.csv',"
-            " {'RedefineKeys': 0, 'ShowDetails': 0, 'RebuildData': 0},"
-            " ['x'], {1: ['y', 'z']}, 'en')\n"
-            "called SingleDataInterface.modify_menu_item with args ('M_SAVE', False)\n"
-            "called SingleDataInterface.modify_menu_item with args ('M_RBLD', False)\n"
-            "called TabbedInterface.get_selected_panel\n")
 
 def test_editor_accept_extrasettings(monkeypatch, capsys):
     """unittest for main.Editor.accept_extrasettings
@@ -2878,7 +2576,7 @@ def test_editor_remove_custom_settings(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             f"called HotkeyPanel.__init__ with args ({testobj.book}, '')\n")
     testobj.book.page.settings = {'xxx': 'aaaaaaa', 'yyy': 'bbbbbbb', 'zzz': 'ccccccc'}
-    monkeypatch.setattr(testee.shared, 'csv_settingnames', ['xxx', 'zzz'])
+    monkeypatch.setattr(testee.shared, 'settingnames', ['xxx', 'zzz'])
     testobj.remove_custom_settings()
     assert testobj.book.page.settings == {'xxx': 'aaaaaaa', 'zzz': 'ccccccc'}
 
@@ -2889,8 +2587,6 @@ def test_editor_m_col(monkeypatch, capsys):
         print('called gui.show_message with args', args, kwargs)
     def mock_writejson(*args):
         print('called writejson with args', args)
-    def mock_writecsv(*args):
-        print('called writecsv with args', args)
     def mock_show_dialog(*args):
         print('called gui.show_dialog with args', args)
         return False
@@ -2907,7 +2603,6 @@ def test_editor_m_col(monkeypatch, capsys):
     monkeypatch.setattr(testee, 'read_columntitledata', mock_read)
     monkeypatch.setattr(testee, 'HotkeyPanel', MockHotkeyPanel)
     monkeypatch.setattr(testee, 'writejson', mock_writejson)
-    monkeypatch.setattr(testee, 'writecsv', mock_writecsv)
 
     testobj = setup_editor(monkeypatch, capsys)
     testobj.ini = {'lang': 'en'}
@@ -2922,7 +2617,7 @@ def test_editor_m_col(monkeypatch, capsys):
     testobj.book.page.column_info = [('xx', 10, False)]
     testobj.book.page.new_column_info = [('xx', 10, False, 0)]
     testobj.book.page.otherstuff = {'other': 'stuff'}
-    testobj.book.page.pad = 'testfile.csv'
+    testobj.book.page.pad = 'testfile.json'
     testobj.m_col()
     assert capsys.readouterr().out == (
             f"called Editor.read_columntitledata with arg '{testobj}'\n"
@@ -2940,21 +2635,7 @@ def test_editor_m_col(monkeypatch, capsys):
             f"called gui.show_message with args ({testobj.gui}, 'I_NOCHG') {{}}\n")
     testobj.book.page.new_column_info = [('xx', 10, False, 0), ('yy', 15, False, 1)]
     testobj.captions = {'xx': 'aaa', 'yy': 'bbb'}
-    testobj.m_col()
-    assert testobj.book.page.column_info == [('xx', 10, False), ('yy', 15, False)]
-    assert capsys.readouterr().out == (
-            f"called Editor.read_columntitledata with arg '{testobj}'\n"
-            f"called gui.show_dialog with args ({testobj}, {testee.gui.ColumnSettingsDialog})\n"
-            "called Editor.build_new_pagedata\n"
-            "called writecsv with args ('testfile.csv',"
-            " {'page': 'settings'}, [('xx', 10, False), ('yy', 15, False)], None, 'en')\n"
-            "called SingleDataInterface.update_colums with args (1, 2)\n"
-            "called TabbedInterface.refresh_locs with arg '['aaa', 'bbb']'\n"
-            "called SingleDataInterface.refresh_headers with arg ['aaa', 'bbb']\n"
-            "called HotkeyPanel.populate_list\n")
-    testobj.book.page.pad = 'testfile.json'
     testobj.book.page.settings = {'page': 'settings'}
-    testobj.book.page.column_info = [('xx', 10, False)]
     testobj.book.page.reader = MockReader()
     testobj.m_col()
     assert testobj.book.page.column_info == [('xx', 10, False), ('yy', 15, False)]
@@ -3155,12 +2836,9 @@ def test_editor_m_entry(monkeypatch, capsys):
     def mock_dialog_2(*args):
         print('called gui.show_dialog with args', args)
         return True
-    def mock_writecsv(*args):
-        print('called writecsv with args', args)
     def mock_writejson(*args):
         print('called writejson with args', args)
     monkeypatch.setattr(testee, 'writejson', mock_writejson)
-    monkeypatch.setattr(testee, 'writecsv', mock_writecsv)
     monkeypatch.setattr(testee.gui, 'show_message', mock_show)
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog)
     testobj = setup_editor(monkeypatch, capsys)
@@ -3203,14 +2881,6 @@ def test_editor_m_entry(monkeypatch, capsys):
                                        f" {testobj.book.page.reader},"
                                        " {'x': 'y'}, [('column', 'info')], {'a': 'b'},"
                                        " {'other': 'stuff'})\n"
-                                       "called HotkeyPanel.populate_list\n")
-
-    testobj.book.page.pad = 'settings.csv'
-    testobj.m_entry()
-    assert capsys.readouterr().out == (f"called gui.show_dialog with args ({testobj},"
-                                       " <class 'editor.dialogs_qt.EntryDialog'>)\n"
-                                       "called writecsv with args ('settings.csv',"
-                                       " {'x': 'y'}, [('column', 'info')], {'a': 'b'}, 'en')\n"
                                        "called HotkeyPanel.populate_list\n")
 
 def test_editor_m_lang(monkeypatch, capsys, tmp_path):

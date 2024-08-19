@@ -1,4 +1,4 @@
-"""HotKeys: non-gui and csv related functions
+"""HotKeys: non-gui and keydef related functions
 """
 import os
 import sys
@@ -34,8 +34,9 @@ def save_log():
     """alter the log file name, adding a next-highest version number
     currently caters for max. 100 versions
     """
-    for last in reversed(sorted(LOGFILE.parent.glob(LOGFILE.name + '*'))):
-       break
+    # for last in reversed(sorted(LOGFILE.parent.glob(LOGFILE.name + '*'))):
+    #    break
+    last = list(reversed(sorted(LOGFILE.parent.glob(LOGFILE.name + '*'))))[0]
     newlast = 0 if last.suffix == LOGFILE.suffix else int(last.suffix[1:]) + 1
     LOGFILE.rename(LOGFILE.with_suffix('.'.join((LOGFILE.suffix, f'{newlast:02}'))))
 
@@ -50,7 +51,7 @@ class SettType(enum.Enum):
     RDEF = 'RedefineKeys'
 
 
-csv_settingnames = [x.value for x in SettType.__members__.values()]
+settingnames = [x.value for x in SettType.__members__.values()]
 mode_f, mode_r = 'Fixed', 'Remember'
 
 

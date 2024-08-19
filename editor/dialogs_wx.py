@@ -167,7 +167,7 @@ class FileBrowseButton(wx.Frame):  # note: wx has this built in
 
 
 class SetupDialog(wx.Dialog):
-    """dialoog voor het opzetten van een csv bestand
+    """dialoog voor het opzetten van een keydef bestand
 
     geeft de mogelijkheid om alvast wat instellingen vast te leggen en zorgt er
     tevens voor dat het correcte formaat gebruikt wordt
@@ -175,7 +175,7 @@ class SetupDialog(wx.Dialog):
     def __init__(self, parent, name):
         self.parent = parent
         self.parent.data = []
-        super().__init__(parent, title=self.parent.master.captions['T_INICSV'])
+        super().__init__(parent, title=self.parent.master.captions['T_INIKDEF'])
 
         box = wx.BoxSizer(wx.VERTICAL)
 
@@ -205,7 +205,7 @@ class SetupDialog(wx.Dialog):
         line = wx.BoxSizer(wx.HORIZONTAL)
         text = wx.StaticText(self, label=self.parent.master.captions['Q_SAVLOC'])
         line.Add(text, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.RIGHT, 5)
-        path = os.path.join('editor', 'plugins', name + "_hotkeys.csv")
+        path = os.path.join('editor', 'plugins', name + "_hotkeys.json")
         # self.t_loc = FileBrowseButton(self, text=path, level_down=True)
         self.t_loc = wxfb.FileBrowseButton(self, size=(300, -1), style=wx.BORDER_SUNKEN,
                                            labelText='', initialValue=path)
@@ -249,7 +249,7 @@ class DeleteDialog(wx.Dialog):
         self.sizer.Add(hsizer, 1, wx.TOP, 5)
 
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        check = wx.CheckBox(self, label=self.parent.master.captions['Q_REMCSV'])
+        check = wx.CheckBox(self, label=self.parent.master.captions['Q_REMKDEF'])
         hsizer.Add(check, 0, wx.LEFT, 10)
         self.remove_keydefs = check
         # hsizer.addStretch()
@@ -298,7 +298,7 @@ class FilesDialog(wx.Dialog):
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         hsizer.Add(wx.StaticText(self, label=self.master.captions['C_PRGNAM']), 0,
                    wx.ALIGN_CENTER_HORIZONTAL | wx.LEFT, 36)
-        hsizer.Add(wx.StaticText(self, label=self.master.captions['C_CSVLOC']), 0,
+        hsizer.Add(wx.StaticText(self, label=self.master.captions['C_KDEFLOC']), 0,
                    wx.ALIGN_CENTER_HORIZONTAL | wx.LEFT, 84)
         self.sizer.Add(hsizer)
 
@@ -313,7 +313,7 @@ class FilesDialog(wx.Dialog):
         self.sizeritems = []
         self.settingsdata = {}
         # settingsdata is een mapping van pluginnaam op een tuple van programmanaam en
-        # andere settings (alleen als er een nieuw csv file voor moet worden aangemaakt)
+        # andere settings (alleen als er een nieuw keydef file voor moet worden aangemaakt)
         for name, path in self.master.ini["plugins"]:
             self.add_row(name, path)
             self.settingsdata[name] = (self.master.pluginfiles[name],)
@@ -389,7 +389,7 @@ class FilesDialog(wx.Dialog):
             self.master.last_added = newtool
             self.loc = prgloc = ""
             self.settingsdata[newtool] = (prgloc,)
-            if ask_question(self.parent, 'P_INICSV'):
+            if ask_question(self.parent, 'P_INIKDEF'):
                 with SetupDialog(self, newtool) as dlg:
                     send = True
                     while send:
@@ -411,16 +411,16 @@ class FilesDialog(wx.Dialog):
                 if dlg.ShowModal() == wx.ID_OK:
                     dlg.accept()
                     for row, name in reversed(checked):
-                        csv_name, prg_name = '', ''
+                        keydef_name, prg_name = '', ''
                         try:
-                            csv_name = self.paths[row][1].GetValue()  # input.text()
+                            keydef_name = self.paths[row][1].GetValue()  # input.text()
                             prg_name = self.settingsdata[name][0]
                         except KeyError:
                             shared.log_exc('')
-                        shared.log('csv name is %s', csv_name)
-                        shared.log('prg name is %s', prg_name)
-                        if self.remove_data and csv_name:
-                            self.data_to_remove.append(csv_name)
+                        shared.log(f'{keydef_name=}')
+                        shared.log(f'{prg_name=}')
+                        if self.remove_data and keydef_name:
+                            self.data_to_remove.append(keydef_name)
                         if self.remove_code and prg_name:
                             self.code_to_remove.append(
                                 prg_name.replace('.', '/') + '.py')
@@ -770,7 +770,7 @@ class ExtraSettingsDialog(wx.Dialog):
         self.rownum = rownum
         self.data, self.checks = [], []
         for name, value in self.master.book.page.settings.items():
-            if name not in shared.csv_settingnames and name != 'extra':
+            if name not in shared.settingnames and name != 'extra':
                 try:
                     desc = self.master.book.page.settings['extra'][name]
                 except KeyError:
@@ -1014,10 +1014,11 @@ class CompleteDialog(wx.Dialog):
         self.master.dialog_data = new_values
 
     def read_data(self):  # *args):
+        "to be implemented in subclass"
         raise NotImplementedError
 
     def build_table(self):
-        pass
+        "to be implemented in subclass"
 
 
 def show_dialog(win, cls):

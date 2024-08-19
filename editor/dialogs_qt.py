@@ -46,8 +46,8 @@ def ask_ync_question(win, message_id='', text='', args=None):
     """
     text = shared.get_text(win, message_id, text, args)
     ok = qtw.QMessageBox.question(win, shared.get_title(win), text,
-                                  qtw.QMessageBox.Yes | qtw.QMessageBox.No |
-                                  qtw.QMessageBox.Cancel)
+                                  qtw.QMessageBox.Yes | qtw.QMessageBox.No
+                                  | qtw.QMessageBox.Cancel)
     return ok == qtw.QMessageBox.Yes, ok == qtw.QMessageBox.Cancel
 
 
@@ -169,7 +169,7 @@ class FileBrowseButton(qtw.QFrame):
 
 
 class SetupDialog(qtw.QDialog):
-    """dialoog voor het opzetten van een csv bestand
+    """dialoog voor het opzetten van een keydef bestand
 
     geeft de mogelijkheid om alvast wat instellingen vast te leggen en zorgt er
     tevens voor dat het correcte formaat gebruikt wordt
@@ -177,7 +177,7 @@ class SetupDialog(qtw.QDialog):
     def __init__(self, parent, name):
         self.parent = parent
         super().__init__()
-        self.setWindowTitle(self.parent.master.captions['T_INICSV'])
+        self.setWindowTitle(self.parent.master.captions['T_INIKDEF'])
 
         grid = qtw.QGridLayout()
 
@@ -201,9 +201,8 @@ class SetupDialog(qtw.QDialog):
         grid.addWidget(self.c_redef, 5, 0, 1, 4)
         text = qtw.QLabel(self.parent.master.captions['Q_SAVLOC'], self)
         grid.addWidget(text, 6, 0, 1, 2)
-        self.t_loc = FileBrowseButton(self,
-                                      text=os.path.join('editor', 'plugins', name + "_hotkeys.csv"),
-                                      level_down=True)
+        suggest = os.path.join('editor', 'plugins', f"{name}_hotkeys.json")
+        self.t_loc = FileBrowseButton(self, text=suggest, level_down=True)
         grid.addWidget(self.t_loc, 6, 2, 1, 3)
 
         buttonbox = qtw.QDialogButtonBox()
@@ -259,7 +258,7 @@ class DeleteDialog(qtw.QDialog):
         self.sizer.addLayout(hsizer)
 
         hsizer = qtw.QHBoxLayout()
-        check = qtw.QCheckBox(self.parent.master.captions['Q_REMCSV'], self)
+        check = qtw.QCheckBox(self.parent.master.captions['Q_REMKDEF'], self)
         hsizer.addWidget(check)
         self.remove_keydefs = check
         hsizer.addStretch()
@@ -318,7 +317,7 @@ class FilesDialog(qtw.QDialog):
         hsizer.addWidget(qtw.QLabel(self.master.captions['C_PRGNAM'], self),
                          alignment=core.Qt.AlignHCenter | core.Qt.AlignVCenter)
         hsizer.addSpacing(84)
-        hsizer.addWidget(qtw.QLabel(self.master.captions['C_CSVLOC'], self),
+        hsizer.addWidget(qtw.QLabel(self.master.captions['C_KDEFLOC'], self),
                          alignment=core.Qt.AlignVCenter)
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
@@ -337,7 +336,7 @@ class FilesDialog(qtw.QDialog):
         self.progs = []
         self.settingsdata = {}
         # settingsdata is een mapping van pluginnaam op een tuple van programmanaam en
-        # andere settings (alleen als er een nieuw csv file voor moet worden aangemaakt)
+        # andere settings (alleen als er een nieuw keydef file voor moet worden aangemaakt)
         for name, path in self.master.ini["plugins"]:
             self.add_row(name, path)
             self.settingsdata[name] = (self.master.pluginfiles[name],)
@@ -404,7 +403,7 @@ class FilesDialog(qtw.QDialog):
             self.master.last_added = newtool
             self.loc = prgloc = ""
             self.settingsdata[newtool] = (prgloc,)
-            if ask_question(self.parent, 'P_INICSV'):
+            if ask_question(self.parent, 'P_INIKDEF'):
                 ok = SetupDialog(self, newtool).exec_()
                 if ok:
                     self.settingsdata[newtool] = self.parent.data
@@ -418,16 +417,16 @@ class FilesDialog(qtw.QDialog):
             dlg = DeleteDialog(self).exec_()
             if dlg == qtw.QDialog.Accepted:
                 for row, name in reversed(checked):
-                    csv_name, prg_name = '', ''
+                    keydef_name, prg_name = '', ''
                     try:
-                        csv_name = self.paths[row][1].input.text()
+                        keydef_name = self.paths[row][1].input.text()
                         prg_name = self.settingsdata[name][0]
                     except KeyError:
                         shared.log_exc('')
-                    shared.log('csv name is %s', csv_name)
-                    shared.log('prg name is %s', prg_name)
-                    if self.remove_data and csv_name:
-                        self.data_to_remove.append(csv_name)
+                    shared.log(f'{keydef_name=}')
+                    shared.log(f'{prg_name=}')
+                    if self.remove_data and keydef_name:
+                        self.data_to_remove.append(keydef_name)
                     if self.remove_code and prg_name:
                         self.code_to_remove.append(
                             prg_name.replace('.', '/') + '.py')
@@ -783,7 +782,7 @@ class ExtraSettingsDialog(qtw.QDialog):
         self.rownum = rownum
         self.data, self.checks = [], []
         for name, value in self.master.book.page.settings.items():
-            if name not in shared.csv_settingnames and name != 'extra':
+            if name not in shared.settingnames and name != 'extra':
                 try:
                     desc = self.master.book.page.settings['extra'][name]
                 except KeyError:
@@ -1029,10 +1028,11 @@ class CompleteDialog(qtw.QDialog):
         qtw.QDialog.accept(self)
 
     def read_data(self):  # *args):
+        "to be implemented in subclass"
         raise NotImplementedError
 
     def build_table(self):
-        pass
+        "to be implemented in subclass"
 
 
 def show_dialog(win, cls):
