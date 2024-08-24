@@ -41,7 +41,7 @@ the default code in the main program will be used.
 """
 '''
 initial_settings = {'plugins': [], 'lang': 'english.lng', 'startup': 'Remember', 'initial': ''}
-initial_columns = ["C_KEY", 120, False], ["C_MODS", 90, False], ["C_DESC", 292, False]
+initial_columns = [["C_KEY", 120, False], ["C_MODS", 90, False], ["C_DESC", 292, False]]
 
 
 class LineType(enum.Enum):
@@ -83,6 +83,7 @@ def write_settings(settings, nobackup=False):
         shutil.copyfile(str(inifile), str(inifile) + '~')
     with inifile.open('w') as _in:
         json.dump(settings, _in)
+    settings['filename'] = inifile  # gaat dit zo werken?
 
 
 def read_columntitledata(editor):
@@ -134,7 +135,7 @@ def add_columntitledata(newdata):
                 f_out.write(line)
 
 
-def update_paths(paths, pathdata, lang):
+def update_paths(paths, pathdata):
     """read the paths to the keydef files from the data returned by the dialog
     if applicable also write a skeleton plugin file
     """
@@ -159,8 +160,10 @@ def initjson(loc, data):
 
     Save some basic settings together with some column info
     """
+    if not loc:
+        return {x: data[i] for i, x in enumerate(shared.settingnames)}, initial_columns, {}
     writejson(loc, None, {x: data[i] for i, x in enumerate(shared.settingnames)},
-              [initial_columns], {}, {})
+              initial_columns, {}, {})
 
 
 def readjson(pad):
@@ -182,6 +185,8 @@ def writejson(pad, reader, settings, coldata, data, otherstuff):
     """
     if os.path.exists(pad):
         shutil.copyfile(pad, pad + '~')
+    # print(settings)
+    # print(coldata)
     fulldict = {'settings': settings, 'column_info': coldata, 'keydata': data}
     if reader and hasattr(reader, 'update_otherstuff_outbound'):
         otherstuff = reader.update_otherstuff_outbound(otherstuff)
@@ -630,8 +635,7 @@ class HotkeyPanel:
             # eventuele wijzigingen in detailscherm checken
             if not self.initializing_screen:  # in de wx versie zat deze conditie niet
                 # zoek naar wijzigingen in sleutelwaarden
-                any_change, changedata = self.check_for_changes()
-                # >> is het nog ergens goed voor om die any_chnge uit te vragen??
+                changedata = self.check_for_changes()[1]
                 # zoek de lijstentry behorende bij de nieuwe sleutelwaarden
                 found, indx = self.check_for_selected_keydef(changedata)
                 # vraag indien nodig of wijzigingen doorgevoerd moeten worden
@@ -932,23 +936,34 @@ class Editor:
         shared.save_log()
         ini = CONF
         if args.conf:
-            ini = pathlib.Path(args.conf) if args.conf.startswith('/') else BASE / args.conf
-        self.ini = read_settings(ini)
+            if args.conf.startswith(('/', '~/', './')):
+                ini = pathlib.Path(args.conf).expanduser().resolve()
+            else:
+                ini = BASE / args.conf
+        if ini.exists():
+            self.ini = read_settings(ini)
+        else:
+            self.ini = {'lang': 'english.lng', 'plugins': [], 'startup': 'Remember', 'filename': ini}
         self.readcaptions(self.ini['lang'])
         self.title = self.captions["T_MAIN"]
         self.pluginfiles = {}
         self.book = None
         self.gui = gui.Gui(self)
+        # if self.ini['plugins'] == []:
+        #     self.show_empty_screen()
+        # else:
+        self.gui.set_window_title(self.title)
+        self.gui.statusbar_message(self.captions["T_HELLO"].format(self.captions["T_MAIN"]))
+        self.book = ChoiceBook(self)
+        self.gui.setup_tabs()
         if self.ini['plugins'] == []:
-            self.show_empty_screen()
-        else:
-            self.gui.set_window_title(self.title)
-            self.gui.statusbar_message(self.captions["T_HELLO"].format(self.captions["T_MAIN"]))
-            self.book = ChoiceBook(self)
-            self.gui.setup_tabs()
-            start = 0
-            if self.ini.get('title', ''):
-                self.title = self.ini['title']
+            self.book.page = SimpleNamespace(settings=initjson('', ['', '', False, False, False])[0],
+                                             data={}, exit=lambda: True)
+            self.gui.setup_menu(minimal=True)
+        start = 0
+        if self.ini.get('title', ''):
+            self.title = self.ini['title']
+        if self.ini['plugins']:
             startapp = args.start
             if startapp:
                 with contextlib.suppress(ValueError):
@@ -956,8 +971,9 @@ class Editor:
             if not start and self.ini.get('initial', ''):
                 start = [x for x, y in self.ini['plugins']].index(self.ini['initial']) + 1
             start -= 1
-            self.book.gui.set_selected_tool(start)
-            self.book.on_page_changed(start)
+            if start >= 0:
+                self.book.gui.set_selected_tool(start)
+                self.book.on_page_changed(start)
             self.setcaptions()
         self.gui.go()
 
@@ -1050,15 +1066,17 @@ class Editor:
         self.book.gui.clear_selector()
 
         current_items = reversed(list(enumerate(current_programs)))
+        # print(self.pluginfiles)
         for indx, program in current_items:  # we need to do this in reverse
+            # print(program)
             # NB niet alleen de Gui, ook het HotkeyPanel verwijderen
             # put_it_back = self.book.gui.remove_tool(indx, program, new_programs)
             # if put_it_back:
             if (put_it_back := self.book.gui.remove_tool(indx, program, new_programs)):
                 items_to_retain[program] = put_it_back
             else:
-                # self.pluginfiles.pop(program)
-                self.pluginfiles.pop(indx)
+                self.pluginfiles.pop(program)
+                # self.pluginfiles.pop(indx - 1)
         return items_to_retain
 
     def rebuild_book(self, current_programs, current_paths, items_to_retain):
@@ -1108,7 +1126,7 @@ class Editor:
         for filename in names_to_remove:
             os.remove(filename)
         newpathdata = {name: entry for name, entry in settingsdata.items() if len(entry) > 1}
-        self.ini["plugins"] = update_paths(name_path_list, newpathdata, self.ini["lang"])
+        self.ini["plugins"] = update_paths(name_path_list, newpathdata)  # , self.ini["lang"])
         return True
 
     def check_plugin_settings(self, name, datafilename, settingsdata):
@@ -1179,7 +1197,9 @@ class Editor:
         if cloc == "":
             gui.show_message(self.gui, 'I_NEEDNAME')
             return False
-        cloc = os.path.abspath(cloc)
+        if not cloc.startswith(('/', '~/', './')):
+            cloc = os.path.join('projects', 'hotkeys', cloc)
+        cloc = os.path.abspath(os.path.expanduser(cloc))
         if os.path.exists(cloc):
             gui.show_message(self.gui, 'I_GOTSETFIL', args=[cloc])
             return False

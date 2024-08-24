@@ -213,11 +213,14 @@ def test_initjson(monkeypatch, capsys):
         print('called writejson with args', args)
     monkeypatch.setattr(testee, 'writejson', mock_write)
     monkeypatch.setattr(testee.shared, 'settingnames', ['x', 'y'])
-    monkeypatch.setattr(testee, 'initial_columns', (('a', 1, True), 'b', 2, False))
+    monkeypatch.setattr(testee, 'initial_columns', [('a', 1, True), ('b', 2, False)])
     testee.initjson('settfile', ['xxx', 'yyy'])
     assert capsys.readouterr().out == ("called writejson with args"
                                        " ('settfile', None, {'x': 'xxx', 'y': 'yyy'},"
-                                       " [(('a', 1, True), 'b', 2, False)], {}, {})\n")
+                                       " [('a', 1, True), ('b', 2, False)], {}, {})\n")
+    assert testee.initjson('', ['xxx', 'yyy']) == ({'x': 'xxx', 'y': 'yyy'},
+                                                   [('a', 1, True), ('b', 2, False)], {})
+    assert capsys.readouterr().out == ""
 
 def test_readjson(tmp_path):
     """unittest for main.readjson
@@ -1943,6 +1946,10 @@ class MockGui:
         """stub
         """
         print('called Gui.setup_tabs')
+    def setup_menu(self, **kwargs):
+        """stub
+        """
+        print('called Gui.setup_menu with args', kwargs)
     def go(self):
         """stub
         """
@@ -1996,22 +2003,35 @@ def test_editor_init(monkeypatch, capsys):
     monkeypatch.setattr(testee.gui, 'Gui', MockGui)
     monkeypatch.setattr(testee, 'ChoiceBook', MockChoiceBook)
     monkeypatch.setattr(testee.Editor, 'setcaptions', mock_set)
-    monkeypatch.setattr(testee, 'CONF', 'mock_conf')
+
+    monkeypatch.setattr(testee, 'CONF', testee.pathlib.Path('mock_conf'))
     monkeypatch.setattr(testee, 'BASE', testee.pathlib.Path('/confbase'))
     args = types.SimpleNamespace(conf='', start='')
     testobj = testee.Editor(args)
-    assert testobj.ini == {'initial': '', 'lang': 'en', 'plugins': [], 'title': ''}
+    assert testobj.ini == {'lang': 'english.lng', 'plugins': [], 'filename': testee.CONF,
+                           'startup': 'Remember'}
     assert testobj.pluginfiles == {}
-    assert testobj.book is None
+    assert isinstance(testobj.book, testee.ChoiceBook)
+    assert testobj.book.page.settings == {'PluginName': '', 'PanelName': '', 'RebuildData': False,
+                                          'ShowDetails': False, 'RedefineKeys': False}
+    assert testobj.book.page.data == {}
+    assert testobj.book.page.exit()
     assert isinstance(testobj.gui, testee.gui.Gui)
-    assert capsys.readouterr().out == ("called shared.save_log\n"
-                                       "called read_settings with arg 'mock_conf'\n"
-                                       "called Editor.readcaptions with arg 'en'\n"
-                                       f"called Gui.__init__ with arg {testobj}\n"
-                                       "called Editor.show_empty_screen\n"
-                                       "called Gui.go\n")
+    assert capsys.readouterr().out == (
+            "called shared.save_log\n"
+            "called Editor.readcaptions with arg 'english.lng'\n"
+            f"called Gui.__init__ with arg {testobj}\n"
+            "called Gui.set_window_title with arg 'maintitle'\n"
+            "called Gui.statusbar_message with args ('hello from maintitle',)\n"
+            f"called ChoiceBook.__init__ with arg '{testobj}'\n"
+            "called TabbedInterface.__init__ with args ()\n"
+            "called Gui.setup_tabs\n"
+            "called Gui.setup_menu with args {'minimal': True}\n"
+            "called Gui.go\n")
+    monkeypatch.setattr(testee.pathlib.Path, 'exists', lambda *x: True)
     monkeypatch.setattr(testee, 'read_settings', mock_read_2)
     args = types.SimpleNamespace(conf='other_conf', start='y')
+    # breakpoint()
     testobj = testee.Editor(args)
     assert testobj.ini == {'initial': 'y', 'lang': 'en', 'title': '', 'plugins': [('x', 'xxx'),
                                                                                   ('y', 'yyy')]}
@@ -2258,13 +2278,13 @@ def test_editor_clear_book(monkeypatch, capsys):
     """
     testobj = setup_editor(monkeypatch, capsys)
     testobj.ini = {'plugins': [('p', 'q'), ('r', 's')]}
-    testobj.pluginfiles = ['aaa', 'bbb', 'ccc']
-    assert testobj.clear_book(['xxx', 'yyy', 'zzz']) == {'zzz': 'item #1', 'xxx': 'item #3'}
-    assert testobj.pluginfiles == ['aaa', 'ccc']
+    testobj.pluginfiles = {'a': 'aaa', 'b': 'bbb', 'c': 'ccc'}
+    assert testobj.clear_book(['xxx', 'b', 'zzz']) == {'zzz': 'item #1', 'xxx': 'item #3'}
+    assert testobj.pluginfiles == {'a': 'aaa', 'c': 'ccc'}
     assert capsys.readouterr().out == (
             "called TabbedInterface.clear_selector\n"
             "called TabbedInterface.remove_tool with args (2, 'zzz', ['p', 'r'])\n"
-            "called TabbedInterface.remove_tool with args (1, 'yyy', ['p', 'r'])\n"
+            "called TabbedInterface.remove_tool with args (1, 'b', ['p', 'r'])\n"
             "called TabbedInterface.remove_tool with args (0, 'xxx', ['p', 'r'])\n")
 
 def test_editor_rebuild_book(monkeypatch, capsys, tmp_path):
@@ -2512,7 +2532,6 @@ def test_editor_accept_pluginsettings(monkeypatch, capsys, tmp_path):
             f"called gui.show_message with args ({testobj.gui}, 'I_GOTSETFIL')"
             f" {{'args': ['{clocpath}']}}\n")
     clocpath.unlink()
-    # breakpoint()
     assert not testobj.accept_pluginsettings(str(clocpath), 'ploc', 'title', '0', '1', '0')
     assert capsys.readouterr().out == (
             "called importlib.util.find_spec with arg 'ploc'\n"
@@ -2522,6 +2541,20 @@ def test_editor_accept_pluginsettings(monkeypatch, capsys, tmp_path):
     assert testobj.accept_pluginsettings(str(clocpath), 'ploc', 'title', '0', '1', '0')
     assert testobj.gui.data == [f'{clocpath}', 'ploc', 'title', 0, 1, 0]
     assert capsys.readouterr().out == "called importlib.util.find_spec with arg 'ploc'\n"
+
+    assert testobj.accept_pluginsettings('clocpath', 'ploc', 'title', '0', '1', '0')
+    path = testee.os.path.expanduser("~/projects/hotkeys/projects/hotkeys/clocpath")
+    assert testobj.gui.data == [path, 'ploc', 'title', 0, 1, 0]
+    assert capsys.readouterr().out == "called importlib.util.find_spec with arg 'ploc'\n"
+    assert testobj.accept_pluginsettings('./clocpath', 'ploc', 'title', '0', '1', '0')
+    path = testee.os.path.expanduser("~/projects/hotkeys/clocpath")
+    assert testobj.gui.data == [path, 'ploc', 'title', 0, 1, 0]
+    assert capsys.readouterr().out == "called importlib.util.find_spec with arg 'ploc'\n"
+    assert testobj.accept_pluginsettings('~/clocpath', 'ploc', 'title', '0', '1', '0')
+    path = testee.os.path.expanduser("~/clocpath")
+    assert testobj.gui.data == [path, 'ploc', 'title', 0, 1, 0]
+    assert capsys.readouterr().out == "called importlib.util.find_spec with arg 'ploc'\n"
+
 
 def test_editor_m_tool(monkeypatch, capsys):
     """unittest for main.Editor.m_tool

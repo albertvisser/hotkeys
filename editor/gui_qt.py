@@ -723,7 +723,7 @@ class Gui(qtw.QMainWindow):
         "add the tabbed widget to the interface"
         self.setCentralWidget(self.editor.book.gui)
 
-    def setup_menu(self):
+    def setup_menu(self, minimal=False):
         """build menus and actions
         """
         self.menu_bar.clear()
@@ -749,6 +749,8 @@ class Gui(qtw.QMainWindow):
                             act = self.create_menuaction(subsel, callback, shortcut)
                             submenu.addAction(act)
                             self.menuitems[sel] = act
+        if minimal:
+            self.menuitems['M_TOOL'].setEnabled(False)
 
     def create_menuaction(self, sel, callback, shortcut):
         """return created action w. some special cases
