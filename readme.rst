@@ -22,13 +22,16 @@ To customize for a new tool, you have to add a plugin for it. At the moment
 this mechanism consists of a Python module that can contain some functions to be
 called by the main program, and a file containing the keyboard definitions and
 some tool-specifc settings. These can be generated in basic form from within the
-program and then customized by hand, also from within the program.
+program and then customized by hand. 
 
 Initially the new plugin is just an empty python module. 
 It can be extended to contain functions that (re)generate the keydef portion
 of the definitions file from the tool's configuration files, 
 and to write modified keydefs back to them.
-It's also meant for customisation of the editor part of this program.
+It's also meant for customisation of the editor part of this program (the lower part of the screen).
+
+A couple of plugins - that I made for the tools that I use - is included,
+as well as an empty (in the sense that it does nothing) plugin containing various explanations.
 
 
 Usage
@@ -39,8 +42,7 @@ Use ``toolkit.py`` in the program directory (``editor``) to define which gui too
 
 I started out using a csv file for the keyboard definitions and other settings, because tools
 like this one did that too I guess. 
-Later I found it a bit too complicated so I simplifed it and switched to a json format.
-No need or want to make this configurable.
+Later I found it a bit too complicated so I simplified it and switched to a json format (for the tool itself as well as for the plugin keydef data).
 
 
 Requirements
@@ -48,5 +50,5 @@ Requirements
 
 - Python
 - PyQt(5) or wxPython (Phoenix) for the GUI part
-- the built in csv and json modules for creating and reading the definition files
+- the built in json module for creating and reading the definition files
 - plugins may use BeautifulSoup (and lxml) for parsing HTML help files
