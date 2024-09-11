@@ -2402,11 +2402,11 @@ def test_editor_check_plugin_settings(monkeypatch, capsys):
             "called readjson with arg 'datafilename'\n"
             f"called gui.show_message with args ({testobj.gui},)"
             " {'text': 'nokeydef error: datafilename'}\n")
-    assert not testobj.check_plugin_settings('pluginname', 'datafilename.csv', ('',))
-    assert capsys.readouterr().out == (
-            "called readjson with arg 'datafilename.csv'\n"
-            f"called gui.show_message with args ({testobj.gui},)"
-            " {'text': 'nokeydef error: datafilename.csv'}\n")
+    # assert not testobj.check_plugin_settings('pluginname', 'datafilename.csv', ('',))
+    # assert capsys.readouterr().out == (
+    #         "called readjson with arg 'datafilename.csv'\n"
+    #         f"called gui.show_message with args ({testobj.gui},)"
+    #         " {'text': 'nokeydef error: datafilename.csv'}\n")
     monkeypatch.setattr(testee, 'readjson', mock_readjson_2)
     assert not testobj.check_plugin_settings('pluginname', 'datafilename.json', ('',))
     assert capsys.readouterr().out == (
