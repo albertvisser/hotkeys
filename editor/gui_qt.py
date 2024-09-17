@@ -748,7 +748,7 @@ class Gui(qtw.QMainWindow):
                             callback, shortcut = values
                             act = self.create_menuaction(subsel, callback, shortcut)
                             submenu.addAction(act)
-                            self.menuitems[sel] = act
+                            self.menuitems[subsel] = act
         if minimal:
             self.menuitems['M_TOOL'].setEnabled(False)
 
