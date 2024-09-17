@@ -489,7 +489,6 @@ class ColumnSettingsDialog(qtw.QDialog):
         self.data, self.checks = [], []
         self.col_textids, self.col_names = self.master.col_textids, self.master.col_names
         for ix, item in enumerate(self.master.book.page.column_info):
-            item.append(ix)
             self.add_row(*item)
         box = qtw.QVBoxLayout()
         box.addLayout(self.gsizer)

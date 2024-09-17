@@ -194,7 +194,7 @@ def test_update_paths(monkeypatch, capsys):
     monkeypatch.setattr(testee, 'initjson', mock_initjson)
     paths = (('xx', 'yy.json'), ('aa', 'bb.json'))
     pathdata = {'xx': ['xx.yy.zz', 'xxx', 1, 0, 0], 'aa': ['.bb.cc', 'aaa', 1, 1, 1]}
-    assert testee.update_paths(paths, pathdata, 'en') == [('xx', 'yy.json'), ('aa', 'bb.json')]
+    assert testee.update_paths(paths, pathdata) == [('xx', 'yy.json'), ('aa', 'bb.json')]
     assert capsys.readouterr().out == (
             f"called path.write with args ({testee.BASE / 'xx' / 'yy' / 'zz.py'!r},"
             f" {testee.plugin_skeleton!r})\n"
@@ -2334,7 +2334,7 @@ def test_editor_accept_pathsettings(monkeypatch, capsys, tmp_path):
     testobj.accept_pathsettings([], {}, [])
     assert testobj.last_added == ''
     assert testobj.ini['plugins'] == []
-    assert capsys.readouterr().out == "called update_paths with args ([], {}, 'en')\n"
+    assert capsys.readouterr().out == "called update_paths with args ([], {})\n"
 
     testobj.ini['startup'] = testee.shared.mode_f
     testobj.ini['initial'] = 'yy'
@@ -2359,7 +2359,7 @@ def test_editor_accept_pathsettings(monkeypatch, capsys, tmp_path):
     assert capsys.readouterr().out == (
             "called Editor.check_plugin_settings with args ('xx', 'path/to/xx', 'path/to/xx')\n"
             "called update_paths with args ([('xx', 'path/to/xx')],"
-            " {'xx': 'path/to/xx', 'zz': 'path/to/zz'}, 'en')\n")
+            " {'xx': 'path/to/xx', 'zz': 'path/to/zz'})\n")
 
 def test_editor_check_plugin_settings(monkeypatch, capsys):
     """unittest for main.Editor.check_plugin_settings
@@ -2729,8 +2729,8 @@ def test_editor_m_col(monkeypatch, capsys):
             "called SingleDataInterface.__init__ with args ()\n")
 
     testobj.book.page.settings = {}
-    testobj.book.page.column_info = [('xx', 10, False)]
-    testobj.book.page.new_column_info = [('xx', 10, False, 0)]
+    testobj.book.page.column_info = [('xx', 10, False, 0)]
+    testobj.new_column_info = [('xx', 10, False, 0)]
     testobj.book.page.otherstuff = {'other': 'stuff'}
     testobj.book.page.pad = 'testfile.json'
     testobj.m_col()
@@ -2738,6 +2738,8 @@ def test_editor_m_col(monkeypatch, capsys):
             f"called Editor.read_columntitledata with arg '{testobj}'\n"
             f"called gui.show_message with args ({testobj.gui}, 'I_ADDSET') {{}}\n")
     testobj.book.page.settings = {'page': 'settings'}
+    testobj.book.page.reader = MockReader()
+    testobj.captions = {'xx': 'aaa', 'yy': 'bbb'}
     testobj.m_col()
     assert capsys.readouterr().out == (
             f"called Editor.read_columntitledata with arg '{testobj}'\n"
@@ -2748,19 +2750,17 @@ def test_editor_m_col(monkeypatch, capsys):
             f"called Editor.read_columntitledata with arg '{testobj}'\n"
             f"called gui.show_dialog with args ({testobj}, {testee.gui.ColumnSettingsDialog})\n"
             f"called gui.show_message with args ({testobj.gui}, 'I_NOCHG') {{}}\n")
-    testobj.book.page.new_column_info = [('xx', 10, False, 0), ('yy', 15, False, 1)]
-    testobj.captions = {'xx': 'aaa', 'yy': 'bbb'}
+    testobj.new_column_info = [('xx', 10, False, 0), ('yy', 15, False, 1)]
     testobj.book.page.settings = {'page': 'settings'}
-    testobj.book.page.reader = MockReader()
     testobj.m_col()
-    assert testobj.book.page.column_info == [('xx', 10, False), ('yy', 15, False)]
+    assert testobj.book.page.column_info == [('xx', 10, False, 0), ('yy', 15, False, 1)]
     assert capsys.readouterr().out == (
             f"called Editor.read_columntitledata with arg '{testobj}'\n"
             f"called gui.show_dialog with args ({testobj}, {testee.gui.ColumnSettingsDialog})\n"
             "called Editor.build_new_pagedata\n"
             f"called writejson with args ('testfile.json', {testobj.book.page.reader},"
             " {'page': 'settings'},"
-            " [('xx', 10, False), ('yy', 15, False)], None, {'other': 'stuff'})\n"
+            " [('xx', 10, False, 0), ('yy', 15, False, 1)], None, {'other': 'stuff'})\n"
             "called SingleDataInterface.update_colums with args (1, 2)\n"
             "called TabbedInterface.refresh_locs with arg '['aaa', 'bbb']'\n"
             "called SingleDataInterface.refresh_headers with arg ['aaa', 'bbb']\n"
@@ -2810,24 +2810,32 @@ def test_editor_accept_columnsettings(monkeypatch, capsys):
     assert testobj.captions == {}
     assert capsys.readouterr().out == (
             f"called gui.show_message with args ({testobj.gui}, 'I_DPLCOL') {{}}\n")
-    data = [('x', 'a', 0, False, 0), ('y', 'b', 2, False, 1), ('z', 'c', 3, False, 2, ),
+    data = [('xzz', 'a', 0, False, 0), ('yyy', 'b', 2, False, 1), ('zzz', 'c', 3, False, 2, ),
             ('q', 'd', 1, False, 'new')]
     testobj.col_names = ['x', 'y', 'z']
     testobj.col_textids = ['xxx', 'yyy', 'zzz']
+    testobj.book.page.column_info = []
     assert testobj.accept_columnsettings(data) == (False, True)
     assert testobj.captions == {}
     assert capsys.readouterr().out == (
-            "called Editor.build_new_title_data with args (['q'], [['xxx', 'a', False, 0],"
-            " ['q', 'd', False, 'new'], ['yyy', 'b', False, 1], ['zzz', 'c', False, 2]])\n")
+            # "called Editor.build_new_title_data with args (['q'], [['xxx', 'a', False, 0],"
+            # " ['q', 'd', False, 'new'], ['yyy', 'b', False, 1], ['zzz', 'c', False, 2]])\n")
+            "called Editor.build_new_title_data with args (['xzz', 'q', 'yyy', 'zzz'],"
+            " [('xzz', 'a', 0, False, 0), ('q', 'd', 1, False, 'new'),"
+            " ('yyy', 'b', 2, False, 1), ('zzz', 'c', 3, False, 2)])\n")
     testobj.captions = {}
     testobj.build_new_title_data = mock_build_2
     assert testobj.accept_columnsettings(data) == (True, False)
-    assert testobj.book.page.new_column_info == ['col', 'info']
+    assert testobj.new_column_info == [('xzz', 'a', 0, False), ('q', 'd', 1, False),
+                                       ('yyy', 'b', 2, False), ('zzz', 'c', 3, False)]
     assert testobj.captions == {'ID1': 'title1', 'ID2': 'title2'}
     assert testobj.book.page.captions == {'ID1': 'title1', 'ID2': 'title2'}
     assert capsys.readouterr().out == (
-            "called Editor.build_new_title_data with args (['q'], [['xxx', 'a', False, 0],"
-            " ['q', 'd', False, 'new'], ['yyy', 'b', False, 1], ['zzz', 'c', False, 2]])\n")
+            # "called Editor.build_new_title_data with args (['q'], [['xxx', 'a', False, 0],"
+            # " ['q', 'd', False, 'new'], ['yyy', 'b', False, 1], ['zzz', 'c', False, 2]])\n")
+            "called Editor.build_new_title_data with args (['xzz', 'q', 'yyy', 'zzz'],"
+            " [('xzz', 'a', 0, False, 0), ('q', 'd', 1, False, 'new'),"
+            " ('yyy', 'b', 2, False, 1), ('zzz', 'c', 3, False, 2)])\n")
 
 def test_editor_build_new_title_data(monkeypatch, capsys, tmp_path):
     """unittest for main.Editor.build_new_title_data

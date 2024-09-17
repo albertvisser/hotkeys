@@ -87,7 +87,7 @@ def write_settings(settings, nobackup=False):
 
 
 def read_columntitledata(editor):
-    """read the current language file and extract the already defined column headers
+    """read the current language file and extract the ids and texts of already defined column headers
     """
     column_textids = []
     column_names = []
@@ -1281,11 +1281,13 @@ class Editor:
         oldcolcount = len(self.book.page.column_info)
         if not gui.show_dialog(self, gui.ColumnSettingsDialog):
             return
-        if [x[:-1] for x in self.book.page.new_column_info] == self.book.page.column_info:
+        # if [x[:-1] for x in self.book.page.new_column_info] == self.book.page.column_info:
+        if self.new_column_info == self.book.page.column_info:
             gui.show_message(self.gui, 'I_NOCHG')
             return
         self.book.page.data = self.build_new_pagedata()
-        self.book.page.column_info = [x[:-1] for x in self.book.page.new_column_info]
+        # self.book.page.column_info = [x[:-1] for x in self.book.page.new_column_info]
+        self.book.page.column_info = self.new_column_info
 
         writejson(self.book.page.pad, self.book.page.reader, self.book.page.settings,
                   self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
@@ -1329,22 +1331,33 @@ class Editor:
             return False, False  # not ok but continue with dialog
         # colno wordt alleen gebruikt voor het sorteren
         # old_colno hebben we nog nodig voor build_new_pagedata
-        for value in sorted(data, key=lambda x: x[2]):
-            name, width, colno, flag, old_colno = value
-            if name in self.col_names:
-                name = self.col_textids[self.col_names.index(name)]
-            else:
-                new_titles.append(name)
-            column_info.append([name, width, flag, old_colno])
+        # print('data from before dialog:', self.col_textids, self.col_names)
+        # print('data from dialog:', data)
+        # for value in sorted(data, key=lambda x: x[2]):
+        #     name, width, colno, flag, old_colno = value
+        #     if name in self.col_names:
+        #         name = self.col_textids[self.col_names.index(name)]
+        #     else:
+        #         new_titles.append(name)
+        #     column_info.append([name, width, flag, old_colno])
+        column_info = sorted(data, key=lambda x: x[2])
+        for ix, value in enumerate(column_info):
+            if value[0] not in self.col_names:
+                new_titles.append(value[0])
+        # print('nieuwe titels:', new_titles)
+        # print('kolominfo:', column_info)
+        self.new_column_info = [x[:-1] for x in column_info]
+        # print('originele info:', self.book.page.column_info)
         if new_titles:
             canceled, titles, colinfo = self.build_new_title_data(new_titles, column_info)
             if canceled:
                 # gui.show_message(self.gui, 'T_CANCLD')
                 return False, True  # not ok, do not continue with dialog
-        self.book.page.new_column_info = colinfo
-        for id_, name in titles:
-            self.captions[id_] = name
-            self.book.page.captions[id_] = name
+            # print(titles, colinfo)
+            # self.new_column_info = colinfo
+            for id_, name in titles:
+                self.captions[id_] = name
+                self.book.page.captions[id_] = name
         return True, False  # ok, done with dialog (but not canceled)
 
     def build_new_title_data(self, new_titles, column_info):
