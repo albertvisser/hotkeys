@@ -9,22 +9,23 @@ import PyQt5.QtCore as core
 from editor import shared
 
 
-class DummyPage(qtw.QFrame):
-    "simulate some hotkeypanel functionality"
-    def __init__(self, parent, message):
-        super().__init__(parent)
-        sizer = qtw.QVBoxLayout()
-        hsizer = qtw.QHBoxLayout()
-        hsizer.addStretch()
-        hsizer.addWidget(qtw.QLabel(message, self))
-        hsizer.addStretch()
-        sizer.addLayout(hsizer)
-        self.setLayout(sizer)
-
-    def exit(self):
-        """simulate processing triggered by exit button
-        """
-        return True
+# deze klasse wordt niet meer gebruikt
+# class DummyPage(qtw.QFrame):
+#     "simulate some hotkeypanel functionality"
+#     def __init__(self, parent, message):
+#         super().__init__(parent)
+#         sizer = qtw.QVBoxLayout()
+#         hsizer = qtw.QHBoxLayout()
+#         hsizer.addStretch()
+#         hsizer.addWidget(qtw.QLabel(message, self))
+#         hsizer.addStretch()
+#         sizer.addLayout(hsizer)
+#         self.setLayout(sizer)
+#
+#     def exit(self):
+#         """simulate processing triggered by exit button
+#         """
+#         return True
 
 
 class SingleDataInterface(qtw.QFrame):
@@ -36,6 +37,7 @@ class SingleDataInterface(qtw.QFrame):
         super().__init__(parent)
         self.parent = parent  # .parent()
         self.master = master
+        self.p0list = qtw.QTreeWidget(self)
 
     def setup_empty_screen(self, nodata, title):
         """build a subscreen with only a message
@@ -52,7 +54,6 @@ class SingleDataInterface(qtw.QFrame):
     def setup_list(self):
         """add the list widget to the interface
         """
-        self.p0list = qtw.QTreeWidget(self)
         sizer = qtw.QVBoxLayout()
         if self.master.column_info:
             self.p0list.setHeaderLabels([self.master.captions[col[0]] for col in
@@ -76,7 +77,7 @@ class SingleDataInterface(qtw.QFrame):
             self.layout_extra_fields(sizer)
 
         self.setLayout(sizer)
-        shared.log(self.master.otherstuff)
+        # shared.log(self.master.otherstuff)
         self.set_listselection(0)
 
     def add_extra_fields(self):
@@ -359,8 +360,7 @@ class SingleDataInterface(qtw.QFrame):
     # used by on_text
     def get_widget_text(self, ted, text):
         "return the text entered in a textfield"
-        text = str(text)    # ineens krijg ik hier altijd "<class 'str'>" voor terug? Is de bind aan
-                            # de callback soms fout? Of is het Py3 vs Py2?
+        # text = str(text)    # Niet meer nodig denk ik (PyQt > 4)
         hlp = ted.text()
         if text != hlp:
             text = hlp
@@ -390,12 +390,15 @@ class SingleDataInterface(qtw.QFrame):
         lbl.setText(value)
 
     def set_textfield_value(self, txt, value):
-        "set the text for a textfield"
+        "set the text for a textfield (LineEdit, ComboBox of TextEdit)"
         txt.setText(value)
 
     # used by on_checkbox
     def get_check_value(self, cb, state):
-        "return the state set in a checkbox (and the widget itself)"
+        """return the state set in a checkbox (and the widget itself)
+
+        in deze variant worden de vanuit de callback binnengekomen gegevens doorgegeven
+        """
         return cb, state
 
     def get_checkbox_state(self, cb):
@@ -582,11 +585,11 @@ class TabbedInterface(qtw.QFrame):
     # used by filter
     def get_filter_state_text(self):
         "return the current text of the filter button"
-        return str(self.b_filter.text())
+        return self.b_filter.text()
 
     def get_search_text(self):
         "return the text to search for"
-        return str(self.find.currentText())
+        return self.find.currentText()
 
     def get_found_keydef_position(self):
         "return the position marker of the current search result"
@@ -762,15 +765,11 @@ class Gui(qtw.QMainWindow):
         if sel == 'M_READ' and not self.editor.book.page.data:
             act.setEnabled(False)
         if sel == 'M_RBLD':
-            try:
-                act.setEnabled(bool(int(self.editor.book.page.settings[shared.SettType.RBLD.value])))
-            except KeyError:
-                act.setEnabled(False)
+            act.setEnabled(bool(int(self.editor.book.page.settings.get(shared.SettType.RBLD.value,
+                                                                       "0"))))
         elif sel == 'M_SAVE':
-            try:
-                act.setEnabled(bool(int(self.editor.book.page.settings[shared.SettType.RDEF.value])))
-            except KeyError:
-                act.setEnabled(False)
+            act.setEnabled(bool(int(self.editor.book.page.settings.get(shared.SettType.RDEF.value,
+                                                                       "0"))))
         return act
 
     def setcaptions(self):

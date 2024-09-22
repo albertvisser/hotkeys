@@ -447,7 +447,7 @@ class HotkeyPanel:
         return True
 
     def on_text(self, *args):
-        """on changing a text enty
+        """on changing a text entry
         """
         if self.initializing_screen:
             return
@@ -977,15 +977,16 @@ class Editor:
             self.setcaptions()
         self.gui.go()
 
-    def show_empty_screen(self):
-        """what to do when there's no data to show
-        """
-        message = self.captions["EMPTY_CONFIG_TEXT"]
-        self.book = SimpleNamespace()
-        self.book.gui = gui.DummyPage(self.gui, message)
-        self.book.page = SimpleNamespace()
-        self.book.page.gui = self.book.gui
-        self.gui.resize_empty_screen(640, 80)
+    # deze methode wordt niet meer gebruikt
+    # def show_empty_screen(self):
+    #     """what to do when there's no data to show
+    #     """
+    #     message = self.captions["EMPTY_CONFIG_TEXT"]
+    #     self.book = SimpleNamespace()
+    #     self.book.gui = gui.DummyPage(self.gui, message)
+    #     self.book.page = SimpleNamespace()
+    #     self.book.page.gui = self.book.gui
+    #     self.gui.resize_empty_screen(640, 80)
 
     def get_menudata(self):
         """provide the application's menu definition to the program

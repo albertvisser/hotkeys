@@ -2089,30 +2089,30 @@ def setup_editor(monkeypatch, capsys):
                                        f'called Gui.__init__ with arg {testobj}\n')
     return testobj
 
-def test_editor_show_empty_screen(monkeypatch, capsys):
-    """unittest for main.Editor.show_empty_screen
-    """
-    class MockDummy:
-        "stub for gui.DummyPage"
-        def __init__(self, *args):
-            print('called gui.DummyPage.__init__ with args', args)
-    def mock_init(self):
-        print('called Editor.__init__')
-    monkeypatch.setattr(testee.Editor, '__init__', mock_init)
-    monkeypatch.setattr(testee.gui, 'DummyPage', MockDummy)
-    testobj = testee.Editor()
-    testobj.gui = MockGui(testobj)
-    assert capsys.readouterr().out == ('called Editor.__init__\n'
-                                       f'called Gui.__init__ with arg {testobj}\n')
-    testobj.captions = {'EMPTY_CONFIG_TEXT': 'Empty'}
-    testobj.show_empty_screen()
-    assert isinstance(testobj.book, testee.SimpleNamespace)
-    assert isinstance(testobj.book.gui, testee.gui.DummyPage)
-    assert isinstance(testobj.book.page, testee.SimpleNamespace)
-    assert testobj.book.page.gui == testobj.book.gui
-    assert capsys.readouterr().out == (
-            f"called gui.DummyPage.__init__ with args ({testobj.gui}, 'Empty')\n"
-            "called Gui.resize_empty_screen with args (640, 80)\n")
+# def test_editor_show_empty_screen(monkeypatch, capsys):
+#     """unittest for main.Editor.show_empty_screen
+#     """
+#     class MockDummy:
+#         "stub for gui.DummyPage"
+#         def __init__(self, *args):
+#             print('called gui.DummyPage.__init__ with args', args)
+#     def mock_init(self):
+#         print('called Editor.__init__')
+#     monkeypatch.setattr(testee.Editor, '__init__', mock_init)
+#     monkeypatch.setattr(testee.gui, 'DummyPage', MockDummy)
+#     testobj = testee.Editor()
+#     testobj.gui = MockGui(testobj)
+#     assert capsys.readouterr().out == ('called Editor.__init__\n'
+#                                        f'called Gui.__init__ with arg {testobj}\n')
+#     testobj.captions = {'EMPTY_CONFIG_TEXT': 'Empty'}
+#     testobj.show_empty_screen()
+#     assert isinstance(testobj.book, testee.SimpleNamespace)
+#     assert isinstance(testobj.book.gui, testee.gui.DummyPage)
+#     assert isinstance(testobj.book.page, testee.SimpleNamespace)
+#     assert testobj.book.page.gui == testobj.book.gui
+#     assert capsys.readouterr().out == (
+#             f"called gui.DummyPage.__init__ with args ({testobj.gui}, 'Empty')\n"
+#             "called Gui.resize_empty_screen with args (640, 80)\n")
 
 def test_editor_get_menudata(monkeypatch, capsys):
     """unittest for main.Editor.get_menudata
