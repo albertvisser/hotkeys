@@ -46,8 +46,7 @@ def ask_ync_question(win, message_id='', text='', args=None):
     """
     text = shared.get_text(win, message_id, text, args)
     ok = qtw.QMessageBox.question(win, shared.get_title(win), text,
-                                  qtw.QMessageBox.Yes | qtw.QMessageBox.No
-                                  | qtw.QMessageBox.Cancel)
+                                  qtw.QMessageBox.Yes | qtw.QMessageBox.No | qtw.QMessageBox.Cancel)
     return ok == qtw.QMessageBox.Yes, ok == qtw.QMessageBox.Cancel
 
 
@@ -175,8 +174,8 @@ class SetupDialog(qtw.QDialog):
     tevens voor dat het correcte formaat gebruikt wordt
     """
     def __init__(self, parent, name):
-        self.parent = parent
         super().__init__()
+        self.parent = parent
         self.setWindowTitle(self.parent.master.captions['T_INIKDEF'])
 
         grid = qtw.QGridLayout()
@@ -347,11 +346,9 @@ class FilesDialog(qtw.QDialog):
         self.sizer.addWidget(self.scrl)
 
         buttonbox = qtw.QDialogButtonBox()
-        btn = buttonbox.addButton(self.master.captions['C_ADDPRG'],
-                                  qtw.QDialogButtonBox.ActionRole)
+        btn = buttonbox.addButton(self.master.captions['C_ADDPRG'], qtw.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.add_program)
-        btn = buttonbox.addButton(self.master.captions['C_REMPRG'],
-                                  qtw.QDialogButtonBox.ActionRole)
+        btn = buttonbox.addButton(self.master.captions['C_REMPRG'], qtw.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.remove_programs)
         buttonbox.addButton(qtw.QDialogButtonBox.Ok)
         buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
@@ -376,9 +373,11 @@ class FilesDialog(qtw.QDialog):
         browse = FileBrowseButton(self, text=path)
         self.gsizer.addWidget(browse, self.rownum, colnum)
         self.paths.append((name, browse))
-        vbar = self.scrl.verticalScrollBar()
-        vbar.setMaximum(vbar.maximum() + 52)
-        vbar.setValue(vbar.maximum())
+        # vbar = self.scrl.verticalScrollBar()
+        # vbar.setMaximum(vbar.maximum() + 52)
+        self.bar.setMaximum(self.bar.maximum() + 52)
+        # vbar.setValue(vbar.maximum())
+        self.bar.setValue(self.bar.maximum())
 
     def delete_row(self, rownum):
         """remove a tool location definition row
@@ -417,20 +416,19 @@ class FilesDialog(qtw.QDialog):
         if checked:
             dlg = DeleteDialog(self).exec_()
             if dlg == qtw.QDialog.Accepted:
-                for row, name in reversed(checked):
+                for row, name in reversed(checked):  # reversed niet nodig als ik checked niet aanpas
                     keydef_name, prg_name = '', ''
-                    try:
-                        keydef_name = self.paths[row][1].input.text()
-                        prg_name = self.settingsdata[name][0]
-                    except KeyError:
-                        shared.log_exc('')
-                    shared.log(f'{keydef_name=}')
-                    shared.log(f'{prg_name=}')
-                    if self.remove_data and keydef_name:
+                    # try:
+                    keydef_name = self.paths[row][1].input.text()
+                    prg_name = self.settingsdata[name][0]
+                    # except KeyError:
+                    #     shared.log_exc('')
+                    # shared.log(f'{keydef_name=}')
+                    # shared.log(f'{prg_name=}')
+                    if self.remove_data and keydef_name:  # kan keydef_name wel leeg zijn?
                         self.data_to_remove.append(keydef_name)
-                    if self.remove_code and prg_name:
-                        self.code_to_remove.append(
-                            prg_name.replace('.', '/') + '.py')
+                    if self.remove_code and prg_name:     # kan prg_name wel leeg zijn?
+                        self.code_to_remove.append(prg_name.replace('.', '/') + '.py')
                     self.delete_row(row)
 
     def accept(self):
@@ -497,11 +495,9 @@ class ColumnSettingsDialog(qtw.QDialog):
         self.sizer.addWidget(self.scrl)
 
         buttonbox = qtw.QDialogButtonBox()
-        btn = buttonbox.addButton(self.master.captions['C_ADDCOL'],
-                                  qtw.QDialogButtonBox.ActionRole)
+        btn = buttonbox.addButton(self.master.captions['C_ADDCOL'], qtw.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.add_column)
-        btn = buttonbox.addButton(self.master.captions['C_REMCOL'],
-                                  qtw.QDialogButtonBox.ActionRole)
+        btn = buttonbox.addButton(self.master.captions['C_REMCOL'], qtw.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.remove_columns)
         buttonbox.addButton(qtw.QDialogButtonBox.Ok)
         buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
@@ -570,9 +566,11 @@ class ColumnSettingsDialog(qtw.QDialog):
         self.gsizer.addLayout(ghsizer)
         old_colno = "new" if colno == '' else colno
         self.data.append((w_name, w_width, w_colno, w_flag, old_colno))
-        vbar = self.scrl.verticalScrollBar()
-        vbar.setMaximum(vbar.maximum() + 62)
-        vbar.setValue(vbar.maximum())
+        # vbar = self.scrl.verticalScrollBar()
+        # vbar.setMaximum(vbar.maximum() + 62)
+        self.bar.setMaximum(self.bar.maximum() + 62)
+        # vbar.setValue(vbar.maximum())
+        self.bar.setValue(self.bar.maximum())
 
     def delete_row(self, rownum):
         """remove a column settings row
@@ -582,7 +580,8 @@ class ColumnSettingsDialog(qtw.QDialog):
         for widgets in self.data[rownum:]:
             w_colno = widgets[2]
             w_colno.setValue(w_colno.value() - 1)
-        w_name, w_width, w_colno, w_flag, _ = self.data[rownum]
+        # w_name, w_width, w_colno, w_flag, _ = self.data[rownum]
+        w_name, w_width, w_colno, w_flag = self.data[rownum][:4]
         for widget in check, w_name, w_width, w_colno, w_flag:
             self.gsizer.removeWidget(widget)
             widget.close()
@@ -649,8 +648,8 @@ class NewColumnsDialog(qtw.QDialog):
             gsizer.addWidget(qtw.QLabel(name.split('.')[0].title(), self), row, col)
 
         # maak een regel voor elke nieuwe titel en neem de waarde over
-        # in de kolom die overeenkomt met de huidige taalinstelling
-        # tevens de betreffende text entry read-only maken
+        # tevens in de kolom die overeenkomt met de huidige taalinstelling
+        # de betreffende text entry read-only maken
         self.widgets = []
         for item in self.master.dialog_data['new_titles']:
             row += 1
@@ -732,11 +731,8 @@ class ExtraSettingsDialog(qtw.QDialog):
         vsizer.addLayout(hsizer)
         hsizer = qtw.QHBoxLayout()
         self.c_showdet = qtw.QCheckBox(self.master.captions['S_DETS'], self)
-        try:
-            if self.master.book.page.settings[shared.SettType.DETS.value] == '1':
-                self.c_showdet.toggle()
-        except KeyError:
-            shared.log_exc()
+        if self.master.book.page.settings[shared.SettType.DETS.value] == '1':
+            self.c_showdet.toggle()
         hsizer.addWidget(self.c_showdet)
         vsizer.addLayout(hsizer)
         hsizer = qtw.QHBoxLayout()
@@ -841,9 +837,8 @@ class ExtraSettingsDialog(qtw.QDialog):
         w_desc = qtw.QLineEdit(desc, self)
         self.gsizer.addWidget(w_desc, self.rownum, colnum)
         self.data.append((w_name, w_value, w_desc))
-        vbar = self.scrl.verticalScrollBar()
-        vbar.setMaximum(vbar.maximum() + 62)
-        vbar.setValue(vbar.maximum())
+        self.bar.setMaximum(self.bar.maximum() + 62)
+        self.bar.setValue(self.bar.maximum())
 
     def delete_row(self, rownum):
         """delete a setting definition row
@@ -928,11 +923,9 @@ class EntryDialog(qtw.QDialog):
         hsizer = qtw.QHBoxLayout()
         hsizer.addStretch()
         buttonbox = qtw.QDialogButtonBox()
-        btn = buttonbox.addButton(self.captions['C_ADDKEY'],
-                                  qtw.QDialogButtonBox.ActionRole)
+        btn = buttonbox.addButton(self.captions['C_ADDKEY'], qtw.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.add_key)
-        btn = buttonbox.addButton(self.captions['C_REMKEY'],
-                                  qtw.QDialogButtonBox.ActionRole)
+        btn = buttonbox.addButton(self.captions['C_REMKEY'], qtw.QDialogButtonBox.ActionRole)
         btn.clicked.connect(self.delete_key)
         buttonbox.addButton(qtw.QDialogButtonBox.Ok)
         buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
