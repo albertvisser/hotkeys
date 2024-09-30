@@ -582,7 +582,8 @@ class HotkeyPanel:
             if text not in keydefdata:
                 continue
             if control is None:
-                print(f'{text} aanwezig in fields zonder corresponderend veld op scherm')
+                plugin = self.settings[shared.SettType.PLG.value].split('.')[-1]
+                print(f'{plugin}: {text} aanwezig in fields zonder corresponderend veld op scherm')
                 continue
             if text != 'C_DESC':  # description is (vooralsnog) readonly bedoeld
                 self._origdata[self.field_indexes[text]] = keydefdata[text]

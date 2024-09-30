@@ -1141,7 +1141,7 @@ def test_hotkeypanel_refresh_extrascreen(monkeypatch, capsys):
     testobj.gui.cb_ctrl = ' with ctrl'
     testobj.gui.cb_alt = ' with alt'
     testobj.gui.cb_win = ' with win'
-    testobj.settings = {testee.shared.SettType.RDEF.value: 1}
+    testobj.settings[testee.shared.SettType.RDEF.value] = 1
     testobj.keylist = ['a', 'b', 'c']
     testobj.refresh_extrascreen('selitem')
     assert testobj._origdata == ['X', True, True, True, False, '', '', '', '', '', '', '']
@@ -1158,7 +1158,7 @@ def test_hotkeypanel_refresh_extrascreen(monkeypatch, capsys):
     testobj.fields = ['C_KEY', 'C_TYPE', 'C_CNTXT', 'C_CMD', 'C_DESC', 'C_PARMS', 'C_CTRL',
                       'C_BPARMS', 'C_APARMS', 'C_FEAT']
     testobj.data = {'1': ['X', 'U', 'xx', 'yy', 'zz', 'aa', 'bb', 'cc', 'dd', 'ee']}
-    # breakpoint()
+    testobj.settings[testee.shared.SettType.PLG.value] = 'xxx.yyy.zzz'
     testobj.refresh_extrascreen('selitem')
     assert testobj._origdata == ['X', False, False, False, False, '', '', '', '', '', '', '']
     assert capsys.readouterr().out == (
@@ -1169,14 +1169,14 @@ def test_hotkeypanel_refresh_extrascreen(monkeypatch, capsys):
             "called SingleDataInterface.get_valuelist with arg 'C_KEY'\n"
             "called SingleDataInterface.set_combobox_string with args"
             " ('key', 'X', ['value', 'list'])\n"
-            "C_CNTXT aanwezig in fields zonder corresponderend veld op scherm\n"
-            "C_CMD aanwezig in fields zonder corresponderend veld op scherm\n"
-            "C_DESC aanwezig in fields zonder corresponderend veld op scherm\n"
-            "C_PARMS aanwezig in fields zonder corresponderend veld op scherm\n"
-            "C_CTRL aanwezig in fields zonder corresponderend veld op scherm\n"
-            "C_BPARMS aanwezig in fields zonder corresponderend veld op scherm\n"
-            "C_APARMS aanwezig in fields zonder corresponderend veld op scherm\n"
-            "C_FEAT aanwezig in fields zonder corresponderend veld op scherm\n")
+            "zzz: C_CNTXT aanwezig in fields zonder corresponderend veld op scherm\n"
+            "zzz: C_CMD aanwezig in fields zonder corresponderend veld op scherm\n"
+            "zzz: C_DESC aanwezig in fields zonder corresponderend veld op scherm\n"
+            "zzz: C_PARMS aanwezig in fields zonder corresponderend veld op scherm\n"
+            "zzz: C_CTRL aanwezig in fields zonder corresponderend veld op scherm\n"
+            "zzz: C_BPARMS aanwezig in fields zonder corresponderend veld op scherm\n"
+            "zzz: C_APARMS aanwezig in fields zonder corresponderend veld op scherm\n"
+            "zzz: C_FEAT aanwezig in fields zonder corresponderend veld op scherm\n")
     testobj.gui.cmb_context = 'context'
     testobj.gui.cmb_commando = 'command'
     testobj.gui.txt_oms = 'desc'
@@ -1992,13 +1992,13 @@ def test_editor_init(monkeypatch, capsys):
     def mock_readcaptions(self, arg):
         print(f"called Editor.readcaptions with arg '{arg}'")
         self.captions = {'T_MAIN': 'maintitle', 'T_HELLO': 'hello from {}'}
-    def mock_show(self):
-        print('called Editor.show_empty_screen')
+    # def mock_show(self):
+    #     print('called Editor.show_empty_screen')
     def mock_set(self):
         print('called Editor.setcaptions')
     monkeypatch.setattr(testee.shared, 'save_log', mock_save_log)
     monkeypatch.setattr(testee, 'read_settings', mock_read)
-    monkeypatch.setattr(testee.Editor, 'show_empty_screen', mock_show)
+    # monkeypatch.setattr(testee.Editor, 'show_empty_screen', mock_show)
     monkeypatch.setattr(testee.Editor, 'readcaptions', mock_readcaptions)
     monkeypatch.setattr(testee.gui, 'Gui', MockGui)
     monkeypatch.setattr(testee, 'ChoiceBook', MockChoiceBook)
