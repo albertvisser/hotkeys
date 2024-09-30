@@ -9,23 +9,187 @@ import PyQt5.QtCore as core
 from editor import shared
 
 
-# deze klasse wordt niet meer gebruikt
-# class DummyPage(qtw.QFrame):
-#     "simulate some hotkeypanel functionality"
-#     def __init__(self, parent, message):
-#         super().__init__(parent)
-#         sizer = qtw.QVBoxLayout()
-#         hsizer = qtw.QHBoxLayout()
-#         hsizer.addStretch()
-#         hsizer.addWidget(qtw.QLabel(message, self))
-#         hsizer.addStretch()
-#         sizer.addLayout(hsizer)
-#         self.setLayout(sizer)
-#
-#     def exit(self):
-#         """simulate processing triggered by exit button
-#         """
-#         return True
+class FieldHandler:
+    """Processing for showing extra fields on screen
+    """
+    def __init__(self, sdi):
+        self.gui = sdi
+        self.master = sdi.master
+
+    def build_fields(self):
+        """determine which build function to call
+        """
+        if 'C_KEY' in self.master.fields:
+            self.build_keyfield()
+        if 'C_MODS' in self.master.fields:
+            self.build_modfields()
+        if 'C_CNTXT' in self.master.fields:
+            self.build_context_field()
+        if 'C_CMD' in self.master.fields:
+            self.build_command_field()
+        if 'C_PARMS' in self.master.fields:
+            self.build_parms_field()
+        if 'C_CTRL' in self.master.fields:
+            self.build_control_field()
+        if 'C_BPARMS' in self.master.fields:
+            self.build_preparms_field()
+        if 'C_APARMS' in self.master.fields:
+            self.build_postparms_field()
+        if 'C_FEAT' in self.master.fields:
+            self.build_featurefield()
+        if 'C_DESC' in self.master.fields:
+            self.build_descfield()
+
+    def build_keyfield(self):
+        """build fields for key(s)
+        """
+        self.gui.lbl_key = qtw.QLabel(self.master.captions['C_KTXT'] + " ", self.gui.frm)
+        if self.master.keylist is None:
+            ted = qtw.QLineEdit(self.gui.frm)
+            ted.setMaximumWidth(90)
+            ted.textChanged[str].connect(functools.partial(self.master.on_text, ted, str))
+            self.gui.screenfields.append(ted)
+            self.gui.txt_key = ted
+        else:
+            cb = qtw.QComboBox(self.gui.frm)
+            cb.setMaximumWidth(90)
+            cb.addItems(self.master.keylist)  # niet sorteren
+            cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
+            self.gui.screenfields.append(cb)
+            self.gui.cmb_key = cb
+
+    def build_modfields(self):
+        """build fields for modifiers
+        """
+        for ix, x in enumerate(('M_CTRL', 'M_ALT', 'M_SHFT', 'M_WIN')):
+            cb = qtw.QCheckBox(self.master.captions[x].join(("+ ", "")), self.gui.frm)
+            cb.setChecked(False)
+            self.gui.screenfields.append(cb)
+            cb.stateChanged.connect(functools.partial(self.master.on_checkbox, cb))
+            if ix == 0:
+                self.gui.cb_ctrl = cb
+            elif ix == 1:
+                self.gui.cb_alt = cb
+            elif ix == 2:
+                self.gui.cb_shift = cb
+            elif ix == 3:
+                self.gui.cb_win = cb
+
+    def build_context_field(self):
+        """build field for context
+        """
+        self.gui.lbl_context = qtw.QLabel(self.master.captions['C_CNTXT'], self.gui.frm)
+        cb = qtw.QComboBox(self.gui.frm)
+        cb.addItems(self.master.contextslist)
+        cb.setMaximumWidth(110)
+        cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
+        self.gui.screenfields.append(cb)
+        self.gui.cmb_context = cb
+
+    def build_command_field(self):
+        """build field for command
+        """
+        self.gui.txt_cmd = qtw.QLabel(self.master.captions['C_CTXT'] + " ", self.gui.frm)
+        cb = qtw.QComboBox(self.gui.frm)
+        cb.setMaximumWidth(150)
+        if 'C_CNTXT' not in self.master.fields:  # load on choosing context
+            cb.addItems(self.master.commandslist)
+        cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
+        self.gui.screenfields.append(cb)
+        self.gui.cmb_commando = cb
+
+    def build_parms_field(self):
+        """build field for command parameters
+        """
+        self.gui.lbl_parms = qtw.QLabel(self.master.captions['C_PARMS'], self.gui.frm)
+        self.gui.txt_parms = qtw.QLineEdit(self.gui.frm)
+        self.gui.txt_parms.setMaximumWidth(280)
+        self.gui.screenfields.append(self.gui.txt_parms)
+
+    def build_control_field(self):
+        """build field for gui element
+        """
+        self.gui.lbl_controls = qtw.QLabel(self.master.captions['C_CTRL'], self.gui.frm)
+        cb = qtw.QComboBox(self.gui.frm)
+        cb.addItems(self.master.controlslist)
+        cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
+        self.gui.screenfields.append(cb)
+        self.gui.cmb_controls = cb
+
+    def build_preparms_field(self):
+        """build field for arguments preceding the keycombo
+        """
+        self.gui.pre_parms_label = qtw.QLabel(self.gui.frm)
+        self.gui.pre_parms_text = qtw.QLineEdit(self.gui.frm)
+        self.gui.screenfields.append(self.gui.pre_parms_text)
+
+    def build_postparms_field(self):
+        """build field for arguments following the keycombo
+        """
+        self.gui.post_parms_label = qtw.QLabel(self.gui.frm)
+        self.gui.post_parms_text = qtw.QLineEdit(self.gui.frm)
+        self.gui.screenfields.append(self.gui.post_parms_text)
+
+    def build_featurefield(self):
+        """build field for feature
+        """
+        self.gui.feature_label = qtw.QLabel(self.gui.frm)
+        self.gui.feature_select = qtw.QComboBox(self.gui.frm)
+        self.gui.feature_select.addItems(self.master.featurelist)
+        self.gui.screenfields.append(self.gui.feature_select)
+        # hoeft feature niet aan de callback gekoppeld of ben ik hier niet verder mee gegaan
+        # omdat ik dit toch niet gebruik?
+
+    def build_descfield(self):
+        """build field for description
+        """
+        self.gui.txt_oms = qtw.QTextEdit(self.gui.frm)
+        self.gui.txt_oms.setReadOnly(True)
+
+    def layout_keymodfields(self, sizer):
+        """layout fields for key and modifiers
+        """
+        if 'C_KEY' in self.master.fields:
+            sizer3 = qtw.QHBoxLayout()
+            sizer3.addWidget(self.gui.lbl_key)
+            if self.master.keylist is None:
+                sizer3.addWidget(self.gui.txt_key)
+            else:
+                sizer3.addWidget(self.gui.cmb_key)
+            sizer3.addStretch()
+            sizer.addLayout(sizer3)
+
+        if 'C_MODS' in self.master.fields:
+            sizer3 = qtw.QHBoxLayout()
+            sizer3.addWidget(self.gui.cb_ctrl)
+            sizer3.addWidget(self.gui.cb_alt)
+            sizer3.addWidget(self.gui.cb_shift)
+            sizer3.addWidget(self.gui.cb_win)
+            sizer3.addStretch()
+            sizer.addLayout(sizer3)
+
+    def layout_commandfields(self, sizer):
+        """layout fields for command and context
+        """
+        if 'C_CNTXT' in self.master.fields:
+            sizer2 = qtw.QHBoxLayout()
+            sizer2.addWidget(self.gui.lbl_context)
+            sizer2.addWidget(self.gui.cmb_context)
+            sizer.addLayout(sizer2)
+
+        if 'C_CMD' in self.master.fields:
+            sizer2 = qtw.QHBoxLayout()
+            sizer2.addWidget(self.gui.txt_cmd)
+            sizer2.addWidget(self.gui.cmb_commando)
+            sizer.addLayout(sizer2)
+
+    def layout_descfield(self, sizer):
+        """layout description field
+        """
+        if 'C_DESC' in self.master.fields:
+            sizer2 = qtw.QVBoxLayout()
+            sizer2.addWidget(self.gui.txt_oms)
+            sizer.addLayout(sizer2, 2)
 
 
 class SingleDataInterface(qtw.QFrame):
@@ -38,6 +202,7 @@ class SingleDataInterface(qtw.QFrame):
         self.parent = parent  # .parent()
         self.master = master
         self.p0list = qtw.QTreeWidget(self)
+        self.fieldhandler = FieldHandler(self)
 
     def setup_empty_screen(self, nodata, title):
         """build a subscreen with only a message
@@ -84,105 +249,22 @@ class SingleDataInterface(qtw.QFrame):
         """fields showing details for selected keydef, to make editing possible
         """
         self.screenfields = []
-        self._box = box = qtw.QFrame(self)
+        self.frm = qtw.QFrame(self)
         frameheight = 90
         # try:
         if hasattr(self.master.reader, 'get_frameheight'):
             frameheight = self.master.reader.get_frameheight()  # user exit
         # except AttributeError:
         #     shared.log_exc()
-        box.setMaximumHeight(frameheight)
+        self.frm.setMaximumHeight(frameheight)
 
         self.cmb_key = self.cmb_context = self.cmb_commando = self.cmb_controls = None
-        if 'C_KEY' in self.master.fields:
-            self.lbl_key = qtw.QLabel(self.master.captions['C_KTXT'] + " ", box)
-            if self.master.keylist is None:
-                ted = qtw.QLineEdit(box)
-                ted.setMaximumWidth(90)
-                ted.textChanged[str].connect(functools.partial(self.master.on_text, ted, str))
-                self.screenfields.append(ted)
-                self.txt_key = ted
-            else:
-                cb = qtw.QComboBox(box)
-                cb.setMaximumWidth(90)
-                cb.addItems(self.master.keylist)  # niet sorteren
-                cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb,
-                                                                      str))
-                self.screenfields.append(cb)
-                self.cmb_key = cb
+        self.fieldhandler.build_fields()
 
-        if 'C_MODS' in self.master.fields:
-            for ix, x in enumerate(('M_CTRL', 'M_ALT', 'M_SHFT', 'M_WIN')):
-                cb = qtw.QCheckBox(self.master.captions[x].join(("+ ", "")), box)
-                cb.setChecked(False)
-                self.screenfields.append(cb)
-                cb.stateChanged.connect(functools.partial(self.master.on_checkbox, cb))
-                if ix == 0:
-                    self.cb_ctrl = cb
-                elif ix == 1:
-                    self.cb_alt = cb
-                elif ix == 2:
-                    self.cb_shift = cb
-                elif ix == 3:
-                    self.cb_win = cb
-
-        if 'C_CNTXT' in self.master.fields:
-            self.lbl_context = qtw.QLabel(self.master.captions['C_CNTXT'], box)
-            cb = qtw.QComboBox(box)
-            cb.addItems(self.master.contextslist)
-            cb.setMaximumWidth(110)
-            cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
-            self.screenfields.append(cb)
-            self.cmb_context = cb
-
-        if 'C_CMD' in self.master.fields:
-            self.txt_cmd = qtw.QLabel(self.master.captions['C_CTXT'] + " ", box)
-            cb = qtw.QComboBox(self)
-            cb.setMaximumWidth(150)
-            if 'C_CNTXT' not in self.master.fields:  # load on choosing context
-                cb.addItems(self.master.commandslist)
-            cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
-            self.screenfields.append(cb)
-            self.cmb_commando = cb
-
-        if 'C_PARMS' in self.master.fields:
-            self.lbl_parms = qtw.QLabel(self.master.captions['C_PARMS'], box)
-            self.txt_parms = qtw.QLineEdit(box)
-            self.txt_parms.setMaximumWidth(280)
-            self.screenfields.append(self.txt_parms)
-
-        if 'C_CTRL' in self.master.fields:
-            self.lbl_controls = qtw.QLabel(self.master.captions['C_CTRL'], box)
-            cb = qtw.QComboBox(box)
-            cb.addItems(self.master.controlslist)
-            cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
-            self.screenfields.append(cb)
-            self.cmb_controls = cb
-
-        if 'C_BPARMS' in self.master.fields:
-            self.pre_parms_label = qtw.QLabel(box)
-            self.pre_parms_text = qtw.QLineEdit(box)
-            self.screenfields.append(self.pre_parms_text)
-
-        if 'C_APARMS' in self.master.fields:
-            self.post_parms_label = qtw.QLabel(box)
-            self.post_parms_text = qtw.QLineEdit(box)
-            self.screenfields.append(self.post_parms_text)
-
-        if 'C_FEAT' in self.master.fields:
-            self.feature_label = qtw.QLabel(box)
-            self.feature_select = qtw.QComboBox(box)
-            self.feature_select.addItems(self.master.featurelist)
-            self.screenfields.append(self.feature_select)
-
-        if 'C_DESC' in self.master.fields:
-            self.txt_oms = qtw.QTextEdit(box)
-            self.txt_oms.setReadOnly(True)
-
-        self.b_save = qtw.QPushButton(self.master.captions['C_SAVE'], box)
+        self.b_save = qtw.QPushButton(self.master.captions['C_SAVE'], self.frm)
         self.b_save.setEnabled(False)
         self.b_save.clicked.connect(self.on_update)
-        self.b_del = qtw.QPushButton(self.master.captions['C_DEL'], box)
+        self.b_del = qtw.QPushButton(self.master.captions['C_DEL'], self.frm)
         self.b_del.setEnabled(False)
         self.b_del.clicked.connect(self.on_delete)
         self._savestates = (False, False)
@@ -208,75 +290,35 @@ class SingleDataInterface(qtw.QFrame):
 
         sizer1 = qtw.QHBoxLayout()
         sizer2 = qtw.QHBoxLayout()
-        if 'C_KEY' in self.master.fields:
-            sizer3 = qtw.QHBoxLayout()
-            sizer3.addWidget(self.lbl_key)
-            if self.master.keylist is None:
-                sizer3.addWidget(self.txt_key)
-            else:
-                sizer3.addWidget(self.cmb_key)
-            sizer3.addStretch()
-            sizer2.addLayout(sizer3)
-
-        if 'C_MODS' in self.master.fields:
-            sizer3 = qtw.QHBoxLayout()
-            sizer3.addWidget(self.cb_ctrl)
-            sizer3.addWidget(self.cb_alt)
-            sizer3.addWidget(self.cb_shift)
-            sizer3.addWidget(self.cb_win)
-            sizer3.addStretch()
-            sizer2.addLayout(sizer3)
+        self.fieldhandler.layout_keymodfields(sizer2)
 
         sizer1.addLayout(sizer2)
         sizer1.addStretch()
-        if 'C_CNTXT' in self.master.fields:
-            sizer2 = qtw.QHBoxLayout()
-            sizer2.addWidget(self.lbl_context)
-            sizer2.addWidget(self.cmb_context)
-            sizer1.addLayout(sizer2)
-
-        if 'C_CMD' in self.master.fields:
-            sizer2 = qtw.QHBoxLayout()
-            sizer2.addWidget(self.txt_cmd)
-            sizer2.addWidget(self.cmb_commando)
-            sizer1.addLayout(sizer2)
+        self.fieldhandler.layout_commandfields(sizer2)
 
         # try:
         if hasattr(self.master.reader, 'layout_extra_fields_topline'):
             self.master.reader.layout_extra_fields_topline(self, sizer1)  # user exit
-        # except AttributeError:
-        #     shared.log_exc()
 
         sizer1.addWidget(self.b_save)
         sizer1.addWidget(self.b_del)
         bsizer.addLayout(sizer1)
 
-        # try:
-        #    test = self.master.reader.layout_extra_fields_nextline
-        # except AttributeError:
-        #     shared.log_exc()
-        # else:
         if hasattr(self.master.reader, 'layout_extra_fields_nextline'):
             sizer1 = qtw.QHBoxLayout()
             self.master.reader.layout_extra_fields_nextline(self, sizer1)  # user exit
             bsizer.addLayout(sizer1)
 
         sizer1 = qtw.QHBoxLayout()
-        if 'C_DESC' in self.master.fields:
-            sizer2 = qtw.QVBoxLayout()
-            sizer2.addWidget(self.txt_oms)
-            sizer1.addLayout(sizer2, 2)
+        self.fieldhandler.layout_descfield(sizer1)
 
-        # try:
         if hasattr(self.master.reader, 'layout_extra_fields'):
             self.master.reader.layout_extra_fields(self, sizer1)  # user exit
-        # except AttributeError:
-        #    shared.log_exc()
 
         bsizer.addLayout(sizer1)
 
-        self._box.setLayout(bsizer)
-        sizer.addWidget(self._box)
+        self.frm.setLayout(bsizer)
+        sizer.addWidget(self.frm)
 
     def resize_if_necessary(self):
         """to be called on changing the language

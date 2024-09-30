@@ -1,5 +1,6 @@
 """unittests for ./editor/gui_qt.py
 """
+import types
 import pytest
 from mockgui import mockqtwidgets as mockqtw
 from editor import gui_qt as testee
@@ -104,6 +105,35 @@ sdilist_end = """\
 called Frame.setLayout with arg of type <class 'mockgui.mockqtwidgets.MockVBoxLayout'>
 called SingleDataInterface.set_listselection with arg 0
 """
+sdiextra_start = """\
+called VBox.__init__
+called VBox.__init__
+called HBox.__init__
+called HBox.__init__
+called fieldhandler.layout_keymodfields
+called HBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called HBox.addStretch
+called fieldhandler.layout_commandfields
+"""
+sdiextra_middle_11 = """\
+called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockPushButton'>
+called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockPushButton'>
+called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called HBox.__init__
+"""
+sdiextra_middle_12 = "called fieldhandler.layout_descfield\n"
+sdiextra_middle_21 = "called plugin.layout_extra_fields_topline\n"
+sdiextra_middle_22 = """\
+called plugin.layout_extra_fields_nextline
+called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called HBox.__init__
+"""
+sdiextra_middle_23 = "called plugin.layout_extra_fields\n"
+sdiextra_end = """\
+called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called Frame.setLayout with arg of type <class 'mockgui.mockqtwidgets.MockVBoxLayout'>
+called VBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockFrame'>
+"""
 
 @pytest.fixture
 def expected_output():
@@ -111,7 +141,11 @@ def expected_output():
     """
     return {'emptyscreen': empty, "maingui": maingui, "tabbed_search": tabbed1,
             "tabbed_screen": tabbed2, 'sdi_list_1': sdilist_start + sdilist_end,
-            'sdi_list_2': sdilist_start + sdilist_middle + sdilist_end}
+            'sdi_list_2': sdilist_start + sdilist_middle + sdilist_end,
+            'sdi_extra_1': sdiextra_start + sdiextra_middle_11 + sdiextra_middle_12 + sdiextra_end,
+            'sdi_extra_2': (sdiextra_start + sdiextra_middle_21 + sdiextra_middle_11
+                            + sdiextra_middle_22 + sdiextra_middle_12 + sdiextra_middle_23
+                            + sdiextra_end)}
 
 
 class MockGui:
@@ -127,6 +161,7 @@ class MockTabbedInterface:
 class MockSDI:
     """testdouble for gui_qt.SingleDataInterface object
     """
+
 
 class MockHotkeyPanel:
     """testdouble for main.HotkeyPanel object
@@ -167,42 +202,445 @@ class MockEditor:
         self.book = MockChoiceBook()
 
 
-# deze tests zijn waarschijnlijk niet meer nodig, dus (nog) niet aan begonnen
-# class TestDummyPage:
-#     """unittest for gui_qt.DummyPage
-#     """
-#     def setup_testobj(self, monkeypatch, capsys):
-#         """stub for gui_qt.DummyPage object
-#
-#         create the object skipping the normal initialization
-#         intercept messages during creation
-#         return the object so that other methods can be monkeypatched in the caller
-#         """
-#         def mock_init(self, *args):
-#             """stub
-#             """
-#             print('called DummyPage.__init__ with args', args)
-#         monkeypatch.setattr(testee.DummyPage, '__init__', mock_init)
-#         testobj = testee.DummyPage()
-#         assert capsys.readouterr().out == 'called DummyPage.__init__ with args ()\n'
-#         return testobj
-#
-#     def _test_init(self, monkeypatch, capsys):
-#         """unittest for DummyPage.__init__
-#         """
-#         testobj = testee.DummyPage(parent, message)
-#         assert capsys.readouterr().out == ("")
-#
-#     def _test_exit(self, monkeypatch, capsys):
-#         """unittest for DummyPage.exit
-#         """
-#         testobj = self.setup_testobj(monkeypatch, capsys)
-#         assert testobj.exit() == "expected_result"
-#         assert capsys.readouterr().out == ("")
+class TestFieldHandler:
+    """unittests for gui.FieldHandler
+    """
+    def setup_testobj(self, monkeypatch, capsys):
+        """stub for gui_qt.FieldHandler object
+
+        create the object skipping the normal initialization
+        intercept messages during creation
+        return the object so that other methods can be monkeypatched in the caller
+        """
+        def mock_init(self, *args):
+            """stub
+            """
+            print('called FieldHandler.__init__ with args', args)
+        monkeypatch.setattr(testee.FieldHandler, '__init__', mock_init)
+        testobj = testee.FieldHandler()
+        testobj.gui = types.SimpleNamespace()
+        testobj.master = types.SimpleNamespace()
+        assert capsys.readouterr().out == 'called FieldHandler.__init__ with args ()\n'
+        return testobj
+
+    def test_init(self):
+        """unittest for FieldHandler.__init__
+        """
+        gui = types.SimpleNamespace(master=types.SimpleNamespace())
+        testobj = testee.FieldHandler(gui)
+        assert testobj.gui == gui
+        assert testobj.master == gui.master
+
+    def test_build_fields(self, monkeypatch, capsys):
+        """unittest for FieldHandler.build_fields
+        """
+        def mock_key():
+            print("called FieldHandler.build_keyfield")
+        def mock_mods():
+            print("called FieldHandler.build_modfields")
+        def mock_context():
+            print("called FieldHandler.build_context_field")
+        def mock_command():
+            print("called FieldHandler.build_command_field")
+        def mock_parms():
+            print("called FieldHandler.build_parms_field")
+        def mock_control():
+            print("called FieldHandler.build_control_field")
+        def mock_preparms():
+            print("called FieldHandler.build_preparms_field")
+        def mock_postparms():
+            print("called FieldHandler.build_postparms_field")
+        def mock_feature():
+            print("called FieldHandler.build_featurefield")
+        def mock_desc():
+            print("called FieldHandler.build_descfield")
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.build_keyfield = mock_key
+        testobj.build_modfields = mock_mods
+        testobj.build_context_field = mock_context
+        testobj.build_command_field = mock_command
+        testobj.build_parms_field = mock_parms
+        testobj.build_control_field = mock_control
+        testobj.build_preparms_field = mock_preparms
+        testobj.build_postparms_field = mock_postparms
+        testobj.build_featurefield = mock_feature
+        testobj.build_descfield = mock_desc
+
+        testobj.master.fields = []
+        testobj.build_fields()
+        assert capsys.readouterr().out == ""
+        testobj.master.fields = ['C_KEY', 'C_MODS', 'C_CNTXT', 'C_CMD', 'C_PARMS', 'C_CTRL',
+                                 'C_BPARMS', 'C_APARMS', 'C_FEAT', 'C_DESC']
+        testobj.build_fields()
+        assert capsys.readouterr().out == ("called FieldHandler.build_keyfield\n"
+                                           "called FieldHandler.build_modfields\n"
+                                           "called FieldHandler.build_context_field\n"
+                                           "called FieldHandler.build_command_field\n"
+                                           "called FieldHandler.build_parms_field\n"
+                                           "called FieldHandler.build_control_field\n"
+                                           "called FieldHandler.build_preparms_field\n"
+                                           "called FieldHandler.build_postparms_field\n"
+                                           "called FieldHandler.build_featurefield\n"
+                                           "called FieldHandler.build_descfield\n")
+
+    def test_build_keyfield(self, monkeypatch, capsys):
+        """unittest for FieldHandler.build_keyfield
+        """
+        monkeypatch.setattr(testee.qtw, 'QLabel', mockqtw.MockLabel)
+        monkeypatch.setattr(testee.qtw, 'QLineEdit', mockqtw.MockLineEdit)
+        monkeypatch.setattr(mockqtw.MockLineEdit, 'textChanged', {str: mockqtw.MockSignal()})
+        monkeypatch.setattr(testee.qtw, 'QComboBox', mockqtw.MockComboBox)
+        monkeypatch.setattr(mockqtw.MockComboBox, 'currentIndexChanged', {str: mockqtw.MockSignal()})
+        assert capsys.readouterr().out == "called Signal.__init__\ncalled Signal.__init__\n"
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.gui.screenfields = []
+        testobj.gui.frm = mockqtw.MockFrame()
+        assert capsys.readouterr().out == "called Frame.__init__\n"
+        testobj.master.on_text = lambda *x: 'x'
+        testobj.master.on_combobox = lambda *x: 'x'
+        testobj.master.captions = {'C_KTXT': 'xxx'}
+        testobj.master.keylist = None
+        testobj.build_keyfield()
+        assert isinstance(testobj.gui.lbl_key, testee.qtw.QLabel)
+        assert isinstance(testobj.gui.txt_key, testee.qtw.QLineEdit)
+        assert testobj.gui.screenfields == [testobj.gui.txt_key]
+        assert capsys.readouterr().out == (
+                f"called Label.__init__ with args ('xxx ', {testobj.gui.frm})\n"
+                "called LineEdit.__init__\n"
+                "called LineEdit.setMaximumWidth with arg `90`\n"
+                f"called Signal.connect with args (functools.partial({testobj.master.on_text},"
+                f" {testobj.gui.txt_key}, <class 'str'>),)\n")
+        testobj.master.keylist = ['x']
+        testobj.gui.screenfields = []
+        testobj.build_keyfield()
+        assert isinstance(testobj.gui.lbl_key, testee.qtw.QLabel)
+        assert isinstance(testobj.gui.cmb_key, testee.qtw.QComboBox)
+        assert testobj.gui.screenfields == [testobj.gui.cmb_key]
+        assert capsys.readouterr().out == (
+                f"called Label.__init__ with args ('xxx ', {testobj.gui.frm})\n"
+                "called ComboBox.__init__\n"
+                "called ComboBox.setMaximumWidth with arg `90`\n"
+                "called ComboBox.addItems with arg ['x']\n"
+                f"called Signal.connect with args (functools.partial({testobj.master.on_combobox},"
+                f" {testobj.gui.cmb_key}, <class 'str'>),)\n")
+
+    def test_build_modfields(self, monkeypatch, capsys):
+        """unittest for FieldHandler.build_modfields
+        """
+        monkeypatch.setattr(testee.qtw, 'QCheckBox', mockqtw.MockCheckBox)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.gui.screenfields = []
+        testobj.gui.frm = mockqtw.MockFrame()
+        assert capsys.readouterr().out == "called Frame.__init__\n"
+        testobj.master.on_checkbox = lambda *x: 'x'
+        testobj.master.captions = {'M_CTRL': 'xxx', 'M_ALT': 'yyy', 'M_SHFT': 'zzz', 'M_WIN': 'qqq'}
+        testobj.build_modfields()
+        assert isinstance(testobj.gui.cb_ctrl, testee.qtw.QCheckBox)
+        assert isinstance(testobj.gui.cb_alt, testee.qtw.QCheckBox)
+        assert isinstance(testobj.gui.cb_shift, testee.qtw.QCheckBox)
+        assert isinstance(testobj.gui.cb_win, testee.qtw.QCheckBox)
+        assert testobj.gui.screenfields == [testobj.gui.cb_ctrl, testobj.gui.cb_alt,
+                                            testobj.gui.cb_shift, testobj.gui.cb_win]
+        assert capsys.readouterr().out == (
+                "called CheckBox.__init__\n"
+                "called CheckBox.setChecked with arg False\n"
+                f"called Signal.connect with args (functools.partial({testobj.master.on_checkbox},"
+                f" {testobj.gui.cb_ctrl}),)\n"
+                "called CheckBox.__init__\n"
+                "called CheckBox.setChecked with arg False\n"
+                f"called Signal.connect with args (functools.partial({testobj.master.on_checkbox},"
+                f" {testobj.gui.cb_alt}),)\n"
+                "called CheckBox.__init__\n"
+                "called CheckBox.setChecked with arg False\n"
+                f"called Signal.connect with args (functools.partial({testobj.master.on_checkbox},"
+                f" {testobj.gui.cb_shift}),)\n"
+                "called CheckBox.__init__\n"
+                "called CheckBox.setChecked with arg False\n"
+                f"called Signal.connect with args (functools.partial({testobj.master.on_checkbox},"
+                f" {testobj.gui.cb_win}),)\n")
+
+    def test_build_context_field(self, monkeypatch, capsys):
+        """unittest for FieldHandler.build_context_field
+        """
+        monkeypatch.setattr(testee.qtw, 'QLabel', mockqtw.MockLabel)
+        monkeypatch.setattr(testee.qtw, 'QComboBox', mockqtw.MockComboBox)
+        monkeypatch.setattr(mockqtw.MockComboBox, 'currentIndexChanged', {str: mockqtw.MockSignal()})
+        assert capsys.readouterr().out == "called Signal.__init__\n"
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.gui.screenfields = []
+        testobj.gui.frm = mockqtw.MockFrame()
+        assert capsys.readouterr().out == "called Frame.__init__\n"
+        testobj.master.captions = {'C_CNTXT': 'xxx'}
+        testobj.master.contextslist = ['x']
+        testobj.master.on_combobox = lambda *x: 'x'
+        testobj.build_context_field()
+        assert isinstance(testobj.gui.lbl_context, testee.qtw.QLabel)
+        assert isinstance(testobj.gui.cmb_context, testee.qtw.QComboBox)
+        assert testobj.gui.screenfields == [testobj.gui.cmb_context]
+        assert capsys.readouterr().out == (
+                f"called Label.__init__ with args ('xxx', {testobj.gui.frm})\n"
+                "called ComboBox.__init__\n"
+                "called ComboBox.addItems with arg ['x']\n"
+                "called ComboBox.setMaximumWidth with arg `110`\n"
+                f"called Signal.connect with args (functools.partial({testobj.master.on_combobox},"
+                f" {testobj.gui.cmb_context}, <class 'str'>),)\n")
+
+    def test_build_command_field(self, monkeypatch, capsys):
+        """unittest for FieldHandler.build_command_field
+        """
+        monkeypatch.setattr(testee.qtw, 'QLabel', mockqtw.MockLabel)
+        monkeypatch.setattr(testee.qtw, 'QComboBox', mockqtw.MockComboBox)
+        monkeypatch.setattr(mockqtw.MockComboBox, 'currentIndexChanged', {str: mockqtw.MockSignal()})
+        assert capsys.readouterr().out == "called Signal.__init__\n"
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.gui.screenfields = []
+        testobj.gui.frm = mockqtw.MockFrame()
+        assert capsys.readouterr().out == "called Frame.__init__\n"
+        testobj.master.captions = {'C_CTXT': 'xxx'}
+        testobj.master.commandslist = ['x']
+        testobj.master.on_combobox = lambda *x: 'x'
+        testobj.master.fields = []
+        testobj.build_command_field()
+        assert isinstance(testobj.gui.txt_cmd, testee.qtw.QLabel)
+        assert isinstance(testobj.gui.cmb_commando, testee.qtw.QComboBox)
+        assert testobj.gui.screenfields == [testobj.gui.cmb_commando]
+        assert capsys.readouterr().out == (
+                f"called Label.__init__ with args ('xxx ', {testobj.gui.frm})\n"
+                "called ComboBox.__init__\n"
+                "called ComboBox.setMaximumWidth with arg `150`\n"
+                "called ComboBox.addItems with arg ['x']\n"
+                f"called Signal.connect with args (functools.partial({testobj.master.on_combobox},"
+                f" {testobj.gui.cmb_commando}, <class 'str'>),)\n")
+        testobj.gui.screenfields = []
+        testobj.master.fields = ['C_CNTXT']
+        testobj.build_command_field()
+        assert isinstance(testobj.gui.txt_cmd, testee.qtw.QLabel)
+        assert isinstance(testobj.gui.cmb_commando, testee.qtw.QComboBox)
+        assert testobj.gui.screenfields == [testobj.gui.cmb_commando]
+        assert capsys.readouterr().out == (
+                f"called Label.__init__ with args ('xxx ', {testobj.gui.frm})\n"
+                "called ComboBox.__init__\n"
+                "called ComboBox.setMaximumWidth with arg `150`\n"
+                f"called Signal.connect with args (functools.partial({testobj.master.on_combobox},"
+                f" {testobj.gui.cmb_commando}, <class 'str'>),)\n")
+
+    def test_build_parms_field(self, monkeypatch, capsys):
+        """unittest for FieldHandler.build_parms_field
+        """
+        monkeypatch.setattr(testee.qtw, 'QLabel', mockqtw.MockLabel)
+        monkeypatch.setattr(testee.qtw, 'QLineEdit', mockqtw.MockLineEdit)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.gui.screenfields = []
+        testobj.gui.frm = mockqtw.MockFrame()
+        assert capsys.readouterr().out == "called Frame.__init__\n"
+        testobj.master.captions = {'C_PARMS': 'xxx'}
+        testobj.build_parms_field()
+        assert isinstance(testobj.gui.lbl_parms, testee.qtw.QLabel)
+        assert isinstance(testobj.gui.txt_parms, testee.qtw.QLineEdit)
+        assert testobj.gui.screenfields == [testobj.gui.txt_parms]
+        assert capsys.readouterr().out == (
+                f"called Label.__init__ with args ('xxx', {testobj.gui.frm})\n"
+                "called LineEdit.__init__\n"
+                "called LineEdit.setMaximumWidth with arg `280`\n")
+
+    def test_build_control_field(self, monkeypatch, capsys):
+        """unittest for FieldHandler.build_control_field
+        """
+        monkeypatch.setattr(testee.qtw, 'QLabel', mockqtw.MockLabel)
+        monkeypatch.setattr(testee.qtw, 'QComboBox', mockqtw.MockComboBox)
+        monkeypatch.setattr(mockqtw.MockComboBox, 'currentIndexChanged', {str: mockqtw.MockSignal()})
+        assert capsys.readouterr().out == "called Signal.__init__\n"
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.gui.screenfields = []
+        testobj.gui.frm = mockqtw.MockFrame()
+        assert capsys.readouterr().out == "called Frame.__init__\n"
+        testobj.master.captions = {'C_CTRL': 'xxx'}
+        testobj.master.controlslist = ['x']
+        testobj.master.on_combobox = lambda *x: 'x'
+        testobj.build_control_field()
+        assert isinstance(testobj.gui.cmb_controls, testee.qtw.QComboBox)
+        assert testobj.gui.screenfields == [testobj.gui.cmb_controls]
+        assert capsys.readouterr().out == (
+                f"called Label.__init__ with args ('xxx', {testobj.gui.frm})\n"
+                "called ComboBox.__init__\n"
+                "called ComboBox.addItems with arg ['x']\n"
+                f"called Signal.connect with args (functools.partial({testobj.master.on_combobox},"
+                f" {testobj.gui.cmb_controls}, <class 'str'>),)\n")
+
+    def test_build_preparms_field(self, monkeypatch, capsys):
+        """unittest for FieldHandler.build_preparms_field
+        """
+        monkeypatch.setattr(testee.qtw, 'QLabel', mockqtw.MockLabel)
+        monkeypatch.setattr(testee.qtw, 'QLineEdit', mockqtw.MockLineEdit)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.gui.screenfields = []
+        testobj.gui.frm = mockqtw.MockFrame()
+        assert capsys.readouterr().out == "called Frame.__init__\n"
+        testobj.build_preparms_field()
+        assert isinstance(testobj.gui.pre_parms_label, testee.qtw.QLabel)
+        assert isinstance(testobj.gui.pre_parms_text, testee.qtw.QLineEdit)
+        assert testobj.gui.screenfields == [testobj.gui.pre_parms_text]
+        assert capsys.readouterr().out == (
+                f"called Label.__init__ with args ({testobj.gui.frm},)\n"
+                "called LineEdit.__init__\n")
+
+    def test_build_postparms_field(self, monkeypatch, capsys):
+        """unittest for FieldHandler.build_postparms_field
+        """
+        monkeypatch.setattr(testee.qtw, 'QLabel', mockqtw.MockLabel)
+        monkeypatch.setattr(testee.qtw, 'QLineEdit', mockqtw.MockLineEdit)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.gui.screenfields = []
+        testobj.gui.frm = mockqtw.MockFrame()
+        assert capsys.readouterr().out == "called Frame.__init__\n"
+        testobj.build_postparms_field()
+        assert isinstance(testobj.gui.post_parms_label, testee.qtw.QLabel)
+        assert isinstance(testobj.gui.post_parms_text, testee.qtw.QLineEdit)
+        assert testobj.gui.screenfields == [testobj.gui.post_parms_text]
+        assert capsys.readouterr().out == (
+                f"called Label.__init__ with args ({testobj.gui.frm},)\n"
+                "called LineEdit.__init__\n")
+
+    def test_build_feature_field(self, monkeypatch, capsys):
+        """unittest for FieldHandler.build_feature_field
+        """
+        monkeypatch.setattr(testee.qtw, 'QLabel', mockqtw.MockLabel)
+        monkeypatch.setattr(testee.qtw, 'QComboBox', mockqtw.MockComboBox)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.gui.screenfields = []
+        testobj.gui.frm = mockqtw.MockFrame()
+        assert capsys.readouterr().out == "called Frame.__init__\n"
+        testobj.master.featurelist = ['x']
+        testobj.build_featurefield()
+        assert isinstance(testobj.gui.feature_label, testee.qtw.QLabel)
+        assert isinstance(testobj.gui.feature_select, testee.qtw.QComboBox)
+        assert testobj.gui.screenfields == [testobj.gui.feature_select]
+        assert capsys.readouterr().out == (
+                f"called Label.__init__ with args ({testobj.gui.frm},)\n"
+                "called ComboBox.__init__\n"
+                "called ComboBox.addItems with arg ['x']\n")
+
+    def test_build_desc_field(self, monkeypatch, capsys):
+        """unittest for FieldHandler.build_desc_field
+        """
+        monkeypatch.setattr(testee.qtw, 'QTextEdit', mockqtw.MockEditorWidget)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.gui.frm = mockqtw.MockFrame()
+        assert capsys.readouterr().out == "called Frame.__init__\n"
+        testobj.build_descfield()
+        assert isinstance(testobj.gui.txt_oms, testee.qtw.QTextEdit)
+        assert capsys.readouterr().out == (f"called Editor.__init__ with args ({testobj.gui.frm},)\n"
+                                           "called Editor.setReadOnly with arg `True`\n")
+
+    def test_layout_keymodfields(self, monkeypatch, capsys):
+        """unittest for FieldHandler.layout_keymodfields
+        """
+        monkeypatch.setattr(testee.qtw, 'QHBoxLayout', mockqtw.MockHBoxLayout)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.gui.lbl_key = mockqtw.MockLabel()
+        testobj.gui.txt_key = mockqtw.MockLineEdit()
+        testobj.gui.cmb_key = mockqtw.MockComboBox()
+        testobj.gui.cb_ctrl = mockqtw.MockCheckBox()
+        testobj.gui.cb_alt = mockqtw.MockCheckBox()
+        testobj.gui.cb_shift = mockqtw.MockCheckBox()
+        testobj.gui.cb_win = mockqtw.MockCheckBox()
+        sizer = mockqtw.MockVBoxLayout()
+        assert capsys.readouterr().out == ("called Label.__init__\ncalled LineEdit.__init__\n"
+                                           "called ComboBox.__init__\ncalled CheckBox.__init__\n"
+                                           "called CheckBox.__init__\ncalled CheckBox.__init__\n"
+                                           "called CheckBox.__init__\ncalled VBox.__init__\n")
+        testobj.master.fields = ['C_KEY']
+        testobj.master.keylist = None
+        testobj.layout_keymodfields(sizer)
+        assert capsys.readouterr().out == ("called HBox.__init__\n"
+                                           "called HBox.addWidget with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockLabel'>\n"
+                                           "called HBox.addWidget with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockLineEdit'>\n"
+                                           "called HBox.addStretch\n"
+                                           "called VBox.addLayout with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockHBoxLayout'>\n")
+        testobj.master.keylist = ['x']
+        testobj.layout_keymodfields(sizer)
+        assert capsys.readouterr().out == ("called HBox.__init__\n"
+                                           "called HBox.addWidget with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockLabel'>\n"
+                                           "called HBox.addWidget with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockComboBox'>\n"
+                                           "called HBox.addStretch\n"
+                                           "called VBox.addLayout with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockHBoxLayout'>\n")
+        testobj.master.fields = ['C_MODS']
+        testobj.layout_keymodfields(mockqtw.MockVBoxLayout())
+        assert capsys.readouterr().out == ("called VBox.__init__\ncalled HBox.__init__\n"
+                                           "called HBox.addWidget with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockCheckBox'>\n"
+                                           "called HBox.addWidget with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockCheckBox'>\n"
+                                           "called HBox.addWidget with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockCheckBox'>\n"
+                                           "called HBox.addWidget with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockCheckBox'>\n"
+                                           "called HBox.addStretch\n"
+                                           "called VBox.addLayout with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockHBoxLayout'>\n")
+
+    def test_layout_commandfields(self, monkeypatch, capsys):
+        """unittest for FieldHandler.layout_commandfields
+        """
+        monkeypatch.setattr(testee.qtw, 'QHBoxLayout', mockqtw.MockHBoxLayout)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.gui.lbl_context = mockqtw.MockLabel()
+        testobj.gui.cmb_context = mockqtw.MockComboBox()
+        testobj.gui.txt_cmd = mockqtw.MockLineEdit()
+        testobj.gui.cmb_commando = mockqtw.MockComboBox()
+        sizer = mockqtw.MockVBoxLayout()
+        assert capsys.readouterr().out == ("called Label.__init__\n"
+                                           "called ComboBox.__init__\n"
+                                           "called LineEdit.__init__\n"
+                                           "called ComboBox.__init__\n"
+                                           "called VBox.__init__\n")
+        testobj.master.fields = ['C_CNTXT']
+        testobj.layout_commandfields(sizer)
+        assert capsys.readouterr().out == ("called HBox.__init__\n"
+                                           "called HBox.addWidget with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockLabel'>\n"
+                                           "called HBox.addWidget with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockComboBox'>\n"
+                                           "called VBox.addLayout with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockHBoxLayout'>\n")
+        testobj.master.fields = ['C_CMD']
+        testobj.layout_commandfields(sizer)
+        assert capsys.readouterr().out == ("called HBox.__init__\n"
+                                           "called HBox.addWidget with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockLineEdit'>\n"
+                                           "called HBox.addWidget with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockComboBox'>\n"
+                                           "called VBox.addLayout with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockHBoxLayout'>\n")
+
+    def test_layout_descfield(self, monkeypatch, capsys):
+        """unittest for FieldHandler.layout_descfield
+        """
+        monkeypatch.setattr(testee.qtw, 'QVBoxLayout', mockqtw.MockHBoxLayout)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.gui.txt_oms = mockqtw.MockEditorWidget()
+        sizer = mockqtw.MockVBoxLayout()
+        assert capsys.readouterr().out == ("called Editor.__init__\ncalled VBox.__init__\n")
+        testobj.master.fields = []
+        testobj.layout_descfield(sizer)
+        assert capsys.readouterr().out == ""
+        testobj.master.fields = ['C_DESC']
+        testobj.layout_descfield(sizer)
+        assert capsys.readouterr().out == ("called HBox.__init__\n"
+                                           "called HBox.addWidget with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockEditorWidget'>\n"
+                                           "called VBox.addLayout with arg of type"
+                                           " <class 'mockgui.mockqtwidgets.MockHBoxLayout'>\n")
 
 
 class TestSingleDataInterface:
-    """unittest for gui_qt.SingleDataInterface
+    """unittests for gui_qt.SingleDataInterface
     """
     def setup_testobj(self, monkeypatch, capsys):
         """stub for gui_qt.SingleDataInterface object
@@ -228,10 +666,14 @@ class TestSingleDataInterface:
         """unittest for SingleDataInterface.__init__
         """
         monkeypatch.setattr(testee.qtw.QFrame, '__init__', mockqtw.MockFrame.__init__)
+        monkeypatch.setattr(testee.qtw, 'QTreeWidget', mockqtw.MockTreeWidget)
         testobj = testee.SingleDataInterface('parent', 'master')
         assert testobj.parent == 'parent'
         assert testobj.master == 'master'
         assert isinstance(testobj.p0list, testee.qtw.QTreeWidget)
+        assert isinstance(testobj.fieldhandler, testee.FieldHandler)
+        assert capsys.readouterr().out == ("called Frame.__init__\n"
+                                           "called Tree.__init__\n")
 
     def test_setup_empty_screen(self, monkeypatch, capsys, expected_output):
         """unittest for SingleDataInterface.setup_empty_screen
@@ -272,12 +714,54 @@ class TestSingleDataInterface:
         testobj.setup_list()
         assert capsys.readouterr().out == expected_output['sdi_list_2'].format(testobj=testobj)
 
-    def _test_add_extra_fields(self, monkeypatch, capsys):
+    def test_add_extra_fields(self, monkeypatch, capsys):
         """unittest for SingleDataInterface.add_extra_fields
         """
+        def mock_build():
+            print('called fieldhandler.build_fields')
+        def mock_get():
+            print('called plugin.get_frameheight')
+            return 'frameheight'
+        monkeypatch.setattr(testee.qtw, 'QFrame', mockqtw.MockFrame)
+        monkeypatch.setattr(testee.qtw, 'QPushButton', mockqtw.MockPushButton)
         testobj = self.setup_testobj(monkeypatch, capsys)
-        assert testobj.add_extra_fields() == "expected_result"
-        assert capsys.readouterr().out == ("")
+        testobj.fieldhandler = types.SimpleNamespace(build_fields=mock_build)
+        testobj.master.captions = {'C_SAVE': 'xxx', 'C_DEL': 'yyy'}
+        testobj.master.reader = types.SimpleNamespace()
+        testobj.add_extra_fields()
+        assert testobj.screenfields == []
+        assert isinstance(testobj.frm, testee.qtw.QFrame)
+        assert isinstance(testobj.b_save, testee.qtw.QPushButton)
+        assert isinstance(testobj.b_del, testee.qtw.QPushButton)
+        assert testobj._savestates == (False, False)
+        assert capsys.readouterr().out == (
+                "called Frame.__init__\n"
+                "called Frame.setMaximumHeight with arg `90`\n"
+                "called fieldhandler.build_fields\n"
+                f"called PushButton.__init__ with args ('xxx', {testobj.frm}) {{}}\n"
+                "called PushButton.setEnabled with arg `False`\n"
+                f"called Signal.connect with args ({testobj.on_update},)\n"
+                f"called PushButton.__init__ with args ('yyy', {testobj.frm}) {{}}\n"
+                "called PushButton.setEnabled with arg `False`\n"
+                f"called Signal.connect with args ({testobj.on_delete},)\n")
+        testobj.master.reader = types.SimpleNamespace(get_frameheight=mock_get)
+        testobj.add_extra_fields()
+        assert testobj.screenfields == []
+        assert isinstance(testobj.frm, testee.qtw.QFrame)
+        assert isinstance(testobj.b_save, testee.qtw.QPushButton)
+        assert isinstance(testobj.b_del, testee.qtw.QPushButton)
+        assert testobj._savestates == (False, False)
+        assert capsys.readouterr().out == (
+                "called Frame.__init__\n"
+                "called plugin.get_frameheight\n"
+                "called Frame.setMaximumHeight with arg `frameheight`\n"
+                "called fieldhandler.build_fields\n"
+                f"called PushButton.__init__ with args ('xxx', {testobj.frm}) {{}}\n"
+                "called PushButton.setEnabled with arg `False`\n"
+                f"called Signal.connect with args ({testobj.on_update},)\n"
+                f"called PushButton.__init__ with args ('yyy', {testobj.frm}) {{}}\n"
+                "called PushButton.setEnabled with arg `False`\n"
+                f"called Signal.connect with args ({testobj.on_delete},)\n")
 
     def test_set_extrascreen_editable(self, monkeypatch, capsys):
         """unittest for SingleDataInterface.set_extrascreen_editable
@@ -308,12 +792,41 @@ class TestSingleDataInterface:
                                            "called PushButton.setEnabled with arg `False`\n"
                                            "called PushButton.setEnabled with arg `False`\n")
 
-    def _test_layout_extra_fields(self, monkeypatch, capsys):
+    def test_layout_extra_fields(self, monkeypatch, capsys, expected_output):
         """unittest for SingleDataInterface.layout_extra_fields
         """
+        def mock_layout1(arg):
+            print('called fieldhandler.layout_keymodfields')
+        def mock_layout2(arg):
+            print('called fieldhandler.layout_commandfields')
+        def mock_layout3(arg):
+            print('called fieldhandler.layout_descfield')
+        def mock_extra1(*args):
+            print('called plugin.layout_extra_fields_topline')
+        def mock_extra2(*args):
+            print('called plugin.layout_extra_fields_nextline')
+        def mock_extra3(*args):
+            print('called plugin.layout_extra_fields')
+        monkeypatch.setattr(testee.qtw, 'QVBoxLayout', mockqtw.MockVBoxLayout)
+        monkeypatch.setattr(testee.qtw, 'QHBoxLayout', mockqtw.MockHBoxLayout)
         testobj = self.setup_testobj(monkeypatch, capsys)
-        assert testobj.layout_extra_fields('sizer') == "expected_result"
-        assert capsys.readouterr().out == ("")
+        testobj.frm = mockqtw.MockFrame()
+        testobj.b_save = mockqtw.MockPushButton()
+        testobj.b_del = mockqtw.MockPushButton()
+        assert capsys.readouterr().out == ("called Frame.__init__\n"
+                                           "called PushButton.__init__ with args () {}\n"
+                                           "called PushButton.__init__ with args () {}\n")
+        testobj.fieldhandler = types.SimpleNamespace(layout_keymodfields=mock_layout1,
+                                                     layout_commandfields=mock_layout2,
+                                                     layout_descfield=mock_layout3)
+        testobj.master.reader = types.SimpleNamespace()
+        testobj.layout_extra_fields(mockqtw.MockVBoxLayout())
+        assert capsys.readouterr().out == expected_output['sdi_extra_1'].format(testobj=testobj)
+        testobj.master.reader = types.SimpleNamespace(layout_extra_fields_topline=mock_extra1,
+                                                      layout_extra_fields_nextline=mock_extra2,
+                                                      layout_extra_fields=mock_extra3)
+        testobj.layout_extra_fields(mockqtw.MockVBoxLayout())
+        assert capsys.readouterr().out == expected_output['sdi_extra_2'].format(testobj=testobj)
 
     def test_resize_if_necessary(self, monkeypatch, capsys):
         """unittest for SingleDataInterface.resize_if_necessary
@@ -594,7 +1107,7 @@ class TestSingleDataInterface:
         testobj.p0list = mockqtw.MockTreeWidget()
         assert capsys.readouterr().out == "called Tree.__init__\n"
         result = testobj.get_keydef_at_position(1)
-        assert result == ''
+        assert result == 'Tree.topLevelItem'
         assert capsys.readouterr().out == ("called Tree.topLevelItem with arg `1`\n")
 
     def test_enable_delete(self, monkeypatch, capsys):
@@ -644,7 +1157,7 @@ class TestSingleDataInterface:
 
 
 class TestTabbedInterface:
-    """unittest for gui_qt.TabbedInterface
+    """unittests for gui_qt.TabbedInterface
     """
     def setup_testobj(self, monkeypatch, capsys):
         """stub for gui_qt.TabbedInterface object
@@ -1139,7 +1652,7 @@ class TestTabbedInterface:
 
 
 class TestGui:
-    """unittest for gui_qt.Gui
+    """unittests for gui_qt.Gui
     """
     def setup_testobj(self, monkeypatch, capsys):
         """stub for gui_qt.Gui object
