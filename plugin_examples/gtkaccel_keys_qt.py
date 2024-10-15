@@ -1,6 +1,6 @@
 """Hotkeys plugins voor gtk-accel based apps - GUI toolkit specifieke code
 """
-import PyQt5.QtWidgets as qtw
+import PyQt6.QtWidgets as qtw
 from ..dialogs_qt import CompleteDialog
 
 

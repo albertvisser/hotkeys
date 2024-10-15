@@ -1,6 +1,6 @@
 """VI plugin for Hotkeys - gui specific functions - Qt5 version
 """
-import PyQt5.QtWidgets as qtw
+import PyQt6.QtWidgets as qtw
 
 
 def layout_extra_fields_topline(win, box):

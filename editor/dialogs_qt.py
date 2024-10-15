@@ -2,9 +2,9 @@
 """
 import os
 import collections
-import PyQt5.QtWidgets as qtw
-## import PyQt5.QtGui as gui
-import PyQt5.QtCore as core
+import PyQt6.QtWidgets as qtw
+## import PyQt6.QtGui as gui
+import PyQt6.QtCore as core
 from editor import shared
 
 
@@ -24,8 +24,9 @@ def show_cancel_message(win, message_id='', text='', args=None):
     """
     text = shared.get_text(win, message_id, text, args)
     ok = qtw.QMessageBox.information(win, shared.get_title(win), text,
-                                     qtw.QMessageBox.Ok | qtw.QMessageBox.Cancel)
-    return ok == qtw.QMessageBox.Ok
+                                     qtw.QMessageBox.StandardButton.Ok
+                                     | qtw.QMessageBox.StandardButton.Cancel)
+    return ok == qtw.QMessageBox.StandardButton.Ok
 
 
 def ask_question(win, message_id='', text='', args=None):
@@ -34,9 +35,10 @@ def ask_question(win, message_id='', text='', args=None):
     """
     text = shared.get_text(win, message_id, text, args)
     ok = qtw.QMessageBox.question(win, shared.get_title(win), text,
-                                  qtw.QMessageBox.Yes | qtw.QMessageBox.No,
-                                  qtw.QMessageBox.Yes)
-    return ok == qtw.QMessageBox.Yes
+                                  qtw.QMessageBox.StandardButton.Yes
+                                  | qtw.QMessageBox.StandardButton.No,
+                                  qtw.QMessageBox.StandardButton.Yes)
+    return ok == qtw.QMessageBox.StandardButton.Yes
 
 
 def ask_ync_question(win, message_id='', text='', args=None):
@@ -46,8 +48,10 @@ def ask_ync_question(win, message_id='', text='', args=None):
     """
     text = shared.get_text(win, message_id, text, args)
     ok = qtw.QMessageBox.question(win, shared.get_title(win), text,
-                                  qtw.QMessageBox.Yes | qtw.QMessageBox.No | qtw.QMessageBox.Cancel)
-    return ok == qtw.QMessageBox.Yes, ok == qtw.QMessageBox.Cancel
+                                  qtw.QMessageBox.StandardButton.Yes
+                                  | qtw.QMessageBox.StandardButton.No
+                                  | qtw.QMessageBox.StandardButton.Cancel)
+    return ok == qtw.QMessageBox.StandardButton.Yes, ok == qtw.QMessageBox.StandardButton.Cancel
 
 
 def get_textinput(win, text, prompt):
@@ -55,7 +59,7 @@ def get_textinput(win, text, prompt):
     (de opgegeven tekst en True bij OK) na sluiten van de dialoog
     """
     text, ok = qtw.QInputDialog.getText(win, 'Application Title', prompt, text=text)
-    return text, ok == qtw.QDialog.Accepted
+    return text, ok == qtw.QDialog.DialogCode.Accepted
 
 
 def get_choice(win, title, caption, choices, current):
@@ -112,8 +116,8 @@ class InitialToolDialog(qtw.QDialog):
         hbox.addStretch()
         vbox.addLayout(hbox)
         buttonbox = qtw.QDialogButtonBox()
-        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
         hbox = qtw.QHBoxLayout()
@@ -146,7 +150,7 @@ class FileBrowseButton(qtw.QFrame):
             self.startdir = os.path.dirname(text)
         super().__init__(parent)
         self.setWindowTitle(self.parent.title)
-        self.setFrameStyle(qtw.QFrame.Panel | qtw.QFrame.Raised)
+        self.setFrameStyle(qtw.QFrame.Shape.Panel | qtw.QFrame.Shadow.Raised)
         vbox = qtw.QVBoxLayout()
         box = qtw.QHBoxLayout()
         self.input = qtw.QLineEdit(text, self)
@@ -205,8 +209,8 @@ class SetupDialog(qtw.QDialog):
         grid.addWidget(self.t_loc, 6, 2, 1, 3)
 
         buttonbox = qtw.QDialogButtonBox()
-        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
 
@@ -271,8 +275,8 @@ class DeleteDialog(qtw.QDialog):
         self.sizer.addLayout(hsizer)
 
         buttonbox = qtw.QDialogButtonBox()
-        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
         self.sizer.addWidget(buttonbox)
@@ -314,10 +318,11 @@ class FilesDialog(qtw.QDialog):
         hsizer = qtw.QHBoxLayout()
         hsizer.addSpacing(36)
         hsizer.addWidget(qtw.QLabel(self.master.captions['C_PRGNAM'], self),
-                         alignment=core.Qt.AlignHCenter | core.Qt.AlignVCenter)
+                         alignment=core.Qt.AlignmentFlag.AlignHCenter
+                         | core.Qt.AlignmentFlag.AlignVCenter)
         hsizer.addSpacing(84)
         hsizer.addWidget(qtw.QLabel(self.master.captions['C_KDEFLOC'], self),
-                         alignment=core.Qt.AlignVCenter)
+                         alignment=core.Qt.AlignmentFlag.AlignVCenter)
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
 
@@ -346,12 +351,14 @@ class FilesDialog(qtw.QDialog):
         self.sizer.addWidget(self.scrl)
 
         buttonbox = qtw.QDialogButtonBox()
-        btn = buttonbox.addButton(self.master.captions['C_ADDPRG'], qtw.QDialogButtonBox.ActionRole)
+        btn = buttonbox.addButton(self.master.captions['C_ADDPRG'],
+                                  qtw.QDialogButtonBox.ButtonRole.ActionRole)
         btn.clicked.connect(self.add_program)
-        btn = buttonbox.addButton(self.master.captions['C_REMPRG'], qtw.QDialogButtonBox.ActionRole)
+        btn = buttonbox.addButton(self.master.captions['C_REMPRG'],
+                                  qtw.QDialogButtonBox.ButtonRole.ActionRole)
         btn.clicked.connect(self.remove_programs)
-        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
         hsizer = qtw.QHBoxLayout()
@@ -403,7 +410,7 @@ class FilesDialog(qtw.QDialog):
             dataloc = prgloc = ""
             self.settingsdata[newtool] = (prgloc,)
             if ask_question(self.parent, 'P_INIKDEF'):
-                ok = SetupDialog(self, newtool).exec_()
+                ok = SetupDialog(self, newtool).exec()
                 if ok:
                     self.settingsdata[newtool] = self.parent.data[1:]
                     prgloc = self.parent.data[1]
@@ -414,8 +421,8 @@ class FilesDialog(qtw.QDialog):
         """alle aangevinkte items verwijderen uit self.gsizer"""
         checked = [(x, y.text()) for x, y in enumerate(self.checks) if y.isChecked()]
         if checked:
-            dlg = DeleteDialog(self).exec_()
-            if dlg == qtw.QDialog.Accepted:
+            dlg = DeleteDialog(self).exec()
+            if dlg == qtw.QDialog.DialogCode.Accepted:
                 for row, name in reversed(checked):  # reversed niet nodig als ik checked niet aanpas
                     keydef_name, prg_name = '', ''
                     # try:
@@ -464,22 +471,22 @@ class ColumnSettingsDialog(qtw.QDialog):
         hsizer = qtw.QHBoxLayout()
         hsizer.addSpacing(41)
         hsizer.addWidget(qtw.QLabel(self.master.captions['C_TTL'], self),
-                         alignment=core.Qt.AlignHCenter | core.Qt.AlignVCenter)
+                         alignment=core.Qt.AlignmentFlag.AlignHCenter | core.Qt.AlignmentFlag.AlignVCenter)
         hsizer.addSpacing(102)  # 82)
         hsizer.addWidget(qtw.QLabel(self.master.captions['C_WID'], self),
-                         alignment=core.Qt.AlignVCenter)
+                         alignment=core.Qt.AlignmentFlag.AlignVCenter)
         hsizer.addSpacing(8)  # 84)
         hsizer.addWidget(qtw.QLabel(self.master.captions['C_IND'], self),
-                         alignment=core.Qt.AlignVCenter)
+                         alignment=core.Qt.AlignmentFlag.AlignVCenter)
         hsizer.addWidget(qtw.QLabel(self.master.captions['C_SEQ'], self),
-                         alignment=core.Qt.AlignVCenter)
+                         alignment=core.Qt.AlignmentFlag.AlignVCenter)
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
 
         pnl = qtw.QFrame(self)
         self.scrl = qtw.QScrollArea(self)
         self.scrl.setWidget(pnl)
-        self.scrl.setAlignment(core.Qt.AlignBottom)
+        self.scrl.setAlignment(core.Qt.AlignmentFlag.AlignBottom)
         self.scrl.setWidgetResizable(True)
         self.bar = self.scrl.verticalScrollBar()
         self.gsizer = qtw.QVBoxLayout()
@@ -495,12 +502,14 @@ class ColumnSettingsDialog(qtw.QDialog):
         self.sizer.addWidget(self.scrl)
 
         buttonbox = qtw.QDialogButtonBox()
-        btn = buttonbox.addButton(self.master.captions['C_ADDCOL'], qtw.QDialogButtonBox.ActionRole)
+        btn = buttonbox.addButton(self.master.captions['C_ADDCOL'],
+                                  qtw.QDialogButtonBox.ButtonRole.ActionRole)
         btn.clicked.connect(self.add_column)
-        btn = buttonbox.addButton(self.master.captions['C_REMCOL'], qtw.QDialogButtonBox.ActionRole)
+        btn = buttonbox.addButton(self.master.captions['C_REMCOL'],
+                                  qtw.QDialogButtonBox.ButtonRole.ActionRole)
         btn.clicked.connect(self.remove_columns)
-        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
         hsizer = qtw.QHBoxLayout()
@@ -669,8 +678,8 @@ class NewColumnsDialog(qtw.QDialog):
         self.sizer.addLayout(gsizer)
 
         buttonbox = qtw.QDialogButtonBox()
-        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
         hsizer = qtw.QHBoxLayout()
@@ -743,7 +752,7 @@ class ExtraSettingsDialog(qtw.QDialog):
         hsizer.addWidget(self.c_redef)
         vsizer.addLayout(hsizer)
         pnl.setLayout(vsizer)
-        pnl.setFrameStyle(qtw.QFrame.Box | qtw.QFrame.Raised)
+        pnl.setFrameStyle(qtw.QFrame.Shape.Box | qtw.QFrame.Shadow.Raised)
         self.sizer.addWidget(pnl)
 
         pnl = qtw.QFrame(self)
@@ -760,10 +769,10 @@ class ExtraSettingsDialog(qtw.QDialog):
         hsizer = qtw.QHBoxLayout()
         hsizer.addSpacing(41)
         hsizer.addWidget(qtw.QLabel(self.master.captions['C_NAM'], self),
-                         alignment=core.Qt.AlignHCenter)
+                         alignment=core.Qt.AlignmentFlag.AlignHCenter)
         hsizer.addSpacing(52)
         hsizer.addWidget(qtw.QLabel(self.master.captions['C_VAL'], self),
-                         alignment=core.Qt.AlignHCenter)
+                         alignment=core.Qt.AlignmentFlag.AlignHCenter)
         hsizer.addStretch()
         vsizer.addLayout(hsizer)
 
@@ -785,7 +794,7 @@ class ExtraSettingsDialog(qtw.QDialog):
                     desc = ''
                 self.add_row(name, value, desc)
         pnl2.setLayout(self.gsizer)
-        pnl.setFrameStyle(qtw.QFrame.Box)
+        pnl.setFrameStyle(qtw.QFrame.Shape.Box)
         self.scrl.ensureVisible(0, 0)
         vsizer.addWidget(self.scrl)
 
@@ -800,12 +809,12 @@ class ExtraSettingsDialog(qtw.QDialog):
         hsizer.addStretch()
         vsizer.addLayout(hsizer)
         pnl.setLayout(vsizer)
-        pnl.setFrameStyle(qtw.QFrame.Box | qtw.QFrame.Raised)
+        pnl.setFrameStyle(qtw.QFrame.Shape.Box | qtw.QFrame.Shadow.Raised)
         self.sizer.addWidget(pnl)
 
         buttonbox = qtw.QDialogButtonBox()
-        btn = buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        btn = buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        btn = buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Ok)
+        btn = buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
         hsizer = qtw.QHBoxLayout()
@@ -923,12 +932,14 @@ class EntryDialog(qtw.QDialog):
         hsizer = qtw.QHBoxLayout()
         hsizer.addStretch()
         buttonbox = qtw.QDialogButtonBox()
-        btn = buttonbox.addButton(self.captions['C_ADDKEY'], qtw.QDialogButtonBox.ActionRole)
+        btn = buttonbox.addButton(self.captions['C_ADDKEY'],
+                                  qtw.QDialogButtonBox.ButtonRole.ActionRole)
         btn.clicked.connect(self.add_key)
-        btn = buttonbox.addButton(self.captions['C_REMKEY'], qtw.QDialogButtonBox.ActionRole)
+        btn = buttonbox.addButton(self.captions['C_REMKEY'],
+                                  qtw.QDialogButtonBox.ButtonRole.ActionRole)
         btn.clicked.connect(self.delete_key)
-        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
         hsizer.addWidget(buttonbox)
@@ -998,8 +1009,8 @@ class CompleteDialog(qtw.QDialog):
         self.sizer.addLayout(hsizer)
 
         buttonbox = qtw.QDialogButtonBox()
-        buttonbox.addButton(qtw.QDialogButtonBox.Ok)
-        buttonbox.addButton(qtw.QDialogButtonBox.Cancel)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
         hsizer = qtw.QHBoxLayout()
@@ -1030,5 +1041,5 @@ class CompleteDialog(qtw.QDialog):
 
 def show_dialog(win, cls):
     "show a dialog and return confirmation"
-    ok = cls(win.gui, win).exec_()
-    return ok == qtw.QDialog.Accepted
+    ok = cls(win.gui, win).exec()
+    return ok == qtw.QDialog.DialogCode.Accepted

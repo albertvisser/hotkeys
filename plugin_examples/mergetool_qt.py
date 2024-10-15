@@ -1,8 +1,8 @@
 """Hotkeys plugin for Total Commander - PyQt specific code
 """
-import PyQt5.QtWidgets as qtw
-import PyQt5.QtGui as gui
-import PyQt5.QtCore as core
+import PyQt6.QtWidgets as qtw
+import PyQt6.QtGui as gui
+import PyQt6.QtCore as core
 import editor.plugins.mergetool_shared as shared
 OKICON = '/usr/share/icons/Adwaita/16x16/emblems/emblem-ok-symbolic.symbolic.png'
 TODOICON = '/usr/share/icons/Adwaita/16x16/emblems/emblem-new.png'
@@ -283,7 +283,7 @@ class MergeDialog(shared.MergeMixin, qtw.QDialog):
 
     def find_listitems(self, win, search, in_col=1):
         "find all items in a list that contain text in a given column"
-        return win.findItems(search, core.Qt.MatchContains, in_col)   # 1)
+        return win.findItems(search, core.Qt.MatchFlag.MatchContains, in_col)   # 1)
 
     def get_selected_item(self, win):
         "get the selected item in a list"

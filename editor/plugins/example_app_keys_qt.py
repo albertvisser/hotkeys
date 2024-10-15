@@ -2,9 +2,9 @@
 
 this module contains the gui-toolkit specific part (in this case, for PyQt)
 """
-# import PyQt5.QtWidgets as qtw
-# import PyQt5.QtGui as gui
-# import PyQt5.QtCore as core
+# import PyQt6.QtWidgets as qtw
+# import PyQt6.QtGui as gui
+# import PyQt6.QtCore as core
 
 # uncomment these to define routines to be used by methods of a HotKeyPanel instance
 # ** corresponds to the ShowDetails setting **

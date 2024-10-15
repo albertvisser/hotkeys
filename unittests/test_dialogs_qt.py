@@ -377,10 +377,10 @@ called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLay
 called HBox.__init__
 called HBox.addSpacing
 called Label.__init__ with args ('eee', {testobj})
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>, kwargs {{'alignment': 4}}
+called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>, kwargs {{'alignment': {testee.core.Qt.AlignmentFlag.AlignHCenter!r}}}
 called HBox.addSpacing
 called Label.__init__ with args ('fff', {testobj})
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>, kwargs {{'alignment': 4}}
+called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>, kwargs {{'alignment': {testee.core.Qt.AlignmentFlag.AlignHCenter!r}}}
 called HBox.addStretch
 called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
 called Frame.__init__
@@ -545,31 +545,31 @@ def mock_get_title(*args):
 def mock_info(*args):
     "stub"
     print('called MessageBox.information with args', args)
-    return testee.qtw.QMessageBox.Cancel
+    return testee.qtw.QMessageBox.StandardButton.Cancel
 
 
 def mock_info_2(*args):
     "stub"
     print('called MessageBox.information with args', args)
-    return testee.qtw.QMessageBox.Ok
+    return testee.qtw.QMessageBox.StandardButton.Ok
 
 
 def mock_question(*args):
     "stub"
     print('called MessageBox.question with args', args)
-    return testee.qtw.QMessageBox.No
+    return testee.qtw.QMessageBox.StandardButton.No
 
 
 def mock_question_2(*args):
     "stub"
     print('called MessageBox.question with args', args)
-    return testee.qtw.QMessageBox.Yes
+    return testee.qtw.QMessageBox.StandardButton.Yes
 
 
 def mock_question_3(*args):
     "stub"
     print('called MessageBox.question with args', args)
-    return testee.qtw.QMessageBox.Cancel
+    return testee.qtw.QMessageBox.StandardButton.Cancel
 
 
 def test_show_message(monkeypatch, capsys):
@@ -597,18 +597,18 @@ def test_show_cancel_message(monkeypatch, capsys):
     monkeypatch.setattr(testee.shared, 'get_title', mock_get_title)
     monkeypatch.setattr(testee.qtw.QMessageBox, 'information', mock_info)
     assert not testee.show_cancel_message('win', message_id='xxx', text='yyy')
-    buttons = testee.qtw.QMessageBox.Ok | testee.qtw.QMessageBox.Cancel
+    buttons = testee.qtw.QMessageBox.StandardButton.Ok | testee.qtw.QMessageBox.StandardButton.Cancel
     assert capsys.readouterr().out == (
             "called shared.get_text with args ('win', 'xxx', 'yyy', None)\n"
             "called shared.get_title with args ('win',)\n"
-            f"called MessageBox.information with args ('win', 'title', 'text', {buttons})\n")
+            f"called MessageBox.information with args ('win', 'title', 'text', {buttons!r})\n")
     monkeypatch.setattr(testee.qtw.QMessageBox, 'information', mock_info_2)
     assert testee.show_cancel_message('win', message_id='xxx', text='yyy', args={'aa': 'bbbb'})
-    buttons = testee.qtw.QMessageBox.Ok | testee.qtw.QMessageBox.Cancel
+    buttons = testee.qtw.QMessageBox.StandardButton.Ok | testee.qtw.QMessageBox.StandardButton.Cancel
     assert capsys.readouterr().out == (
             "called shared.get_text with args ('win', 'xxx', 'yyy', {'aa': 'bbbb'})\n"
             "called shared.get_title with args ('win',)\n"
-            f"called MessageBox.information with args ('win', 'title', 'text', {buttons})\n")
+            f"called MessageBox.information with args ('win', 'title', 'text', {buttons!r})\n")
 
 
 def test_ask_question(monkeypatch, capsys):
@@ -618,22 +618,22 @@ def test_ask_question(monkeypatch, capsys):
     monkeypatch.setattr(testee.shared, 'get_title', mock_get_title)
     monkeypatch.setattr(testee.qtw.QMessageBox, 'question', mock_question)
     assert not testee.ask_question('win', message_id='xxx', text='yyy')
-    buttons = testee.qtw.QMessageBox.Yes | testee.qtw.QMessageBox.No
-    yesbutton = testee.qtw.QMessageBox.Yes
+    buttons = testee.qtw.QMessageBox.StandardButton.Yes | testee.qtw.QMessageBox.StandardButton.No
+    yesbutton = testee.qtw.QMessageBox.StandardButton.Yes
     assert capsys.readouterr().out == (
             "called shared.get_text with args ('win', 'xxx', 'yyy', None)\n"
             "called shared.get_title with args ('win',)\n"
-            f"called MessageBox.question with args ('win', 'title', 'text', {buttons},"
-            f" {yesbutton})\n")
+            f"called MessageBox.question with args ('win', 'title', 'text', {buttons!r},"
+            f" {yesbutton!r})\n")
     monkeypatch.setattr(testee.qtw.QMessageBox, 'question', mock_question_2)
     assert testee.ask_question('win', message_id='xxx', text='yyy', args={'aa': 'bbbb'})
-    buttons = testee.qtw.QMessageBox.Yes | testee.qtw.QMessageBox.No
-    yesbutton = testee.qtw.QMessageBox.Yes
+    buttons = testee.qtw.QMessageBox.StandardButton.Yes | testee.qtw.QMessageBox.StandardButton.No
+    yesbutton = testee.qtw.QMessageBox.StandardButton.Yes
     assert capsys.readouterr().out == (
             "called shared.get_text with args ('win', 'xxx', 'yyy', {'aa': 'bbbb'})\n"
             "called shared.get_title with args ('win',)\n"
-            f"called MessageBox.question with args ('win', 'title', 'text', {buttons},"
-            f" {yesbutton})\n")
+            f"called MessageBox.question with args ('win', 'title', 'text', {buttons!r},"
+            f" {yesbutton!r})\n")
 
 
 def test_ask_ync_question(monkeypatch, capsys):
@@ -643,7 +643,7 @@ def test_ask_ync_question(monkeypatch, capsys):
     monkeypatch.setattr(testee.shared, 'get_title', mock_get_title)
     monkeypatch.setattr(testee.qtw.QMessageBox, 'question', mock_question)
     assert testee.ask_ync_question('win', message_id='xxx', text='yyy') == (False, False)
-    # buttons = testee.qtw.QMessageBox.Yes | testee.qtw.QMessageBox.No | testee.qtw.QMessageBox.Cancel
+    # buttons = testee.qtw.QMessageBox.StandardButton.Yes | testee.qtw.QMessageBox.StandardButton.No | testee.qtw.QMessageBox.StandardButton.Cancel
     # # hier komt `buttons` ineens niet meer overeen met de buttons in de testee methode
     # daarom stdout vergelijking maar laten zitten
     # assert capsys.readouterr().out == (
@@ -652,7 +652,7 @@ def test_ask_ync_question(monkeypatch, capsys):
     #         f"called MessageBox.question with args ('win', 'title', 'text', {buttons}")
     monkeypatch.setattr(testee.qtw.QMessageBox, 'question', mock_question_2)
     assert testee.ask_ync_question('win', message_id='xxx', text='yyy', args={}) == (True, False)
-    # buttons = testee.qtw.QMessageBox.Yes | testee.qtw.QMessageBox.No | testee.qtw.QMessageBox.Cancel
+    # buttons = testee.qtw.QMessageBox.StandardButton.Yes | testee.qtw.QMessageBox.StandardButton.No | testee.qtw.QMessageBox.StandardButton.Cancel
     # assert capsys.readouterr().out == (
     #         "called shared.get_text with args ('win', 'xxx', 'yyy', {})\n"
     #         "called shared.get_title with args ('win',)\n"
@@ -660,7 +660,7 @@ def test_ask_ync_question(monkeypatch, capsys):
     monkeypatch.setattr(testee.qtw.QMessageBox, 'question', mock_question_3)
     assert testee.ask_ync_question('win', message_id='xxx', text='yyy',
                                    args={'aa': 'bbbb'}) == (False, True)
-    # buttons = testee.qtw.QMessageBox.Yes | testee.qtw.QMessageBox.No | testee.qtw.QMessageBox.Cancel
+    # buttons = testee.qtw.QMessageBox.StandardButton.Yes | testee.qtw.QMessageBox.StandardButton.No | testee.qtw.QMessageBox.StandardButton.Cancel
     # assert capsys.readouterr().out == (
     #         "called shared.get_text with args ('win', 'xxx', 'yyy', {'aa': 'bbbb'})\n"
     #         "called shared.get_title with args ('win',)\n"
@@ -672,10 +672,10 @@ def test_get_textinput(monkeypatch, capsys):
     """
     def mock_get(*args, **kwargs):
         print('called Inputdialog.getText with args', args, kwargs)
-        return '', testee.qtw.QDialog.Rejected
+        return '', testee.qtw.QDialog.DialogCode.Rejected
     def mock_get_2(*args, **kwargs):
         print('called Inputdialog.getText with args', args, kwargs)
-        return 'xxx', testee.qtw.QDialog.Accepted
+        return 'xxx', testee.qtw.QDialog.DialogCode.Accepted
     monkeypatch.setattr(testee.qtw.QInputDialog, 'getText', mock_get)
     assert testee.get_textinput('win', 'text', 'prompt') == ('', False)
     assert capsys.readouterr().out == ("called Inputdialog.getText with args"
@@ -1151,7 +1151,7 @@ class TestFilesDialog:
         # testobj.scrl = mockqtw.MockScrollArea()
         testobj.bar = mockqtw.MockScrollBar()
         assert capsys.readouterr().out == ("called Grid.__init__\n"
-                                           "called Scrollbar.__init__\n")
+                                           "called ScrollBar.__init__\n")
         testobj.checks = []
         testobj.paths = []
         testobj.rownum = 0
@@ -1252,15 +1252,15 @@ class TestFilesDialog:
             "stub for SetupDialog object"
             def __init__(self, *args):
                 print('called SetupDialog with args', args)
-            def exec_(self):
-                print('called SetupDialog.exec_')
+            def exec(self):
+                print('called SetupDialog.exec')
                 return False
         class MockSetup2:
             "stub for SetupDialog object"
             def __init__(self, *args):
                 print('called SetupDialog with args', args)
-            def exec_(self):
-                print('called SetupDialog.exec_')
+            def exec(self):
+                print('called SetupDialog.exec')
                 return True
         def mock_add(*args, **kwargs):
             print('called FilesDialog with args', args, kwargs)
@@ -1295,7 +1295,7 @@ class TestFilesDialog:
                 f"called get_textinput with args ({testobj}, '', 'xxx')\n"
                 f"called ask_question with args ({testobj.parent}, 'P_INIKDEF')\n"
                 f"called SetupDialog with args ({testobj}, 'qqq')\n"
-                "called SetupDialog.exec_\n"
+                "called SetupDialog.exec\n"
                 "called FilesDialog with args ('qqq',) {'path': ''}\n")
         monkeypatch.setattr(testee, 'SetupDialog', MockSetup2)
         testobj.add_program()
@@ -1303,7 +1303,7 @@ class TestFilesDialog:
                 f"called get_textinput with args ({testobj}, '', 'xxx')\n"
                 f"called ask_question with args ({testobj.parent}, 'P_INIKDEF')\n"
                 f"called SetupDialog with args ({testobj}, 'qqq')\n"
-                "called SetupDialog.exec_\n"
+                "called SetupDialog.exec\n"
                 "called FilesDialog with args ('qqq',) {'path': 'data_loc'}\n")
 
     def test_remove_programs(self, monkeypatch, capsys):
@@ -1313,16 +1313,16 @@ class TestFilesDialog:
             "stub for DeleteDialog object"
             def __init__(self, parent):
                 print('called DeleteDialog.__init__')
-            def exec_(self):
-                print('called DeleteDialog.exec_')
-                return testee.qtw.QDialog.Rejected
+            def exec(self):
+                print('called DeleteDialog.exec')
+                return testee.qtw.QDialog.DialogCode.Rejected
         class MockDelete2:
             "stub for DeleteDialog object"
             def __init__(self, parent):
                 print('called DeleteDialog.__init__')
-            def exec_(self):
-                print('called DeleteDialog.exec_')
-                return testee.qtw.QDialog.Accepted
+            def exec(self):
+                print('called DeleteDialog.exec')
+                return testee.qtw.QDialog.DialogCode.Accepted
         class MockFileBrowseButton:
             "stub for FileBrowseButton object"
             def __init__(self, *args, **kwargs):
@@ -1375,7 +1375,7 @@ class TestFilesDialog:
         assert not testobj.code_to_remove
         assert capsys.readouterr().out == ("called CheckBox.isChecked\n"
                                            "called DeleteDialog.__init__\n"
-                                           "called DeleteDialog.exec_\n"
+                                           "called DeleteDialog.exec\n"
                                            "called LineEdit.text\n")
         testobj.checks = [check_c]
         testobj.paths = [('zzz', file_c)]
@@ -1388,7 +1388,7 @@ class TestFilesDialog:
         assert not testobj.code_to_remove
         assert capsys.readouterr().out == ("called CheckBox.isChecked\n"
                                            "called DeleteDialog.__init__\n"
-                                           "called DeleteDialog.exec_\n"
+                                           "called DeleteDialog.exec\n"
                                            "called LineEdit.text\n"
                                            "called FilesDialog.delete_row with arg 0\n")
         testobj.checks = [check_c]
@@ -1402,7 +1402,7 @@ class TestFilesDialog:
         assert testobj.code_to_remove == ['path/name.py']
         assert capsys.readouterr().out == ("called CheckBox.isChecked\n"
                                            "called DeleteDialog.__init__\n"
-                                           "called DeleteDialog.exec_\n"
+                                           "called DeleteDialog.exec\n"
                                            "called LineEdit.text\n"
                                            "called FilesDialog.delete_row with arg 0\n")
 
@@ -1530,7 +1530,7 @@ class TestColumnSettingsDialog:
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.gsizer = mockqtw.MockVBoxLayout()
         testobj.bar = mockqtw.MockScrollBar()
-        assert capsys.readouterr().out == ("called VBox.__init__\ncalled Scrollbar.__init__\n")
+        assert capsys.readouterr().out == ("called VBox.__init__\ncalled ScrollBar.__init__\n")
         testobj.rownum = 1
         testobj.data = []
         testobj.checks = []
@@ -1881,7 +1881,7 @@ class TestExtraSettingsDialog:
         assert isinstance(testobj.c_showdet, testee.qtw.QCheckBox)
         assert isinstance(testobj.c_redef, testee.qtw.QCheckBox)
         assert capsys.readouterr().out == expected_output['extra'].format(
-                testobj=testobj, action="")
+                testobj=testobj, testee=testee, action="")
         master.book.page.settings[testee.shared.SettType.RBLD.value] = '1'
         master.book.page.settings[testee.shared.SettType.RDEF.value] = '1'
         master.book.page.settings[testee.shared.SettType.DETS.value] = '1'
@@ -1896,7 +1896,7 @@ class TestExtraSettingsDialog:
         assert isinstance(testobj.c_showdet, testee.qtw.QCheckBox)
         assert isinstance(testobj.c_redef, testee.qtw.QCheckBox)
         assert capsys.readouterr().out == expected_output['extra2'].format(
-                testobj=testobj, action="\ncalled CheckBox.toggle")
+                testobj=testobj, testee=testee, action="\ncalled CheckBox.toggle")
 
     def test_add_row(self, monkeypatch, capsys):
         """unittest for ExtraSettingsDialog.add_row
@@ -1910,7 +1910,7 @@ class TestExtraSettingsDialog:
         testobj.data = []
         testobj.bar = mockqtw.MockScrollBar()
         assert capsys.readouterr().out == ("called Grid.__init__\n"
-                                           "called Scrollbar.__init__\n")
+                                           "called ScrollBar.__init__\n")
         testobj.add_row()
         assert testobj.rownum == 2
         assert len(testobj.checks) == 1
@@ -2373,19 +2373,19 @@ def test_show_dialog(monkeypatch, capsys):
     """unittest for dialogs_qt.show_dialog
     """
     def mock_exec(self):
-        print('called Dialog.exec_')
-        return testee.qtw.QDialog.Rejected
+        print('called Dialog.exec')
+        return testee.qtw.QDialog.DialogCode.Rejected
     def mock_exec_2(self):
-        print('called Dialog.exec_')
-        return testee.qtw.QDialog.Accepted
+        print('called Dialog.exec')
+        return testee.qtw.QDialog.DialogCode.Accepted
     cls = mockqtw.MockDialog
     win = types.SimpleNamespace(gui=mockqtw.MockFrame())
     assert capsys.readouterr().out == "called Frame.__init__\n"
-    monkeypatch.setattr(mockqtw.MockDialog, 'exec_', mock_exec)
+    monkeypatch.setattr(mockqtw.MockDialog, 'exec', mock_exec)
     assert not testee.show_dialog(win, cls)
     assert capsys.readouterr().out == (f"called Dialog.__init__ with args {win.gui} ({win},) {{}}\n"
-                                       "called Dialog.exec_\n")
-    monkeypatch.setattr(mockqtw.MockDialog, 'exec_', mock_exec_2)
+                                       "called Dialog.exec\n")
+    monkeypatch.setattr(mockqtw.MockDialog, 'exec', mock_exec_2)
     assert testee.show_dialog(win, cls)
     assert capsys.readouterr().out == (f"called Dialog.__init__ with args {win.gui} ({win},) {{}}\n"
-                                       "called Dialog.exec_\n")
+                                       "called Dialog.exec\n")

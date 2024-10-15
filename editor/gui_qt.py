@@ -3,9 +3,9 @@
 import sys
 import contextlib
 import functools
-import PyQt5.QtWidgets as qtw
-## import PyQt5.QtGui as gui
-import PyQt5.QtCore as core
+import PyQt6.QtWidgets as qtw
+import PyQt6.QtGui as gui
+import PyQt6.QtCore as core
 from editor import shared
 
 
@@ -54,7 +54,7 @@ class FieldHandler:
             cb = qtw.QComboBox(self.gui.frm)
             cb.setMaximumWidth(90)
             cb.addItems(self.master.keylist)  # niet sorteren
-            cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
+            cb.currentTextChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
             self.gui.screenfields.append(cb)
             self.gui.cmb_key = cb
 
@@ -82,7 +82,7 @@ class FieldHandler:
         cb = qtw.QComboBox(self.gui.frm)
         cb.addItems(self.master.contextslist)
         cb.setMaximumWidth(110)
-        cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
+        cb.currentTextChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
         self.gui.screenfields.append(cb)
         self.gui.cmb_context = cb
 
@@ -94,7 +94,7 @@ class FieldHandler:
         cb.setMaximumWidth(150)
         if 'C_CNTXT' not in self.master.fields:  # load on choosing context
             cb.addItems(self.master.commandslist)
-        cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
+        cb.currentTextChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
         self.gui.screenfields.append(cb)
         self.gui.cmb_commando = cb
 
@@ -112,7 +112,7 @@ class FieldHandler:
         self.gui.lbl_controls = qtw.QLabel(self.master.captions['C_CTRL'], self.gui.frm)
         cb = qtw.QComboBox(self.gui.frm)
         cb.addItems(self.master.controlslist)
-        cb.currentIndexChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
+        cb.currentTextChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
         self.gui.screenfields.append(cb)
         self.gui.cmb_controls = cb
 
@@ -379,7 +379,7 @@ class SingleDataInterface(qtw.QFrame):
     def build_listitem(self, key):
         "create a new item for the list"
         new_item = qtw.QTreeWidgetItem()
-        new_item.setData(0, core.Qt.UserRole, key)
+        new_item.setData(0, core.Qt.ItemDataRole.UserRole, key)
         return new_item
 
     def set_listitemtext(self, item, indx, value):
@@ -459,7 +459,7 @@ class SingleDataInterface(qtw.QFrame):
 
     def get_itemdata(self, item):
         "return the data associated with a listitem"
-        return item.data(0, core.Qt.UserRole)
+        return item.data(0, core.Qt.ItemDataRole.UserRole)
 
     def set_checkbox_state(self, cb, state):
         "set the state for a checkbox"
@@ -603,7 +603,7 @@ class TabbedInterface(qtw.QFrame):
 
     def find_items(self, page, text):
         "return the items that contain the text to search for"
-        return page.gui.p0list.findItems(text, core.Qt.MatchContains, self.master.zoekcol)
+        return page.gui.p0list.findItems(text, core.Qt.MatchFlag.MatchContains, self.master.zoekcol)
 
     def init_search_buttons(self):
         "set the search-related buttons to their initial values (i.e. disabled)"
@@ -754,7 +754,7 @@ class Gui(qtw.QMainWindow):
         frm.setLayout(vbox)
         self.setCentralWidget(frm)
         self.show()
-        sys.exit(self.app.exec_())
+        sys.exit(self.app.exec())
 
     def set_window_title(self, title):
         "show a title in the title bar"
@@ -800,7 +800,7 @@ class Gui(qtw.QMainWindow):
     def create_menuaction(self, sel, callback, shortcut):
         """return created action w. some special cases
         """
-        act = qtw.QAction(self.editor.captions[sel], self)
+        act = gui.QAction(self.editor.captions[sel], self)
         ## act.triggered.connect(functools.partial(callback, self))
         act.triggered.connect(callback)
         act.setShortcut(shortcut)

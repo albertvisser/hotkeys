@@ -20,7 +20,7 @@ called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLay
 called Frame.setLayout with arg of type <class 'mockgui.mockqtwidgets.MockVBoxLayout'>
 called MainWidget.setCentralWindow with arg of type `<class 'mockgui.mockqtwidgets.MockFrame'>`
 called MainWindow.show
-called Application.exec_
+called Application.exec
 """
 empty = """\
 called VBox.__init__
@@ -290,7 +290,7 @@ class TestFieldHandler:
         monkeypatch.setattr(testee.qtw, 'QLineEdit', mockqtw.MockLineEdit)
         monkeypatch.setattr(mockqtw.MockLineEdit, 'textChanged', {str: mockqtw.MockSignal()})
         monkeypatch.setattr(testee.qtw, 'QComboBox', mockqtw.MockComboBox)
-        monkeypatch.setattr(mockqtw.MockComboBox, 'currentIndexChanged', {str: mockqtw.MockSignal()})
+        monkeypatch.setattr(mockqtw.MockComboBox, 'currentTextChanged', {str: mockqtw.MockSignal()})
         assert capsys.readouterr().out == "called Signal.__init__\ncalled Signal.__init__\n"
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.gui.screenfields = []
@@ -364,7 +364,7 @@ class TestFieldHandler:
         """
         monkeypatch.setattr(testee.qtw, 'QLabel', mockqtw.MockLabel)
         monkeypatch.setattr(testee.qtw, 'QComboBox', mockqtw.MockComboBox)
-        monkeypatch.setattr(mockqtw.MockComboBox, 'currentIndexChanged', {str: mockqtw.MockSignal()})
+        monkeypatch.setattr(mockqtw.MockComboBox, 'currentTextChanged', {str: mockqtw.MockSignal()})
         assert capsys.readouterr().out == "called Signal.__init__\n"
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.gui.screenfields = []
@@ -390,7 +390,7 @@ class TestFieldHandler:
         """
         monkeypatch.setattr(testee.qtw, 'QLabel', mockqtw.MockLabel)
         monkeypatch.setattr(testee.qtw, 'QComboBox', mockqtw.MockComboBox)
-        monkeypatch.setattr(mockqtw.MockComboBox, 'currentIndexChanged', {str: mockqtw.MockSignal()})
+        monkeypatch.setattr(mockqtw.MockComboBox, 'currentTextChanged', {str: mockqtw.MockSignal()})
         assert capsys.readouterr().out == "called Signal.__init__\n"
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.gui.screenfields = []
@@ -448,7 +448,7 @@ class TestFieldHandler:
         """
         monkeypatch.setattr(testee.qtw, 'QLabel', mockqtw.MockLabel)
         monkeypatch.setattr(testee.qtw, 'QComboBox', mockqtw.MockComboBox)
-        monkeypatch.setattr(mockqtw.MockComboBox, 'currentIndexChanged', {str: mockqtw.MockSignal()})
+        monkeypatch.setattr(mockqtw.MockComboBox, 'currentTextChanged', {str: mockqtw.MockSignal()})
         assert capsys.readouterr().out == "called Signal.__init__\n"
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.gui.screenfields = []
@@ -913,11 +913,12 @@ class TestSingleDataInterface:
         testobj = self.setup_testobj(monkeypatch, capsys)
         result = testobj.build_listitem('key')
         assert isinstance(result, testee.qtw.QTreeWidgetItem)
-        assert result.data(0, testee.core.Qt.UserRole) == 'key'
+        assert result.data(0, testee.core.Qt.ItemDataRole.UserRole) == 'key'
         assert capsys.readouterr().out == (
                 "called TreeItem.__init__ with args ()\n"
-                f"called TreeItem.setData to `key` with role {testee.core.Qt.UserRole} for col 0\n"
-                f"called TreeItem.data for col 0 role {testee.core.Qt.UserRole}\n")
+                "called TreeItem.setData to `key` with role"
+                f" {testee.core.Qt.ItemDataRole.UserRole} for col 0\n"
+                f"called TreeItem.data for col 0 role {testee.core.Qt.ItemDataRole.UserRole}\n")
 
     def test_set_listitemtext(self, monkeypatch, capsys):
         """unittest for SingleDataInterface.set_listitemtext
@@ -1128,13 +1129,14 @@ class TestSingleDataInterface:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         item = mockqtw.MockTreeItem()
-        item.setData(0, testee.core.Qt.UserRole, 'data')
+        item.setData(0, testee.core.Qt.ItemDataRole.UserRole, 'data')
         assert capsys.readouterr().out == (
                 "called TreeItem.__init__ with args ()\n"
-                f"called TreeItem.setData to `data` with role {testee.core.Qt.UserRole} for col 0\n")
+                "called TreeItem.setData to `data` with role"
+                f" {testee.core.Qt.ItemDataRole.UserRole} for col 0\n")
         assert testobj.get_itemdata(item) == "data"
         assert capsys.readouterr().out == (
-                f"called TreeItem.data for col 0 role {testee.core.Qt.UserRole}\n")
+                f"called TreeItem.data for col 0 role {testee.core.Qt.ItemDataRole.UserRole}\n")
 
     def test_get_selected_keydef(self, monkeypatch, capsys):
         """unittest for SingleDataInterface.get_selected_keydef
@@ -1375,7 +1377,8 @@ class TestTabbedInterface:
         page.gui.p0list = mockqtw.MockTreeWidget()
         assert testobj.find_items(page, 'text') == []
         assert capsys.readouterr().out == ("called Tree.__init__\n"
-                                           "called Tree.findItems with args ('text', 1, 'xxx')\n")
+                                           "called Tree.findItems with args ('text',"
+                                           f" {testee.core.Qt.MatchFlag.MatchContains!r}, 'xxx')\n")
 
     def test_init_search_buttons(self, monkeypatch, capsys):
         """unittest for TabbedInterface.init_search_buttons
@@ -1828,11 +1831,11 @@ class TestGui:
         """
         def mock_callback():
             "stub for function object"
-        monkeypatch.setattr(testee.qtw, 'QAction', mockqtw.MockAction)
+        monkeypatch.setattr(testee.gui, 'QAction', mockqtw.MockAction)
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.editor.captions = {'xxx': 'yyyyyy'}
         result = testobj.create_menuaction('xxx', mock_callback, 'shortcut')
-        assert isinstance(result, testee.qtw.QAction)
+        assert isinstance(result, testee.gui.QAction)
         assert capsys.readouterr().out == (
                 f"called Action.__init__ with args ('yyyyyy', {testobj})\n"
                 f"called Signal.connect with args ({mock_callback},)\n"
@@ -1841,7 +1844,7 @@ class TestGui:
         testobj.editor.captions = {'M_READ': 'yyyyyy'}
         testobj.editor.book.page.data = {}
         result = testobj.create_menuaction('M_READ', mock_callback, 'shortcut')
-        assert isinstance(result, testee.qtw.QAction)
+        assert isinstance(result, testee.gui.QAction)
         assert capsys.readouterr().out == (
                 f"called Action.__init__ with args ('yyyyyy', {testobj})\n"
                 f"called Signal.connect with args ({mock_callback},)\n"
@@ -1849,7 +1852,7 @@ class TestGui:
                 "called Action.setEnabled with arg `False`\n")
         testobj.editor.book.page.data = {'keydef': ['x']}
         result = testobj.create_menuaction('M_READ', mock_callback, 'shortcut')
-        assert isinstance(result, testee.qtw.QAction)
+        assert isinstance(result, testee.gui.QAction)
         assert capsys.readouterr().out == (
                 f"called Action.__init__ with args ('yyyyyy', {testobj})\n"
                 f"called Signal.connect with args ({mock_callback},)\n"
@@ -1858,7 +1861,7 @@ class TestGui:
         testobj.editor.captions = {'M_RBLD': 'yyyyyy'}
         testobj.editor.book.page.settings = {}
         result = testobj.create_menuaction('M_RBLD', mock_callback, 'shortcut')
-        assert isinstance(result, testee.qtw.QAction)
+        assert isinstance(result, testee.gui.QAction)
         assert capsys.readouterr().out == (
                 f"called Action.__init__ with args ('yyyyyy', {testobj})\n"
                 f"called Signal.connect with args ({mock_callback},)\n"
@@ -1866,7 +1869,7 @@ class TestGui:
                 "called Action.setEnabled with arg `False`\n")
         testobj.editor.book.page.settings = {testee.shared.SettType.RBLD.value: False}
         result = testobj.create_menuaction('M_RBLD', mock_callback, 'shortcut')
-        assert isinstance(result, testee.qtw.QAction)
+        assert isinstance(result, testee.gui.QAction)
         assert capsys.readouterr().out == (
                 f"called Action.__init__ with args ('yyyyyy', {testobj})\n"
                 f"called Signal.connect with args ({mock_callback},)\n"
@@ -1874,7 +1877,7 @@ class TestGui:
                 "called Action.setEnabled with arg `False`\n")
         testobj.editor.book.page.settings = {testee.shared.SettType.RBLD.value: True}
         result = testobj.create_menuaction('M_RBLD', mock_callback, 'shortcut')
-        assert isinstance(result, testee.qtw.QAction)
+        assert isinstance(result, testee.gui.QAction)
         assert capsys.readouterr().out == (
                 f"called Action.__init__ with args ('yyyyyy', {testobj})\n"
                 f"called Signal.connect with args ({mock_callback},)\n"
@@ -1884,7 +1887,7 @@ class TestGui:
         testobj.editor.captions = {'M_SAVE': 'yyyyyy'}
         testobj.editor.book.page.settings = {}
         result = testobj.create_menuaction('M_SAVE', mock_callback, 'shortcut')
-        assert isinstance(result, testee.qtw.QAction)
+        assert isinstance(result, testee.gui.QAction)
         assert capsys.readouterr().out == (
                 f"called Action.__init__ with args ('yyyyyy', {testobj})\n"
                 f"called Signal.connect with args ({mock_callback},)\n"
@@ -1892,7 +1895,7 @@ class TestGui:
                 "called Action.setEnabled with arg `False`\n")
         testobj.editor.book.page.settings = {testee.shared.SettType.RDEF.value: False}
         result = testobj.create_menuaction('M_SAVE', mock_callback, 'shortcut')
-        assert isinstance(result, testee.qtw.QAction)
+        assert isinstance(result, testee.gui.QAction)
         assert capsys.readouterr().out == (
                 f"called Action.__init__ with args ('yyyyyy', {testobj})\n"
                 f"called Signal.connect with args ({mock_callback},)\n"
@@ -1900,7 +1903,7 @@ class TestGui:
                 "called Action.setEnabled with arg `False`\n")
         testobj.editor.book.page.settings = {testee.shared.SettType.RDEF.value: True}
         result = testobj.create_menuaction('M_SAVE', mock_callback, 'shortcut')
-        assert isinstance(result, testee.qtw.QAction)
+        assert isinstance(result, testee.gui.QAction)
         assert capsys.readouterr().out == (
                 f"called Action.__init__ with args ('yyyyyy', {testobj})\n"
                 f"called Signal.connect with args ({mock_callback},)\n"
