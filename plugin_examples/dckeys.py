@@ -11,8 +11,7 @@ import xml.etree.ElementTree as ET
 import bs4 as bs  # import BeautifulSoup
 from ..gui import (show_cancel_message, get_file_to_open, get_file_to_save, show_dialog,
                    ask_ync_question)
-# from .dckeys_gui import layout_extra_fieldsd
-from .dckeys_gui import DcCompleteDialog
+from .dckeys_gui import layout_extra_fields, DcCompleteDialog
 
 CONFPATH = '/home/albert/.config/doublecmd'
 # DOCSPATH = '/usr/share/doublecmd/doc/en'
