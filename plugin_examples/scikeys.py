@@ -528,7 +528,7 @@ def merge_command_dicts(dict_from_text, dict_from_src):
 
 def build_data(page, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
-    en geef ze terug voor schrijven naar het csv bestand
+    en geef ze terug voor schrijven naar het keydef bestand
     """
     # we're not considering per-directory settings:
     # - Local properties file called "SciTE.properties" which may be present

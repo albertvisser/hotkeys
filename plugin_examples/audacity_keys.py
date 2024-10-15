@@ -38,7 +38,7 @@ def _translate_keyname(inp):
 
 def build_data(page, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
-    en geef ze terug voor schrijven naar het csv bestand
+    en geef ze terug voor schrijven naar het keydef bestand
     """
     shortcuts = collections.OrderedDict()
     otherstuff = {}
@@ -91,9 +91,9 @@ Instructions to load the changed definitions back into Audacity.
 
 First you need to save the definitions.
 
-After that, perhaps it's sufficient to (re)start Audacity. Otherwise,
-select Edit > Preferences from the menu (or press Ctrl-P) and go to
-"Keyboard".
+After that, it might be sufficient to (re)start Audacity.
+Otherwise, select Edit > Preferences from the menu (or press Ctrl-P)
+and go to "Keyboard".
 Push the "Import" button and select the file you just saved.
 
 Now press "OK" to build and save the keyboard definitions file

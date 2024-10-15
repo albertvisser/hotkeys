@@ -49,7 +49,7 @@ def get_keydefs(doc, soort, keydefs=None):
     return keydefs
 
 
-def writecsv():
+def write_data():
     """implementation of standard function to build the csvfile
 
     i.v.m. obsolete raken niet build_data genoemd zodat ik me niet kan vergissen

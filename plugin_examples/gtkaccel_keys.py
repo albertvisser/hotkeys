@@ -7,7 +7,7 @@ import pprint
 from .read_gtkaccel import read_keydefs_and_stuff
 from ..gui import get_file_to_open, get_file_to_save, show_dialog
 from .gtkaccel_keys_gui import AccelCompleteDialog
-import editor.plugins.gtkaccel_keys_csv as dml
+import editor.plugins.gtkaccel_keys_data as dml
 
 settname = ''
 
@@ -22,7 +22,7 @@ def _translate_keyname(inp):
 
 def build_data(settnames, page, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
-    en geef ze terug voor schrijven naar het csv bestand
+    en geef ze terug voor schrijven naar het keydef bestand
     """
     shortcuts = collections.OrderedDict()
     fdesc = ("File containing keymappings", "File containing command descriptions")

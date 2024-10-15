@@ -214,7 +214,7 @@ def translate_keyname(inp):
 
 
 def build_data(page, showinfo=True):
-    """implementation of generic function to build the csv file
+    """implementation of generic function to build the keydef file
 
     zo geschreven komt her erop neer dat de te rebuilden gegevens in het match file zitten
     (want alleen de settings- en help files zijn niet voldoende)
