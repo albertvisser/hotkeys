@@ -14,7 +14,7 @@ displayed, so that I can sort on purpose or context instead of just on base key
 making it easier to find a keydef if I need it, in whatever way I want to look for it.
 That's why I also built search and filter facilities.
 
-And then of course, be able to apply changes where possible.
+And then of course, to be able to apply changes where possible.
 For that, part of the screen can be used to define custom fields to show and edit
 details of a shortcut key definition.
 
@@ -32,6 +32,8 @@ It's also meant for customisation of the editor part of this program (the lower 
 
 A couple of plugins - that I made for the tools that I use - is included,
 as well as an empty (in the sense that it does nothing) plugin containing various explanations.
+To use the included plugins, you don't need to copy them to the editor/plugins subdirectory,
+you can just (sym)link them.
 
 
 Usage
@@ -40,7 +42,7 @@ Usage
 Simply call ``start.py`` in the top directory.
 Use ``toolkit.py`` in the program directory (``editor``) to define which gui toolkit to use.
 
-I started out using a csv file for the keyboard definitions and other settings, because tools
+I started out using csv files for the keyboard definitions and other settings, because other tools
 like this one did that too I guess. 
 Later I found it a bit too complicated so I simplified it and switched to a json format (for the tool itself as well as for the plugin keydef data).
 
@@ -49,6 +51,6 @@ Requirements
 ------------
 
 - Python
-- PyQt(5) or wxPython (Phoenix) for the GUI part
+- PyQt(6) or wxPython (Phoenix) for the GUI part
 - the built in json module for creating and reading the definition files
 - plugins may use BeautifulSoup (and lxml) for parsing HTML help files
