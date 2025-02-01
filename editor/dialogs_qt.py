@@ -734,21 +734,27 @@ class ExtraSettingsDialog(qtw.QDialog):
         hsizer = qtw.QHBoxLayout()
         self.c_rebuild = qtw.QCheckBox(self.master.captions['T_MAKE'].format(
             self.master.captions['S_RBLD']), self)
-        if self.master.book.page.settings[shared.SettType.RBLD.value] == '1':
-            self.c_rebuild.toggle()
+        # if self.master.book.page.settings[shared.SettType.RBLD.value] == '1':
+        #     self.c_rebuild.toggle()
+        # met #1050 kan dit vereenvoudigd worden tot
+        self.c_rebuild.setChecked(self.master.book.page.settings[shared.SettType.RBLD.value])
         hsizer.addWidget(self.c_rebuild)
         vsizer.addLayout(hsizer)
         hsizer = qtw.QHBoxLayout()
         self.c_showdet = qtw.QCheckBox(self.master.captions['S_DETS'], self)
-        if self.master.book.page.settings[shared.SettType.DETS.value] == '1':
-            self.c_showdet.toggle()
+        # if self.master.book.page.settings[shared.SettType.DETS.value] == '1':
+        #     self.c_showdet.toggle()
+        # met #1050 kan dit vereenvoudigd worden tot
+        self.c_showdet.setChecked(self.master.book.page.settings[shared.SettType.DETS.value])
         hsizer.addWidget(self.c_showdet)
         vsizer.addLayout(hsizer)
         hsizer = qtw.QHBoxLayout()
         self.c_redef = qtw.QCheckBox(self.master.captions['T_MAKE'].format(
             self.master.captions['S_RSAV']), self)
-        if self.master.book.page.settings[shared.SettType.RDEF.value] == '1':
-            self.c_redef.toggle()
+        # if self.master.book.page.settings[shared.SettType.RDEF.value] == '1':
+        #     self.c_redef.toggle()
+        # met #1050 kan dit vereenvoudigd worden tot
+        self.c_redef.setChecked(self.master.book.page.settings[shared.SettType.RDEF.value])
         hsizer.addWidget(self.c_redef)
         vsizer.addLayout(hsizer)
         pnl.setLayout(vsizer)

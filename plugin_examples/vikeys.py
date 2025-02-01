@@ -23,6 +23,7 @@ CATEGORYLIST = ((f'1. {CONTEXTS[1]}', ''),
                 (f'4. {CONTEXTS[3]}line editing', ''),
                 (f'5. Terminal-Job mode', ''),
                 (f'6. {EXCMD}', ''))
+STARTDELIMS, ENDDELIMS = '{[<', '}]>'
 
 
 def convert_key(value):
@@ -165,11 +166,7 @@ class DefaultKeys:
         value = command
         self.components, self.pre_params, self.post_params = [], [], []
         while value:
-            first, last = '{[<', '}]>'
-            if value[0] in first:
-                skip, value = self.process_parms(value, first, last)
-                if skip:
-                    continue
+            value = self.check_for_and_process_delimited(value)
             if value.startswith('CTRL'):
                 self.components.append(value[5].lower() + ' ctrl')
                 value = value[6:].lstrip()
@@ -186,34 +183,33 @@ class DefaultKeys:
                 if extradesc:
                     desc = extradesc + ' ' + desc
 
-        pre_params = ' '.join(['[%s]' % x for x in self.pre_params])
-        post_params = ' '.join(['{%s}' % x for x in self.post_params])
+        pre_params = ' '.join([f'[{x}]' for x in self.pre_params])
+        post_params = ' '.join([f'{{{x}}}' for x in self.post_params])
         command = ' + '.join(self.components), pre_params, post_params
-        if desc.startswith('1 ', '2 '):
+        if desc.startswith(('1 ', '2 ')):
             desc = desc[1:].lstrip()
         elif desc.startswith('1/2 '):
             desc = desc[3:].lstrip()
         return command, desc
 
-    def process_parms(self, value, first, last):
-        """processs a delimited value (parameter or special key
+    def check_for_and_process_delimited(self, value):
+        """processs a delimited value (parameter or special key)
         """
+        firstchar = value[0]
+        if firstchar not in STARTDELIMS:
+            return value
         try:
-            pos = value.index(last[first.index(value[0])])
+            pos = value.index(ENDDELIMS[STARTDELIMS.index(value[0])])
         except ValueError:
-            skip = False
+            return value
+        part = value[1:pos]
+        if value[0] == '<':
+            self.components.append(convert_key(part))
+        elif self.components:
+            self.post_params.append(part)
         else:
-            part = value[1:pos]
-            if value[0] == '<':
-                part = convert_key(part)
-                self.components.append(part)
-            elif self.components:
-                self.post_params.append(part)
-            else:
-                self.pre_params.append(part)
-            value = value[pos + 1:].lstrip()
-            skip = True
-        return skip, value
+            self.pre_params.append(part)
+        return value[pos + 1:].lstrip()
 
     def process_dash(self, value):
         """process a range continuation (" - ")

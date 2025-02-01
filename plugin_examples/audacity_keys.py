@@ -79,8 +79,7 @@ def build_data(page, showinfo=True):
         cmd_label = item.get('label')
         if keyname:
             key += 1
-            shortcuts[key] = (_translate_keyname(keyname), keymods, cmd_name,
-                              cmd_label)
+            shortcuts[key] = (_translate_keyname(keyname), keymods, cmd_name, cmd_label)
         commandlist[cmd_name] = cmd_label
     otherstuff['commands'] = commandlist
     return shortcuts, otherstuff

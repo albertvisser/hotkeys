@@ -5,11 +5,13 @@ __pycache__/
 
 # development stuff
 logs/
-*.swp
-*.swo
+.coverage
+projdocs*
+.sessionrc
 
 # data
 *.csv*
+*.json*
 
 # on-demand
 toolkit.py

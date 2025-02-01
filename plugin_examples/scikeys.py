@@ -63,27 +63,31 @@ def read_commands(path):
 
     """
     with open(path) as doc:
-
         soup = bs.BeautifulSoup(doc, 'lxml')
 
-    menus, internals = soup.find_all('table')
+    menu_commands, internal_commands = {}, {}
 
-    menu_commands = {}
-    count = 0
-    for row in menus.find_all('tr'):
-        if row.parent.name =='thead':
-            continue
-        command, text = [tag.string for tag in row.find_all('td')]
-        count += 1
-        menu_commands["{:0>4}".format(count)] = (command, text)
+    try:
+        menus, internals = soup.find_all('table')
+        got_data = True
+    except ValueError:
+        got_data = False
 
-    internal_commands = {}
-    for row in internals.find_all('tr'):
-        if row.parent.name =='thead':
-            continue
-        key, command, text = [tag.string for tag in row.find_all('td')]
-        internal_commands[key] = (command, text)
-        # command_names[text] = (key, command)
+    if got_data:
+        count = 0
+        for row in menus.find_all('tr'):
+            if row.parent.name =='thead':
+                continue
+            command, text = [tag.string for tag in row.find_all('td')]
+            count += 1
+            menu_commands["{:0>4}".format(count)] = (command, text)
+
+        for row in internals.find_all('tr'):
+            if row.parent.name =='thead':
+                continue
+            key, command, text = [tag.string for tag in row.find_all('td')]
+            internal_commands[key] = (command, text)
+            # command_names[text] = (key, command)
 
     return menu_commands, internal_commands
 
@@ -92,18 +96,18 @@ def read_docs(path):
     """read keydefs from SciTEDoc.html
     """
     with open(path) as doc:
-
         soup = bs.BeautifulSoup(doc, 'lxml')
 
     keyboard_commands = soup.find('table', summary="Keyboard commands")
 
     keydefs = []
-    for row in keyboard_commands.find_all('tr'):
-        if not row.find_all('td'):
-            continue
-        description, shortcut = [tag.string for tag in row.find_all('td')][:2]
-        key, mods = nicefy_props(shortcut)
-        keydefs.append((key, mods, description))
+    if keyboard_commands:
+        for row in keyboard_commands.find_all('tr'):
+            if not row.find_all('td'):
+                continue
+            description, shortcut = [tag.string for tag in row.find_all('td')][:2]
+            key, mods = nicefy_props(shortcut)
+            keydefs.append((key, mods, description))
 
     return keydefs
 
@@ -174,6 +178,8 @@ def read_menu_gtk(fname):
             if in_menu:
                 continue
             in_menu = 'menuItemsHelp[] =' in line
+            # in_menu = any(('menuItems[] =' in line, 'menuItemsOptions[] =' in line,
+            #                'menuItemsBuffer[] =' in line, 'menuItemsHelp[] =' in line))
     return menu_keys
 
 

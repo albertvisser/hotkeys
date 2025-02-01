@@ -1,4 +1,4 @@
-"""VI plugin for Hotkeys - gui specific functions - Qt5 version
+"""VI plugin for Hotkeys - gui specific functions - Qt version
 """
 import PyQt6.QtWidgets as qtw
 

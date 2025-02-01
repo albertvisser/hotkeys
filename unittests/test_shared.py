@@ -110,6 +110,8 @@ def test_get_open_title(monkeypatch, capsys):
         print('called get_text with args', args)
         return 'text'
     monkeypatch.setattr(testee, 'get_text', mock_get)
+    assert testee.get_open_title('win', 'message_id', '') == 'text'
+    assert capsys.readouterr().out == "called get_text with args ('win', 'message_id')\n"
     assert testee.get_open_title('win', 'message_id', 'oms') == 'text - oms'
     assert capsys.readouterr().out == "called get_text with args ('win', 'message_id')\n"
 

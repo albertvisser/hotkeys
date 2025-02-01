@@ -342,19 +342,19 @@ class TestFieldHandler:
         assert testobj.gui.screenfields == [testobj.gui.cb_ctrl, testobj.gui.cb_alt,
                                             testobj.gui.cb_shift, testobj.gui.cb_win]
         assert capsys.readouterr().out == (
-                "called CheckBox.__init__\n"
+                "called CheckBox.__init__ with text '+ xxx'\n"
                 "called CheckBox.setChecked with arg False\n"
                 f"called Signal.connect with args (functools.partial({testobj.master.on_checkbox},"
                 f" {testobj.gui.cb_ctrl}),)\n"
-                "called CheckBox.__init__\n"
+                "called CheckBox.__init__ with text '+ yyy'\n"
                 "called CheckBox.setChecked with arg False\n"
                 f"called Signal.connect with args (functools.partial({testobj.master.on_checkbox},"
                 f" {testobj.gui.cb_alt}),)\n"
-                "called CheckBox.__init__\n"
+                "called CheckBox.__init__ with text '+ zzz'\n"
                 "called CheckBox.setChecked with arg False\n"
                 f"called Signal.connect with args (functools.partial({testobj.master.on_checkbox},"
                 f" {testobj.gui.cb_shift}),)\n"
-                "called CheckBox.__init__\n"
+                "called CheckBox.__init__ with text '+ qqq'\n"
                 "called CheckBox.setChecked with arg False\n"
                 f"called Signal.connect with args (functools.partial({testobj.master.on_checkbox},"
                 f" {testobj.gui.cb_win}),)\n")
@@ -687,6 +687,7 @@ class TestSingleDataInterface:
         assert testobj.title == 'title'
         assert capsys.readouterr().out == expected_output['emptyscreen'].format(testobj=testobj)
 
+# 231->230
     def test_setup_list(self, monkeypatch, capsys, expected_output):
         """unittest for SingleDataInterface.setup_list
         """
@@ -897,7 +898,7 @@ class TestSingleDataInterface:
         assert capsys.readouterr().out == ("called MainWindow.__init__\n"
                                            "called Application.__init__\n")
         testobj.set_title('title')
-        assert capsys.readouterr().out == "called MainWindow.setWindowTitle to `title`\n"
+        assert capsys.readouterr().out == "called MainWindow.setWindowTitle with arg `title`\n"
 
     def test_clear_list(self, monkeypatch, capsys):
         """unittest for SingleDataInterface.clear_list
@@ -1237,7 +1238,7 @@ class TestTabbedInterface:
         testobj.sel = mockqtw.MockComboBox()
         assert capsys.readouterr().out == "called ComboBox.__init__\n"
         testobj.add_to_selector('text')
-        assert capsys.readouterr().out == ("called ComboBox.addItems with arg `text`\n")
+        assert capsys.readouterr().out == "called ComboBox.addItem with arg `text`\n"
 
     def test_format_screen(self, monkeypatch, capsys, expected_output):
         """unittest for TabbedInterface.format_screen
@@ -1493,6 +1494,8 @@ class TestTabbedInterface:
         testobj.master.page.gui = MockSDI()
         testobj.master.page.gui.p0list = mockqtw.MockTreeWidget()
         assert capsys.readouterr().out == "called Tree.__init__\n"
+        testobj.set_found_keydef_position()
+        assert capsys.readouterr().out == "called Tree.topLevelItemCount\n"
         testobj.master.page.gui.p0list.topLevelItemCount = mock_count
         testobj.master.page.gui.p0list.topLevelItem = mock_item
         testobj.master.page.gui.p0list.currentItem = mock_current
@@ -1753,7 +1756,7 @@ class TestGui:
         monkeypatch.setattr(testee.Gui, 'setWindowTitle', mockqtw.MockMainWindow.setWindowTitle)
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.set_window_title('title')
-        assert capsys.readouterr().out == ("called MainWindow.setWindowTitle to `title`\n")
+        assert capsys.readouterr().out == ("called MainWindow.setWindowTitle with arg `title`\n")
 
     def test_statusbar_message(self, monkeypatch, capsys):
         """unittest for Gui.statusbar_message

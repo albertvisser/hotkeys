@@ -24,7 +24,7 @@ import importlib.util
 from editor import shared
 from editor import gui
 NO_PATH = 'NO_PATH'
-named_keys = ['Insert', 'Del', 'Home', 'End', 'PgUp', 'PgDn', 'Space', 'Backspace',
+NAMED_KEYS = ['Insert', 'Del', 'Home', 'End', 'PgUp', 'PgDn', 'Space', 'Backspace',
               'Tab', 'Num+', 'Num-', 'Num*', 'Num/', 'Enter', 'Esc', 'Left', 'Right',
               'Up', 'Down', 'Letter', 'Letter(s)']
 VRS = "2.1.x"
@@ -44,14 +44,14 @@ initial_settings = {'plugins': [], 'lang': 'english.lng', 'startup': 'Remember',
 initial_columns = [["C_KEY", 120, False], ["C_MODS", 90, False], ["C_DESC", 292, False]]
 
 
-class LineType(enum.Enum):
-    """Types of lines in the keydef file (first value)
-    """
-    SETT = 'Setting'
-    CAPT = 'Title'
-    WID = 'Width'
-    ORIG = 'is_type'
-    KEY = 'Keydef'
+# class LineType(enum.Enum):
+#     """Types of lines in the keydef file (first value)
+#     """
+#     SETT = 'Setting'
+#     CAPT = 'Title'
+#     WID = 'Width'
+#     ORIG = 'is_type'
+#     KEY = 'Keydef'
 
 
 def readlang(lang):
@@ -307,7 +307,9 @@ class HotkeyPanel:
             self.fields = [x[0] for x in self.column_info]
             self.add_extra_attributes()
             self.gui.add_extra_fields()
-            self.gui.set_extrascreen_editable(bool(int(self.settings[shared.SettType.RDEF.value])))
+            # #1050 is bedoeld om de omzetting bool(int(...)) overbodig te maken
+            # self.gui.set_extrascreen_editable(bool(int(self.settings[shared.SettType.RDEF.value])))
+            self.gui.set_extrascreen_editable(self.settings[shared.SettType.RDEF.value])
 
         self.gui.setup_list()
         if self.has_extrapanel:
@@ -408,12 +410,8 @@ class HotkeyPanel:
                 self.init_origdata.append('')
                 self.field_indexes[text] = itemindex
                 itemindex += 1
-            # if text == 'C_KEY':
-            #     self.keylist = (list(string.ascii_uppercase) + list(string.digits)
-            #                     + [f"F{i}" for i in range(1, 13)] + named_keys
-            #                     + ['.', ',', '+', '=', '-', '`', '[', ']', '\\', ';', "'", '/'])
         self.keylist = (list(string.ascii_uppercase) + list(string.digits)
-                        + [f"F{i}" for i in range(1, 13)] + named_keys
+                        + [f"F{i}" for i in range(1, 13)] + NAMED_KEYS
                         + ['.', ',', '+', '=', '-', '`', '[', ']', '\\', ';', "'", '/'])
 
         self.contextslist = self.commandslist = self.defkeys = []
@@ -422,8 +420,8 @@ class HotkeyPanel:
             self.reader.add_extra_attributes(self)  # user exit, kan self.keylist leegmaken
         except AttributeError:
             shared.log_exc()
-        if self.keylist:
-            self.keylist.sort()
+        # if self.keylist:  check niet nodig, wordt altijd ingesteld
+        self.keylist.sort()
 
     def set_title(self, modified=None):
         """set title and adapt to modified flag
@@ -559,7 +557,9 @@ class HotkeyPanel:
             self.gui.enable_save(False)
             self.gui.enable_delete(False)
         # C_TYPE heeft geen correponderend veld in het detailscherm
-        if 'C_TYPE' in self.fields and bool(int(self.settings[shared.SettType.RDEF.value])):
+        # #1050 is bedoeld om de omzetting bool(int(...)) overbodig te maken
+        # if 'C_TYPE' in self.fields and bool(int(self.settings[shared.SettType.RDEF.value])):
+        if 'C_TYPE' in self.fields and self.settings[shared.SettType.RDEF.value]:
             self.gui.enable_delete(keydefdata['C_TYPE'] == 'U')
         self._origdata = self.init_origdata[:]
         if 'C_MODS' in self.fields:
@@ -632,7 +632,9 @@ class HotkeyPanel:
         # in de qt versie was deze controle op commentaar gezet
         # in de __init__ is het scherm editable afhankelijk van de setting
         # bool(int(self.settings['RedefineKeys']
-        if bool(int(self.settings[shared.SettType.RDEF.value])):
+        # #1050 is bedoeld om de omzetting bool(int(...)) overbodig te maken
+        # if bool(int(self.settings[shared.SettType.RDEF.value])):
+        if self.settings[shared.SettType.RDEF.value]:
             # eventuele wijzigingen in detailscherm checken
             if not self.initializing_screen:  # in de wx versie zat deze conditie niet
                 # zoek naar wijzigingen in sleutelwaarden
@@ -838,7 +840,7 @@ class ChoiceBook:
         win = self.gui.get_panel()
         if win is None:                     # leaving: no page selected yet
             return
-        self.page = win.master              # change to new selection
+        self.page = win.master              # set to old selection
         if self.page.modified:
             ok = win.exit()
             if not ok:                       # leaving: can't exit modified page yet
@@ -958,6 +960,7 @@ class Editor:
         self.book = ChoiceBook(self)
         self.gui.setup_tabs()
         if self.ini['plugins'] == []:
+            # set up a dummy page
             self.book.page = SimpleNamespace(settings=initjson('', ['', '', False, False, False])[0],
                                              data={}, exit=lambda: True)
             self.gui.setup_menu(minimal=True)
@@ -1215,23 +1218,28 @@ class Editor:
         """define tool-specific settings
         """
         if not self.book.page.settings:
-            self.book.page.settings = {x: 0 for x in shared.settingnames}
+            for i, x in enumerate(shared.settingnames):
+                self.book.page.settings[x] = '' if i < 2 else False
         old_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
+        # #1050 is bedoeld om de omzetting bool(int(...)) overbodig te maken
         if gui.show_dialog(self, gui.ExtraSettingsDialog):
             writejson(self.book.page.pad, self.book.page.reader, self.book.page.settings,
                       self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
-            test_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
-            test_dets = bool(int(self.book.page.settings[shared.SettType.DETS.value]))
-            test_rbld = bool(int(self.book.page.settings[shared.SettType.RBLD.value]))
-            self.gui.modify_menuitem('M_SAVE', test_redef)
-            self.gui.modify_menuitem('M_RBLD', test_rbld)
+            # new_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
+            new_redef = self.book.page.settings[shared.SettType.RDEF.value]
+            # new_dets = bool(int(self.book.page.settings[shared.SettType.DETS.value]))
+            new_dets = self.book.page.settings[shared.SettType.DETS.value]
+            # new_rbld = bool(int(self.book.page.settings[shared.SettType.RBLD.value]))
+            new_rbld = self.book.page.settings[shared.SettType.RBLD.value]
+            self.gui.modify_menuitem('M_SAVE', new_redef)
+            self.gui.modify_menuitem('M_RBLD', new_rbld)
             indx, win = self.book.gui.get_selected_panel()
-            if test_dets != self.book.page.has_extrapanel:
-                self.book.page.has_extrapanel = test_dets
+            if new_dets != self.book.page.has_extrapanel:
+                self.book.page.has_extrapanel = new_dets
                 newwin = HotkeyPanel(self.book, self.ini["plugins"][indx][1]).gui
                 self.book.gui.replace_panel(indx, win, newwin)
-            elif test_redef != old_redef and test_dets:
-                self.book.gui.set_panel_editable(test_redef)
+            elif new_redef != old_redef and new_dets:
+                self.book.gui.set_panel_editable(new_redef)
 
     def accept_extrasettings(self, program, title, rebuild, showdet, redef, data):
         "check and confirm the input from ExtraSettingsDialog"
@@ -1248,9 +1256,13 @@ class Editor:
         if self.book.page.title != title:
             self.book.page.title = title
             self.book.page.set_title()
-        self.book.page.settings[shared.SettType.RBLD.value] = '1' if rebuild else '0'
-        self.book.page.settings[shared.SettType.DETS.value] = '1' if showdet else '0'
-        self.book.page.settings[shared.SettType.RDEF.value] = '1' if redef else '0'
+        # self.book.page.settings[shared.SettType.RBLD.value] = '1' if rebuild else '0'
+        # self.book.page.settings[shared.SettType.DETS.value] = '1' if showdet else '0'
+        # self.book.page.settings[shared.SettType.RDEF.value] = '1' if redef else '0'
+        # #1050 realiseren zou dit moeten vereenvoudigen tot
+        self.book.page.settings[shared.SettType.RBLD.value] = rebuild
+        self.book.page.settings[shared.SettType.DETS.value] = showdet
+        self.book.page.settings[shared.SettType.RDEF.value] = redef
 
         settingsdict, settdescdict = {}, {}
         for name, value, desc in data:
@@ -1322,7 +1334,6 @@ class Editor:
         if len(set(test)) != len(test):
             gui.show_message(self.gui, 'I_DPLNAM')
             return False, False  # not ok but continue with dialog
-        # if len([x for x in test if x]) != len(test):
         if not all(test):
             gui.show_message(self.gui, 'I_MISSNAM')
             return False, False  # not ok but continue with dialog
@@ -1333,30 +1344,16 @@ class Editor:
             return False, False  # not ok but continue with dialog
         # colno wordt alleen gebruikt voor het sorteren
         # old_colno hebben we nog nodig voor build_new_pagedata
-        # print('data from before dialog:', self.col_textids, self.col_names)
-        # print('data from dialog:', data)
-        # for value in sorted(data, key=lambda x: x[2]):
-        #     name, width, colno, flag, old_colno = value
-        #     if name in self.col_names:
-        #         name = self.col_textids[self.col_names.index(name)]
-        #     else:
-        #         new_titles.append(name)
-        #     column_info.append([name, width, flag, old_colno])
         column_info = sorted(data, key=lambda x: x[2])
         for ix, value in enumerate(column_info):
             if value[0] not in self.col_names:
                 new_titles.append(value[0])
-        # print('nieuwe titels:', new_titles)
-        # print('kolominfo:', column_info)
         self.new_column_info = [x[:-1] for x in column_info]
-        # print('originele info:', self.book.page.column_info)
         if new_titles:
             canceled, titles, colinfo = self.build_new_title_data(new_titles, column_info)
             if canceled:
                 # gui.show_message(self.gui, 'T_CANCLD')
                 return False, True  # not ok, do not continue with dialog
-            # print(titles, colinfo)
-            # self.new_column_info = colinfo
             for id_, name in titles:
                 self.captions[id_] = name
                 self.book.page.captions[id_] = name
@@ -1370,6 +1367,8 @@ class Editor:
             if name == self.ini['lang']:
                 colno = indx + 1
                 break
+        else:
+            colno = -1  # no languages defined: not possible here
         self.dialog_data = {'textid': 'C_XXX', 'new_titles': new_titles,
                             'languages': languages, 'colno': colno}
         if not gui.show_dialog(self, gui.NewColumnsDialog):
@@ -1464,13 +1463,13 @@ class Editor:
         self.prefs = oldmode, oldpref
         if gui.show_dialog(self, gui.InitialToolDialog):
             changed = False
-            mode, pref = self.prefs
-            if mode:
-                self.ini['startup'] = mode
-                changed = True  # self.change_setting('startup', oldmode, mode)
+            mode, pref = self.prefs  # can be modified in the dialog
+            mode = mode or oldmode
+            self.ini['startup'] = mode
+            changed = mode != oldmode  # True
             if mode == 'Fixed':
                 self.ini['initial'] = pref
-                changed = True  # self.change_setting('initial', oldpref, pref)
+                changed = changed or pref != oldpref  # True
             if changed:
                 write_settings(self.ini)
 

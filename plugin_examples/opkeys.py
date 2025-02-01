@@ -13,9 +13,8 @@ def get_keydefs(doc, soort, keydefs=None):
 
     context = ''
     for line in doc:
-
         line = line.strip()
-        if not line or line.startswith(';', '#'):
+        if not line or line.startswith((';', '#')):
             continue
         elif line.startswith('['):
             context = line.strip('[]')

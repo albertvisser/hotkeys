@@ -67,11 +67,11 @@ called Label.__init__ with args ('S_PNLNAM', {testobj})
 called LineEdit.__init__
 called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'> at (2, 0, 1, 3)
 called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLineEdit'> at (2, 3)
-called CheckBox.__init__
+called CheckBox.__init__ with text 'T_MAKE S_RBLD'
 called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'> at (3, 0, 1, 4)
-called CheckBox.__init__
+called CheckBox.__init__ with text 'S_DETS'
 called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'> at (4, 0, 1, 4)
-called CheckBox.__init__
+called CheckBox.__init__ with text 'T_MAKE S_RSAV'
 called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'> at (5, 0, 1, 4)
 called Label.__init__ with args ('Q_SAVLOC', {testobj})
 called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'> at (6, 0, 1, 2)
@@ -108,12 +108,12 @@ called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>
 called HBox.addStretch
 called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
 called HBox.__init__
-called CheckBox.__init__
+called CheckBox.__init__ with text 'yyy'
 called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'>
 called HBox.addStretch
 called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
 called HBox.__init__
-called CheckBox.__init__
+called CheckBox.__init__ with text 'zzz'
 called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'>
 called HBox.addStretch
 called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
@@ -352,15 +352,18 @@ called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>
 called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLineEdit'>
 called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
 called HBox.__init__
-called CheckBox.__init__{action}
+called CheckBox.__init__ with text 'zzz aaa'
+called CheckBox.setChecked with arg {action}
 called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'>
 called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
 called HBox.__init__
-called CheckBox.__init__{action}
+called CheckBox.__init__ with text 'ccc'
+called CheckBox.setChecked with arg {action}
 called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'>
 called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
 called HBox.__init__
-called CheckBox.__init__{action}
+called CheckBox.__init__ with text 'zzz bbb'
+called CheckBox.setChecked with arg {action}
 called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'>
 called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
 called Frame.setLayout with arg of type <class 'mockgui.mockqtwidgets.MockVBoxLayout'>
@@ -393,9 +396,9 @@ called Grid.__init__
 extra_middle = """\
 called ExtraSettingsDialog.add_row with args ('PluginName', 'xxx', '')
 called ExtraSettingsDialog.add_row with args ('PanelName', 'yyy', '')
-called ExtraSettingsDialog.add_row with args ('RebuildData', '1', '')
-called ExtraSettingsDialog.add_row with args ('RedefineKeys', '1', '')
-called ExtraSettingsDialog.add_row with args ('ShowDetails', '1', '')
+called ExtraSettingsDialog.add_row with args ('RebuildData', True, '')
+called ExtraSettingsDialog.add_row with args ('RedefineKeys', True, '')
+called ExtraSettingsDialog.add_row with args ('ShowDetails', True, '')
 called ExtraSettingsDialog.add_row with args ('XYZ', 'xyz', 'xxyyzz')
 called ExtraSettingsDialog.add_row with args ('ABC', 'abc', '')
 """
@@ -1163,7 +1166,7 @@ class TestFilesDialog:
         assert testobj.paths[0][0] == 'name'
         assert isinstance(testobj.paths[0][1], testee.FileBrowseButton)
         assert capsys.readouterr().out == (
-                "called CheckBox.__init__\n"
+                "called CheckBox.__init__ with text 'name'\n"
                 "called Grid.addWidget with arg of type"
                 " <class 'mockgui.mockqtwidgets.MockCheckBox'> at (1, 0)\n"
                 f"called gui.FileBrowseButton with args ({testobj},) {{'text': ''}}\n"
@@ -1186,7 +1189,7 @@ class TestFilesDialog:
         assert testobj.paths[0][0] == 'name'
         assert isinstance(testobj.paths[0][1], testee.FileBrowseButton)
         assert capsys.readouterr().out == (
-                "called CheckBox.__init__\n"
+                "called CheckBox.__init__ with text 'name'\n"
                 "called Grid.addWidget with arg of type"
                 " <class 'mockgui.mockqtwidgets.MockCheckBox'> at (1, 0)\n"
                 f"called gui.FileBrowseButton with args ({testobj},) {{'text': 'path'}}\n"
@@ -1339,13 +1342,13 @@ class TestFilesDialog:
         check_c = mockqtw.MockCheckBox('zzz')
         file_c = MockFileBrowseButton('ccc')
         check_c.setChecked(True)
-        assert capsys.readouterr().out == ("called CheckBox.__init__\n"
+        assert capsys.readouterr().out == ("called CheckBox.__init__ with text 'xxx'\n"
                                            "called gui.FileBrowseButton with args ('aaa',) {}\n"
                                            "called LineEdit.__init__\n"
-                                           "called CheckBox.__init__\n"
+                                           "called CheckBox.__init__ with text 'yyy'\n"
                                            "called gui.FileBrowseButton with args ('bbb',) {}\n"
                                            "called LineEdit.__init__\n"
-                                           "called CheckBox.__init__\n"
+                                           "called CheckBox.__init__ with text 'zzz'\n"
                                            "called gui.FileBrowseButton with args ('ccc',) {}\n"
                                            "called LineEdit.__init__\n"
                                            "called CheckBox.setChecked with arg True\n")
@@ -1362,6 +1365,14 @@ class TestFilesDialog:
         assert not testobj.code_to_remove
         assert capsys.readouterr().out == ("called CheckBox.isChecked\n"
                                            "called CheckBox.isChecked\n")
+        testobj.checks = [check_c]
+        testobj.remove_programs()
+        assert not testobj.data_to_remove
+        assert not testobj.code_to_remove
+        assert capsys.readouterr().out == ("called CheckBox.isChecked\n"
+                                           "called DeleteDialog.__init__\n"
+                                           "called DeleteDialog.exec\n")
+
         monkeypatch.setattr(testee, 'DeleteDialog', MockDelete2)
         testobj.checks = [check_c]
         testobj.paths = [('zzz', file_c)]
@@ -1625,6 +1636,9 @@ class TestColumnSettingsDialog:
                                            "called ComboBox.__init__\n"
                                            "called SpinBox.__init__\n")
         testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.data = []
+        testobj.on_text_changed('name2')
+        assert capsys.readouterr().out == ""
         testobj.data = [(name1, width1, 'x', 'y'), (name2, width2, 'a', 'b')]
         testobj.on_text_changed('name2')
         assert capsys.readouterr().out == ("called ComboBox.currentText\n"
@@ -1660,9 +1674,15 @@ class TestColumnSettingsDialog:
         assert capsys.readouterr().out == ("called CheckBox.__init__\ncalled CheckBox.__init__\n")
         testobj.checks = [check1, check2]
         testobj.remove_columns()
-        assert capsys.readouterr().out == ("called CheckBox.isChecked\ncalled CheckBox.isChecked\n")
+        assert capsys.readouterr().out == ("called CheckBox.isChecked\n"
+                                           "called CheckBox.isChecked\n")
         check2.setChecked(True)
         assert capsys.readouterr().out == ("called CheckBox.setChecked with arg True\n")
+        testobj.remove_columns()
+        assert capsys.readouterr().out == (
+                "called CheckBox.isChecked\n"
+                "called CheckBox.isChecked\n"
+                f"called ask_question with args ({testobj.parent}, 'Q_REMCOL')\n")
         monkeypatch.setattr(testee, 'ask_question', mock_ask_2)
         testobj.remove_columns()
         assert capsys.readouterr().out == (
@@ -1852,9 +1872,9 @@ class TestExtraSettingsDialog:
         master.book = types.SimpleNamespace(page=types.SimpleNamespace())
         master.book.page.settings = {testee.shared.SettType.PLG.value: 'xxx',
                                      testee.shared.SettType.PNL.value: 'yyy',
-                                     testee.shared.SettType.RBLD.value: '0',
-                                     testee.shared.SettType.RDEF.value: '0',
-                                     testee.shared.SettType.DETS.value: '0'}
+                                     testee.shared.SettType.RBLD.value: False,  # '0',
+                                     testee.shared.SettType.RDEF.value: False,  # '0',
+                                     testee.shared.SettType.DETS.value: False}  # '0'}
         monkeypatch.setattr(testee.qtw.QDialog, '__init__', mockqtw.MockDialog.__init__)
         monkeypatch.setattr(testee.qtw.QDialog, 'setWindowTitle', mockqtw.MockDialog.setWindowTitle)
         monkeypatch.setattr(testee.qtw.QFrame, 'setFrameStyle', mockqtw.MockFrame.setFrameStyle)
@@ -1881,10 +1901,10 @@ class TestExtraSettingsDialog:
         assert isinstance(testobj.c_showdet, testee.qtw.QCheckBox)
         assert isinstance(testobj.c_redef, testee.qtw.QCheckBox)
         assert capsys.readouterr().out == expected_output['extra'].format(
-                testobj=testobj, testee=testee, action="")
-        master.book.page.settings[testee.shared.SettType.RBLD.value] = '1'
-        master.book.page.settings[testee.shared.SettType.RDEF.value] = '1'
-        master.book.page.settings[testee.shared.SettType.DETS.value] = '1'
+                testobj=testobj, testee=testee, action="False")
+        master.book.page.settings[testee.shared.SettType.RBLD.value] = True  # '1'
+        master.book.page.settings[testee.shared.SettType.RDEF.value] = True  # '1'
+        master.book.page.settings[testee.shared.SettType.DETS.value] = True  # '1'
         master.book.page.settings['XYZ'] = 'xyz'
         master.book.page.settings['ABC'] = 'abc'
         monkeypatch.setattr(testee.shared, 'settingnames', [])
@@ -1896,7 +1916,7 @@ class TestExtraSettingsDialog:
         assert isinstance(testobj.c_showdet, testee.qtw.QCheckBox)
         assert isinstance(testobj.c_redef, testee.qtw.QCheckBox)
         assert capsys.readouterr().out == expected_output['extra2'].format(
-                testobj=testobj, testee=testee, action="\ncalled CheckBox.toggle")
+                testobj=testobj, testee=testee, action="True")
 
     def test_add_row(self, monkeypatch, capsys):
         """unittest for ExtraSettingsDialog.add_row
@@ -2216,6 +2236,7 @@ class TestEntryDialog:
                                            "called Table.removeRow with arg '1'\n"
                                            "called Table.removeRow with arg '0'\n")
 
+# 978-979  (AttributeError)
     def test_accept(self, monkeypatch, capsys):
         """unittest for EntryDialog.accept
         """

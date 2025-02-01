@@ -72,7 +72,7 @@ class FieldHandler:
                 self.gui.cb_alt = cb
             elif ix == 2:
                 self.gui.cb_shift = cb
-            elif ix == 3:
+            else:  # if ix == 3:  # geen andere mogelijkheid
                 self.gui.cb_win = cb
 
     def build_context_field(self):
@@ -228,8 +228,8 @@ class SingleDataInterface(qtw.QFrame):
             hdr = self.p0list.header()
             hdr.setSectionsClickable(True)
             for indx, col in enumerate(self.master.column_info):
-                if indx <= len(self.master.column_info):
-                    hdr.resizeSection(indx, col[1])
+                # if indx <= len(self.master.column_info):  overbodige afvraging
+                hdr.resizeSection(indx, col[1])
             hdr.setStretchLastSection(True)
             self.master.populate_list()
             self.p0list.setSortingEnabled(True)
@@ -807,11 +807,15 @@ class Gui(qtw.QMainWindow):
         if sel == 'M_READ' and not self.editor.book.page.data:
             act.setEnabled(False)
         if sel == 'M_RBLD':
-            act.setEnabled(bool(int(self.editor.book.page.settings.get(shared.SettType.RBLD.value,
-                                                                       "0"))))
+            # act.setEnabled(bool(int(self.editor.book.page.settings.get(shared.SettType.RBLD.value,
+            #                                                            "0"))))
+            # #1050 is bedoeld om dit te vereenvoudigen tot
+            act.setEnabled(self.editor.book.page.settings.get(shared.SettType.RBLD.value, False))
         elif sel == 'M_SAVE':
-            act.setEnabled(bool(int(self.editor.book.page.settings.get(shared.SettType.RDEF.value,
-                                                                       "0"))))
+            # act.setEnabled(bool(int(self.editor.book.page.settings.get(shared.SettType.RDEF.value,
+            #                                                            "0"))))
+            # #1050 is bedoeld om dit te vereenvoudigen tot
+            act.setEnabled(self.editor.book.page.settings.get(shared.SettType.RDEF.value, False))
         return act
 
     def setcaptions(self):

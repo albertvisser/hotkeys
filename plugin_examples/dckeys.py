@@ -540,12 +540,12 @@ def update_otherstuff_inbound(otherstuff):
     newstuff = {}
     for key, value in otherstuff['stdkeys'].items():
         newkey = key.split(' ')  # split explicitely on one space
-        newstuff[newkey] = value
+        newstuff[tuple(newkey)] = value
     otherstuff['stdkeys'] = newstuff
     newstuff = {}
     for key, value in otherstuff['defaults'].items():
         newkey = key.split(' ')  # split explicitely on one space
-        newstuff[newkey] = value
+        newstuff[tuple(newkey)] = value
     otherstuff['defaults'] = newstuff
     return otherstuff
 
