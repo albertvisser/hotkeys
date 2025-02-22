@@ -294,7 +294,7 @@ class HotkeyPanel:
         #     self.has_extrapanel = bool(int(self.settings[shared.SettType.DETS.value]))
         # except KeyError:
         #     shared.log_exc()
-        self.has_extrapanel = bool(int(self.settings[shared.SettType.DETS.value]))
+        self.has_extrapanel = self.settings[shared.SettType.DETS.value]
         self.title = self.settings[shared.SettType.PNL.value]  # "PanelName"]
 
         # self.has_extrapanel controleert extra initialisaties en het opbouwen van het extra
