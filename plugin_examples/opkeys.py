@@ -16,7 +16,7 @@ def get_keydefs(doc, soort, keydefs=None):
         line = line.strip()
         if not line or line.startswith((';', '#')):
             continue
-        elif line.startswith('['):
+        if line.startswith('['):
             context = line.strip('[]')
             if context in keydefs or context.lower() in ('info', 'version'):
                 context = ''
@@ -126,11 +126,7 @@ class Settings:
                 if line.startswith('#') or '=' not in line:
                     f_out.write(line)
                     continue
-                try:
-                    naam, waarde = line.strip().split('=')
-                except ValueError:
-                    f_out.write(line)
-                    continue
+                naam, waarde = line.strip().split('=')
                 if naam == self.namen[0]:
                     f_out.write(line.replace(waarde, self.std))
                 elif naam == self.namen[1]:

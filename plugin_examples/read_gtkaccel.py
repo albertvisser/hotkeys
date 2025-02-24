@@ -39,7 +39,7 @@ def read_keydefs_and_stuff(filename):
     result = {'keydefs': keydefs}
 
     actions, actiondict, descriptions = expand_actions(actions)
-    contextlist = [x for x in actiondict]
+    contextlist = list(actiondict)
     result.update({'actions': actions, 'actionscontext': actiondict,
                    'contexts': contextlist, 'descriptions': descriptions})
     if others:
@@ -59,11 +59,10 @@ def readfile(filename):
         for line in _in:
             ## colon_ed = False
             if KEYDEF in line:
-                if line.startswith(';'):
-                    ## colon_ed = True  # don't know what this means: line ended in colon
-                    line = line[1:].strip()
-                line = line.rsplit(')', 1)[0]
-                data = line.split(KEYDEF, 1)[1].strip().split('" "')
+                # if line.startswith(';'):
+                #     ## colon_ed = True  # don't know what this means: line ended in colon
+                #     line = line[1:].strip()
+                data = line.rsplit(')', 1)[0].split(KEYDEF, 1)[1].strip().split('" "')
                 if len(data) != len(['two', 'items']):
                     print(line)
                     print('contains more/less that 2 items, what to do?')
