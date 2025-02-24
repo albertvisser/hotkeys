@@ -1363,6 +1363,7 @@ class Editor:
         """ask for column details, ids for new titles etc.
         """
         languages = [x.name for x in shared.HERELANG.iterdir() if x.suffix == ".lng"]
+        languages.sort()
         for indx, name in enumerate(languages):
             if name == self.ini['lang']:
                 colno = indx + 1
@@ -1436,6 +1437,7 @@ class Editor:
         """
         # bepaal welke language files er beschikbaar zijn
         choices = [x.name for x in shared.HERELANG.iterdir() if x.suffix == ".lng"]
+        choices.sort()
         # bepaal welke er momenteel geactiveerd is
         oldlang = self.ini['lang']
         indx = choices.index(oldlang) if oldlang in choices else 0
