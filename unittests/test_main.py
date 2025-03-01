@@ -2060,6 +2060,7 @@ def test_editor_init(monkeypatch, capsys):
     assert testobj.book.page.data == {}
     assert testobj.book.page.exit()
     assert isinstance(testobj.gui, testee.gui.Gui)
+    assert not testobj.forgetatexit
     assert capsys.readouterr().out == (
             "called shared.save_log\n"
             "called Editor.readcaptions with arg 'english.lng'\n"
@@ -2074,13 +2075,13 @@ def test_editor_init(monkeypatch, capsys):
     monkeypatch.setattr(testee.pathlib.Path, 'exists', lambda *x: True)
     monkeypatch.setattr(testee, 'read_settings', mock_read_2)
     args = types.SimpleNamespace(conf='other_conf', start='y')
-    # breakpoint()
     testobj = testee.Editor(args)
     assert testobj.ini == {'initial': 'y', 'lang': 'en', 'title': '', 'plugins': [('x', 'xxx'),
                                                                                   ('y', 'yyy')]}
     assert testobj.pluginfiles == {}
     assert isinstance(testobj.gui, testee.gui.Gui)
     assert isinstance(testobj.book, testee.ChoiceBook)
+    assert testobj.forgetatexit
     assert capsys.readouterr().out == (
             "called shared.save_log\n"
             "called read_settings with arg '/confbase/other_conf'\n"
@@ -2095,6 +2096,14 @@ def test_editor_init(monkeypatch, capsys):
             "called ChoiceBook.on_page_changed with arg '1'\n"
             "called Editor.setcaptions\n"
             "called Gui.go\n")
+    args = types.SimpleNamespace(conf='other_conf', start='z')
+    with pytest.raises(ValueError) as e:
+        testobj = testee.Editor(args)
+    assert str(e.value) == "Can't start with z: possible values are ['x', 'y']"
+    assert capsys.readouterr().out == (
+            "called shared.save_log\n"
+            "called read_settings with arg '/confbase/other_conf'\n")
+
     monkeypatch.setattr(testee, 'read_settings', mock_read_3)
     args = types.SimpleNamespace(conf='/yet/another/conf', start='')
     testobj = testee.Editor(args)
@@ -2150,31 +2159,6 @@ def setup_editor(monkeypatch, capsys):
                                        'called TabbedInterface.__init__ with args ()\n'
                                        f'called Gui.__init__ with arg {testobj}\n')
     return testobj
-
-# def test_editor_show_empty_screen(monkeypatch, capsys):
-#     """unittest for main.Editor.show_empty_screen
-#     """
-#     class MockDummy:
-#         "stub for gui.DummyPage"
-#         def __init__(self, *args):
-#             print('called gui.DummyPage.__init__ with args', args)
-#     def mock_init(self):
-#         print('called Editor.__init__')
-#     monkeypatch.setattr(testee.Editor, '__init__', mock_init)
-#     monkeypatch.setattr(testee.gui, 'DummyPage', MockDummy)
-#     testobj = testee.Editor()
-#     testobj.gui = MockGui(testobj)
-#     assert capsys.readouterr().out == ('called Editor.__init__\n'
-#                                        f'called Gui.__init__ with arg {testobj}\n')
-#     testobj.captions = {'EMPTY_CONFIG_TEXT': 'Empty'}
-#     testobj.show_empty_screen()
-#     assert isinstance(testobj.book, testee.SimpleNamespace)
-#     assert isinstance(testobj.book.gui, testee.gui.DummyPage)
-#     assert isinstance(testobj.book.page, testee.SimpleNamespace)
-#     assert testobj.book.page.gui == testobj.book.gui
-#     assert capsys.readouterr().out == (
-#             f"called gui.DummyPage.__init__ with args ({testobj.gui}, 'Empty')\n"
-#             "called Gui.resize_empty_screen with args (640, 80)\n")
 
 def test_editor_get_menudata(monkeypatch, capsys):
     """unittest for main.Editor.get_menudata
@@ -3247,10 +3231,7 @@ def test_editor_m_pref(monkeypatch, capsys):
     assert testobj.ini['initial'] == 'unchanged'
     assert capsys.readouterr().out == (
             "called gui.show_dialog with args"
-            f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-            # "called write_settings with arg"
-            # " '{'startup': 'Fixed', 'initial': 'unchanged'}'\n"
-            )
+            f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n")
 
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_4)
     testobj.ini = {'startup': 'Fixed', 'initial': 'unchanged'}
@@ -3274,52 +3255,6 @@ def test_editor_m_pref(monkeypatch, capsys):
             "called write_settings with arg"
             " '{'startup': 'Fixed', 'initial': 'changed'}'\n")
 
-    # monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_2)
-    # testobj.ini = {'startup': 'Remember', 'initial': 'unchanged'}
-    # testobj.m_pref()
-    # assert testobj.ini['startup'] == 'Remember'
-    # assert testobj.ini['initial'] == 'unchanged'
-    # assert capsys.readouterr().out == (
-    #         "called gui.show_dialog with args"
-    #         f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-    #         # "called write_settings with arg"
-    #         # " '{'startup': 'Remember', 'initial': 'unchanged'}'\n"
-    #         )
-
-    # monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_3)
-    # testobj.ini = {'startup': 'Remember', 'initial': 'unchanged'}
-    # testobj.m_pref()
-    # assert testobj.ini['startup'] == 'Fixed'
-    # assert testobj.ini['initial'] == 'unchanged'
-    # assert capsys.readouterr().out == (
-    #         "called gui.show_dialog with args"
-    #         f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-    #         "called write_settings with arg"
-    #         " '{'startup': 'Fixed', 'initial': 'unchanged'}'\n")
-
-    # monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_4)
-    # testobj.ini = {'startup': 'Remember', 'initial': 'unchanged'}
-    # testobj.m_pref()
-    # assert testobj.ini['startup'] == 'Remember'
-    # assert testobj.ini['initial'] == 'unchanged'
-    # assert capsys.readouterr().out == (
-    #         "called gui.show_dialog with args"
-    #         f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-    #         # "called write_settings with arg"
-    #         # " '{'startup': 'Remember', 'initial': 'unchanged'}'\n"
-    #         )
-
-    # monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_5)
-    # testobj.ini = {'startup': 'Remember', 'initial': 'unchanged'}
-    # testobj.m_pref()
-    # assert testobj.ini['startup'] == 'Fixed'
-    # assert testobj.ini['initial'] == 'changed'
-    # assert capsys.readouterr().out == (
-    #         "called gui.show_dialog with args"
-    #         f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-    #         "called write_settings with arg"
-    #         " '{'startup': 'Fixed', 'initial': 'changed'}'\n")
-
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_6)
     testobj.ini = {'startup': 'Remember', 'initial': 'unchanged'}
     testobj.m_pref()
@@ -3327,10 +3262,7 @@ def test_editor_m_pref(monkeypatch, capsys):
     assert testobj.ini['initial'] == 'unchanged'
     assert capsys.readouterr().out == (
             "called gui.show_dialog with args"
-            f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-            # "called write_settings with arg"
-            # " '{'startup': 'Remember', 'initial': 'unchanged'}'\n"
-            )
+            f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n")
 
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_6)
     testobj.ini = {'startup': 'Fixed', 'initial': 'unchanged'}
@@ -3397,6 +3329,7 @@ def test_editor_exit(monkeypatch, capsys):
     assert capsys.readouterr().out == ("called HotkeyPanel.exit\n"
                                        "called Gui.close\n")
     testobj.ini = {'startup': 'remember'}
+    testobj.forgetatexit = False
     testobj.book.gui.get_selected_text = mock_get
     testobj.exit()
     assert testobj.ini['initial'] == 'xxx'
@@ -3407,6 +3340,14 @@ def test_editor_exit(monkeypatch, capsys):
                                        " {'nobackup': True}\n"
                                        "called Gui.close\n")
     testobj.ini = {'startup': 'remember', 'initial': 'yyy'}
+    testobj.forgetatexit = True
+    testobj.book.gui.get_selected_text = mock_get
+    testobj.exit()
+    assert testobj.ini['initial'] == 'yyy'
+    assert capsys.readouterr().out == ("called HotkeyPanel.exit\n"
+                                       "called Gui.close\n")
+    testobj.ini = {'startup': 'remember', 'initial': 'yyy'}
+    testobj.forgetatexit = False
     testobj.book.gui.get_selected_text = mock_get
     testobj.exit()
     assert testobj.ini['initial'] == 'xxx'

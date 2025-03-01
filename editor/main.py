@@ -13,7 +13,6 @@ from types import SimpleNamespace
 import os
 import pathlib
 import json
-import enum
 import shutil
 import collections
 import string
@@ -42,16 +41,6 @@ the default code in the main program will be used.
 '''
 initial_settings = {'plugins': [], 'lang': 'english.lng', 'startup': 'Remember', 'initial': ''}
 initial_columns = [["C_KEY", 120, False], ["C_MODS", 90, False], ["C_DESC", 292, False]]
-
-
-# class LineType(enum.Enum):
-#     """Types of lines in the keydef file (first value)
-#     """
-#     SETT = 'Setting'
-#     CAPT = 'Title'
-#     WID = 'Width'
-#     ORIG = 'is_type'
-#     KEY = 'Keydef'
 
 
 def readlang(lang):
@@ -947,31 +936,28 @@ class Editor:
             self.ini = read_settings(ini)
         else:
             self.ini = {'lang': 'english.lng', 'plugins': [], 'startup': 'Remember', 'filename': ini}
+        appslist = [x[0] for x in self.ini['plugins']]
+        if args.start and args.start not in appslist:
+            raise ValueError(f"Can't start with {args.start}: possible values are {appslist}")
         self.readcaptions(self.ini['lang'])
         self.title = self.captions["T_MAIN"]
         self.pluginfiles = {}
         self.book = None
         self.gui = gui.Gui(self)
-        # if self.ini['plugins'] == []:
-        #     self.show_empty_screen()
-        # else:
         self.gui.set_window_title(self.title)
         self.gui.statusbar_message(self.captions["T_HELLO"].format(self.captions["T_MAIN"]))
         self.book = ChoiceBook(self)
         self.gui.setup_tabs()
-        if self.ini['plugins'] == []:
-            # set up a dummy page
-            self.book.page = SimpleNamespace(settings=initjson('', ['', '', False, False, False])[0],
-                                             data={}, exit=lambda: True)
-            self.gui.setup_menu(minimal=True)
-        start = 0
         if self.ini.get('title', ''):
             self.title = self.ini['title']
+        self.forgetatexit = False
         if self.ini['plugins']:
+            start = 0
             startapp = args.start
             if startapp:
                 with contextlib.suppress(ValueError):
                     start = [x for x, y in self.ini['plugins']].index(startapp) + 1
+                    self.forgetatexit = True
             if not start and self.ini.get('initial', ''):
                 start = [x for x, y in self.ini['plugins']].index(self.ini['initial']) + 1
             start -= 1
@@ -979,6 +965,11 @@ class Editor:
                 self.book.gui.set_selected_tool(start)
                 self.book.on_page_changed(start)
             self.setcaptions()
+        else:
+            # set up a dummy page
+            self.book.page = SimpleNamespace(settings=initjson('', ['', '', False, False, False])[0],
+                                             data={}, exit=lambda: True)
+            self.gui.setup_menu(minimal=True)
         self.gui.go()
 
     # deze methode wordt niet meer gebruikt
@@ -1500,7 +1491,7 @@ class Editor:
         mode = self.ini.get("startup", '')
         # pref = self.ini.get("initial", '')
         # when setting is 'remember', set the remembered tool to the current one
-        if mode == shared.mode_r:
+        if mode == shared.mode_r and not self.forgetatexit:
             try:
                 # oldpref, pref = pref, self.book.gui.get_selected_text()
                 self.ini['initial'] = self.book.gui.get_selected_text()
