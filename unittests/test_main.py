@@ -5,7 +5,7 @@ import pytest
 import editor.main as testee
 
 
-class MockSettType(testee.enum.Enum):
+class MockSettType(testee.shared.enum.Enum):
     """stub for shared.SettType
     """
     PLG = 'plg'
