@@ -449,19 +449,19 @@ called Header.resizeSection for col 1 width 2
 """
 entry_middle = """\
 called Table.insertRow with arg '0'
-called TableItem.__init__ with arg xy
-called TableItem.settext with arg xx
-called Table.setItem with args (0, 0, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)
-called TableItem.__init__ with arg xy
-called TableItem.settext with arg yy
-called Table.setItem with args (0, 1, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called TableItem.__init__ with arg ''
+called TableItem.setText with arg 'xx'
+called Table.setItem with args (0, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called TableItem.__init__ with arg ''
+called TableItem.setText with arg 'yy'
+called Table.setItem with args (0, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
 called Table.insertRow with arg '1'
-called TableItem.__init__ with arg xy
-called TableItem.settext with arg aa
-called Table.setItem with args (1, 0, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)
-called TableItem.__init__ with arg xy
-called TableItem.settext with arg bb
-called Table.setItem with args (1, 1, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called TableItem.__init__ with arg ''
+called TableItem.setText with arg 'aa'
+called Table.setItem with args (1, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called TableItem.__init__ with arg ''
+called TableItem.setText with arg 'bb'
+called Table.setItem with args (1, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
 """
 entry_end = """\
 called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockTable'>
@@ -2202,14 +2202,14 @@ class TestEntryDialog:
         assert capsys.readouterr().out == (
                 "called Table.insertRow with arg '1'\n"
                 "called Table.columnCount\n"
-                "called TableItem.__init__ with arg xy\n"
-                "called TableItem.settext with arg \n"
+                "called TableItem.__init__ with arg ''\n"
+                "called TableItem.setText with arg ''\n"
                 "called Table.setItem with args"
-                " (1, 0, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
-                "called TableItem.__init__ with arg xy\n"
-                "called TableItem.settext with arg \n"
+                " (1, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called TableItem.__init__ with arg ''\n"
+                "called TableItem.setText with arg ''\n"
                 "called Table.setItem with args"
-                " (1, 1, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                " (1, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
                 "called Table.scrollToBottom\n")
 
     def test_delete_key(self, monkeypatch, capsys):
@@ -2256,18 +2256,18 @@ class TestEntryDialog:
                 "called Header.__init__\n"
                 "called Table.setRowCount with arg '2'\n"
                 "called Table.setColumnCount with arg '2'\n"
-                "called TableItem.__init__ with arg 0x0\n"
+                "called TableItem.__init__ with arg '0x0'\n"
                 "called Table.setItem with args"
-                " (0, 0, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
-                "called TableItem.__init__ with arg 0x1\n"
+                " (0, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called TableItem.__init__ with arg '0x1'\n"
                 "called Table.setItem with args"
-                " (0, 1, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
-                "called TableItem.__init__ with arg 1x0\n"
+                " (0, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called TableItem.__init__ with arg '1x0'\n"
                 "called Table.setItem with args"
-                " (1, 0, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
-                "called TableItem.__init__ with arg 1x1\n"
+                " (1, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called TableItem.__init__ with arg '1x1'\n"
                 "called Table.setItem with args"
-                " (1, 1, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)\n")
+                " (1, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n")
         testobj.accept()
         assert testobj.master.book.page.data == {1: ['0x0', '0x1'], 2: ['1x0', '1x1']}
         assert capsys.readouterr().out == ("called Table.rowCount\n"
@@ -2353,18 +2353,18 @@ class TestCompleteDialog:
         assert capsys.readouterr().out == (
                 "called Table.setRowCount with arg '2'\n"
                 "called Table.setColumnCount with arg '2'\n"
-                "called TableItem.__init__ with arg 0x0\n"
+                "called TableItem.__init__ with arg '0x0'\n"
                 "called Table.setItem with args"
-                " (0, 0, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
-                "called TableItem.__init__ with arg 0x1\n"
+                " (0, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called TableItem.__init__ with arg '0x1'\n"
                 "called Table.setItem with args"
-                " (0, 1, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
-                "called TableItem.__init__ with arg 1x0\n"
+                " (0, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called TableItem.__init__ with arg '1x0'\n"
                 "called Table.setItem with args"
-                " (1, 0, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
-                "called TableItem.__init__ with arg 1x1\n"
+                " (1, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called TableItem.__init__ with arg '1x1'\n"
                 "called Table.setItem with args"
-                " (1, 1, item of <class 'mockgui.mockqtwidgets.MockTableItem'>)\n")
+                " (1, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n")
         testobj.accept()
         assert testobj.master.dialog_data == {'0x0': '0x1', '1x0': '1x1'}
         assert capsys.readouterr().out == ("called Table.rowCount\n"
