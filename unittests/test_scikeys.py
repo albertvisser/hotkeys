@@ -397,13 +397,6 @@ class TestPropertiesFile:
                                            "called nicefy_props with arg 'F1'\n"
                                            "called nicefy_props with arg 'F5'\n")
 
-    # def _test_probably_obsolete_routine(self, monkeypatch, capsys):
-    #     """unittest for PropertiesFile.probably_obsolete_routine
-    #     """
-    #     testobj = self.setup_testobj(monkeypatch, capsys)
-    #     assert testobj.probably_obsolete_routine() == "expected_result"
-    #     assert capsys.readouterr().out == ("")
-
     def test_process_manual_toolcommand_shortcuts(self, monkeypatch, capsys):
         """unittest for PropertiesFile.process_manual_toolcommand_shortcuts
         """
@@ -485,41 +478,6 @@ class TestPropertiesFile:
                             'descriptions': {'key': [('ftype', 'plat', 'description')]}}
         testobj._process_automatic_toolcommand_shortcuts(data)
         assert data == [['y', 'C', 'ftype', 'plat', 'command', 'description']]
-
-    # def _test_do_substitutions(self, monkeypatch, capsys):
-    #     """unittest for PropertiesFile._do_substitutions
-    #     """
-    #     testobj = self.setup_testobj(monkeypatch, capsys)
-    #     assert testobj._do_substitutions(prop, value) == "expected_result"
-    #     assert capsys.readouterr().out == ("")
-
-    # def test_create_variants(self, monkeypatch, capsys):
-    #     """unittest for PropertiesFile._create_variants
-    #     """
-    #     testobj = self.setup_testobj(monkeypatch, capsys)
-    #     testobj.properties = {'xxx': {'a': 'yyy', 'b': 'zzz'}}
-    #     assert testobj._create_variants('xxx', '-->', '<--') == [('a', '-->yyy<--'),
-    #                                                              ('b', '-->zzz<--')]
-
-    # def test_expand_from_other(self, monkeypatch, capsys):
-    #     """unittest for PropertiesFile._expand_from_other
-    #     """
-    #     testobj = self.setup_testobj(monkeypatch, capsys)
-    #     testobj._default_platform = 'b'
-    #     testobj._platform = 'q'
-    #     testobj._acceptable_combinations = [('q', 'c'), ('q', 'r')]
-    #     testobj.properties = {'xxx': {'a': 'yyy', 'b': 'zzz', 'c': 'pqr'}}
-    #     assert testobj._expand_from_other('xxx', '-->', '<--') == "-->zzz<--"
-    #     testobj._default_platform = 'x'
-    #     testobj._platform = 'q'
-    #     testobj._acceptable_combinations = [('q', 'c'), ('q', 'r')]
-    #     testobj.properties = {'xxx': {'a': 'yyy', 'b': 'zzz', 'c': 'pqr'}}
-    #     assert testobj._expand_from_other('xxx', '-->', '<--') == "-->pqr<--"
-    #     testobj._default_platform = 'x'
-    #     testobj._platform = 'y'
-    #     testobj._acceptable_combinations = [('q', 'c'), ('q', 'r')]
-    #     testobj.properties = {'xxx': {'a': 'yyy', 'b': 'zzz', 'c': 'pqr'}}
-    #     assert testobj._expand_from_other('xxx', '-->', '<--') == ""
 
 
 def test_merge_command_dicts():
