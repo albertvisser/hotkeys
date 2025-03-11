@@ -10,13 +10,16 @@ import csv
 import xml.etree.ElementTree as ET
 import bs4 as bs  # import BeautifulSoup
 from ..gui import (show_cancel_message, get_file_to_open, get_file_to_save, show_dialog,
-                   ask_ync_question)
+                   show_message, ask_ync_question)
 from .dckeys_gui import layout_extra_fields, DcCompleteDialog
 
 CONFPATH = '/home/albert/.config/doublecmd'
 # DOCSPATH = '/usr/share/doublecmd/doc/en'
 DOCSPATH = 'https:/doublecmd.github.io/doc/en'
 HERE = os.path.dirname(__file__)
+TEMPLOC = '/tmp/dc_files'
+DCVER = "0.6.6 beta"
+KBVER = "20"
 
 instructions = """\
 Instructions for rebuilding the keyboard shortcut definitions
@@ -94,7 +97,7 @@ def get_data_from_csv(filename):
     result = []
     with open(filename) as _in:
         rdr = csv.reader(_in)
-        result = [line for line in rdr]
+        result = list(rdr)  # [line for line in rdr]
     return result
 
 
@@ -112,11 +115,11 @@ def parse_keytext(text):
     """leid keynamen en modifiers op uit tekst
 
     geeft een list terug van keynaam - modifier-list paren
-    voorziet nog niet in , key al dan niet met modifiers
     """
     retval = []
 
     # uitzondering op het onderstaande
+    # tekst is "Esc, Q (or with any combination Ctrl, Shift, Alt)"
     if text.startswith('Esc, Q ('):  # uitgeprobeerd: toevoeging klopt niet (bij mij)
         return [('Esc', ''), ('Q', '')]
     # split keycombos
@@ -139,8 +142,7 @@ def parse_keytext(text):
 
 
 def analyze_keydefs(root):  # , cat_name):
-    """build the data for a specific category (corresponds with a section in the
-    html)
+    """build the data for a specific category (corresponds with a section in the html)
 
     input:
         met BeautifulSoup geparsede node data
@@ -157,8 +159,8 @@ def analyze_keydefs(root):  # , cat_name):
         for row in tbl.children:
             if not row.name or row.name != 'tr':
                 continue
-            if 'class' in row.attrs and row['class'] in ('rowcategorytitle',
-                                                         'rowsubtitle'):
+            if 'class' in row.attrs and ('rowcategorytitle' in row['class']
+                                         or 'rowsubtitle' in row['class']):
                 continue
             command, defkey, params, desctable = '', '', [], []
 
@@ -185,7 +187,7 @@ def analyze_keydefs(root):  # , cat_name):
                             desctable.append(item)
                         elif item.name != 'table':
                             desctable.append(' '.join([x.strip()
-                                                      for x in item.get_text().split('\n')]))
+                                                       for x in item.get_text().split('\n')]))
                         elif "innercmddesc" in item['class']:
                             for line in item.children:
                                 if line.name != 'tr':
@@ -233,10 +235,15 @@ def build_data(page, showinfo=True):
     """
     builder = CsvBuilder(page, showinfo)
     kbfile, dc_keys, dc_cmds, dc_sett, dc_desc = builder.get_settings_pathnames()
+    # breakpoint()
     if showinfo:
-        new_kbfile = builder.check_path_setting(kbfile)
-        if new_kbfile and not kbfile:
-            kbfile = page.settings['DC_PATH'] = new_kbfile
+        while True:
+            new_kbfile = builder.check_path_setting(kbfile)
+            if new_kbfile and (not kbfile or new_kbfile != kbfile):
+                kbfile = page.settings['DC_PATH'] = new_kbfile
+            if kbfile:
+                break
+            show_message(builder.page.gui, text="You MUST provide a name for the settings file")
     # map toets + context op o.a. commando
     builder.get_keydefs(get_data_from_xml(kbfile))
     # map omschrijvingen op standaard toets definities
@@ -260,8 +267,8 @@ def build_data(page, showinfo=True):
             # builder.contexts.append(test)
         builder.contexts.add(test)
     return builder.shortcuts, {'stdkeys': builder.stdkeys, 'defaults': builder.defaults,
-                               'cmddict': builder.cmddict, 'contexts': list(builder.contexts),
-                               'restrictions': list(builder.controls), 'cmdparms': builder.params,
+                               'cmddict': builder.cmddict, 'contexts': sorted(builder.contexts),
+                               'restrictions': sorted(builder.controls), 'cmdparms': builder.params,
                                'catdict': builder.catdict}
 
 
@@ -286,18 +293,18 @@ class CsvBuilder:
             kbfile = self.page.settings['DC_PATH'] = os.path.join(CONFPATH, 'shortcuts.scf')
         dc_keys = self.page.settings.get('DC_KEYS', '')
         if not dc_keys:
-            dc_keys = self.page_settings['DC_KEYS'] = os.path.join(DOCSPATH, 'shortcuts.html')
-        if dc_keys.startswith('http') and not os.path.exists('/tmp/dc_files/shortcuts.html'):
+            dc_keys = self.page.settings['DC_KEYS'] = os.path.join(DOCSPATH, 'shortcuts.html')
+        if dc_keys.startswith('http') and not os.path.exists(os.path.join(TEMPLOC, 'shortcuts.html')):
             # http://doublecmd.github.io/doc/en/shortcuts.html
-            subprocess.run(['wget', dc_keys, '-P', '/tmp/dc_files', '-nc'], check=False)
-        dc_keys = os.path.join('/tmp/dc_files', os.path.basename(dc_keys))
+            subprocess.run(['wget', dc_keys, '-P', TEMPLOC, '-nc'], check=False)
+        dc_keys = os.path.join(TEMPLOC, os.path.basename(dc_keys))
         dc_cmds = self.page.settings.get('DC_CMDS', '')
         if not dc_cmds:
             dc_cmds = self.page.settings['DC_CMDS'] = os.path.join(DOCSPATH, 'cmds.html')
-        if dc_cmds.startswith('http') and not os.path.exists('/tmp/dc_files/cmds.html'):
+        if dc_cmds.startswith('http') and not os.path.exists(os.path.join(TEMPLOC, 'cmds.html')):
             # http://doublecmd.github.io/doc/en/cmds.html
-            subprocess.run(['wget', dc_cmds, '-P', '/tmp/dc_files', '-nc'], check=False)
-        dc_cmds = os.path.join('/tmp/dc_files', os.path.basename(dc_cmds))
+            subprocess.run(['wget', dc_cmds, '-P', TEMPLOC, '-nc'], check=False)
+        dc_cmds = os.path.join(TEMPLOC, os.path.basename(dc_cmds))
         dc_sett = self.page.settings.get('DC_SETT', '')
         if not dc_sett:
             dc_sett = self.page.settings['DC_SETT'] = os.path.join(CONFPATH, 'doublecmd.xml')
@@ -341,9 +348,10 @@ class CsvBuilder:
                 modifiers = _shorten_mods(parts[:-1])
                 command = hotkey.find('Command').text
                 test = hotkey.findall('Param')
-                parameter = '' if test is None else ";".join([param.text for param in test])
+                # parameter = '' if test is None else ";".join([param.text for param in test])
+                parameter = '' if not test else ";".join([param.text for param in test])
                 test = hotkey.findall('Control')
-                if test is None:
+                if not test:  # test is None: - findall geeft lege list i.p.v. None
                     ctrls = ''
                     self.controls.add('')
                 else:
@@ -370,7 +378,7 @@ class CsvBuilder:
             if not context:
                 continue
             context = context[0]['name']
-            if context in ("warning", "options"):
+            if context in ("intro", "options"):
                 continue
             context = context.replace('_window', '').title()
             self.contexts_list.append(context)
@@ -437,9 +445,11 @@ class CsvBuilder:
             for row in list(toolbar):
                 for item in row.findall('Program'):
                     key = item.find('ID').text
-                    desc = item.find('Hint').text
                     cmd = item.find('Command').text
-                    parm = item.find('Params').text
+                    test = item.find('Hint')
+                    desc = test.text if test is not None else ''
+                    test = item.find('Params')
+                    parm = test.text if test is not None else ''
                     # self.tbcmddict[key] = (desc, cmd, parm)
                     self.tbcmddict[(toolbarid, key)] = (desc, cmd, parm)
 
@@ -449,11 +459,11 @@ class CsvBuilder:
         if self.showinfo:
             self.page.dialog_data = {'descdict': dict(desclist), 'cmddict': self.cmddict}
             if show_dialog(self.page, DcCompleteDialog):
-                desclist = list(self.page.dialog_data.items())
+                desclist = list(self.page.dialog_data['descdict'].items())
         for command, description in desclist:
             if command not in self.cmddict or not self.cmddict[command]:
                 self.cmddict[command] = description
-        self.desclist = desclist
+        # self.desclist = desclist
         return desclist
 
     def assemble_shortcuts(self):
@@ -503,7 +513,7 @@ class CsvBuilder:
                 elif not cmddict_oms:  # and stdkeys_oms:
                     # let op: hier ontstaan nieuwe of bijgewerkte cmddict entries
                     self.cmddict[definitions_dict['cmd']] = stdkeys_oms
-                elif cmddict_oms and cmddict_oms != stdkeys_oms:
+                elif cmddict_oms != stdkeys_oms:
                     # omschrijving verschillend - verzamelen om te kijken welke we willen gebruiken?
                     self.tobematched[key_in_context] = {'stdkeys_oms': stdkeys_oms,
                                                         'cmddict_oms': cmddict_oms}
@@ -557,14 +567,14 @@ def update_otherstuff_outbound(otherstuff):
     for key, value in otherstuff['stdkeys'].items():
         newkey = ' '.join(list(key))
         if isinstance(value, set):
-            value = list(value)
+            value = sorted(value)
         newstuff[newkey] = value
     otherstuff['stdkeys'] = newstuff
     newstuff = {}
     for key, value in otherstuff['defaults'].items():
         newkey = ' '.join(list(key))
         if isinstance(value, set):
-            value = list(value)
+            value = sorted(value)
         newstuff[newkey] = value
     otherstuff['defaults'] = newstuff
     return otherstuff
@@ -604,8 +614,8 @@ def savekeys(page):
     kbfile = get_file_to_save(page, extension='SCF files (*.scf)', start=page.settings['DC_PATH'])
     if not kbfile:
         return
-    root = ET.Element('doublecmd', DCVersion="0.6.6 beta")
-    head = ET.SubElement(root, 'Hotkeys', Version="20")
+    root = ET.Element('doublecmd', DCVersion=DCVER)
+    head = ET.SubElement(root, 'Hotkeys', Version=KBVER)
     oldform = ''
     for item in sorted(page.data.values(), key=lambda x: x[3]):
         key, mods, kind, context, cmnd, parm, ctrl, desc = item

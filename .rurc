@@ -11,9 +11,13 @@ qtdial = test_dialogs_qt.py
 wxdial = test_dialogs_wx.py
 vi = test_vikeys.py
 dc = test_dckeys.py
+dcqt = test_dckeys_qt.py
+dcwx = test_dckeys_wx.py
 tc = test_tcmdrkys.py
 opera = test_opkeys.py
 gtk = test_gtkaccel_keys.py
+gtkqt = test_gtkaccel_keys_qt.py
+gtkwx = test_gtkaccel_keys_wx.py
 gtkread = test_read_gtkaccel.py
 auda = test_audacity_keys.py
 
@@ -27,9 +31,13 @@ qtdial = editor/dialogs_qt.py
 wxdial = editor/dialogs_wx.py
 vi = editor/plugins/vikeys.py
 dc = editor/plugins/dckeys.py
+dcqt = editor/plugins/dckeys_qt.py
+dcwx = editor/plugins/dckeys_wx.py
 tc = editor/plugins/tcmdrkys.py
 opera = editor/plugins/opkeys.py
 gtk = editor/plugins/gtkaccel_keys.py
+gtkqt = editor/plugins/gtkaccel_keys_qt.py
+gtkwx = editor/plugins/gtkaccel_keys_wx.py
 gtkread = editor/plugins/read_gtkaccel.py
 auda = editor/plugins/audacity_keys.py
 
