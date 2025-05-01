@@ -498,7 +498,7 @@ class HotkeyPanel:
             else:
                 choice_to_check = self.gui.cmb_commando
                 checkfieldindex = self.field_indexes['C_CMD']
-            if self.gui.get_combobox_value(choice_to_check) == self._origdata[checkfieldindex]:
+            if self.gui.get_combobox_text(choice_to_check) == self._origdata[checkfieldindex]:
                 self.set_changed_indicators(False)
 
     def set_changed_indicators(self, value):
