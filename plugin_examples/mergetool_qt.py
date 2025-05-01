@@ -134,7 +134,7 @@ class MergeDialog(shared.MergeMixin, qtw.QDialog):
         self.setLayout(vbox)
 
         for text, callback, keyseq, desc in self.getshortcuts():
-            act = qtw.QAction(text, self)
+            act = gui.QAction(text, self)
             act.triggered.connect(callback)
             act.setShortcut(keyseq)
             self.addAction(act)
