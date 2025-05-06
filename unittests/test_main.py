@@ -2791,8 +2791,8 @@ def test_editor_m_col(monkeypatch, capsys):
             "called SingleDataInterface.__init__ with args ()\n")
 
     testobj.book.page.settings = {}
-    testobj.book.page.column_info = [('xx', 10, False, 0)]
-    testobj.new_column_info = [('xx', 10, False, 0)]
+    testobj.book.page.column_info = [('xx', 10, False, 0, 0)]
+    testobj.new_column_info = [('xx', 10, False, 0, 0)]
     testobj.book.page.otherstuff = {'other': 'stuff'}
     testobj.book.page.pad = 'testfile.json'
     testobj.m_col()
@@ -2812,7 +2812,7 @@ def test_editor_m_col(monkeypatch, capsys):
             f"called Editor.read_columntitledata with arg '{testobj}'\n"
             f"called gui.show_dialog with args ({testobj}, {testee.gui.ColumnSettingsDialog})\n"
             f"called gui.show_message with args ({testobj.gui}, 'I_NOCHG') {{}}\n")
-    testobj.new_column_info = [('xx', 10, False, 0), ('yy', 15, False, 1)]
+    testobj.new_column_info = [('xx', 10, False, 0, 0), ('yy', 15, False, 1, 'new')]
     testobj.book.page.settings = {'page': 'settings'}
     testobj.m_col()
     assert testobj.book.page.column_info == [('xx', 10, False, 0), ('yy', 15, False, 1)]
@@ -2834,8 +2834,8 @@ def test_editor_build_new_pagedata(monkeypatch, capsys):
     testobj = setup_editor(monkeypatch, capsys)
     testobj.book.page = MockHotkeyPanel(testobj.book, '')
     testobj.book.page.data = {'qq': ['aa', 1, 'X'], 'rr': ['bb', 2, 'Z']}
-    testobj.book.page.column_info = [('xx', 10, False, 0), ('zz', 12, False, 'new'),
-                                     ('yy', 15, False, 1)]
+    testobj.new_column_info = [('xx', 10, False, 0), ('zz', 12, False, 'new'),
+                               ('yy', 15, False, 1)]
     assert testobj.build_new_pagedata() == {'qq': ['aa', '', 1], 'rr': ['bb', '', 2]}
 
 def test_editor_accept_columnsettings(monkeypatch, capsys):
@@ -2859,52 +2859,57 @@ def test_editor_accept_columnsettings(monkeypatch, capsys):
     testobj.captions = {}
     testobj.book.page.captions = {}
     testobj.build_new_title_data = mock_build
-    data = [('x', 'a', 0), ('y', 'b', 1), ('x', 'c', 2)]
+    data = [('x', 'a', False, 0, 0), ('y', 'b', False, 1, 1), ('x', 'c', False, 2, 2)]
     assert testobj.accept_columnsettings(data) == (False, False)
     assert testobj.captions == {}
     assert capsys.readouterr().out == (
             f"called gui.show_message with args ({testobj.gui}, 'I_DPLNAM') {{}}\n")
-    data = [('x', 'a', 0), ('y', 'b', 1), ('', 'c', 2)]
+    data = [('x', 'a', False, 0, 0), ('y', 'b', False, 1, 1), ('', 'c', False, 2, 2)]
     assert testobj.accept_columnsettings(data) == (False, False)
     assert testobj.captions == {}
     assert capsys.readouterr().out == (
             f"called gui.show_message with args ({testobj.gui}, 'I_MISSNAM') {{}}\n")
-    data = [('x', 'a', 0), ('y', 'b', 2), ('z', 'c', 2)]
+    data = [('x', 'a', False, 0, 0), ('y', 'b', False, 2, 1), ('z', 'c', False, 2, 2)]
     assert testobj.accept_columnsettings(data) == (False, False)
     assert testobj.captions == {}
     assert capsys.readouterr().out == (
             f"called gui.show_message with args ({testobj.gui}, 'I_DPLCOL') {{}}\n")
-    data = [('xzz', '010', 0, False, 0), ('yyy', '020', 2, False, 1), ('zzz', '030', 3, False, 2),
-            ('q', '040', 1, False, 'new')]
+    # data = [('xzz', '010', 0, False, 0), ('yyy', '020', 2, False, 1), ('zzz', '030', 3, False, 2),
+    #         ('q', '040', 1, False, 'new')]
+    data = [('xzz', '010', False, 0, 0), ('yyy', '020', False, 2, 1), ('zzz', '030', False, 3, 2),
+            ('q', '040', False, 1, 'new')]
     testobj.col_names = ['xxx', 'yyy', 'zzz']
+    testobj.col_textids = ['id1', 'id2', 'id3']
     testobj.book.page.column_info = []
     assert testobj.accept_columnsettings(data) == (False, True)
+    assert testobj.new_column_info == [('xzz', '010', False, 0, 0), ('id2', '020', False, 2, 1), ('id3', '030', False, 3, 2), ('q', '040', False, 1, 'new')]
     assert testobj.captions == {}
+    assert testobj.book.page.captions == {}
     assert capsys.readouterr().out == (
             "called Editor.build_new_title_data with args (['xzz', 'q'],"
-            " [('xzz', '010', 0, False, 0), ('q', '040', 1, False, 'new'),"
-            " ('yyy', '020', 2, False, 1), ('zzz', '030', 3, False, 2)])\n")
+            " [('xzz', '010', False, 0, 0), ('id2', '020', False, 2, 1),"
+            " ('id3', '030', False, 3, 2), ('q', '040', False, 1, 'new')])\n")
     testobj.captions = {}
     testobj.book.page.captions = {}
     testobj.build_new_title_data = mock_build_2
     assert testobj.accept_columnsettings(data) == (True, False)
-    assert testobj.new_column_info == [('xzz', '010', 0, False), ('q', '040', 1, False),
-                                       ('yyy', '020', 2, False), ('zzz', '030', 3, False)]
+    assert testobj.new_column_info == [('ID1', '010', False, 0, 0), ('id2', '020', False, 2, 1),
+                                       ('id3', '030', False, 3, 2), ('ID2', '040', False, 1, 'new')]
     assert testobj.captions == {'ID1': 'xzz', 'ID2': 'q'}
     assert testobj.book.page.captions == {'ID1': 'xzz', 'ID2': 'q'}
     assert capsys.readouterr().out == (
             "called Editor.build_new_title_data with args (['xzz', 'q'],"
-            " [('xzz', '010', 0, False, 0), ('q', '040', 1, False, 'new'),"
-            " ('yyy', '020', 2, False, 1), ('zzz', '030', 3, False, 2)])\n")
+            " [('xzz', '010', False, 0, 0), ('id2', '020', False, 2, 1),"
+            " ('id3', '030', False, 3, 2), ('q', '040', False, 1, 'new')])\n")
 
-    data = [('xxx', '010', 0, False, 0), ('yyy', '020', 1, False, 1), ('zzz', '030', 2, False, 2)]
+    data = [('xxx', '010', False, 0, 0), ('yyy', '020', False, 1, 1), ('zzz', '030', False, 2, 2)]
     testobj.captions = {}
     testobj.book.page.captions = {}
     testobj.col_names = ['xxx', 'yyy', 'zzz']
     testobj.book.page.column_info = []
     assert testobj.accept_columnsettings(data) == (True, False)
-    assert testobj.new_column_info == [('xxx', '010', 0, False),
-                                       ('yyy', '020', 1, False), ('zzz', '030', 2, False)]
+    assert testobj.new_column_info == [('id1', '010', False, 0, 0),
+                                       ('id2', '020', False, 1, 1), ('id3', '030', False, 2, 2)]
     assert testobj.captions == {}
     assert testobj.book.page.captions == {}
     assert capsys.readouterr().out == ''

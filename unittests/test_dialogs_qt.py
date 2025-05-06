@@ -1709,35 +1709,35 @@ class TestColumnSettingsDialog:
         testobj.master.accept_columnsettings = mock_accept
         w1 = mockqtw.MockComboBox()
         w2 = mockqtw.MockSpinBox()
-        w3 = mockqtw.MockLineEdit()
+        w3 = mockqtw.MockSpinBox()
         w4 = mockqtw.MockCheckBox()
         assert capsys.readouterr().out == ("called ComboBox.__init__\ncalled SpinBox.__init__\n"
-                                           "called LineEdit.__init__\ncalled CheckBox.__init__\n")
+                                           "called SpinBox.__init__\ncalled CheckBox.__init__\n")
         testobj.data = [(w1, w2, w3, w4, 'xxx')]
         testobj.accept()
         assert capsys.readouterr().out == (
             "called ComboBox.currentText\n"
             "called SpinBox.value\n"
-            "called LineEdit.text\n"
             "called CheckBox.isChecked\n"
-            "called Editor.accept_columnsettings with arg [('current text', 0, '', False, 'xxx')]\n")
+            "called SpinBox.value\n"
+            "called Editor.accept_columnsettings with arg [('current text', 0, False, -1, 'xxx')]\n")
         testobj.master.accept_columnsettings = mock_accept_2
         testobj.accept()
         assert capsys.readouterr().out == (
             "called ComboBox.currentText\n"
             "called SpinBox.value\n"
-            "called LineEdit.text\n"
             "called CheckBox.isChecked\n"
-            "called Editor.accept_columnsettings with arg [('current text', 0, '', False, 'xxx')]\n"
+            "called SpinBox.value\n"
+            "called Editor.accept_columnsettings with arg [('current text', 0, False, -1, 'xxx')]\n"
             "called Dialog.accept\n")
         testobj.master.accept_columnsettings = mock_accept_3
         testobj.accept()
         assert capsys.readouterr().out == (
             "called ComboBox.currentText\n"
             "called SpinBox.value\n"
-            "called LineEdit.text\n"
             "called CheckBox.isChecked\n"
-            "called Editor.accept_columnsettings with arg [('current text', 0, '', False, 'xxx')]\n")
+            "called SpinBox.value\n"
+            "called Editor.accept_columnsettings with arg [('current text', 0, False, -1, 'xxx')]\n")
 
 
 class TestNewColumnsDialog:

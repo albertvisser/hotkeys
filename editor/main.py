@@ -55,6 +55,14 @@ def readlang(lang):
         return captions
 
 
+def normalize_cloc(cloc):
+    """convert location of plugin code in json data to absloute path
+    """
+    if not cloc.startswith(('/', '~/', './')):
+        cloc = os.path.join('projects', 'hotkeys', cloc)
+    return os.path.abspath(os.path.expanduser(cloc))
+
+
 def read_settings(ini):
     "read the application settings from a given path"
     with ini.open() as _in:
@@ -356,6 +364,7 @@ class HotkeyPanel:
     def populate_list(self, pos=0):
         """vullen van de lijst
         """
+        # breakpoint()
         self.gui.clear_list()
 
         items = self.data.items()
@@ -498,7 +507,7 @@ class HotkeyPanel:
             else:
                 choice_to_check = self.gui.cmb_commando
                 checkfieldindex = self.field_indexes['C_CMD']
-            if self.gui.get_combobox_text(choice_to_check) == self._origdata[checkfieldindex]:
+            if self.gui.get_combobox_value(choice_to_check) == self._origdata[checkfieldindex]:
                 self.set_changed_indicators(False)
 
     def set_changed_indicators(self, value):
@@ -1120,7 +1129,7 @@ class Editor:
                     return False
                 self.pluginfiles[name] = settingsdata[name][0]
         for filename in names_to_remove:
-            os.remove(filename)
+            os.remove(normalize_cloc(filename))
         newpathdata = {name: entry for name, entry in settingsdata.items() if len(entry) > 1}
         self.ini["plugins"] = update_paths(name_path_list, newpathdata)  # , self.ini["lang"])
         return True
@@ -1193,9 +1202,7 @@ class Editor:
         if cloc == "":
             gui.show_message(self.gui, 'I_NEEDNAME')
             return False
-        if not cloc.startswith(('/', '~/', './')):
-            cloc = os.path.join('projects', 'hotkeys', cloc)
-        cloc = os.path.abspath(os.path.expanduser(cloc))
+        cloc = normalize_cloc(cloc)
         if os.path.exists(cloc):
             gui.show_message(self.gui, 'I_GOTSETFIL', args=[cloc])
             return False
@@ -1291,8 +1298,8 @@ class Editor:
             gui.show_message(self.gui, 'I_NOCHG')
             return
         self.book.page.data = self.build_new_pagedata()
-        # self.book.page.column_info = [x[:-1] for x in self.book.page.new_column_info]
-        self.book.page.column_info = self.new_column_info
+        self.book.page.column_info = [x[:-1] for x in self.new_column_info]
+        # self.book.page.column_info = self.new_column_info
 
         writejson(self.book.page.pad, self.book.page.reader, self.book.page.settings,
                   self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
@@ -1305,10 +1312,12 @@ class Editor:
     def build_new_pagedata(self):
         """rebuild the keydef data, removing deleted columns and adding empty values for new ones
         """
+        # breakpoint()
         new_pagedata = {}
         for key, value in self.book.page.data.items():
             newvalue = []
-            for colinf in self.book.page.column_info:
+            # for colinf in self.book.page.column_info:
+            for colinf in self.new_column_info:
                 test = colinf[-1]
                 if test == 'new':
                     newvalue.append('')
@@ -1319,6 +1328,8 @@ class Editor:
 
     def accept_columnsettings(self, data):
         "check and confirm input from columnsettings dialog"
+        # breakpoint()
+        # print(f"in accept_columnsettings, {data=}", flush=True)
         column_info, new_titles = [], []
         # checken op dubbele en vergeten namen
         test = [x[0] for x in data]
@@ -1329,7 +1340,7 @@ class Editor:
             gui.show_message(self.gui, 'I_MISSNAM')
             return False, False  # not ok but continue with dialog
         # checken op dubbele kolomnummers
-        test = [x[2] for x in data]
+        test = [x[3] for x in data]
         if len(set(test)) != len(test):
             gui.show_message(self.gui, 'I_DPLCOL')
             return False, False  # not ok but continue with dialog
@@ -1339,7 +1350,13 @@ class Editor:
         for ix, value in enumerate(column_info):
             if value[0] not in self.col_names:
                 new_titles.append(value[0])
-        self.new_column_info = [x[:-1] for x in column_info]
+        self.new_column_info = column_info
+        # for value in self.new_column_info:
+        for ix, value in enumerate(self.new_column_info):
+            if value[0] in self.col_names:
+                # value = (self.col_textids[self.col_names.index(value[0])], value[1:])
+                self.new_column_info[ix] = (self.col_textids[self.col_names.index(value[0])],
+                                            *value[1:])
         if new_titles:
             canceled, titles, colinfo = self.build_new_title_data(new_titles, column_info)
             if canceled:
@@ -1348,6 +1365,12 @@ class Editor:
             for id_, name in titles:
                 self.captions[id_] = name
                 self.book.page.captions[id_] = name
+                # for value in self.new_column_info:
+                for ix, value in enumerate(self.new_column_info):
+                    if value[0] == name:
+                        # value = (id_, value[1:])
+                        self.new_column_info[ix] = (id_, *value[1:])
+        # print(f"in accept_columnsettings, {self.new_column_info=}", flush=True)
         return True, False  # ok, done with dialog (but not canceled)
 
     def build_new_title_data(self, new_titles, column_info):

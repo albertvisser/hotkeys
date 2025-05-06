@@ -623,13 +623,11 @@ class ColumnSettingsDialog(qtw.QDialog):
     def accept(self):
         """save the changed settings and leave
         """
-        data = [(x.currentText(), y.value(), a.text(), b.isChecked(), c)
+        data = [(x.currentText(), y.value(), b.isChecked(), a.value() - 1, c)
                 for x, y, a, b, c in self.data]
-        ok, cancel = self.master.accept_columnsettings(data)
+        ok, cancel = self.master.accept_columnsettings(sorted(data, key=lambda x: x[3]))
         if ok:
             super().accept()
-        # elif cancel:
-        #     super().reject()
 
 
 class NewColumnsDialog(qtw.QDialog):
