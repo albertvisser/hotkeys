@@ -1001,7 +1001,7 @@ class Editor:
                            ('M_EXIT', (self.m_exit, 'Ctrl+Q')), )),
                 ('M_TOOL', (('M_SETT2', ((('M_COL', (self.m_col, '')),
                                           ('M_MISC', (self.m_tool, '')),
-                                          ('M_ENTR', (self.m_entry, '')), ), '')),
+                                          ('M_ENTR', (self.m_entry, 'Ctrl+E')), ), '')),
                             ('M_READ', (self.m_read, 'Ctrl+R')),
                             ('M_RBLD', (self.m_rebuild, 'Ctrl+B')),
                             ('M_SAVE', (self.m_save, 'Ctrl+S')), )),
