@@ -39,7 +39,7 @@ for everything that's not in here
 the default code in the main program will be used.
 """
 '''
-initial_settings = {'plugins': [], 'lang': 'english.lng', 'startup': 'Remember', 'initial': ''}
+initial_config = {'plugins': [], 'lang': 'english.lng', 'startup': 'Remember', 'initial': ''}
 initial_columns = [["C_KEY", 120, False], ["C_MODS", 90, False], ["C_DESC", 292, False]]
 
 
@@ -63,24 +63,24 @@ def normalize_cloc(cloc):
     return os.path.abspath(os.path.expanduser(cloc))
 
 
-def read_settings(ini):
+def read_config(ini):
     "read the application settings from a given path"
     with ini.open() as _in:
         fulldict = json.load(_in)
-    settings = {'filename': ini}
-    for name in initial_settings:
-        settings[name] = fulldict.get(name, '')
-    return settings
+    config = {'filename': ini}
+    for name in initial_config:
+        config[name] = fulldict.get(name, '')
+    return config
 
 
-def write_settings(settings, nobackup=False):
+def write_config(config, nobackup=False):
     "rewrite the application settings file"
-    inifile = settings.pop('filename')
+    inifile = config.pop('filename')
     if inifile.exists() and not nobackup:
         shutil.copyfile(str(inifile), str(inifile) + '~')
     with inifile.open('w') as _in:
-        json.dump(settings, _in)
-    settings['filename'] = inifile  # gaat dit zo werken?
+        json.dump(config, _in)
+    config['filename'] = inifile  # gaat dit zo werken?
 
 
 def read_columntitledata(editor):
@@ -157,10 +157,10 @@ def initjson(loc, data):
 
     Save some basic settings together with some column info
     """
+    initial_settings = {x: data[i] for i, x in enumerate(shared.settingnames)}
     if not loc:
-        return {x: data[i] for i, x in enumerate(shared.settingnames)}, initial_columns, {}
-    writejson(loc, None, {x: data[i] for i, x in enumerate(shared.settingnames)},
-              initial_columns, {}, {})
+        return initial_settings, initial_columns, {}
+    writejson(loc, None, initial_settings, initial_columns, {}, {})
 
 
 def readjson(pad):
@@ -941,7 +941,7 @@ class Editor:
             else:
                 ini = BASE / args.conf
         if ini.exists():
-            self.ini = read_settings(ini)
+            self.ini = read_config(ini)
         else:
             self.ini = {'lang': 'english.lng', 'plugins': [], 'startup': 'Remember', 'filename': ini}
         appslist = [x[0] for x in self.ini['plugins']]
@@ -1052,7 +1052,7 @@ class Editor:
         self.last_added = None  # wordt in de hierna volgende dialoog ingesteld
         if gui.show_dialog(self, gui.FilesDialog):
             selection = self.book.gui.get_selected_index()
-            write_settings(self.ini)
+            write_config(self.ini)
 
             items_to_retain = self.clear_book(current_programs)
             self.rebuild_book(current_programs, current_paths, items_to_retain)
@@ -1120,7 +1120,7 @@ class Editor:
         pref = self.ini.get("initial", '')
         if mode == shared.mode_f and pref not in [x[0] for x in self.ini['plugins']]:
             self.ini['startup'] = shared.mode_r
-            write_settings(self.ini)  # self.change_setting('startup', oldmode, mode)
+            write_config(self.ini)  # self.change_setting('startup', oldmode, mode)
 
         for entry in name_path_list:
             name, datafilename = entry
@@ -1475,7 +1475,7 @@ class Editor:
         if ok:
             # self.change_setting('lang', oldlang, lang)
             self.ini['lang'] = lang
-            write_settings(self.ini)
+            write_config(self.ini)
             self.readcaptions(lang)
             self.setcaptions()
 
@@ -1502,7 +1502,7 @@ class Editor:
                 self.ini['initial'] = pref
                 changed = changed or pref != oldpref  # True
             if changed:
-                write_settings(self.ini)
+                write_config(self.ini)
 
     def accept_startupsettings(self, fix, remember, pref):
         """check and confirm input from initialToolDialog
@@ -1537,7 +1537,7 @@ class Editor:
                 pass
             else:
                 # self.change_setting('initial', oldpref, pref)
-                write_settings(self.ini, nobackup=True)
+                write_config(self.ini, nobackup=True)
 
         # super().close()
         self.gui.close()

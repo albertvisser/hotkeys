@@ -110,16 +110,16 @@ def test_readlang(monkeypatch, tmp_path):
     (mock_lang / 'en').write_text("#deze overslaan\n\ncode text\n\nalso a code with text\n")
     assert testee.readlang('en') == {'code': 'text', 'also': 'a code with text'}
 
-def test_read_settings(monkeypatch, tmp_path):
-    """unittest for main.read_settings
+def test_read_config(monkeypatch, tmp_path):
+    """unittest for main.read_config
     """
-    monkeypatch.setattr(testee, 'initial_settings', {'x': '', 'a': ''})
-    ini = tmp_path / 'settingsfile'
+    monkeypatch.setattr(testee, 'initial_config', {'x': '', 'a': ''})
+    ini = tmp_path / 'configfile'
     ini.write_text('{"a": "b", "q": "r"}\n')
-    assert testee.read_settings(ini) == {'a': 'b', 'filename': ini, 'x': ''}
+    assert testee.read_config(ini) == {'a': 'b', 'filename': ini, 'x': ''}
 
-def test_write_settings(monkeypatch, capsys, tmp_path):
-    """unittest for main.write_settings
+def test_write_config(monkeypatch, capsys, tmp_path):
+    """unittest for main.write_config
     """
     def mock_copy(*args):
         """stub
@@ -131,17 +131,17 @@ def test_write_settings(monkeypatch, capsys, tmp_path):
         print('called json.dump with arg', args[0])
     monkeypatch.setattr(testee.json, 'dump', mock_dump)
     monkeypatch.setattr(testee.shared.pathlib.Path, 'exists', lambda *x: False)
-    monkeypatch.setattr(testee, 'initial_settings', {'x': '', 'a': ''})
+    monkeypatch.setattr(testee, 'initial_config', {'x': '', 'a': ''})
     ini = tmp_path / 'settingsfile'
-    testee.write_settings(settings={'a': 'b', 'filename': ini, 'x': 'y'})
+    testee.write_config({'a': 'b', 'filename': ini, 'x': 'y'})
     assert capsys.readouterr().out == "called json.dump with arg {'a': 'b', 'x': 'y'}\n"
     monkeypatch.setattr(testee.shutil, 'copyfile', mock_copy)
     monkeypatch.setattr(testee.shared.pathlib.Path, 'exists', lambda *x: True)
-    testee.write_settings(settings={'a': 'b', 'filename': ini, 'x': 'y'})
+    testee.write_config({'a': 'b', 'filename': ini, 'x': 'y'})
     assert capsys.readouterr().out == (f"called shutil.copyfile with args ('{ini}',"
                                        f" '{str(ini) + '~'}')\n"
                                        "called json.dump with arg {'a': 'b', 'x': 'y'}\n")
-    testee.write_settings(settings={'a': 'b', 'filename': ini, 'x': 'y'}, nobackup=True)
+    testee.write_config({'a': 'b', 'filename': ini, 'x': 'y'}, nobackup=True)
     assert capsys.readouterr().out == "called json.dump with arg {'a': 'b', 'x': 'y'}\n"
 
 def test_read_columntitledata(monkeypatch, capsys, tmp_path):
@@ -2024,16 +2024,16 @@ def test_editor_init(monkeypatch, capsys):
     def mock_save_log():
         print('called shared.save_log')
     def mock_read(arg):
-        print(f"called read_settings with arg '{arg}'")
+        print(f"called read_config with arg '{arg}'")
         return {'lang': 'en', 'title': '', 'initial': '', 'plugins': []}
     def mock_read_2(arg):
-        print(f"called read_settings with arg '{arg}'")
+        print(f"called read_config with arg '{arg}'")
         return {'lang': 'en', 'title': '', 'initial': 'y', 'plugins': [('x', 'xxx'), ('y', 'yyy')]}
     def mock_read_3(arg):
-        print(f"called read_settings with arg '{arg}'")
+        print(f"called read_config with arg '{arg}'")
         return {'lang': 'en', 'title': 'qqq', 'initial': 'x', 'plugins': [('x', 'xxx')]}
     def mock_read_4(arg):
-        print(f"called read_settings with arg '{arg}'")
+        print(f"called read_config with arg '{arg}'")
         return {'lang': 'en', 'title': 'qqq', 'initial': '', 'plugins': [('x', 'xxx')]}
     def mock_readcaptions(self, arg):
         print(f"called Editor.readcaptions with arg '{arg}'")
@@ -2043,7 +2043,7 @@ def test_editor_init(monkeypatch, capsys):
     def mock_set(self):
         print('called Editor.setcaptions')
     monkeypatch.setattr(testee.shared, 'save_log', mock_save_log)
-    monkeypatch.setattr(testee, 'read_settings', mock_read)
+    monkeypatch.setattr(testee, 'read_config', mock_read)
     # monkeypatch.setattr(testee.Editor, 'show_empty_screen', mock_show)
     monkeypatch.setattr(testee.Editor, 'readcaptions', mock_readcaptions)
     monkeypatch.setattr(testee.gui, 'Gui', MockGui)
@@ -2076,7 +2076,7 @@ def test_editor_init(monkeypatch, capsys):
             "called Gui.setup_menu with args {'minimal': True}\n"
             "called Gui.go\n")
     monkeypatch.setattr(testee.pathlib.Path, 'exists', lambda *x: True)
-    monkeypatch.setattr(testee, 'read_settings', mock_read_2)
+    monkeypatch.setattr(testee, 'read_config', mock_read_2)
     args = types.SimpleNamespace(conf='other_conf', start='y')
     testobj = testee.Editor(args)
     assert testobj.ini == {'initial': 'y', 'lang': 'en', 'title': '', 'plugins': [('x', 'xxx'),
@@ -2087,7 +2087,7 @@ def test_editor_init(monkeypatch, capsys):
     assert testobj.forgetatexit
     assert capsys.readouterr().out == (
             "called shared.save_log\n"
-            "called read_settings with arg '/confbase/other_conf'\n"
+            "called read_config with arg '/confbase/other_conf'\n"
             "called Editor.readcaptions with arg 'en'\n"
             f"called Gui.__init__ with arg {testobj}\n"
             "called Gui.set_window_title with arg 'maintitle'\n"
@@ -2105,9 +2105,9 @@ def test_editor_init(monkeypatch, capsys):
     assert str(e.value) == "Can't start with z: possible values are ['x', 'y']"
     assert capsys.readouterr().out == (
             "called shared.save_log\n"
-            "called read_settings with arg '/confbase/other_conf'\n")
+            "called read_config with arg '/confbase/other_conf'\n")
 
-    monkeypatch.setattr(testee, 'read_settings', mock_read_3)
+    monkeypatch.setattr(testee, 'read_config', mock_read_3)
     args = types.SimpleNamespace(conf='/yet/another/conf', start='')
     testobj = testee.Editor(args)
     assert testobj.ini == {'initial': 'x', 'lang': 'en', 'title': 'qqq', 'plugins': [('x', 'xxx')]}
@@ -2116,7 +2116,7 @@ def test_editor_init(monkeypatch, capsys):
     assert isinstance(testobj.book, testee.ChoiceBook)
     assert capsys.readouterr().out == (
             "called shared.save_log\n"
-            "called read_settings with arg '/yet/another/conf'\n"
+            "called read_config with arg '/yet/another/conf'\n"
             "called Editor.readcaptions with arg 'en'\n"
             f"called Gui.__init__ with arg {testobj}\n"
             "called Gui.set_window_title with arg 'maintitle'\n"
@@ -2129,7 +2129,7 @@ def test_editor_init(monkeypatch, capsys):
             "called Editor.setcaptions\n"
             "called Gui.go\n")
     testobj.ini['initial'] = ''
-    monkeypatch.setattr(testee, 'read_settings', mock_read_4)
+    monkeypatch.setattr(testee, 'read_config', mock_read_4)
     testobj = testee.Editor(args)
     assert testobj.ini == {'initial': '', 'lang': 'en', 'title': 'qqq', 'plugins': [('x', 'xxx')]}
     assert testobj.pluginfiles == {}
@@ -2137,7 +2137,7 @@ def test_editor_init(monkeypatch, capsys):
     assert isinstance(testobj.book, testee.ChoiceBook)
     assert capsys.readouterr().out == (
             "called shared.save_log\n"
-            "called read_settings with arg '/yet/another/conf'\n"
+            "called read_config with arg '/yet/another/conf'\n"
             "called Editor.readcaptions with arg 'en'\n"
             f"called Gui.__init__ with arg {testobj}\n"
             "called Gui.set_window_title with arg 'maintitle'\n"
@@ -2286,7 +2286,7 @@ def test_editor_m_loc(monkeypatch, capsys):
         args[0].ini['plugins'] = [('x', 'y'), ('a', 'b')]
         return True
     def mock_write(name):
-        print(f"called Editor.write_settings with arg '{name}'")
+        print(f"called Editor.write_config with arg '{name}'")
     def mock_clear(arg):
         print('called Editor.clear_book with arg {arg}')
         return []
@@ -2294,7 +2294,7 @@ def test_editor_m_loc(monkeypatch, capsys):
         print('called Editor.rebuild_book with args', args)
         return []
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_show)
-    monkeypatch.setattr(testee, 'write_settings', mock_write)
+    monkeypatch.setattr(testee, 'write_config', mock_write)
     testobj = setup_editor(monkeypatch, capsys)
     testobj.clear_book = mock_clear
     testobj.rebuild_book = mock_rebuild
@@ -2307,7 +2307,7 @@ def test_editor_m_loc(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             f"called gui.show_dialog with args ({testobj}, {testee.gui.FilesDialog})\n"
             "called TabbedInterface.get_selected_index\n"
-            "called Editor.write_settings with arg '{'plugins': [('x', 'y')]}'\n"
+            "called Editor.write_config with arg '{'plugins': [('x', 'y')]}'\n"
             "called Editor.clear_book with arg {arg}\n"
             "called Editor.rebuild_book with args (['p', 'r'], ['q', 's'], [])\n"
             "called TabbedInterface.set_selected_tool with arg '1'\n")
@@ -2317,7 +2317,7 @@ def test_editor_m_loc(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             f"called gui.show_dialog with args ({testobj}, {testee.gui.FilesDialog})\n"
             "called TabbedInterface.get_selected_index\n"
-            "called Editor.write_settings with arg '{'plugins': [('x', 'y'), ('a', 'b')]}'\n"
+            "called Editor.write_config with arg '{'plugins': [('x', 'y'), ('a', 'b')]}'\n"
             "called Editor.clear_book with arg {arg}\n"
             "called Editor.rebuild_book with args (['p', 'r'], ['q', 's'], [])\n"
             "called TabbedInterface.get_new_selection with arg 'last added'\n"
@@ -2364,7 +2364,7 @@ def test_editor_accept_pathsettings(monkeypatch, capsys, tmp_path):
     """unittest for main.Editor.accept_pathsettings
     """
     def mock_write(data):
-        print(f"called write_settings with arg '{data}'")
+        print(f"called write_config with arg '{data}'")
     def mock_update(*args):
         print('called update_paths with args', args)
         return []
@@ -2374,7 +2374,7 @@ def test_editor_accept_pathsettings(monkeypatch, capsys, tmp_path):
     def mock_check_2(*args):
         print('called Editor.check_plugin_settings with args', args)
         return True
-    monkeypatch.setattr(testee, 'write_settings', mock_write)
+    monkeypatch.setattr(testee, 'write_config', mock_write)
     monkeypatch.setattr(testee, 'update_paths', mock_update)
     testobj = setup_editor(monkeypatch, capsys)
     testobj.check_plugin_settings = mock_check
@@ -2399,7 +2399,7 @@ def test_editor_accept_pathsettings(monkeypatch, capsys, tmp_path):
     assert testobj.pluginfiles == {}
     assert testobj.last_added == 'xx'
     assert capsys.readouterr().out == (
-            "called write_settings with arg '{'lang': 'en', 'plugins': [('zz', 'path/to/zz')],"
+            "called write_config with arg '{'lang': 'en', 'plugins': [('zz', 'path/to/zz')],"
             " 'startup': 'Remember', 'initial': 'yy'}'\n"
             "called Editor.check_plugin_settings with args ('xx', 'path/to/xx', ('path/to/xx',))\n")
 
@@ -3185,12 +3185,12 @@ def test_editor_m_lang(monkeypatch, capsys, tmp_path):
         print('called gui.get_choice with args', args, kwargs)
         return 'xx', True
     def mock_write(arg):
-        print(f"called write_settings with arg '{arg}'")
+        print(f"called write_config with arg '{arg}'")
     def mock_read(arg):
         print(f"called Editor.readcaptions with arg '{arg}'")
     def mock_set():
         print("called Editor.setcaptions")
-    monkeypatch.setattr(testee, 'write_settings', mock_write)
+    monkeypatch.setattr(testee, 'write_config', mock_write)
     monkeypatch.setattr(testee.gui, 'get_choice', mock_choice)
     langdir = tmp_path
     (langdir / 'en.lng').touch()
@@ -3221,7 +3221,7 @@ def test_editor_m_lang(monkeypatch, capsys, tmp_path):
     assert capsys.readouterr().out == (
             "called gui.get_choice with args"
             f" ({testobj.gui}, 'xxx', 'hello', ['en.lng', 'nl.lng']) {{'current': 1}}\n"
-            "called write_settings with arg '{'lang': 'xx'}'\n"
+            "called write_config with arg '{'lang': 'xx'}'\n"
             "called Editor.readcaptions with arg 'xx'\n"
             "called Editor.setcaptions\n")
 
@@ -3268,9 +3268,9 @@ def test_editor_m_pref(monkeypatch, capsys):
         args[0].prefs = ('', 'changed')
         return True
     def mock_write(arg):
-        print(f"called write_settings with arg '{arg}'")
+        print(f"called write_config with arg '{arg}'")
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog)
-    monkeypatch.setattr(testee, 'write_settings', mock_write)
+    monkeypatch.setattr(testee, 'write_config', mock_write)
     testobj = setup_editor(monkeypatch, capsys)
     testobj.ini = {'startup': 'Fixed', 'initial': 'unchanged'}
     testobj.m_pref()
@@ -3288,7 +3288,7 @@ def test_editor_m_pref(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             "called gui.show_dialog with args"
             f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-            "called write_settings with arg"
+            "called write_config with arg"
             " '{'startup': 'Remember', 'initial': 'unchanged'}'\n")
 
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_3)
@@ -3308,7 +3308,7 @@ def test_editor_m_pref(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             "called gui.show_dialog with args"
             f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-            "called write_settings with arg"
+            "called write_config with arg"
             " '{'startup': 'Remember', 'initial': 'unchanged'}'\n")
 
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_5)
@@ -3319,7 +3319,7 @@ def test_editor_m_pref(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             "called gui.show_dialog with args"
             f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-            "called write_settings with arg"
+            "called write_config with arg"
             " '{'startup': 'Fixed', 'initial': 'changed'}'\n")
 
     monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_6)
@@ -3339,7 +3339,7 @@ def test_editor_m_pref(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             "called gui.show_dialog with args"
             f" ({testobj}, <class 'editor.dialogs_qt.InitialToolDialog'>)\n"
-            "called write_settings with arg"
+            "called write_config with arg"
             " '{'startup': 'Fixed', 'initial': 'changed'}'\n")
 
 def test_editor_accept_startupsettings(monkeypatch, capsys):
@@ -3377,13 +3377,13 @@ def test_editor_exit(monkeypatch, capsys):
         print('called HotkeyPanel.exit')
         return True
     def mock_write(*args, **kwargs):
-        print('called write_settings with args', args, kwargs)
+        print('called write_config with args', args, kwargs)
     def mock_get():
         print('called SingledataInterface.get_selected_text')
         return 'xxx'
     monkeypatch.setattr(testee.shared, 'mode_f', 'fixed')
     monkeypatch.setattr(testee.shared, 'mode_r', 'remember')
-    monkeypatch.setattr(testee, 'write_settings', mock_write)
+    monkeypatch.setattr(testee, 'write_config', mock_write)
     testobj = setup_editor(monkeypatch, capsys)
     testobj.book.page = types.SimpleNamespace(exit=mock_exit)
     testobj.ini = {}
@@ -3402,7 +3402,7 @@ def test_editor_exit(monkeypatch, capsys):
     assert testobj.ini['initial'] == 'xxx'
     assert capsys.readouterr().out == ("called HotkeyPanel.exit\n"
                                        "called SingledataInterface.get_selected_text\n"
-                                       "called write_settings with args"
+                                       "called write_config with args"
                                        " ({'startup': 'remember', 'initial': 'xxx'},)"
                                        " {'nobackup': True}\n"
                                        "called Gui.close\n")
@@ -3420,7 +3420,7 @@ def test_editor_exit(monkeypatch, capsys):
     assert testobj.ini['initial'] == 'xxx'
     assert capsys.readouterr().out == ("called HotkeyPanel.exit\n"
                                        "called SingledataInterface.get_selected_text\n"
-                                       "called write_settings with args"
+                                       "called write_config with args"
                                        " ({'startup': 'remember', 'initial': 'xxx'},)"
                                        " {'nobackup': True}\n"
                                        "called Gui.close\n")
