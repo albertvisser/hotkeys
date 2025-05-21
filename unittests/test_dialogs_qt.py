@@ -435,7 +435,7 @@ called Dialog.setLayout
 entry_start = """\
 called Dialog.__init__ with args {testobj.parent} () {{}}
 called Dialog.resize with args (680, 400)
-called Dialog.setWindowTitle with args ('title',)
+called Dialog.setWindowTitle with args ('title: manual entry',)
 called VBox.__init__
 called HBox.__init__
 called Table.__init__ with args ({testobj},)
@@ -475,7 +475,7 @@ called Signal.connect with args ({testobj.add_key},)
 called ButtonBox.addButton with args ('remove', 9)
 called PushButton.__init__ with args () {{}}
 called Signal.connect with args ({testobj.delete_key},)
-called ButtonBox.addButton with args (1,)
+called ButtonBox.addButton with args (4,)
 called PushButton.__init__ with args () {{}}
 called ButtonBox.addButton with args (2,)
 called PushButton.__init__ with args () {{}}
@@ -488,24 +488,26 @@ called Dialog.setLayout
 """
 complete = """\
 called Dialog.__init__ with args {testobj.parent} () {{}}
-called Dialog.resize with args (680, 400)
+called Dialog.resize with args (1100, 700)
+called Dialog.setWindowTitle with args ('title: edit descriptions',)
 called CompleteDialog.read_data
-called Table.__init__ with args (3, 2, {testobj})
+called VBox.__init__
+called HBox.__init__
+called Table.__init__ with args (3, 3, {testobj})
 called Header.__init__
 called Header.__init__
 called shared.get_text with args ({testobj.parent}, 'C_CMD')
 called shared.get_text with args ({testobj.parent}, 'C_DESC')
-called Table.setHorizontalHeaderLabels with arg '[None, None]'
+called Table.setHorizontalHeaderLabels with arg '[None, None, 'value from earlier modification']'
 called Table.horizontalHeader
 called Header.setStretchLastSection with arg True
 called CompleteDialog.build_table
 called Table.setColumnWidth with args (0, 260)
-called VBox.__init__
-called HBox.__init__
+called Table.setColumnWidth with args (1, 520)
 called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockTable'>
 called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
 called ButtonBox.__init__ with args ()
-called ButtonBox.addButton with args (1,)
+called ButtonBox.addButton with args (4,)
 called ButtonBox.addButton with args (2,)
 called Signal.connect with args ({testobj.accept},)
 called Signal.connect with args ({testobj.reject},)
@@ -515,6 +517,7 @@ called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockButtonB
 called HBox.addStretch
 called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
 called Dialog.setLayout
+called Table.setCurrentCell with args (0, 1)
 """
 
 
@@ -2236,7 +2239,6 @@ class TestEntryDialog:
                                            "called Table.removeRow with arg '1'\n"
                                            "called Table.removeRow with arg '0'\n")
 
-# 978-979  (AttributeError)
     def test_accept(self, monkeypatch, capsys):
         """unittest for EntryDialog.accept
         """
@@ -2315,6 +2317,7 @@ class TestCompleteDialog:
         parent = mockqtw.MockFrame()
         assert capsys.readouterr().out == "called Frame.__init__\n"
         master = types.SimpleNamespace()
+        master.title = 'title'
         monkeypatch.setattr(testee.shared, 'get_text', mock_get)
         monkeypatch.setattr(testee.qtw.QDialog, '__init__', mockqtw.MockDialog.__init__)
         monkeypatch.setattr(testee.qtw.QDialog, 'setWindowTitle', mockqtw.MockDialog.setWindowTitle)
@@ -2378,16 +2381,81 @@ class TestCompleteDialog:
         """unittest for CompleteDialog.read_data
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
-        with pytest.raises(NotImplementedError):
-            testobj.read_data()
+        testobj.master = types.SimpleNamespace(
+                book=types.SimpleNamespace(
+                    page=types.SimpleNamespace(descriptions={'x': 'y'}, olddescs={'a': 'b'})))
+        testobj.read_data()
+        assert testobj.cmds == {'x': 'y'}
+        assert testobj.desc == {'a': 'b'}
 
-    def _test_build_table(self, monkeypatch, capsys):
+    def test_build_table(self, monkeypatch, capsys):
         """unittest for CompleteDialog.build_table
         """
-        # not implemented, see docstring in testee
-        # testobj = self.setup_testobj(monkeypatch, capsys)
-        # assert testobj.build_table() == "expected_result"
-        # assert capsys.readouterr().out == ("")
+        def mock_flags(self):
+            print('called TableItem.flags')
+            return testee.core.Qt.ItemFlag.ItemIsEditable
+        monkeypatch.setattr(testee.qtw, 'QTableWidgetItem', mockqtw.MockTableItem)
+        monkeypatch.setattr(mockqtw.MockTableItem, 'flags', mock_flags)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.p0list = mockqtw.MockTable()
+        assert capsys.readouterr().out == ("called Table.__init__ with args ()\n"
+                                           "called Header.__init__\ncalled Header.__init__\n")
+        testobj.cmds = {}
+        testobj.desc = {}
+        testobj.build_table()
+        assert capsys.readouterr().out == ("")
+        testobj.cmds = {'x': 'y', 'a': 'b', 'p': 'q'}
+        testobj.desc = {'x': 'y', 'a': 'c'}
+        testobj.build_table()
+        assert capsys.readouterr().out == (
+                "called TableItem.__init__ with arg ''\n"
+                "called TableItem.setText with arg 'a'\n"
+                "called TableItem.flags\n"
+                "called TableItem.setFlags with arg ItemFlag.NoItemFlags\n"
+                "called Table.setItem with args (0, 0, item of type"
+                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called TableItem.__init__ with arg ''\n"
+                "called TableItem.setText with arg 'b'\n"
+                "called Table.setItem with args (0, 1, item of type"
+                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called TableItem.__init__ with arg ''\n"
+                "called TableItem.setText with arg 'c'\n"
+                "called TableItem.flags\n"
+                "called TableItem.setFlags with arg ItemFlag.NoItemFlags\n"
+                "called Table.setItem with args (0, 2, item of type"
+                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called TableItem.__init__ with arg ''\n"
+                "called TableItem.setText with arg 'p'\n"
+                "called TableItem.flags\n"
+                "called TableItem.setFlags with arg ItemFlag.NoItemFlags\n"
+                "called Table.setItem with args (1, 0, item of type"
+                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called TableItem.__init__ with arg ''\n"
+                "called TableItem.setText with arg 'q'\n"
+                "called Table.setItem with args (1, 1, item of type"
+                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called TableItem.__init__ with arg ''\n"
+                "called TableItem.setText with arg ''\n"
+                "called TableItem.flags\n"
+                "called TableItem.setFlags with arg ItemFlag.NoItemFlags\n"
+                "called Table.setItem with args (1, 2, item of type"
+                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called TableItem.__init__ with arg ''\n"
+                "called TableItem.setText with arg 'x'\n"
+                "called TableItem.flags\n"
+                "called TableItem.setFlags with arg ItemFlag.NoItemFlags\n"
+                "called Table.setItem with args (2, 0, item of type"
+                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called TableItem.__init__ with arg ''\n"
+                "called TableItem.setText with arg 'y'\n"
+                "called Table.setItem with args (2, 1, item of type"
+                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called TableItem.__init__ with arg ''\n"
+                "called TableItem.setText with arg ''\n"
+                "called TableItem.flags\n"
+                "called TableItem.setFlags with arg ItemFlag.NoItemFlags\n"
+                "called Table.setItem with args (2, 2, item of type"
+                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n")
 
 
 def test_show_dialog(monkeypatch, capsys):

@@ -412,8 +412,8 @@ class HotkeyPanel:
                         + [f"F{i}" for i in range(1, 13)] + NAMED_KEYS
                         + ['.', ',', '+', '=', '-', '`', '[', ']', '\\', ';', "'", '/'])
 
-        self.contextslist = self.commandslist = self.defkeys = []
-        self.contextactionsdict = self.omsdict = self.descriptions = {}
+        self.contextslist, self.commandslist, self.defkeys = [], [], []
+        self.contextactionsdict, self.omsdict, self.descriptions, self.olddescs = {}, {}, {}, {}
         try:
             self.reader.add_extra_attributes(self)  # user exit, kan self.keylist leegmaken
         except AttributeError:
@@ -766,7 +766,6 @@ class HotkeyPanel:
         #     self._origdata[self.field_indexes['C_CMD']] = cmnd
         # if 'C_CNTXT' in self.fields:
         #     self._origdata[self.field_indexes['C_CNTXT']] = context
-        # # TODO: niet geïmplementeerd voor vikeys.py (is ook read only momenteel)
         # # de implementatie in dckeys.py is subtiel anders:
         # self._origdata[self.field_indexes['C_PARMS']] = newdata[self.field_indexes['C_PARMS']]
         # self._origdata[self.field_indexes['C_CTRL']] = newdata[self.field_indexes['C_CTRL']]
@@ -843,7 +842,7 @@ class ChoiceBook:
             ok = win.exit()
             if not ok:                       # leaving: can't exit modified page yet
                 return
-        self.parent.gui.statusbar_message(self.parent.captions["M_DESC"].format(
+        self.parent.gui.statusbar_message(self.parent.captions["I_DESC"].format(
             self.gui.get_selected_tool()))
         self.gui.set_selected_panel(indx)
         win = self.gui.get_panel()
@@ -1000,8 +999,9 @@ class Editor:
                                         ('M_PREF', (self.m_pref, ''))), '')),
                            ('M_EXIT', (self.m_exit, 'Ctrl+Q')), )),
                 ('M_TOOL', (('M_SETT2', ((('M_COL', (self.m_col, '')),
-                                          ('M_MISC', (self.m_tool, '')),
-                                          ('M_ENTR', (self.m_entry, 'Ctrl+E')), ), '')),
+                                          ('M_MISC', (self.m_tool, '')), ), '')),
+                            ('M_ENTR', (self.m_entry, 'Ctrl+E')),
+                            ('M_DESC', (self.m_editdescs, 'Ctrl+D')),
                             ('M_READ', (self.m_read, 'Ctrl+R')),
                             ('M_RBLD', (self.m_rebuild, 'Ctrl+B')),
                             ('M_SAVE', (self.m_save, 'Ctrl+S')), )),
@@ -1440,6 +1440,21 @@ class Editor:
             gui.show_message(self.gui, 'I_ADDCOL')
             return
         if gui.show_dialog(self, gui.EntryDialog) and self.book.page.data:
+            writejson(self.book.page.pad, self.book.page.reader, self.book.page.settings,
+                      self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
+            self.book.page.populate_list()
+
+    def m_editdescs(self, event=None):
+        """manual entry of descriptions
+        """
+        if not hasattr(self.book.page, 'descriptions') or not self.book.page.descriptions:
+            gui.show_message(self.gui, 'I_NOMAP')
+            return
+        if not hasattr(self.book.page.reader, 'update_descriptions'):
+            gui.show_message(self.gui, 'I_NOMETH')
+            return
+        if gui.show_dialog(self, gui.CompleteDialog):
+            self.book.page.reader.update_descriptions(self.dialog_data)
             writejson(self.book.page.pad, self.book.page.reader, self.book.page.settings,
                       self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
             self.book.page.populate_list()

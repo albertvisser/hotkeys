@@ -727,7 +727,7 @@ class Gui(qtw.QMainWindow):
         super().__init__()
         # self.init_gui()
         wid = 1140 if shared.LIN else 688
-        hig = 594
+        hig = 832
         self.resize(wid, hig)
         self.sb = self.statusBar()
         self.menu_bar = self.menuBar()

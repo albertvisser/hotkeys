@@ -23,6 +23,7 @@ class MockSettType(testee.shared.enum.Enum):
 #     ORIG = 'orig'
 #     KEY = 'key'
 
+
 class MockSDI:
     """stub for gui.SingleDataInterface
     """
@@ -81,9 +82,11 @@ class MockSDI:
         """
         print(f"called SingleDataInterface.refresh_headers with arg {headers}")
 
+
 class MockReader:
     """stub for plugin program
     """
+
 
 class MockReader2:
     """stub for plugin program
@@ -1728,7 +1731,7 @@ def test_choicebook_on_page_changed(monkeypatch, capsys):
     win.master.data = {1: 'y'}
     win.exit = mock_exit
     testobj = setup_choicebook(monkeypatch, capsys)
-    testobj.parent.captions = {'M_DESC': "it's {}", 'x': 'column'}
+    testobj.parent.captions = {'I_DESC': "it's {}", 'x': 'column'}
     testobj.gui.get_selected_tool = mock_get_tool
     testobj.gui.get_panel = mock_get
     testobj.parent.gui.setup_menu = mock_setup
@@ -2168,7 +2171,8 @@ def test_editor_get_menudata(monkeypatch, capsys):
     assert [x[0] for x in menus] == ['M_APP', 'M_TOOL', 'M_HELP']
     submenus = [x[1] for x in menus]
     assert [x[0] for x in submenus[0]] == ['M_SETT', 'M_EXIT']
-    assert [x[0] for x in submenus[1]] == ['M_SETT2', 'M_READ', 'M_RBLD', 'M_SAVE']
+    assert [x[0] for x in submenus[1]] == ['M_SETT2', 'M_ENTR', 'M_DESC', 'M_READ', 'M_RBLD',
+                                           'M_SAVE']
     assert [x[0] for x in submenus[2]] == ['M_ABOUT']
     # subsubmenus = [x[1] for x in submenus[0]]
     # assert [x[0] for x in subsubmenus] == ['M_LOC', 'M_LANG', 'M_PREF']
@@ -2529,6 +2533,7 @@ def test_editor_m_rebuild(monkeypatch, capsys):
     testobj.m_rebuild()
     assert capsys.readouterr().out == (
             f"called gui.show_message with args ({testobj.gui}, 'I_DEFRBLD') {{}}\n")
+    testobj.book.page.descriptions = {'old': 'descs'}
     testobj.book.page.reader.build_data = mock_build
     testobj.m_rebuild()
     assert capsys.readouterr().out == (
@@ -3113,6 +3118,63 @@ def test_editor_m_entry(monkeypatch, capsys):
                                        " {'other': 'stuff'})\n"
                                        "called HotkeyPanel.populate_list\n")
 
+def test_editor_m_editdescs(monkeypatch, capsys):
+    """unittest for main.Editor.m_editdescs
+    """
+    def mock_show(*args):
+        print('called gui.show_message with args', args)
+    def mock_dialog(*args):
+        print('called gui.show_dialog with args', args)
+        return False
+    def mock_dialog_2(*args):
+        print('called gui.show_dialog with args', args)
+        return True
+    def mock_writejson(*args):
+        print('called writejson with args', args)
+    def mock_update(*args):
+        print('called reader.update_descriptions with args', args)
+    monkeypatch.setattr(testee, 'writejson', mock_writejson)
+    monkeypatch.setattr(testee.gui, 'show_message', mock_show)
+    monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog)
+    testobj = setup_editor(monkeypatch, capsys)
+    testobj.ini = {'lang': 'en'}
+    testobj.book.page = MockHotkeyPanel(testobj.book, 'xxx')
+    testobj.book.page.reader = types.SimpleNamespace()
+    assert capsys.readouterr().out == (
+            f"called HotkeyPanel.__init__ with args ({testobj.book}, 'xxx')\n")
+    testobj.book.page.settings = {'set': 'tings'}
+    testobj.book.page.column_info = [('column', 'info')]
+    testobj.book.page.data = {'da': 'ta'}
+    testobj.book.page.otherstuff = {'other': 'stuff'}
+    testobj.book.page.pad = 'settings.json'
+    testobj.m_editdescs()
+    assert capsys.readouterr().out == (
+            f"called gui.show_message with args ({testobj.gui}, 'I_NOMAP')\n")
+    testobj.book.page.descriptions = {}
+    testobj.m_editdescs()
+    assert capsys.readouterr().out == (
+            f"called gui.show_message with args ({testobj.gui}, 'I_NOMAP')\n")
+    testobj.book.page.descriptions = {'desc': 'riptions'}
+    testobj.m_editdescs()
+    assert capsys.readouterr().out == (
+            f"called gui.show_message with args ({testobj.gui}, 'I_NOMETH')\n")
+    testobj.book.page.reader.update_descriptions = mock_update
+
+    testobj.dialog_data = {'dialog': 'data'}
+    testobj.m_editdescs()
+    assert capsys.readouterr().out == (f"called gui.show_dialog with args ({testobj},"
+                                       " <class 'editor.dialogs_qt.CompleteDialog'>)\n")
+
+    monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_2)
+    testobj.m_editdescs()
+    assert capsys.readouterr().out == (
+            f"called gui.show_dialog with args ({testobj},"
+            " <class 'editor.dialogs_qt.CompleteDialog'>)\n"
+            "called reader.update_descriptions with args ({'dialog': 'data'},)\n"
+            f"called writejson with args ('settings.json', {testobj.book.page.reader},"
+            " {'set': 'tings'}, [('column', 'info')], {'da': 'ta'}, {'other': 'stuff'})\n"
+            "called HotkeyPanel.populate_list\n")
+
 def test_editor_m_lang(monkeypatch, capsys, tmp_path):
     """unittest for main.Editor.m_lang
     """
@@ -3419,7 +3481,6 @@ def test_editor_readcaptions(monkeypatch, capsys):
     testobj.readcaptions('en')
     assert testobj.captions == {'captions': 'dict'}
     assert testobj.last_textid == ''
-
 
 def test_editor_setcaptions(monkeypatch, capsys):
     """unittest for main.Editor.setcaptions

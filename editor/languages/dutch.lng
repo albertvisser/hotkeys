@@ -114,7 +114,7 @@ I_NOCHG Geen aanpassingen
 I_NODATA Geen data voor dit programma
 Q_DPLKEY Deze toetsencombinatie is al gedefinieerd, wil je hem vervangen?
 C_NONE Nog geen plugin voor {}
-M_DESC {} keyboard shortcuts bekijken/aanpassen
+I_DESC {} keyboard shortcuts bekijken/aanpassen
 I_NOTFND {} niet gevonden
 I_NONXT Geen volgend item
 I_NOPRV Geen vorig item
@@ -134,6 +134,8 @@ I_DPLCOL  Opslaan niet mogelijk: gelijke waarden voor kolomnummers
 I_DPLNAM  Opslaan niet mogelijk: gelijke waarden voor kolomnnamen
 I_MISSNAM Opslaan niet mogelijk: niet alle kolomnamen zijn opgegeven
 M_NODESC (Geen omschrijving beschikbaar)
+I_NOMAP Functie niet mogelijk: geen mapping van commando's op beschrijvingen
+I_NOMETH Functie niet mogelijk: bestaat niet in plugin   
 T_COLTTL Titels van de kolommen; zie de sleutels in het taalbestand
 T_COLWID Breedte van de kolommen
 T_COLIND geeft aan of de keydef standaard is of ge(her)definieerd
@@ -170,6 +172,7 @@ M_TOOL &Programmaspecifiek
 M_COL  &Kolommen
 M_MISC &Diversen
 M_ENTR Handmatige &Invoer
+M_DESC &Beschrijvingen Aanpassen
 M_PREF Voorkeursapplicatie
 M_HELP &Help
 M_ABOUT &Over...

@@ -901,7 +901,7 @@ class EntryDialog(qtw.QDialog):
 
         super().__init__(parent)
         self.resize(680, 400)
-        self.setWindowTitle(self.master.title)
+        self.setWindowTitle(self.master.title + ": manual entry")
 
         self.sizer = qtw.QVBoxLayout()
         hsizer = qtw.QHBoxLayout()
@@ -942,7 +942,7 @@ class EntryDialog(qtw.QDialog):
         btn = buttonbox.addButton(self.captions['C_REMKEY'],
                                   qtw.QDialogButtonBox.ButtonRole.ActionRole)
         btn.clicked.connect(self.delete_key)
-        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Save)
         buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
@@ -977,10 +977,10 @@ class EntryDialog(qtw.QDialog):
         new_values = collections.defaultdict(list)
         for rowid in range(self.p0list.rowCount()):
             for colid in range(self.p0list.columnCount()):
-                try:
-                    value = self.p0list.item(rowid, colid).text()
-                except AttributeError:
-                    value = ''
+                # try:
+                value = self.p0list.item(rowid, colid).text()
+                # except AttributeError:
+                #     value = ''
                 new_values[rowid + 1].append(value.replace('\\n', '\n'))
         self.master.book.page.data = new_values
         super().accept()
@@ -995,25 +995,28 @@ class CompleteDialog(qtw.QDialog):
         ## self.captions = self.parent.captions
 
         super().__init__(parent)
-        self.resize(680, 400)
+        self.resize(1100, 700)
+        self.setWindowTitle(self.master.title + ": edit descriptions")
 
-        self.read_data()  # client exit to get start data for dialog
-
-        self.p0list = qtw.QTableWidget(len(self.cmds), 2, self)
-        self.p0list.setHorizontalHeaderLabels([shared.get_text(self.parent, 'C_CMD'),
-                                               shared.get_text(self.parent, 'C_DESC')])
-        hdr = self.p0list.horizontalHeader()
-        hdr.setStretchLastSection(True)
-        self.build_table()  # client exit to build the dialog body
-        self.p0list.setColumnWidth(0, 260)
+        self.read_data()
 
         self.sizer = qtw.QVBoxLayout()
         hsizer = qtw.QHBoxLayout()
+        self.p0list = qtw.QTableWidget(len(self.cmds), 3, self)
+        self.p0list.setHorizontalHeaderLabels([shared.get_text(self.parent, 'C_CMD'),
+                                               shared.get_text(self.parent, 'C_DESC'),
+                                               'value from earlier modification'])
+        hdr = self.p0list.horizontalHeader()
+        hdr.setStretchLastSection(True)
+        self.build_table()
+        self.p0list.setColumnWidth(0, 260)
+        self.p0list.setColumnWidth(1, 520)
+
         hsizer.addWidget(self.p0list)
         self.sizer.addLayout(hsizer)
 
         buttonbox = qtw.QDialogButtonBox()
-        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Ok)
+        buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Save)
         buttonbox.addButton(qtw.QDialogButtonBox.StandardButton.Cancel)
         buttonbox.accepted.connect(self.accept)
         buttonbox.rejected.connect(self.reject)
@@ -1023,6 +1026,32 @@ class CompleteDialog(qtw.QDialog):
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
         self.setLayout(self.sizer)
+        self.p0list.setCurrentCell(0, 1)  # self.p0list.setCurrentItem(itemAt(0,1))
+
+    def read_data(self):  # *args):
+        """lees eventuele extra commando's
+        """
+        self.cmds = self.master.book.page.descriptions
+        self.desc = self.master.book.page.olddescs
+
+    def build_table(self):
+        "vul de tabel met in te voeren gegevens"
+        # breakpoint()
+        row = 0
+        for key, desc in sorted(self.cmds.items()):
+            new_item = qtw.QTableWidgetItem()
+            new_item.setText(key)
+            new_item.setFlags(new_item.flags() ^ core.Qt.ItemFlag.ItemIsEditable)
+            self.p0list.setItem(row, 0, new_item)
+            new_item = qtw.QTableWidgetItem()
+            new_item.setText(desc)
+            self.p0list.setItem(row, 1, new_item)
+            new_item = qtw.QTableWidgetItem()
+            olddesc = self.desc[key] if key in self.desc and self.desc[key] != desc else ''
+            new_item.setText(olddesc)
+            new_item.setFlags(new_item.flags() ^ core.Qt.ItemFlag.ItemIsEditable)
+            self.p0list.setItem(row, 2, new_item)
+            row += 1
 
     def accept(self):
         """confirm changes
@@ -1034,13 +1063,6 @@ class CompleteDialog(qtw.QDialog):
             new_values[cmd] = desc
         self.master.dialog_data = new_values
         qtw.QDialog.accept(self)
-
-    def read_data(self):  # *args):
-        "to be implemented in subclass"
-        raise NotImplementedError
-
-    def build_table(self):
-        "to be implemented in subclass"
 
 
 def show_dialog(win, cls):

@@ -114,7 +114,7 @@ I_NOCHG Nothing was changed
 I_NODATA No data for this program
 Q_DPLKEY This keycombo already exists, do you want to replace it?
 C_NONE No plugin for {} yet
-M_DESC View/edit {} keyboard shortcuts
+I_DESC View/edit {} keyboard shortcuts
 I_NOTFND {} not found
 I_NONXT No next item
 I_NOPRV No previous item
@@ -134,6 +134,8 @@ I_DPLCOL Can't save this: identical values for column numbers
 I_DPLNAM Can't save this: identical values for column names
 I_MISSNAM Can't save this: not all column names are entered
 M_NODESC (No description available)
+I_NOMAP Function not possible: no mapping of commands to descriptions
+I_NOMETH Function not possible: not implemented in plugin
 T_COLTTL Titles of the columns in the display; refer to keys in the language file
 T_COLWID Column widths
 T_COLIND column indicates if keydef is original or (re)defined
@@ -171,6 +173,7 @@ M_TOOL &Tool Specific
 M_COL &Columns
 M_MISC &Misc
 M_ENTR Manual &Entry
+M_DESC &Edit Descriptions
 M_HELP &Help
 M_ABOUT &About
 
