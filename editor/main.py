@@ -185,16 +185,20 @@ def writejson(pad, reader, settings, coldata, data, otherstuff):
     # print(settings)
     # print(coldata)
     fulldict = {'settings': settings, 'column_info': coldata, 'keydata': data}
-    if reader and hasattr(reader, 'update_otherstuff_outbound'):
+    update_outbound = bool(reader) and hasattr(reader, 'update_otherstuff_outbound')
+    if update_outbound:
         otherstuff = reader.update_otherstuff_outbound(otherstuff)
     for name, item in otherstuff.items():
         if isinstance(item, set):
             item = sorted(list(item))
-        if 'otherstuff' not in fulldict:
-            fulldict['otherstuff'] = {}
-        fulldict['otherstuff'][name] = item
+        # if 'otherstuff' not in fulldict:
+        #     fulldict['otherstuff'] = {}
+        # fulldict['otherstuff'][name] = item
+        fulldict[name] = item
     with open(pad, 'w') as out:
         json.dump(fulldict, out)
+    if update_outbound:
+        otherstuff = reader.update_otherstuff_inbound(otherstuff)
 
 
 def quick_check(filename):
@@ -1454,7 +1458,7 @@ class Editor:
             gui.show_message(self.gui, 'I_NOMETH')
             return
         if gui.show_dialog(self, gui.CompleteDialog):
-            self.book.page.reader.update_descriptions(self.dialog_data)
+            self.book.page.reader.update_descriptions(self.book.page, self.dialog_data)
             writejson(self.book.page.pad, self.book.page.reader, self.book.page.settings,
                       self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
             self.book.page.populate_list()

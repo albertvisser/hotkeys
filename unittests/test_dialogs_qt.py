@@ -2383,7 +2383,8 @@ class TestCompleteDialog:
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.master = types.SimpleNamespace(
                 book=types.SimpleNamespace(
-                    page=types.SimpleNamespace(descriptions={'x': 'y'}, olddescs={'a': 'b'})))
+                    page=types.SimpleNamespace(descriptions={'x': 'y'},
+                                               otherstuff={'olddescs': {'a': 'b'}})))
         testobj.read_data()
         assert testobj.cmds == {'x': 'y'}
         assert testobj.desc == {'a': 'b'}

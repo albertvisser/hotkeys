@@ -1032,7 +1032,8 @@ class CompleteDialog(qtw.QDialog):
         """lees eventuele extra commando's
         """
         self.cmds = self.master.book.page.descriptions
-        self.desc = self.master.book.page.olddescs
+        self.desc = self.master.book.page.otherstuff.get('olddescs', {})
+        # overgebleven afwijkende descriptions
 
     def build_table(self):
         "vul de tabel met in te voeren gegevens"

@@ -239,8 +239,11 @@ def test_readjson(tmp_path):
 def test_writejson(tmp_path, capsys):
     """unittest for main.writejson
     """
-    def mock_update(data):
+    def mock_update_out(data):
         print('called Reader.update_otherstuff_outbound with arg', data)
+        return data
+    def mock_update_in(data):
+        print('called Reader.update_otherstuff_inbound with arg', data)
         return data
     plgfile = tmp_path / 'test' / 'plugin.json'
     plgfile.parent.mkdir()
@@ -257,10 +260,10 @@ def test_writejson(tmp_path, capsys):
     assert plgfile.read_text() == ('{"settings": {"settings": "dict"},'
                                    ' "column_info": [["column", "info"]],'
                                    ' "keydata": {"keycombo": "dict"},'
-                                   ' "otherstuff": {"xxx": ["a", "b", "c"], "yyy": ["q", "r"],'
-                                   ' "zzz": {"m": "n"}}}')
+                                   ' "xxx": ["a", "b", "c"], "yyy": ["q", "r"], "zzz": {"m": "n"}}')
     assert capsys.readouterr().out == ''
-    reader.update_otherstuff_outbound = mock_update
+    reader.update_otherstuff_outbound = mock_update_out
+    reader.update_otherstuff_inbound = mock_update_in
     otherstuff = {'xxx': {'a', 'b', 'c'}, 'yyy': ['q', 'r'], 'zzz': {'m': 'n'}}
     testee.writejson(str(plgfile), reader, {'settings': 'dict'}, [['column', 'info']],
                      {'keycombo': 'dict'},
@@ -268,10 +271,10 @@ def test_writejson(tmp_path, capsys):
     assert plgfile.read_text() == ('{"settings": {"settings": "dict"},'
                                    ' "column_info": [["column", "info"]],'
                                    ' "keydata": {"keycombo": "dict"},'
-                                   ' "otherstuff": {"xxx": ["a", "b", "c"], "yyy": ["q", "r"],'
-                                   ' "zzz": {"m": "n"}}}')
+                                   ' "xxx": ["a", "b", "c"], "yyy": ["q", "r"], "zzz": {"m": "n"}}')
     assert capsys.readouterr().out == (
-            f"called Reader.update_otherstuff_outbound with arg {otherstuff}\n")
+            f"called Reader.update_otherstuff_outbound with arg {otherstuff}\n"
+            f"called Reader.update_otherstuff_inbound with arg {otherstuff}\n")
     reader = None
     testee.writejson(str(plgfile), reader, {'settings': 'dict'}, [['column', 'info']],
                      {'keycombo': 'dict'},
@@ -279,8 +282,7 @@ def test_writejson(tmp_path, capsys):
     assert plgfile.read_text() == ('{"settings": {"settings": "dict"},'
                                    ' "column_info": [["column", "info"]],'
                                    ' "keydata": {"keycombo": "dict"},'
-                                   ' "otherstuff": {"xxx": ["a", "b", "c"], "yyy": ["q", "r"],'
-                                   ' "zzz": {"m": "n"}}}')
+                                   ' "xxx": ["a", "b", "c"], "yyy": ["q", "r"], "zzz": {"m": "n"}}')
     assert capsys.readouterr().out == ''
 
 def test_quick_check(monkeypatch, capsys):
@@ -319,7 +321,6 @@ def test_quick_check(monkeypatch, capsys):
     testee.quick_check('plugin.json')
     assert capsys.readouterr().out == ('called readjson with arg `plugin.json`\n'
                                        'plugin.json: No errors found\n')
-
 
 def test_hotkeypanel_init(monkeypatch, capsys):
     """unittest for main.HotkeyPanel.init
@@ -3170,7 +3171,8 @@ def test_editor_m_editdescs(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             f"called gui.show_dialog with args ({testobj},"
             " <class 'editor.dialogs_qt.CompleteDialog'>)\n"
-            "called reader.update_descriptions with args ({'dialog': 'data'},)\n"
+            f"called reader.update_descriptions with args ({testobj.book.page},"
+            " {'dialog': 'data'})\n"
             f"called writejson with args ('settings.json', {testobj.book.page.reader},"
             " {'set': 'tings'}, [('column', 'info')], {'da': 'ta'}, {'other': 'stuff'})\n"
             "called HotkeyPanel.populate_list\n")
