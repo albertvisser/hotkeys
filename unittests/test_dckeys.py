@@ -58,48 +58,48 @@ def test_get_data_from_html(monkeypatch, capsys, tmp_path):
             " mode='r' encoding='UTF-8'>, 'lxml')\n")
 
 
-def test_get_data_from_csv(monkeypatch, capsys, tmp_path):
-    """unittest for dckeys.get_data_from_csv
-    """
-    def mock_reader(stream):
-        print(f'called csv.reader with arg {stream}')
-        return ['expected', 'result']
-    monkeypatch.setattr(testee.csv, 'reader', mock_reader)
-    filepath = tmp_path / 'filename'
-    filepath.touch()
-    assert testee.get_data_from_csv(str(filepath)) == ["expected", "result"]
-    assert capsys.readouterr().out == (
-            f"called csv.reader with arg <_io.TextIOWrapper name='{filepath}'"
-            " mode='r' encoding='UTF-8'>\n")
+# def test_get_data_from_csv(monkeypatch, capsys, tmp_path):
+#     """unittest for dckeys.get_data_from_csv
+#     """
+#     def mock_reader(stream):
+#         print(f'called csv.reader with arg {stream}')
+#         return ['expected', 'result']
+#     monkeypatch.setattr(testee.csv, 'reader', mock_reader)
+#     filepath = tmp_path / 'filename'
+#     filepath.touch()
+#     assert testee.get_data_from_csv(str(filepath)) == ["expected", "result"]
+#     assert capsys.readouterr().out == (
+#             f"called csv.reader with arg <_io.TextIOWrapper name='{filepath}'"
+#             " mode='r' encoding='UTF-8'>\n")
 
 
-def test_save_list_to_csv(monkeypatch, capsys, tmp_path):
-    """unittest for dckeys.save_list_to_csv
-    """
-    def mock_copy(*args):
-        print('called shutil.copyfile with args', args)
-    def mock_write(arg):
-        print(f"called csv.writer.writerow with arg '{arg}'")
-    def mock_writer(arg):
-        print(f"called csv.writer with arg {arg}")
-        return types.SimpleNamespace(writerow=mock_write)
-    monkeypatch.setattr(testee.shutil, 'copyfile', mock_copy)
-    monkeypatch.setattr(testee.csv, 'writer', mock_writer)
-    filepath = tmp_path / 'filename'
-    testee.save_list_to_csv(['data', 'lines'], str(filepath))
-    assert capsys.readouterr().out == (
-            f"called csv.writer with arg <_io.TextIOWrapper name='{filepath}'"
-            " mode='w' encoding='UTF-8'>\n"
-            "called csv.writer.writerow with arg 'data'\n"
-            "called csv.writer.writerow with arg 'lines'\n")
-    filepath.touch()
-    testee.save_list_to_csv(['data', 'lines'], str(filepath))
-    assert capsys.readouterr().out == (
-            f"called shutil.copyfile with args ('{filepath}', '{str(filepath) + '~'}')\n"
-            f"called csv.writer with arg <_io.TextIOWrapper name='{filepath}'"
-            " mode='w' encoding='UTF-8'>\n"
-            "called csv.writer.writerow with arg 'data'\n"
-            "called csv.writer.writerow with arg 'lines'\n")
+# def test_save_list_to_csv(monkeypatch, capsys, tmp_path):
+#     """unittest for dckeys.save_list_to_csv
+#     """
+#     def mock_copy(*args):
+#         print('called shutil.copyfile with args', args)
+#     def mock_write(arg):
+#         print(f"called csv.writer.writerow with arg '{arg}'")
+#     def mock_writer(arg):
+#         print(f"called csv.writer with arg {arg}")
+#         return types.SimpleNamespace(writerow=mock_write)
+#     monkeypatch.setattr(testee.shutil, 'copyfile', mock_copy)
+#     monkeypatch.setattr(testee.csv, 'writer', mock_writer)
+#     filepath = tmp_path / 'filename'
+#     testee.save_list_to_csv(['data', 'lines'], str(filepath))
+#     assert capsys.readouterr().out == (
+#             f"called csv.writer with arg <_io.TextIOWrapper name='{filepath}'"
+#             " mode='w' encoding='UTF-8'>\n"
+#             "called csv.writer.writerow with arg 'data'\n"
+#             "called csv.writer.writerow with arg 'lines'\n")
+#     filepath.touch()
+#     testee.save_list_to_csv(['data', 'lines'], str(filepath))
+#     assert capsys.readouterr().out == (
+#             f"called shutil.copyfile with args ('{filepath}', '{str(filepath) + '~'}')\n"
+#             f"called csv.writer with arg <_io.TextIOWrapper name='{filepath}'"
+#             " mode='w' encoding='UTF-8'>\n"
+#             "called csv.writer.writerow with arg 'data'\n"
+#             "called csv.writer.writerow with arg 'lines'\n")
 
 
 def test_parse_keytext():
@@ -197,7 +197,8 @@ def test_analyze_keydefs():
     root = soup.select('div')[0]
     assert testee.analyze_keydefs(root) == ({'xxx': '',
                                              'yyyyyy': 'descitem a longer description inner desc'},
-                                            {('Kkk', ''): {'yyyyyy'}, ('Lll', ''): {'xxx'}},
+                                            {('Kkk', ''): {('Main', 'yyyyyy')},
+                                             ('Lll', ''): {('Main', 'xxx')}},
                                             {'yyyyyy': [('', '', ''), ('param', 'value', 'pdesc')]},
                                             ['yyyyyy', 'xxx'])
 
@@ -212,6 +213,7 @@ def test_build_data(monkeypatch, capsys):
             print('called MockBuilder.__init__ with args', args)
             self.page = args[0]
             self.counter = 0
+            self.olddescs = {'old': 'descs'}
         def get_settings_pathnames(self, *args):
             print('called MockBuilder.get_settings_pathnames with args', args)
             if self.page.name in ('nokbfile', 'newkbfile'):
@@ -234,17 +236,14 @@ def test_build_data(monkeypatch, capsys):
         def get_cmddict(self, *args):
             print('called MockBuilder.get_cmddict with args', args)
             self.cmddict = {'cmd': 'dict'}
-        def assemble_shortcuts(self, *args):
-            print('called MockBuilder.assemble_shortcuts with args', args)
+        def assemble_shortcuts(self):
+            print('called MockBuilder.assemble_shortcuts')
             self.contexts = {'con', 'texts'}
             self.controls = {'con', 'trols'}
             self.params = {'params': ''}
             self.catdict = {'cat': 'dict'}
-        def add_missing_descriptions(self, *args):
-            print('called MockBuilder.add_missing_descriptions with args', args)
-            if self.page.name == 'newkbfile':
-                return ['csv', 'data']
-            return ['desc', 'list']
+        def compare_descriptions(self, *args):
+            print('called MockBuilder.compare_descriptions with args', args)
         def format_shortcuts(self, *args):
             print('called MockBuilder.format_shortcuts with args', args)
             self.shortcuts = {'short': 'cuts'}
@@ -255,29 +254,22 @@ def test_build_data(monkeypatch, capsys):
     def mock_get_data_from_html(arg):
         print('called get_data_from_html with arg', arg)
         return 'html_data'
-    def mock_get_data_from_csv(arg):
-        print('called get_data_from_csv with arg', arg)
-        return ['csv', 'data']
-    def mock_save_to_csv(*args):
-        print('called save_list_to_csv with args', args)
     def mock_show(*args, **kwargs):
         print('called gui.show_message with args', args, kwargs)
     monkeypatch.setattr(testee, 'CsvBuilder', MockBuilder)
     monkeypatch.setattr(testee, 'get_data_from_xml', mock_get_data_from_xml)
     monkeypatch.setattr(testee, 'get_data_from_html', mock_get_data_from_html)
-    monkeypatch.setattr(testee, 'get_data_from_csv', mock_get_data_from_csv)
-    monkeypatch.setattr(testee, 'save_list_to_csv', mock_save_to_csv)
     monkeypatch.setattr(testee, 'show_message', mock_show)
-    page = types.SimpleNamespace(name='', settings={})
+    page = types.SimpleNamespace(name='', settings={}, descriptions={'x': 'y'})
     page.gui = types.SimpleNamespace()
     assert testee.build_data(page, showinfo=False) == (
             {'short': 'cuts'},
-            {'stdkeys': {'std': 'keys'}, 'defaults': {'def': 'aults'}, 'cmddict': {'cmd': 'dict'},
+            {'olddescs': {'old': 'descs'},'stdkeys': {'std': 'keys'},
+             'defaults': {'def': 'aults'}, 'cmddict': {'cmd': 'dict'},
              'contexts': ['con', 'texts'], 'restrictions': ['con', 'trols'],
              'cmdparms': {'params': ''}, 'catdict': {'cat': 'dict'}})
     assert capsys.readouterr().out == (
-            "called MockBuilder.__init__ with args (namespace(name='', settings={},"
-            " gui=namespace()), False)\n"
+            f"called MockBuilder.__init__ with args ({page}, False)\n"
             "called MockBuilder.get_settings_pathnames with args ()\n"
             "called get_data_from_xml with arg kbf\n"
             "called MockBuilder.get_keydefs with args ('xml data',)\n"
@@ -287,19 +279,17 @@ def test_build_data(monkeypatch, capsys):
             "called MockBuilder.get_toolbarcmds with args ('xml data',)\n"
             "called get_data_from_html with arg cmds\n"
             "called MockBuilder.get_cmddict with args ('html_data',)\n"
-            "called MockBuilder.assemble_shortcuts with args ()\n"
-            "called get_data_from_csv with arg desc\n"
-            "called MockBuilder.add_missing_descriptions with args (['csv', 'data'],)\n"
-            "called save_list_to_csv with args (['desc', 'list'], 'desc')\n"
+            "called MockBuilder.assemble_shortcuts\n"
+            "called MockBuilder.compare_descriptions with args ({'x': 'y'},)\n"
             "called MockBuilder.format_shortcuts with args ()\n")
     assert testee.build_data(page) == (
             {'short': 'cuts'},
-            {'stdkeys': {'std': 'keys'}, 'defaults': {'def': 'aults'}, 'cmddict': {'cmd': 'dict'},
+            {'olddescs': {'old': 'descs'},'stdkeys': {'std': 'keys'},
+             'defaults': {'def': 'aults'}, 'cmddict': {'cmd': 'dict'},
              'contexts': ['con', 'texts'], 'restrictions': ['con', 'trols'],
              'cmdparms': {'params': ''}, 'catdict': {'cat': 'dict'}})
     assert capsys.readouterr().out == (
-            "called MockBuilder.__init__ with args"
-            " (namespace(name='', settings={}, gui=namespace()), True)\n"
+            f"called MockBuilder.__init__ with args ({page}, True)\n"
             "called MockBuilder.get_settings_pathnames with args ()\n"
             "called MockBuilder.check_path_setting with args ('kbf',)\n"
             "called get_data_from_xml with arg kbf\n"
@@ -310,28 +300,26 @@ def test_build_data(monkeypatch, capsys):
             "called MockBuilder.get_toolbarcmds with args ('xml data',)\n"
             "called get_data_from_html with arg cmds\n"
             "called MockBuilder.get_cmddict with args ('html_data',)\n"
-            "called MockBuilder.assemble_shortcuts with args ()\n"
-            "called get_data_from_csv with arg desc\n"
-            "called MockBuilder.add_missing_descriptions with args (['csv', 'data'],)\n"
-            "called save_list_to_csv with args (['desc', 'list'], 'desc')\n"
+            "called MockBuilder.assemble_shortcuts\n"
+            "called MockBuilder.compare_descriptions with args ({'x': 'y'},)\n"
             "called MockBuilder.format_shortcuts with args ()\n")
     page.name = 'nokbfile'
     page.title = 'xx'
     page.gui.master = page
     assert testee.build_data(page) == (
             {'short': 'cuts'},
-            {'stdkeys': {'std': 'keys'}, 'defaults': {'def': 'aults'}, 'cmddict': {'cmd': 'dict'},
+            {'olddescs': {'old': 'descs'},'stdkeys': {'std': 'keys'},
+             'defaults': {'def': 'aults'}, 'cmddict': {'cmd': 'dict'},
              'contexts': ['con', 'texts'], 'restrictions': ['con', 'trols'],
              'cmdparms': {'params': ''}, 'catdict': {'cat': 'dict'}})
+    # mimic the original settings path before entering it in check_path_setting
+    page.settings = {}
     assert capsys.readouterr().out == (
-            "called MockBuilder.__init__ with args"
-            " (namespace(name='nokbfile', settings={}, gui=namespace(master=namespace(...)),"
-            " title='xx'), True)\n"
+            f"called MockBuilder.__init__ with args ({page}, True)\n"
             "called MockBuilder.get_settings_pathnames with args ()\n"
             "called MockBuilder.check_path_setting with args ('',)\n"
-            "called gui.show_message with args"
-            " (namespace(master=namespace(name='nokbfile', settings={}, gui=namespace(...),"
-            " title='xx')),) {'text': 'You MUST provide a name for the settings file'}\n"
+            f"called gui.show_message with args ({page.gui},)"
+            " {'text': 'You MUST provide a name for the settings file'}\n"
             "called MockBuilder.check_path_setting with args ('',)\n"
             "called get_data_from_xml with arg newkbf\n"
             "called MockBuilder.get_keydefs with args ('xml data',)\n"
@@ -341,21 +329,20 @@ def test_build_data(monkeypatch, capsys):
             "called MockBuilder.get_toolbarcmds with args ('xml data',)\n"
             "called get_data_from_html with arg cmds\n"
             "called MockBuilder.get_cmddict with args ('html_data',)\n"
-            "called MockBuilder.assemble_shortcuts with args ()\n"
-            "called get_data_from_csv with arg desc\n"
-            "called MockBuilder.add_missing_descriptions with args (['csv', 'data'],)\n"
-            "called save_list_to_csv with args (['desc', 'list'], 'desc')\n"
+            "called MockBuilder.assemble_shortcuts\n"
+            "called MockBuilder.compare_descriptions with args ({'x': 'y'},)\n"
             "called MockBuilder.format_shortcuts with args ()\n")
     page.name = 'newkbfile'
     assert testee.build_data(page) == (
             {'short': 'cuts'},
-            {'stdkeys': {'std': 'keys'}, 'defaults': {'def': 'aults'}, 'cmddict': {'cmd': 'dict'},
-             'contexts': ['Xx', 'con', 'texts'], 'restrictions': ['con', 'trols'],
+            {'olddescs': {'old': 'descs'},'stdkeys': {'std': 'keys'},
+             'defaults': {'def': 'aults'}, 'cmddict': {'cmd': 'dict'},
+             'contexts': ['con', 'texts'], 'restrictions': ['con', 'trols'],
              'cmdparms': {'params': ''}, 'catdict': {'cat': 'dict'}})
+    # mimic the original settings path before entering it in check_path_setting
+    page.settings = {}
     assert capsys.readouterr().out == (
-            "called MockBuilder.__init__ with args"
-            " (namespace(name='newkbfile', settings={'DC_PATH': 'newkbf'},"
-            " gui=namespace(master=namespace(...)), title='xx'), True)\n"
+            f"called MockBuilder.__init__ with args ({page}, True)\n"
             "called MockBuilder.get_settings_pathnames with args ()\n"
             "called MockBuilder.check_path_setting with args ('',)\n"
             "called get_data_from_xml with arg newkbf\n"
@@ -366,9 +353,8 @@ def test_build_data(monkeypatch, capsys):
             "called MockBuilder.get_toolbarcmds with args ('xml data',)\n"
             "called get_data_from_html with arg cmds\n"
             "called MockBuilder.get_cmddict with args ('html_data',)\n"
-            "called MockBuilder.assemble_shortcuts with args ()\n"
-            "called get_data_from_csv with arg desc\n"
-            "called MockBuilder.add_missing_descriptions with args (['csv', 'data'],)\n"
+            "called MockBuilder.assemble_shortcuts\n"
+            "called MockBuilder.compare_descriptions with args ({'x': 'y'},)\n"
             "called MockBuilder.format_shortcuts with args ()\n")
 
 
@@ -394,10 +380,11 @@ class TestCsvBuilder:
     def test_init(self):
         """unittest for CsvBuilder.__init__
         """
-        page = types.SimpleNamespace()
+        page = types.SimpleNamespace(descriptions='olddescs')
         testobj = testee.CsvBuilder(page, True)
         assert testobj.page == page
         assert testobj.showinfo
+        assert testobj.olddescs == 'olddescs'
         assert testobj.definedkeys == {}
         assert testobj.stdkeys == {}
         assert testobj.cmddict == {}
@@ -740,50 +727,65 @@ class TestCsvBuilder:
         testobj.get_toolbarcmds(data)
         assert testobj.tbcmddict == {('MainToolbar', 'xxx'): ('', 'yyy', '')}
 
-    def test_add_missing_descriptions(self, monkeypatch, capsys):
+    # def test_add_missing_descriptions(self, monkeypatch, capsys):
+    #     """unittest for CsvBuilder.add_missing_descriptions
+    #     """
+    #     def mock_show(*args):
+    #         print('called show_dialog with args', args)
+    #         return False
+    #     def mock_show_2(*args):
+    #         print('called show_dialog with args', args)
+    #         return True
+    #     monkeypatch.setattr(testee, 'show_dialog', mock_show)
+    #     testobj = self.setup_testobj(monkeypatch, capsys)
+    #     testobj.showinfo = False
+    #     testobj.cmddict = {}
+    #     assert testobj.add_missing_descriptions([]) == []
+    #     assert not testobj.cmddict
+    #     assert capsys.readouterr().out == ""
+    #     assert testobj.add_missing_descriptions([('desc', 'list')]) == [('desc', 'list')]
+    #     assert testobj.cmddict == {'desc': 'list'}
+    #     assert capsys.readouterr().out == ""
+    #     testobj.cmddict = {'x': 'y'}
+    #     assert testobj.add_missing_descriptions([('desc', 'list')]) == [('desc', 'list')]
+    #     assert testobj.cmddict == {'x': 'y', 'desc': 'list'}
+    #     assert capsys.readouterr().out == ""
+    #     testobj.cmddict = {'desc': ''}
+    #     assert testobj.add_missing_descriptions([('desc', 'list')]) == [('desc', 'list')]
+    #     assert testobj.cmddict == {'desc': 'list'}
+    #     assert capsys.readouterr().out == ""
+    #     testobj.cmddict = {'desc': 'xxx'}
+    #     assert testobj.add_missing_descriptions([('desc', 'list')]) == [('desc', 'list')]
+    #     assert testobj.cmddict == {'desc': 'xxx'}
+    #     assert capsys.readouterr().out == ""
+    #     testobj.showinfo = True
+    #     testobj.page = types.SimpleNamespace()
+    #     testobj.cmddict = {}
+    #     assert testobj.add_missing_descriptions([('desc', 'list')]) == [('desc', 'list')]
+    #     assert testobj.cmddict == {'desc': 'list'}
+    #     testobj.page.dialog_data['cmddict'] = {}  # restore page to original state
+    #     assert capsys.readouterr().out == (f"called show_dialog with args ({testobj.page},"
+    #                                        " <class 'editor.plugins.dckeys_qt.DcCompleteDialog'>)\n")
+    #     monkeypatch.setattr(testee, 'show_dialog', mock_show_2)
+    #     assert testobj.add_missing_descriptions([('desc', 'list')]) == [('desc', 'list')]
+    #     assert testobj.cmddict == {'desc': 'list'}
+    #     assert capsys.readouterr().out == (f"called show_dialog with args ({testobj.page},"
+    #                                        " <class 'editor.plugins.dckeys_qt.DcCompleteDialog'>)\n")
+
+    def test_compare_descriptions(self, monkeypatch, capsys):
         """unittest for CsvBuilder.add_missing_descriptions
         """
-        def mock_show(*args):
-            print('called show_dialog with args', args)
-            return False
-        def mock_show_2(*args):
-            print('called show_dialog with args', args)
-            return True
-        monkeypatch.setattr(testee, 'show_dialog', mock_show)
         testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.showinfo = False
         testobj.cmddict = {}
-        assert testobj.add_missing_descriptions([]) == []
+        olddescs = {}
+        testobj.compare_descriptions(olddescs)
         assert not testobj.cmddict
-        assert capsys.readouterr().out == ""
-        assert testobj.add_missing_descriptions([('desc', 'list')]) == [('desc', 'list')]
-        assert testobj.cmddict == {'desc': 'list'}
-        assert capsys.readouterr().out == ""
-        testobj.cmddict = {'x': 'y'}
-        assert testobj.add_missing_descriptions([('desc', 'list')]) == [('desc', 'list')]
-        assert testobj.cmddict == {'x': 'y', 'desc': 'list'}
-        assert capsys.readouterr().out == ""
-        testobj.cmddict = {'desc': ''}
-        assert testobj.add_missing_descriptions([('desc', 'list')]) == [('desc', 'list')]
-        assert testobj.cmddict == {'desc': 'list'}
-        assert capsys.readouterr().out == ""
-        testobj.cmddict = {'desc': 'xxx'}
-        assert testobj.add_missing_descriptions([('desc', 'list')]) == [('desc', 'list')]
-        assert testobj.cmddict == {'desc': 'xxx'}
-        assert capsys.readouterr().out == ""
-        testobj.showinfo = True
-        testobj.page = types.SimpleNamespace()
-        testobj.cmddict = {}
-        assert testobj.add_missing_descriptions([('desc', 'list')]) == [('desc', 'list')]
-        assert testobj.cmddict == {'desc': 'list'}
-        testobj.page.dialog_data['cmddict'] = {}  # restore page to original state
-        assert capsys.readouterr().out == (f"called show_dialog with args ({testobj.page},"
-                                           " <class 'editor.plugins.dckeys_qt.DcCompleteDialog'>)\n")
-        monkeypatch.setattr(testee, 'show_dialog', mock_show_2)
-        assert testobj.add_missing_descriptions([('desc', 'list')]) == [('desc', 'list')]
-        assert testobj.cmddict == {'desc': 'list'}
-        assert capsys.readouterr().out == (f"called show_dialog with args ({testobj.page},"
-                                           " <class 'editor.plugins.dckeys_qt.DcCompleteDialog'>)\n")
+        assert not testobj.olddescs
+        testobj.cmddict = {'x': 'y', 'p': 'q', 'g': 'h', 'k': ''}
+        olddescs = {'a': 'b', 'p': 'r', 'g': 'h', 'k': 'l'}
+        testobj.compare_descriptions(olddescs)
+        assert testobj.cmddict == {'x': 'y', 'p': 'q', 'g': 'h', 'k': 'l'}
+        assert testobj.olddescs == {'a': 'b', 'p': 'r'}
 
     def test_assemble_shortcuts(self, monkeypatch, capsys):
         """unittest for CsvBuilder.assemble_shortcuts
@@ -811,9 +813,20 @@ class TestCsvBuilder:
                                                        'ctrl': 'control', 'standard': ''},
                                      'stdkey': {'cmd': '', 'param': '', 'ctrl': '',
                                                 'standard': 'S', 'desc': 'stdkeydesc'}}
+        testobj.definedkeys = {('x', 'y', 'z'): {'cmd': 'cmnd', 'param': 'parm', 'ctrl': 'control'}}
+        testobj.stdkeys = {'stdkey': 'stdkeydesc'}
+        testobj.defaults = {('x', 'y'): {('z', 'cmnd')}}
+        testobj.assemble_shortcuts()
+        assert testobj.tobematched == {}
+        assert testobj.unlisted_cmds == ['cmnd']
+        assert testobj.cmddict == {'cmnd': ''}
+        assert testobj.shortcuts == {('x', 'y', 'z'): {'cmd': 'cmnd', 'param': 'parm',
+                                                       'ctrl': 'control', 'standard': 'S'},
+                                     'stdkey': {'cmd': '', 'param': '', 'ctrl': '',
+                                                'standard': 'S', 'desc': 'stdkeydesc'}}
         testobj.stdkeys = {}
         testobj.cmddict = {}
-        testobj.defaults = {('x', 'y'): {'cmnd'}}
+        testobj.defaults = {('x', 'y'): {('u', 'cmnd')}}
         testobj.stdkeys = {'stdkey': 'stdkeydesc'}
         testobj.shortcuts = {'stdkey': 'xxx'}
         testobj.definedkeys = {('x', 'y', 'z'): {'cmd': 'cm_ExecuteToolbarItem',
@@ -836,7 +849,7 @@ class TestCsvBuilder:
                                ('p', 'q', 'r'): {'cmd': 'xxx', 'desc': 'this'}}
         testobj.cmddict = {'c': 'something', 'xxx': 'this', 'd': 'it'}
         testobj.stdkeys = {('x', 'y', 'z'): 'stdkey', ('p', 'q', 'r'): 'yyy', ('d', 'e', 'f'): 'it'}
-        testobj.defaults = {('x', 'y'): {'cmnd'}}
+        testobj.defaults = {('x', 'y'): {('u', 'cmnd')}}
         testobj.shortcuts = {}
         testobj.assemble_shortcuts()
         assert testobj.tobematched == {('p', 'q', 'r'): {'stdkeys_oms': 'yyy',
@@ -886,10 +899,11 @@ def test_update_otherstuff_inbound():
     """
     otherstuff = {'stdkeys': {}, 'defaults': {}}
     assert testee.update_otherstuff_inbound(otherstuff) == {'stdkeys': {}, 'defaults': {}}
-    otherstuff = {'stdkeys': {'x y': 'z', 'a b c': 'dd', 'q  r': 's'},
+    otherstuff = {'stdkeys': {'x y': 'z', 'a b c': 'dd', 'q  r': 's', 'D (1) A XX': '...'},
                   'defaults': {'a': 'b', 'x y  z   q r': 's'}}
     assert testee.update_otherstuff_inbound(otherstuff) == {
-            'stdkeys': {('x', 'y'): 'z', ('a', 'b', 'c'): 'dd', ('q', '', 'r'): 's'},
+            'stdkeys': {('x', 'y'): 'z', ('a', 'b', 'c'): 'dd', ('q', '', 'r'): 's',
+                        ('D (1)', 'A', 'XX'): '...'},
             'defaults': {('a',): 'b', ('x', 'y', '', 'z', '', '', 'q', 'r'): 's'}}
 
 
@@ -934,12 +948,22 @@ def test_savekeys(monkeypatch, capsys):
         return '+'.join(args)
     def mock_copy(*args):
         print('shutil.copyfile with args', args)
+    class MockSDI:
+        "stub for SimgleDataInterface object"
     class MockElement:
         "stub for ElementTree.Element object"
         def __init__(self, name, **attrs):
             print(f"called ET.Element.__init__ with args ('{name}',)", attrs)
             self.name = name
             self.children = []
+            self.attrib = {x: attrs[x] for x in attrs}
+        def find(self, name):
+            print(f"called ET.Element.find with arg {name}")
+            for child in self.children:
+                if child.name == name:
+                    return child
+            else:
+                return None
     def MockSubElement(obj, name, **attrs):
         "stub for ElementTree.SubElement object factory"
         print(f"called ET.SubElement with args(<Element '{obj.name}'>, '{name}')", attrs)
@@ -950,8 +974,17 @@ def test_savekeys(monkeypatch, capsys):
         "stub for ElementTree.ElementTree object"
         def __init__(self, root):
             print(f"called ET.ElementTree.__init__ with arg <Element '{root.name}'>")
+            self.root = root
         def write(self, *args, **kwargs):
             print('called ET.ElementTree.write with args', args, kwargs)
+        def getroot(self):
+            print('called ET.ElementTree.getroot')
+            return self.root
+    def mock_parse(self, *args):
+        print('called ET.ElementTree.parse with args', args)
+        root = MockElement('doublecmd', DCVersion='dcv')
+        head = MockSubElement(root, 'Hotkeys', Version='ver')
+        return MockElementTree(root)
     monkeypatch.setattr(testee, 'show_cancel_message', mock_show)
     monkeypatch.setattr(testee, 'get_file_to_save', mock_get)
     monkeypatch.setattr(testee, 'build_shortcut', mock_build)
@@ -959,46 +992,60 @@ def test_savekeys(monkeypatch, capsys):
     monkeypatch.setattr(testee.ET, 'Element', MockElement)
     monkeypatch.setattr(testee.ET, 'SubElement', MockSubElement)
     monkeypatch.setattr(testee.ET, 'ElementTree', MockElementTree)
+    monkeypatch.setattr(testee.ET, 'parse', mock_parse)
     monkeypatch.setattr(testee, 'how_to_save', 'how to save')
-    page = types.SimpleNamespace(data={}, settings={'DC_PATH': 'xxx'})
+    page = types.SimpleNamespace(data={}, settings={'DC_PATH': 'xxx'}, gui=MockSDI())
     testee.savekeys(page)
     assert capsys.readouterr().out == (
-            f"called show_cancel_message with args ({page},) {{'text': 'how to save'}}\n")
-    # 610-633
+            f"called show_cancel_message with args ({page.gui},) {{'text': 'how to save'}}\n")
     monkeypatch.setattr(testee, 'show_cancel_message', mock_show_2)
     testee.savekeys(page)
     assert capsys.readouterr().out == (
-            f"called show_cancel_message with args ({page},) {{'text': 'how to save'}}\n"
+            f"called show_cancel_message with args ({page.gui},) {{'text': 'how to save'}}\n"
             "called get_file_to_save with args"
-            f" ({page},) {{'extension': 'SCF files (*.scf)', 'start': 'xxx'}}\n")
-    # 613-633
+            f" ({page.gui},) {{'extension': 'SCF files (*.scf)', 'start': 'xxx'}}\n")
     monkeypatch.setattr(testee, 'get_file_to_save', mock_get_2)
     testee.savekeys(page)
     assert capsys.readouterr().out == (
-            f"called show_cancel_message with args ({page},) {{'text': 'how to save'}}\n"
+            f"called show_cancel_message with args ({page.gui},) {{'text': 'how to save'}}\n"
             "called get_file_to_save with args"
-            f" ({page},) {{'extension': 'SCF files (*.scf)', 'start': 'xxx'}}\n"
-            f"called ET.Element.__init__ with args ('doublecmd',) {{'DCVersion': '{testee.DCVER}'}}\n"
+            f" ({page.gui},) {{'extension': 'SCF files (*.scf)', 'start': 'xxx'}}\n"
+            "called ET.ElementTree.parse with args ()\n"
+            "called ET.Element.__init__ with args ('doublecmd',) {'DCVersion': 'dcv'}\n"
             "called ET.SubElement with args(<Element 'doublecmd'>, 'Hotkeys')"
-            f" {{'Version': '{testee.KBVER}'}}\n"
-            f"called ET.Element.__init__ with args ('Hotkeys',) {{'Version': '{testee.KBVER}'}}\n"
+            " {'Version': 'ver'}\n"
+            "called ET.Element.__init__ with args ('Hotkeys',) {'Version': 'ver'}\n"
+            "called ET.ElementTree.__init__ with arg <Element 'doublecmd'>\n"
+            "called ET.ElementTree.getroot\n"
+            "called ET.Element.find with arg Hotkeys\n"
+            "called ET.Element.__init__ with args ('doublecmd',) {'DCVersion': 'dcv'}\n"
+            "called ET.SubElement with args(<Element 'doublecmd'>, 'Hotkeys')"
+            " {'Version': 'ver'}\n"
+            "called ET.Element.__init__ with args ('Hotkeys',) {'Version': 'ver'}\n"
             "shutil.copyfile with args ('filename', 'filename.bak')\n"
             "called ET.ElementTree.__init__ with arg <Element 'doublecmd'>\n"
             "called ET.ElementTree.write with args"
             " ('filename',) {'encoding': 'UTF-8', 'xml_declaration': True}\n")
-    # 619-633
     page.data = {1: ['key1', 'mods', 'kind', 'context', 'command', '', '', 'desc1'],
                2: ['key2', 'mods', 'kind', 'context', 'command2', 'parm', 'ctrl', 'desc2'],
                3: ['key3', 'mods', 'kind', 'cntxt', 'command3', 'parm', 'ctrl', 'desc3']}
     testee.savekeys(page)
     assert capsys.readouterr().out == (
-            f"called show_cancel_message with args ({page},) {{'text': 'how to save'}}\n"
+            f"called show_cancel_message with args ({page.gui},) {{'text': 'how to save'}}\n"
             "called get_file_to_save with args"
-            f" ({page},) {{'extension': 'SCF files (*.scf)', 'start': 'xxx'}}\n"
-            f"called ET.Element.__init__ with args ('doublecmd',) {{'DCVersion': '{testee.DCVER}'}}\n"
+            f" ({page.gui},) {{'extension': 'SCF files (*.scf)', 'start': 'xxx'}}\n"
+            "called ET.ElementTree.parse with args ()\n"
+            "called ET.Element.__init__ with args ('doublecmd',) {'DCVersion': 'dcv'}\n"
             "called ET.SubElement with args(<Element 'doublecmd'>, 'Hotkeys')"
-            f" {{'Version': '{testee.KBVER}'}}\n"
-            f"called ET.Element.__init__ with args ('Hotkeys',) {{'Version': '{testee.KBVER}'}}\n"
+            " {'Version': 'ver'}\n"
+            "called ET.Element.__init__ with args ('Hotkeys',) {'Version': 'ver'}\n"
+            "called ET.ElementTree.__init__ with arg <Element 'doublecmd'>\n"
+            "called ET.ElementTree.getroot\n"
+            "called ET.Element.find with arg Hotkeys\n"
+            "called ET.Element.__init__ with args ('doublecmd',) {'DCVersion': 'dcv'}\n"
+            "called ET.SubElement with args(<Element 'doublecmd'>, 'Hotkeys')"
+            " {'Version': 'ver'}\n"
+            "called ET.Element.__init__ with args ('Hotkeys',) {'Version': 'ver'}\n"
             "called ET.SubElement with args(<Element 'Hotkeys'>, 'Form') {'Name': 'cntxt'}\n"
             "called ET.Element.__init__ with args ('Form',) {'Name': 'cntxt'}\n"
             "called ET.SubElement with args(<Element 'Form'>, 'Hotkey') {}\n"
@@ -1039,7 +1086,7 @@ def test_savekeys(monkeypatch, capsys):
 
 
 def test_savekeys_2(monkeypatch, capsys, tmp_path):
-    """unittest for dckeys.savekeys
+    """unittest for dckeys.savekeys  - ElementTree niet gesimuleerd
     """
     def mock_show(*args, **kwargs):
         print('called show_cancel_message with args', args, kwargs)
@@ -1052,13 +1099,16 @@ def test_savekeys_2(monkeypatch, capsys, tmp_path):
         return '+'.join(args)
     def mock_copy(*args):
         print('shutil.copyfile with args', args)
+    class MockSDI:
+        "stub for SimgleDataInterface object"
     filename = tmp_path / 'testfile'
+    filename.write_text('<doublecmd DCVersion="0.6.6 beta"><Hotkeys Version="20"/></doublecmd>')
     monkeypatch.setattr(testee, 'show_cancel_message', mock_show)
     monkeypatch.setattr(testee, 'get_file_to_save', mock_get)
     monkeypatch.setattr(testee, 'build_shortcut', mock_build)
     monkeypatch.setattr(testee.shutil, 'copyfile', mock_copy)
     monkeypatch.setattr(testee, 'how_to_save', 'how to save')
-    page = types.SimpleNamespace(settings={'DC_PATH': 'xxx'}, data={
+    page = types.SimpleNamespace(settings={'DC_PATH': 'xxx'}, gui=MockSDI(), data={
         1: ['key1', 'mods', 'kind', 'context', 'command', '', '', 'desc1'],
         2: ['key2', 'mods', 'kind', 'context', 'command2', 'parm', 'ctrl', 'desc2'],
         3: ['key3', 'mods', 'kind', 'cntxt', 'command3', 'parm', 'ctrl', 'desc3']})
@@ -1075,9 +1125,9 @@ def test_savekeys_2(monkeypatch, capsys, tmp_path):
             '<Hotkey><Shortcut>key2+mods</Shortcut><Command>command2</Command>'
             '<Param>parm</Param><Control>ctrl</Control></Hotkey></Form></Hotkeys></doublecmd>')
     assert capsys.readouterr().out == (
-            f"called show_cancel_message with args ({page},) {{'text': 'how to save'}}\n"
+            f"called show_cancel_message with args ({page.gui},) {{'text': 'how to save'}}\n"
             "called get_file_to_save with args"
-            f" ({page},) {{'extension': 'SCF files (*.scf)', 'start': 'xxx'}}\n"
+            f" ({page.gui},) {{'extension': 'SCF files (*.scf)', 'start': 'xxx'}}\n"
             "called build_shortcut with args ('key3', 'mods')\n"
             "called build_shortcut with args ('key1', 'mods')\n"
             "called build_shortcut with args ('key2', 'mods')\n"
@@ -1090,7 +1140,6 @@ def test_add_extra_attributes():
     win = types.SimpleNamespace(otherstuff={'cmddict': {'z': 'zzz', 'x': 'xxx', 'y': 'yyy'},
                                             'contexts': ['aa', 'bb'], 'restrictions': ['q', 'r']})
     testee.add_extra_attributes(win)
-    assert win.commandsdict == {'x': 'xxx', 'y': 'yyy', 'z': 'zzz'}
     assert win.commandslist == ['x', 'y', 'z']
     assert win.descriptions == {'z': 'zzz', 'x': 'xxx', 'y': 'yyy'}
     assert win.contextslist == ['aa', 'bb']
@@ -1102,3 +1151,22 @@ def test_get_frameheight():
     """unittest for dckeys.get_frameheight
     """
     assert testee.get_frameheight() == 120
+
+def test_update_descriptions(monkeypatch):
+    """unittest for dckeys.update_descriptions
+    """
+    win = types.SimpleNamespace(data={'x': ('a', 'b', 'd', 'e', 'f', 'g')}, otherstuff={})
+    testee.update_descriptions(win, {'y': 'z'})
+    assert win.otherstuff['cmddict'] == {'y': 'z'}
+    assert win.descriptions == {'y': 'z'}
+    assert win.data['x'] == ('a', 'b', 'd', 'e', 'f', 'g')
+    win = types.SimpleNamespace(data={'x': ('a', 'b', 'd', 'e', 'f', 'g')}, otherstuff={})
+    testee.update_descriptions(win, {'f': 'z'})
+    assert win.otherstuff['cmddict'] == {'f': 'z'}
+    assert win.descriptions == {'f': 'z'}
+    assert win.data['x'] == ('a', 'b', 'd', 'e', 'f', 'z')
+    win = types.SimpleNamespace(data={'x': ('a', 'b', 'd', 'e', 'f', 'g')}, otherstuff={})
+    testee.update_descriptions(win, {'f': 'g'})
+    assert win.otherstuff['cmddict'] == {'f': 'g'}
+    assert win.descriptions == {'f': 'g'}
+    assert win.data['x'] == ('a', 'b', 'd', 'e', 'f', 'g')

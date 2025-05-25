@@ -11,15 +11,13 @@ import xml.etree.ElementTree as ET
 import bs4 as bs  # import BeautifulSoup
 from ..gui import (show_cancel_message, get_file_to_open, get_file_to_save, show_dialog,
                    show_message, ask_ync_question)
-from .dckeys_gui import layout_extra_fields, DcCompleteDialog
+from .dckeys_gui import layout_extra_fields  # , DcCompleteDialog
 
 CONFPATH = '/home/albert/.config/doublecmd'
 # DOCSPATH = '/usr/share/doublecmd/doc/en'
 DOCSPATH = 'https:/doublecmd.github.io/doc/en'
 HERE = os.path.dirname(__file__)
 TEMPLOC = '/tmp/dc_files'
-DCVER = "0.6.6 beta"
-KBVER = "20"
 
 instructions = """\
 Instructions for rebuilding the keyboard shortcut definitions
@@ -92,23 +90,23 @@ def get_data_from_html(filename):
     return soup
 
 
-def get_data_from_csv(filename):
-    "gegevens uit csv bestand lezen en bewerkbaar maken"
-    result = []
-    with open(filename) as _in:
-        rdr = csv.reader(_in)
-        result = list(rdr)  # [line for line in rdr]
-    return result
+# def get_data_from_csv(filename):
+#     "gegevens uit csv bestand lezen en bewerkbaar maken"
+#     result = []
+#     with open(filename) as _in:
+#         rdr = csv.reader(_in)
+#         result = list(rdr)  # [line for line in rdr]
+#     return dict(result)
 
 
-def save_list_to_csv(data, filename):
-    "gegevens omzetten in csv formaat en opslaan"
-    if os.path.exists(filename):
-        shutil.copyfile(filename, filename + '~')
-    with open(filename, 'w') as _out:
-        writer = csv.writer(_out)
-        for line in data:
-            writer.writerow(line)
+# def save_list_to_csv(data, filename):
+#     "gegevens omzetten in csv formaat en opslaan"
+#     if os.path.exists(filename):
+#         shutil.copyfile(filename, filename + '~')
+#     with open(filename, 'w') as _out:
+#         writer = csv.writer(_out)
+#         for line in data:
+#             writer.writerow(line)
 
 
 def parse_keytext(text):
@@ -206,15 +204,15 @@ def analyze_keydefs(root):  # , cat_name):
                                     elif "innerdescdesccell" in cell['class']:
                                         desc = cell.get_text()
                                 params.append((name, value, desc))
-                        # else:
-                        #     print(item)
 
             cmddesc = ' '.join([x.strip() for x in desctable if x.strip()]).strip(' .')
             if defkey:
                 allkeys = parse_keytext(defkey)
                 for key, mods in allkeys:
                     test = (_translate_keynames(key), mods)
-                    dflt_assign[test].add(command)  # (command, cmddesc))
+                    # voor zover ik kan zien zitten in cmds.html alleen defaults voor het main window
+                    # dflt_assign[test].add(command)  # (command, cmddesc))
+                    dflt_assign[test].add(('Main', command))  # (command, cmddesc))
 
             if command:
                 command_list.append(command)
@@ -233,6 +231,8 @@ def build_data(page, showinfo=True):
         moet worden
     returns: een mapping voor het csv file en een aantal hulptabellen
     """
+    olddescs = page.descriptions    # veilig stellen om straks te vergelijken
+                                    # en te bewaren wat niet uit de tool settings komt
     builder = CsvBuilder(page, showinfo)
     kbfile, dc_keys, dc_cmds, dc_sett, dc_desc = builder.get_settings_pathnames()
     # breakpoint()
@@ -254,19 +254,21 @@ def build_data(page, showinfo=True):
     builder.get_cmddict(get_data_from_html(dc_cmds))
     # alles samenvoegen
     builder.assemble_shortcuts()
+    builder.compare_descriptions(olddescs)
     # stuur dialoog aan om beschrijvingen aan te vullen
-    desclist = get_data_from_csv(dc_desc)
-    newdesclist = builder.add_missing_descriptions(desclist)
-    if newdesclist != desclist:
-        save_list_to_csv(newdesclist, dc_desc)
+    # descdict = get_data_from_csv(dc_desc)
+    # newdesclist = builder.add_missing_descriptions(desclist)
+    # if newdesclist != desclist:
+    #     save_list_to_csv(newdesclist, dc_desc)
     # op juiste formaat brengen
     builder.format_shortcuts()
-    for name in builder.contexts_list:
-        test = name.split('_')[0].title()
-        # if test not in builder.contexts:
-            # builder.contexts.append(test)
-        builder.contexts.add(test)
+    # for name in builder.contexts_list:
+    #     test = name.split('_')[0].title()
+    #     # if test not in builder.contexts:
+    #         # builder.contexts.append(test)
+    #     builder.contexts.add(test)
     return builder.shortcuts, {'stdkeys': builder.stdkeys, 'defaults': builder.defaults,
+                               'olddescs': builder.olddescs,
                                'cmddict': builder.cmddict, 'contexts': sorted(builder.contexts),
                                'restrictions': sorted(builder.controls), 'cmdparms': builder.params,
                                'catdict': builder.catdict}
@@ -275,9 +277,20 @@ def build_data(page, showinfo=True):
 class CsvBuilder:
     """assemble data for csv file
     """
+    context_map = {"main_window": "Main", "dcopymove": "Copy/MoveDialog",
+                   "editdesc": "EditCommentDialog", "find": "FindFiles",
+                   "mrename": "MultiRename", "sync": "SynchronizeDirectories",
+                   "viewer": "Viewer", "editor": "Editor", "differ": "Differ",
+                   "hotkeys": "HotkeysDialog", "favtabs": "FavoriteTabsDialog",
+                   "dirhotlist": "DirectoryHotlist"}
+    unmappable = "Confirmation" # deze kan ik niet mappen maar dat is geloof ik niet erg
+    skip_contexts = ("intro", "options")
+
     def __init__(self, page, showinfo):
         self.page = page
         self.showinfo = showinfo
+        self.olddescs = self.page.descriptions  # veilig stellen om straks te vergelijken
+                                                # en te bewaren wat niet uit de tool settings komt
         self.definedkeys, self.stdkeys, self.cmddict, self.tbcmddict = {}, {}, {}, {}
         self.defaults, self.params, self.catdict, self.shortcuts = {}, {}, {}, {}
         self.contexts, self.controls, self.contexts_list = set(), set(), []
@@ -335,7 +348,7 @@ class CsvBuilder:
         """
         root = data.getroot()
         for form in list(root.find('Hotkeys')):
-            ctx = form.get('Name')
+            ctx = ''.join(form.get('Name').split())
             self.contexts.add(ctx)
             for hotkey in form:
                 shortcut = hotkey.find('Shortcut').text
@@ -378,9 +391,10 @@ class CsvBuilder:
             if not context:
                 continue
             context = context[0]['name']
-            if context in ("intro", "options"):
+            if context in self.skip_contexts:
                 continue
-            context = context.replace('_window', '').title()
+            # context = context.replace('_window', '').title().replace('Mrename', 'MultiRename')
+            context = self.context_map.get(context, self.unmappable)
             self.contexts_list.append(context)
             tbody = div.select('table tr')
             for row in tbody:
@@ -388,12 +402,9 @@ class CsvBuilder:
                     continue
                 keynames = ()
                 for col in row.select('td'):
-                    ## if col['class'] == 'varcell':
                     if 'class' in col.attrs and 'varcell' in col['class']:
                         keynames = parse_keytext(col.div.text)  # meer dan 1 key/keycombo mogelijk
-                    ## elif 'hintcell' in col['class']:
-                        ## print('hintcell')
-                    else:
+                    else:  # elif 'hintcell' in col['class']:
                         oms = '\n'.join([x.strip() for x in col.get_text().split('\n')])
                 if keynames:
                     for name, mods in keynames:
@@ -453,18 +464,28 @@ class CsvBuilder:
                     # self.tbcmddict[key] = (desc, cmd, parm)
                     self.tbcmddict[(toolbarid, key)] = (desc, cmd, parm)
 
-    def add_missing_descriptions(self, desclist):
-        """update missing descriptions in cmddict
-        """
-        if self.showinfo:
-            self.page.dialog_data = {'descdict': dict(desclist), 'cmddict': self.cmddict}
-            if show_dialog(self.page, DcCompleteDialog):
-                desclist = list(self.page.dialog_data['descdict'].items())
-        for command, description in desclist:
-            if command not in self.cmddict or not self.cmddict[command]:
-                self.cmddict[command] = description
-        # self.desclist = desclist
-        return desclist
+    # def add_missing_descriptions(self, desclist):
+    #     """update missing descriptions in cmddict
+    #     """
+    #     if self.showinfo:
+    #         self.page.dialog_data = {'descdict': dict(desclist), 'cmddict': self.cmddict}
+    #         if show_dialog(self.page, DcCompleteDialog):
+    #             desclist = list(self.page.dialog_data['descdict'].items())
+    #     for command, description in desclist:
+    #         if command not in self.cmddict or not self.cmddict[command]:
+    #             self.cmddict[command] = description
+    #     # self.desclist = desclist
+    #     return desclist
+
+    def compare_descriptions(self, olddescs):
+        "identify and keep differing descriptions"
+        for key, value in self.cmddict.items():
+            if key in olddescs:
+                if value == olddescs[key]:
+                    olddescs.pop(key)
+                elif value == '':
+                    self.cmddict[key] = olddescs.pop(key)
+        self.olddescs = olddescs
 
     def assemble_shortcuts(self):
         """automatische mapping van bekende keycombo's op commando's d.m.v. gegevens uit de
@@ -478,7 +499,10 @@ class CsvBuilder:
             # bepalen of dit een standaard definitie is
             definitions_dict['standard'] = ''
             # we kunnen hiervoor kijken in defaults (bijproduct van het bepalen van cmddict)
-            if self.defaults.get(key_in_context[:2]) == {definitions_dict['cmd']}:
+            # if self.defaults.get(key_in_context[:2]) == {definitions_dict['cmd']}:
+            # dit werkt niet meer nu ik de context aan self.defaults toevoeg, dus:
+            if self.defaults.get(key_in_context[:2]) == {(key_in_context[2],
+                                                          definitions_dict['cmd'])}:
                 definitions_dict['standard'] = 'S'
             # maar het leeuwendeel zit eigenlijk in stdkeys, daar zitten tevens de omschrijvingen
             # in. In cmddict zitten ook omschrijvingen, deze kunnen verschillend zijn en in dat
@@ -550,6 +574,8 @@ def update_otherstuff_inbound(otherstuff):
     newstuff = {}
     for key, value in otherstuff['stdkeys'].items():
         newkey = key.split(' ')  # split explicitely on one space
+        if len(newkey) == 4:  # bv. ['Digit', '(1..9)', 'A', 'Main']
+            newkey = [' '.join(newkey[:2]), newkey[2], newkey[3]]
         newstuff[tuple(newkey)] = value
     otherstuff['stdkeys'] = newstuff
     newstuff = {}
@@ -608,14 +634,19 @@ def build_shortcut(key, mods):
 def savekeys(page):
     """schrijf de gegevens terug
     """
-    ok = show_cancel_message(page, text=how_to_save)
+    ok = show_cancel_message(page.gui, text=how_to_save)
     if not ok:
         return
-    kbfile = get_file_to_save(page, extension='SCF files (*.scf)', start=page.settings['DC_PATH'])
+    kbfile = get_file_to_save(page.gui, extension='SCF files (*.scf)', start=page.settings['DC_PATH'])
     if not kbfile:
         return
-    root = ET.Element('doublecmd', DCVersion=DCVER)
-    head = ET.SubElement(root, 'Hotkeys', Version=KBVER)
+    # get versions to use from the original
+    oldroot = ET.parse(kbfile).getroot()
+    dcversion = oldroot.attrib['DCVersion']
+    oldhead = oldroot.find('Hotkeys')
+    kbversion = oldhead.attrib['Version']
+    root = ET.Element('doublecmd', DCVersion=dcversion)
+    head = ET.SubElement(root, 'Hotkeys', Version=kbversion)
     oldform = ''
     for item in sorted(page.data.values(), key=lambda x: x[3]):
         key, mods, kind, context, cmnd, parm, ctrl, desc = item
@@ -645,9 +676,9 @@ def add_extra_attributes(win):
 
     key, mods, cmnd, params, controls
     """
-    win.commandsdict = win.otherstuff['cmddict']
-    win.commandslist = sorted(win.commandsdict.keys())
-    win.descriptions = win.commandsdict  # is this correct?
+    win.descriptions = win.otherstuff['cmddict']  # mapping van commando's op descriptions
+    win.commandslist = sorted(win.descriptions.keys())
+    # win.mydescs = win.otherstuff.get('olddescs', {})  # overgebleven afwijkende descriptions
     win.contextslist = win.otherstuff['contexts']
     # not entirely correct, but will have to do for now
     win.contextactionsdict = {x: win.commandslist for x in win.contextslist}
@@ -658,3 +689,14 @@ def get_frameheight():
     """return fixed height for extra panel
     """
     return 120
+
+
+def update_descriptions(win, newdescs):
+    """merge edited descriptions back into the data to save
+    """
+    win.otherstuff['cmddict'] = newdescs
+    win.descriptions = newdescs
+    for key, data in win.data.items():
+        if data[4] in win.descriptions and data[-1] != win.descriptions[data[4]]:
+            # win.data[key][-1] = win.descriptions[data[4]]
+            win.data[key] = tuple(list(win.data[key][:-1]) + [win.descriptions[data[4]]])
