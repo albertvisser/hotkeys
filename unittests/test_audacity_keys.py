@@ -37,20 +37,22 @@ def test_build_data(monkeypatch, capsys):
         return types.SimpleNamespace(getroot=lambda *x: 'xmlroot')
     def mock_build(root):
         print(f"called build_commandlist with arg '{root}'")
-        return 'shortcuts', 'commands'
+        return {'short': 'cuts'}, {'com': 'mands'}
     monkeypatch.setattr(testee, 'show_cancel_message', mock_show)
     monkeypatch.setattr(testee, 'get_file_to_open', mock_get)
     monkeypatch.setattr(testee.ET, 'parse', mock_parse)
-    monkeypatch.setattr(testee, 'build_commandlist', mock_build)
+    monkeypatch.setattr(testee, 'build_commandsdict', mock_build)
     monkeypatch.setattr(testee, 'INSTRUCTIONS', 'instructions')
-    page = types.SimpleNamespace(settings={}, gui='pagegui')
+    page = types.SimpleNamespace(settings={}, gui='pagegui', descriptions={})
     assert testee.build_data(page, showinfo=False) == ({}, {})
     assert capsys.readouterr().out == ("")
     assert testee.build_data(page, showinfo=True) == ({}, {})
     assert capsys.readouterr().out == (
             "called show_cancel_message with args ('pagegui',) {'text': 'instructions'}\n")
-    page = types.SimpleNamespace(settings={'AC_KEYS': 'ac_keys'}, gui='pagegui')
-    assert testee.build_data(page, showinfo=False) == ('shortcuts', {'commands': 'commands'})
+    page = types.SimpleNamespace(settings={'AC_KEYS': 'ac_keys'}, gui='pagegui', descriptions={})
+    assert testee.build_data(page, showinfo=False) == ({'short': 'cuts'},
+                                                       {'commands': {'com': 'mands'},
+                                                        'olddescs': {}})
     assert capsys.readouterr().out == ("called ET.parse with arg 'ac_keys'\n"
                                        "called build_commandlist with arg 'xmlroot'\n")
     assert testee.build_data(page, showinfo=True) == ({}, {})
@@ -64,7 +66,9 @@ def test_build_data(monkeypatch, capsys):
             "called get_file_to_open with args"
             " ('pagegui',) {'extension': 'XML files (*.xml)', 'start': 'ac_keys'}\n")
     monkeypatch.setattr(testee, 'get_file_to_open', mock_get_2)
-    assert testee.build_data(page, showinfo=True) == ('shortcuts', {'commands': 'commands'})
+    assert testee.build_data(page, showinfo=True) == ({'short': 'cuts'},
+                                                      {'commands': {'com': 'mands'},
+                                                       'olddescs': {}})
     assert capsys.readouterr().out == (
             "called show_cancel_message with args ('pagegui',) {'text': 'instructions'}\n"
             "called get_file_to_open with args"
@@ -73,7 +77,7 @@ def test_build_data(monkeypatch, capsys):
             "called build_commandlist with arg 'xmlroot'\n")
 
 
-def test_build_commandlist(capsys):
+def test_build_commandsdict(capsys):
     """unittest for audacity_keys.build_commandlist
     """
     class MockElement:
@@ -105,16 +109,25 @@ def test_build_commandlist(capsys):
                 MockElement('A+Num+', 'cmd3', 'desc3'), MockElement('A+S+X', 'cmd4', 'desc4'),
                 MockElement('', '', ''), MockElement('A', 'cmd5', 'desc5')]
     root = types.SimpleNamespace(findall=mock_find)
-    assert testee.build_commandlist(root) == ({}, {})
+    assert testee.build_commandsdict(root) == ({}, {})
     assert capsys.readouterr().out == ("called root.findall with args ('command',)\n")
     root = types.SimpleNamespace(findall=mock_find_2)
-    assert testee.build_commandlist(root) == (
+    assert testee.build_commandsdict(root) == (
         {1: ('+', 'C', 'cmd1', 'desc1'), 2: ('+', '', 'cmd2', 'desc2'),
          3: ('Num+', 'A', 'cmd3', 'desc3'), 4: ('X', 'AS', 'cmd4', 'desc4'),
          5: ('A', '', 'cmd5', 'desc5')},
         {'cmd1': 'desc1', 'cmd2': 'desc2', 'cmd3': 'desc3', 'cmd4': 'desc4', None: None,
          'cmd5': 'desc5'})
     assert capsys.readouterr().out == ("called root.findall with args ('command',)\n")
+
+
+def test_compare_and_keep():
+    """unittest for audacity_keys.compare_and_keep
+    """
+    newstuff = {'a': 'b', 'c': 'd', 'e': '', 'g': 'h'}
+    oldstuff = {'c': 'd', 'e': 'f', 'g': 'i'}
+    assert testee.compare_and_keep(oldstuff, newstuff) == {'g': 'i'}
+    assert newstuff == {'a': 'b', 'c': 'd', 'e': 'f', 'g': 'h'}
 
 
 def test_savekeys(monkeypatch, capsys, tmp_path):
@@ -182,3 +195,23 @@ def test_add_extra_attributes():
     assert win.keylist == ['NumEnter']
     assert win.descriptions == {'x': 'xx', 'y': 'yy'}
     assert win.commandslist == ['x', 'y']
+
+
+def test_update_descriptions(monkeypatch):
+    """unittest for dckeys.update_descriptions
+    """
+    win = types.SimpleNamespace(data={'x': ('a', 'b', 'd', 'e')}, otherstuff={})
+    testee.update_descriptions(win, {'y': 'z'})
+    assert win.otherstuff['commands'] == {'y': 'z'}
+    assert win.descriptions == {'y': 'z'}
+    assert win.data['x'] == ('a', 'b', 'd', 'e')
+    win = types.SimpleNamespace(data={'x': ('a', 'b', 'd', 'e')}, otherstuff={})
+    testee.update_descriptions(win, {'d': 'z'})
+    assert win.otherstuff['commands'] == {'d': 'z'}
+    assert win.descriptions == {'d': 'z'}
+    assert win.data['x'] == ('a', 'b', 'd', 'z')
+    win = types.SimpleNamespace(data={'x': ('a', 'b', 'd', 'e')}, otherstuff={})
+    testee.update_descriptions(win, {'d': 'e'})
+    assert win.otherstuff['commands'] == {'d': 'e'}
+    assert win.descriptions == {'d': 'e'}
+    assert win.data['x'] == ('a', 'b', 'd', 'e')

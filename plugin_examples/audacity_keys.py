@@ -36,6 +36,8 @@ def build_data(page, showinfo=True):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het keydef bestand
     """
+    olddescs = page.descriptions    # veilig stellen om straks te vergelijken
+                                    # en te bewaren wat niet uit de tool settings komt
     otherstuff = {}
     initial = page.settings.get('AC_KEYS', '')
 
@@ -52,15 +54,16 @@ def build_data(page, showinfo=True):
         return {}, {}
 
     tree = ET.parse(kbfile)
-    shortcuts, otherstuff['commands'] = build_commandlist(tree.getroot())
+    shortcuts, otherstuff['commands'] = build_commandsdict(tree.getroot())
+    otherstuff['olddescs'] = compare_and_keep(olddescs, otherstuff['commands'])
     return shortcuts, otherstuff
 
 
-def build_commandlist(root):
+def build_commandsdict(root):
     "build the list of commands"
     shortcuts = {}
     key = 0
-    commandlist = {}
+    commandsdict = {}
     for item in root.findall('command'):
         ## line = []
         keydef = item.get('key', default='')
@@ -78,8 +81,19 @@ def build_commandlist(root):
         if keyname:
             key += 1
             shortcuts[key] = (_translate_keyname(keyname), keymods, cmd_name, cmd_label)
-        commandlist[cmd_name] = cmd_label
-    return shortcuts, commandlist
+        commandsdict[cmd_name] = cmd_label
+    return shortcuts, commandsdict
+
+
+def compare_and_keep(olddescs, newdescs):
+    "savekeep descriptions that don't come from the tool settings"
+    for key, value in newdescs.items():
+        if key in olddescs:
+            if value == olddescs[key]:
+                olddescs.pop(key)
+            elif value == '':
+                newdescs[key] = olddescs.pop(key)
+    return olddescs
 
 
 how_to_save = """\
@@ -136,4 +150,13 @@ def add_extra_attributes(win):
     win.descriptions = win.otherstuff['commands']
     win.commandslist = sorted(win.descriptions.keys())
 
+
+def update_descriptions(win, newdescs):
+    """merge edited descriptions back into the data to save
+    """
+    win.descriptions = newdescs
+    win.otherstuff['commands'] = win.descriptions
+    for key, data in win.data.items():
+        if data[2] in win.descriptions and data[-1] != win.descriptions[data[2]]:
+            win.data[key] = tuple(list(data[:-1]) + [win.descriptions[data[2]]])
 # end
