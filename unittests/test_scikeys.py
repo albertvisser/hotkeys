@@ -542,6 +542,9 @@ def test_build_data(monkeypatch, capsys, tmp_path):
     def mock_merge_keydefs(*args):
         print("called scikeys.merge_keydefs with args", args)
         return dict(enumerate(args[0] + args[1])), ['con', 'texts']
+    def mock_compare(*args):
+        print("called compare_and_keep with args", args)
+        return {'old': 'descs'}
     monkeypatch.setattr(testee.tarfile, 'open', mock_open)
     monkeypatch.setattr(testee, 'read_commands', mock_read_commands)
     monkeypatch.setattr(testee, 'read_menu_gtk', mock_read_menu_gtk)
@@ -552,10 +555,12 @@ def test_build_data(monkeypatch, capsys, tmp_path):
     monkeypatch.setattr(testee, 'read_docs', mock_read_docs)
     monkeypatch.setattr(testee, 'PropertiesFile', MockPropertiesFile)
     monkeypatch.setattr(testee, 'merge_keydefs', mock_merge_keydefs)
+    monkeypatch.setattr(testee, 'compare_and_keep', mock_compare)
     page = types.SimpleNamespace(settings={'SCI_CMDS': 'commands.txt', 'SCI_SRCE': 'sourceloc',
                                            'SCI_DOCS': 'docs.txt',
                                            'SCI_GLBL': str(tmp_path / 'global/glbl.properties'),
-                                           'SCI_USER': str(tmp_path / 'user/user.properties')})
+                                           'SCI_USER': str(tmp_path / 'user/user.properties')},
+                                 descriptions={})
     (tmp_path / 'global').mkdir()
     (tmp_path / 'global' / 'glbl.properties').touch()
     (tmp_path / 'global' / 'SciTE.properties').touch()
@@ -570,7 +575,7 @@ def test_build_data(monkeypatch, capsys, tmp_path):
         3: (('x', ''), 'y', 'z', 'q', 'U', 'r', 's')}, {
             'menucommands': {1: ('command-1', 'desc-1'), 3: ('command-3', 'desc-3')},
             'internal_commands': {111: ('command-2', 'desc-2'), 104: ('command-4', 'desc-4')},
-            'contexts': ['con', 'texts']})
+            'contexts': ['con', 'texts'], 'olddescs': {'old': 'descs'}})
     assert capsys.readouterr().out == (
             "called scikeys.read_commands with arg commands.txt\n"
             "called tarfile.open with arg sourceloc\n"
@@ -599,8 +604,9 @@ def test_build_data(monkeypatch, capsys, tmp_path):
             " (('x', ''), 'y', 'z', 'q', 'S', 'r', 's')],"
             " [(('x', ''), 'y', 'z', 'q', 'U', 'r', 's')],"
             " {1: ('command-1', 'desc-1'), 3: ('command-3', 'desc-3')},"
-            " {111: ('command-2', 'desc-2'), 104: ('command-4', 'desc-4')})\n")
-    # 595-596
+            " {111: ('command-2', 'desc-2'), 104: ('command-4', 'desc-4')})\n"
+            "called compare_and_keep with args ({}, {1: ('command-1', 'desc-1'), 3: ('command-3',"
+            " 'desc-3')}, {111: ('command-2', 'desc-2'), 104: ('command-4', 'desc-4')})\n")
     monkeypatch.setattr(testee.sys, 'platform', 'win32x')
     assert testee.build_data(page, showinfo=True) == ({
         0: (('A', ''), 'C', '*', '*', 'S', 111, ''),
@@ -609,7 +615,7 @@ def test_build_data(monkeypatch, capsys, tmp_path):
         3: (('x', ''), 'y', 'z', 'q', 'U', 'r', 's')}, {
             'menucommands': {1: ('command-1', 'desc-1'), 3: ('command-3', 'desc-3')},
             'internal_commands': {111: ('command-2', 'desc-2'), 104: ('command-4', 'desc-4')},
-            'contexts': ['con', 'texts']})
+            'contexts': ['con', 'texts'], 'olddescs': {'old': 'descs'}})
     assert capsys.readouterr().out == (
             "called scikeys.read_commands with arg commands.txt\n"
             "called tarfile.open with arg sourceloc\n"
@@ -638,7 +644,9 @@ def test_build_data(monkeypatch, capsys, tmp_path):
             " (('x', ''), 'y', 'z', 'q', 'S', 'r', 's')],"
             " [(('x', ''), 'y', 'z', 'q', 'U', 'r', 's')],"
             " {1: ('command-1', 'desc-1'), 3: ('command-3', 'desc-3')},"
-            " {111: ('command-2', 'desc-2'), 104: ('command-4', 'desc-4')})\n")
+            " {111: ('command-2', 'desc-2'), 104: ('command-4', 'desc-4')})\n"
+            "called compare_and_keep with args ({}, {1: ('command-1', 'desc-1'), 3: ('command-3',"
+            " 'desc-3')}, {111: ('command-2', 'desc-2'), 104: ('command-4', 'desc-4')})\n")
     monkeypatch.setattr(testee.sys, 'platform', 'other')
     assert testee.build_data(page, showinfo=True) == ({
         0: (('X', ''), 'A', '*', '*', 'S', '', 'qqq'),
@@ -646,7 +654,7 @@ def test_build_data(monkeypatch, capsys, tmp_path):
         2: (('x', ''), 'y', 'z', 'q', 'U', 'r', 's')}, {
             'menucommands': {1: ('command-1', 'desc-1'), 3: ('command-3', 'desc-3')},
             'internal_commands': {111: ('command-2', 'desc-2'), 104: ('command-4', 'desc-4')},
-            'contexts': ['con', 'texts']})
+            'contexts': ['con', 'texts'], 'olddescs': {'old': 'descs'}})
     assert capsys.readouterr().out == (
             "called scikeys.read_commands with arg commands.txt\n"
             "called tarfile.open with arg sourceloc\n"
@@ -672,7 +680,9 @@ def test_build_data(monkeypatch, capsys, tmp_path):
             " (('x', ''), 'y', 'z', 'q', 'S', 'r', 's')],"
             " [(('x', ''), 'y', 'z', 'q', 'U', 'r', 's')],"
             " {1: ('command-1', 'desc-1'), 3: ('command-3', 'desc-3')},"
-            " {111: ('command-2', 'desc-2'), 104: ('command-4', 'desc-4')})\n")
+            " {111: ('command-2', 'desc-2'), 104: ('command-4', 'desc-4')})\n"
+            "called compare_and_keep with args ({}, {1: ('command-1', 'desc-1'), 3: ('command-3',"
+            " 'desc-3')}, {111: ('command-2', 'desc-2'), 104: ('command-4', 'desc-4')})\n")
 
 
 def _test_merge_keydefs(monkeypatch, capsys):
@@ -685,6 +695,24 @@ def _test_merge_keydefs(monkeypatch, capsys):
     assert testee.merge_keydefs(default_keys, userdef_keys,
                                 menu_commands, internal_commands) == ({}, [])
     assert capsys.readouterr().out == ("")
+
+
+def test_compare_and_keep():
+    """unittest for scikeys.compare_and_keep
+    """
+    newstuff = {1: ('a', 'b'), 2: ('c', 'd'), 3: ('e', ''), 4: ('g', 'h')}
+    otherstuff = {}
+    oldstuff = {'c': 'd', 'e': 'f', 'g': 'i'}
+    # breakpoint()
+    assert testee.compare_and_keep(oldstuff, newstuff, otherstuff) == {'g': 'i'}
+    assert newstuff == {1: ('a', 'b'), 2: ('c', 'd'), 3: ('e', 'f'), 4: ('g', 'h')}
+    assert not otherstuff
+    newstuff = {1: ('a', 'b'), 2: ('c', 'd'), 3: ('e', ''), 4: ('g', 'h')}
+    otherstuff = {}
+    oldstuff = {'c': 'd', 'e': 'f', 'g': 'i'}
+    assert testee.compare_and_keep(oldstuff, otherstuff, newstuff) == {'g': 'i'}
+    assert newstuff == {1: ('a', 'b'), 2: ('c', 'd'), 3: ('e', 'f'), 4: ('g', 'h')}
+    assert not otherstuff
 
 
 def test_add_extra_attributes():
@@ -703,8 +731,47 @@ def test_add_extra_attributes():
     assert win.keylist == ['key', 'list', 'Movement']
 
 
+def test_update_descriptions():
+    """unittest for scikeys.update_descriptions
+    """
+    win = types.SimpleNamespace(data={'x': ('a', 'b', 'd', 'e', 'f', 'g', 'h')},
+                                otherstuff={'menucommands': {1: ('IDM_X', 'xxxx'),
+                                                             2: ('IDM_Y', 'yyyy')},
+                                            'internal_commands': {100: ('aaa', 'aaaa'),
+                                                                  200: ('bbb', 'bbbb')}})
+    testee.update_descriptions(win, {})
+    assert win.otherstuff['menucommands'] == {1: ('IDM_X', 'xxxx'), 2: ('IDM_Y', 'yyyy')}
+    assert win.otherstuff['internal_commands'] == {100: ('aaa', 'aaaa'), 200: ('bbb', 'bbbb')}
+    assert win.descriptions == {}
+    assert win.data['x'] == ('a', 'b', 'd', 'e', 'f', 'g', 'h')
+    win = types.SimpleNamespace(data={'x': ('a', 'b', 'd', 'e', 'f', 'IDM_X', 'h'),
+                                      'y': ('p', 'q', 'r', 's', 't', 'bbb', 'v')},
+                                otherstuff={'menucommands': {1: ('IDM_X', 'xxxx'),
+                                                             2: ('IDM_Y', 'yyyy')},
+                                            'internal_commands': {100: ('aaa', 'aaaa'),
+                                                                  200: ('bbb', 'bbbb')}})
+    testee.update_descriptions(win, {'': 'z', 'IDM_X': 'XXX', 'bbb': 'BBB'})
+    assert win.otherstuff['menucommands'] == {1: ('IDM_X', 'XXX'), 2: ('IDM_Y', 'yyyy')}
+    assert win.otherstuff['internal_commands'] == {100: ('aaa', 'aaaa'), 200: ('bbb', 'BBB')}
+    assert win.descriptions == {'': 'z', 'IDM_X': 'XXX', 'bbb': 'BBB'}
+    assert win.data == {'x': ('a', 'b', 'd', 'e', 'f', 'IDM_X', 'XXX'),
+                        'y': ('p', 'q', 'r', 's', 't', 'bbb', 'BBB')}
+    win = types.SimpleNamespace(data={'x': ('a', 'b', 'd', 'e', 'f', 'IDM_X', 'xxxx'),
+                                      'y': ('p', 'q', 'r', 's', 't', 'bbb', 'bbbb')},
+                                otherstuff={'menucommands': {1: ('IDM_X', 'xxxx'),
+                                                             2: ('IDM_Y', 'yyyy')},
+                                            'internal_commands': {100: ('aaa', 'aaaa'),
+                                                                  200: ('bbb', 'bbbb')}})
+    testee.update_descriptions(win, {'': 'z', 'IDM_X': 'xxxx', 'bbb': 'bbbb'})
+    assert win.otherstuff['menucommands'] == {1: ('IDM_X', 'xxxx'), 2: ('IDM_Y', 'yyyy')}
+    assert win.otherstuff['internal_commands'] == {100: ('aaa', 'aaaa'), 200: ('bbb', 'bbbb')}
+    assert win.descriptions == {'': 'z', 'IDM_X': 'xxxx', 'bbb': 'bbbb'}
+    assert win.data == {'x': ('a', 'b', 'd', 'e', 'f', 'IDM_X', 'xxxx'),
+                        'y': ('p', 'q', 'r', 's', 't', 'bbb', 'bbbb')}
+
+
 def _test_savekeys(monkeypatch, capsys):
-    """unittest for scikeys.savekeys
+    """unittest for scikeys.savekeys - not implemented (yet?)
     """
     parent = types.SimpleNamespace()
     assert testee.savekeys(parent) == "expected_result"

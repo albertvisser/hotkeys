@@ -583,6 +583,8 @@ def build_data(page, showinfo=True):
     showinfo argument is for API compatibility
     """
     settings = page.settings
+    olddescs = page.descriptions    # veilig stellen om straks te vergelijken
+                                    # en te bewaren wat niet uit de tool settings komt
     special_keys = ('help', 'go', 'build', 'compile', 'clean')
     # menu_commands - dict: map volgnummer op (commandonaam, omschrijving)
     # command_list: dict: map command nummer op (naam, omschrijving)
@@ -654,8 +656,9 @@ def build_data(page, showinfo=True):
 
     shortcuts, contexts_list = merge_keydefs(default_keys, userdef_keys,
                                              menu_commands, internal_commands)
+    olddescs = compare_and_keep(olddescs, menu_commands, internal_commands)
     return shortcuts, {'menucommands': menu_commands, 'internal_commands': internal_commands,
-                       'contexts': list(contexts_list)}
+                       'contexts': list(contexts_list), 'olddescs': olddescs}
 
 
 def merge_keydefs(default_keys, userdef_keys, menu_commands, internal_commands):
@@ -705,6 +708,28 @@ def merge_keydefs(default_keys, userdef_keys, menu_commands, internal_commands):
     return shortcuts, contexts_list
 
 
+def compare_and_keep(olddescs, menudescs, intdescs):
+    "savekeep descriptions that don't come from the tool settings"
+    # menudescs: sequence number mapped to (IDM-code, description)
+    # intdescs: command nummber mapped to (mnemonic, description)
+    # olddescs contains either IDM-code or mnemonic or nothing
+    for key, value in menudescs.items():
+        code, desc = value
+        if code in olddescs:
+            if desc == olddescs[code]:
+                olddescs.pop(code)
+            elif desc == '':
+                menudescs[key] = (code, olddescs.pop(code))
+    for key, value in intdescs.items():
+        code, desc = value
+        if code in olddescs:
+            if desc == olddescs[code]:
+                olddescs.pop(code)
+            elif desc == '':
+                intdescs[key] = (code, olddescs.pop(code))
+    return olddescs
+
+
 def add_extra_attributes(win):
     """define plugin-specific variables
     """
@@ -717,6 +742,29 @@ def add_extra_attributes(win):
     win.contextactionsdict = {}
     win.descriptions = {y: z for x, y, z in actionslist}
     win.keylist.append('Movement')
+
+
+def update_descriptions(win, newdescs):
+    """merge edited descriptions back into the data to save
+    """
+    win.descriptions = newdescs
+    # return  # moet herschreven worden:
+    # achteraan menucommands komt een lijst met IDM commando's met descriptions
+    # menucommands is een mapping van nummers op een list (python tuple) bestaande uit IDM-code en beschrijving
+    # alle codes + beschrijvingen komen aan het eind nog een keer maar dan als mapping van de IDM-code op de beschrijving
+    # achteraan internal_commands krijgen we hetzelfde
+    # de doel dictionaries zijn anders gestructureerd als de bron-dictionary
+    # create reverse lookups
+    menu_lookup = {value[0]: key for key, value in win.otherstuff['menucommands'].items()}
+    int_lookup = {value[0]: key for key, value in win.otherstuff['internal_commands'].items()}
+    for key, desc in win.descriptions.items():
+        if key.startswith('IDM'):
+            win.otherstuff['menucommands'][menu_lookup[key]] = (key, desc)
+        elif key:
+            win.otherstuff['internal_commands'][int_lookup[key]] = (key, desc)
+    for key, data in win.data.items():
+        if data[5] in win.descriptions and data[-1] != win.descriptions[data[5]]:
+            win.data[key] = tuple(list(win.data[key][:-1]) + [win.descriptions[data[5]]])
 
 
 def savekeys(parent):
