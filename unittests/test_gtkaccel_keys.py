@@ -2,6 +2,111 @@
 """
 import types
 from editor.plugins import gtkaccel_keys as testee
+import pytest
+
+
+def test_read_keydefs_and_stuff(monkeypatch, capsys):
+    """unittest for gtkaccel_keys.read_keydefs_and_stuff
+    """
+    def mock_read(filename):
+        print(f'called readfile with arg {filename}')
+        return {'key': 'defs'}, {'actions': 'dict'}, {}
+    def mock_read_2(filename):
+        print(f'called readfile with arg {filename}')
+        return {'key': 'defs'}, {'actions': 'dict'}, {'others': 'dict'}
+    def mock_actions(arg):
+        print(f'called expand_actions with arg {arg}')
+        return {'act': 'ions'}, {'action': 'dict'}, {'desc': 'riptions'}
+    def mock_others(arg):
+        print(f'called expand_others with arg {arg}')
+        return {'other': 'actions'}, {'others': 'dict'}, {'other': 'keys'}
+    monkeypatch.setattr(testee, 'readfile', mock_read)
+    monkeypatch.setattr(testee, 'expand_actions', mock_actions)
+    monkeypatch.setattr(testee, 'expand_others', mock_others)
+    assert testee.read_keydefs_and_stuff('filename') == {
+            'keydefs': {'key': 'defs'}, 'actions': {'act': 'ions'},
+            'actionscontext': {'action': 'dict'}, 'contexts': ['action'],
+            'descriptions': {'desc': 'riptions'}}
+    assert capsys.readouterr().out == ("called readfile with arg filename\n"
+                                       "called expand_actions with arg {'actions': 'dict'}\n")
+    monkeypatch.setattr(testee, 'readfile', mock_read_2)
+    assert testee.read_keydefs_and_stuff('filename') == {
+            'keydefs': {'key': 'defs'}, 'actions': {'act': 'ions'},
+            'actionscontext': {'action': 'dict'}, 'contexts': ['action'],
+            'descriptions': {'desc': 'riptions'},
+            'others': {'other': 'actions'}, 'othercontext': {'others': 'dict'},
+            'otherkeys': {'other': 'keys'}}
+    assert capsys.readouterr().out == ("called readfile with arg filename\n"
+                                       "called expand_actions with arg {'actions': 'dict'}\n"
+                                       "called expand_others with arg {'others': 'dict'}\n")
+
+
+def test_readfile(monkeypatch, capsys, tmp_path):
+    """unittest for gtkaccel_keys.readfile
+    """
+    monkeypatch.setattr(testee, 'KEYDEF', 'KEYDEF')
+    path = tmp_path / 'keydefs'
+    with pytest.raises(FileNotFoundError):
+        testee.readfile(str(path))
+    path.touch()
+    assert testee.readfile(str(path)) == ([], {}, [])
+    assert capsys.readouterr().out == ("")
+    path.write_text("KEYDEF\n  \n")
+    assert testee.readfile(str(path)) == ([], {}, [])
+    assert capsys.readouterr().out == ("KEYDEF\n\ncontains more/less that 2 items, what to do?\n")
+    path.write_text('KEYDEF xxx yyy zzz)\n  \n')
+    assert testee.readfile(str(path)) == ([], {}, [])
+    assert capsys.readouterr().out == ('KEYDEF xxx yyy zzz)\n\n'
+                                       'contains more/less that 2 items, what to do?\n')
+    path.write_text('KEYDEF "x" "y" "z")\n  \n')
+    assert testee.readfile(str(path)) == ([], {}, [])
+    assert capsys.readouterr().out == ('KEYDEF "x" "y" "z")\n\n'
+                                       'contains more/less that 2 items, what to do?\n')
+    path.write_text('KEYDEF xxx yyy)')
+    assert testee.readfile(str(path)) == ([], {}, [])
+    assert capsys.readouterr().out == ('KEYDEF xxx yyy)\n'
+                                       'contains more/less that 2 items, what to do?\n')
+    path.write_text('KEYDEF "x" "y")')
+    assert testee.readfile(str(path)) == ([], {}, [('x', 'y')])
+    assert capsys.readouterr().out == ""
+    path.write_text('; (KEYDEF "<Actions>/edit/edit-copy" "<Primary>c")\n'
+                    '; (KEYDEF "<Actions>/edit/edit-paste" "")\n')
+    assert testee.readfile(str(path)) == ([('C', 'C', 1)],
+                                          {1: '/edit/edit-copy', 2: '/edit/edit-paste'}, [])
+    assert capsys.readouterr().out == ("")
+
+
+def test_parse_actiondef(monkeypatch):
+    """unittest for gtkaccel_keys.parse_actiondef
+    """
+    monkeypatch.setattr(testee, 'conversion_map', (('xxx', 'x'),))
+    assert testee.parse_actiondef("it's>the xxx key") == ('The x key', '')
+    assert testee.parse_actiondef("") == ('', '')
+    assert testee.parse_actiondef("zzz") == ('Zzz', '')
+    assert testee.parse_actiondef("<Primary>A bladibla") == ('A bladibla', 'C')
+    assert testee.parse_actiondef("<Alt>b") == ('B', 'A')
+    assert testee.parse_actiondef("<Shift>c") == ('C', 'S')
+    assert testee.parse_actiondef("<Shift><Alt><Primary>") == ('', 'CAS')
+
+
+def test_expand_actions():
+    """unittest for gtkaccel_keys.expand_actions
+    """
+    with pytest.raises(ValueError):
+        testee.expand_actions({1: 'copy'})
+    assert testee.expand_actions({2: 'edit/paste'}) == ({2: ('edit', 'paste')}, {'edit': ['paste']},
+                                                        {2: ''})
+    assert testee.expand_actions({1: '/edit/edit-copy', 2: '/edit/edit-paste'}) == (
+           {1: ('edit', 'edit-copy'), 2: ('edit', 'edit-paste')},
+           {'edit': ['edit-copy', 'edit-paste']}, {1: '', 2: ''})
+
+
+def test_expand_others():
+    """unittest for gtkaccel_keys.expand_others
+    """
+    assert testee.expand_others([('x/y', 'yz'), ('/x/a', 'yb'), ('/q/r/s', '')]) == (
+            {1: ('x', 'y'), 2: ('x', 'a'), 3: ('q', 'r/s')}, {'x': ['y', 'a'], 'q': ['r/s']},
+            [('yz', 1), ('yb', 2)])
 
 
 def test_translate_keyname():
@@ -35,133 +140,123 @@ def test_build_data(monkeypatch, capsys):
         return {'keydefs': [('x', '', 'xxx'), ('y', 'C', 'yyy')],
                 'actions': {'xxx': ['ccc', 'aaa'], 'yyy': ['ddd', 'bbb']},
                 'descriptions': {'xxx': '', 'yyy': 'descy'}}
-    def mock_read_data(*args):
-        print('called dml.read_data with args', args)
-        return 'message from read_data', {}
-    def mock_read_data_2(*args):
-        print('called dml.read_data with args', args)
-        return '', {'desc': 'dict'}
-    def mock_show(*args):
-        print('called gui.show_dialog with args', args)
-        args[0].dialog_data = {'desc': 'dict'}
-        return False
-    def mock_show_2(*args):
-        print('called gui.show_dialog with args', args)
-        args[0].dialog_data = {'desc': 'dict'}
-        return True
-    def mock_show_3(*args):
-        print('called gui.show_dialog with args', args)
-        args[0].dialog_data = {'ccc/aaa': 'descx'}
-        return True
-    def mock_write_data(*args):
-        print('called dml.write_data with args', args)
     def mock_translate(key):
         print(f'called _translate_keyname with arg {key}')
         return key
     settnames = 'settnames'
-    page = types.SimpleNamespace()
+    page = types.SimpleNamespace(otherstuff={'descriptions': {'x': 'y'}})
     monkeypatch.setattr(testee, 'names2filenames', mock_names)
     monkeypatch.setattr(testee, 'read_keydefs_and_stuff', mock_read)
-    monkeypatch.setattr(testee.dml, 'read_data', mock_read_data)
-    monkeypatch.setattr(testee, 'show_dialog', mock_show)
-    monkeypatch.setattr(testee.dml, 'write_data', mock_write_data)
     monkeypatch.setattr(testee, '_translate_keyname', mock_translate)
     assert testee.build_data(settnames, page) == ({}, {})
     assert capsys.readouterr().out == (
             f"called names2filenames with args ('settnames', {page}, True)\n")
     monkeypatch.setattr(testee, 'names2filenames', mock_names_2)
-    assert testee.build_data(settnames, page) == ({}, {'actions': {}, 'descriptions': {}})
+    assert testee.build_data(settnames, page) == ({}, {'actions': {}, 'descriptions': {},
+                                                       'olddescs': {'x': 'y'}})
     assert capsys.readouterr().out == (
             f"called names2filenames with args ('settnames', {page}, True)\n"
-            "called read_keydefs_and_stuff with args ('',)\n"
-            "called dml.read_data with args ('fnamedesc', {})\n"
-            "message from read_data\n")
+            "called read_keydefs_and_stuff with args ('',)\n")
     monkeypatch.setattr(testee, 'names2filenames', mock_names_3)
-    assert testee.build_data(settnames, page) == ({}, {'actions': {}, 'descriptions': {}})
+    assert testee.build_data(settnames, page) == ({}, {'actions': {}, 'descriptions': {},
+                                                       'olddescs': {'x': 'y'}})
     assert capsys.readouterr().out == (
             f"called names2filenames with args ('settnames', {page}, True)\n"
             "called read_keydefs_and_stuff with args ('fnamekb',)\n")
     monkeypatch.setattr(testee, 'names2filenames', mock_names_4)
-    assert testee.build_data(settnames, page) == ({}, {'actions': {}, 'descriptions': {}})
+    assert testee.build_data(settnames, page) == ({}, {'actions': {}, 'descriptions': {},
+                                                       'olddescs': {'x': 'y'}})
     assert capsys.readouterr().out == (
             f"called names2filenames with args ('settnames', {page}, True)\n"
-            "called read_keydefs_and_stuff with args ('fnamekb',)\n"
-            "called dml.read_data with args ('fnamedesc', {})\n"
-            "message from read_data\n")
+            "called read_keydefs_and_stuff with args ('fnamekb',)\n")
     monkeypatch.setattr(testee, 'read_keydefs_and_stuff', mock_read_2)
     assert testee.build_data(settnames, page) == (
             {1: ('x', '', 'ccc', 'aaa', ''), 2: ('y', 'C', 'ddd', 'bbb', 'descy')},
             {'actions': {'xxx': ['ccc', 'aaa'], 'yyy': ['ddd', 'bbb']},
-             'descriptions': {'xxx': '', 'yyy': 'descy'}})
+             'descriptions': {'xxx': '', 'yyy': 'descy'}, 'olddescs': {'x': 'y'}})
     assert capsys.readouterr().out == (
             f"called names2filenames with args ('settnames', {page}, True)\n"
             "called read_keydefs_and_stuff with args ('fnamekb',)\n"
-            "called dml.read_data with args ('fnamedesc', {'xxx': '', 'yyy': 'descy'})\n"
-            "message from read_data\n"
             "called _translate_keyname with arg x\n"
             "called _translate_keyname with arg y\n")
-    monkeypatch.setattr(testee.dml, 'read_data', mock_read_data_2)
-    assert testee.build_data(settnames, page, showinfo=False) == (
-            {1: ('x', '', 'ccc', 'aaa', ''), 2: ('y', 'C', 'ddd', 'bbb', 'descy')},
-            {'actions': {'xxx': ['ccc', 'aaa'], 'yyy': ['ddd', 'bbb']},
-             'descriptions': {'xxx': '', 'yyy': 'descy'}})
-    assert capsys.readouterr().out == (
-            f"called names2filenames with args ('settnames', {page}, False)\n"
-            "called read_keydefs_and_stuff with args ('fnamekb',)\n"
-            "called dml.read_data with args ('fnamedesc', {'xxx': '', 'yyy': 'descy'})\n"
-            "called _translate_keyname with arg x\n"
-            "called _translate_keyname with arg y\n")
-    assert testee.build_data(settnames, page) == (
-            {1: ('x', '', 'ccc', 'aaa', ''), 2: ('y', 'C', 'ddd', 'bbb', 'descy')},
-            {'actions': {'xxx': ['ccc', 'aaa'], 'yyy': ['ddd', 'bbb']},
-             'descriptions': {'xxx': '', 'yyy': 'descy'}})
-    assert page.dialog_data == {'desc': 'dict'}
-    # stand van page vóór de aanroep van de dialoog terugzetten t,b.v. assert statement
-    page = types.SimpleNamespace(dialog_data={'descdict': {'desc': 'dict'},
-                                              'actions': {'xxx': ['ccc', 'aaa'],
-                                                          'yyy': ['ddd', 'bbb']}})
-    assert capsys.readouterr().out == (
-            f"called names2filenames with args ('settnames', namespace(), True)\n"
-            "called read_keydefs_and_stuff with args ('fnamekb',)\n"
-            "called dml.read_data with args ('fnamedesc', {'xxx': '', 'yyy': 'descy'})\n"
-            f"called gui.show_dialog with args ({page}, {testee.AccelCompleteDialog})\n"
-            "called _translate_keyname with arg x\n"
-            "called _translate_keyname with arg y\n")
-    monkeypatch.setattr(testee, 'show_dialog', mock_show_2)
-    assert testee.build_data(settnames, page) == (
-            {1: ('x', '', 'ccc', 'aaa', ''), 2: ('y', 'C', 'ddd', 'bbb', 'descy')},
-            {'actions': {'xxx': ['ccc', 'aaa'], 'yyy': ['ddd', 'bbb']},
-             'descriptions': {'xxx': '', 'yyy': 'descy'}})
-    assert page.dialog_data == {'desc': 'dict'}
-    # stand van page vóór de aanroep van de dialoog terugzetten t,b.v. assert statement
-    page = types.SimpleNamespace(dialog_data={'descdict': {'desc': 'dict'},
-                                              'actions': {'xxx': ['ccc', 'aaa'],
-                                                          'yyy': ['ddd', 'bbb']}})
-    assert capsys.readouterr().out == (
-            f"called names2filenames with args ('settnames', {page}, True)\n"
-            "called read_keydefs_and_stuff with args ('fnamekb',)\n"
-            "called dml.read_data with args ('fnamedesc', {'xxx': '', 'yyy': 'descy'})\n"
-            f"called gui.show_dialog with args ({page}, {testee.AccelCompleteDialog})\n"
-            "called _translate_keyname with arg x\n"
-            "called _translate_keyname with arg y\n")
-    monkeypatch.setattr(testee, 'show_dialog', mock_show_3)
-    assert testee.build_data(settnames, page) == (
-            {1: ('x', '', 'ccc', 'aaa', 'descx'), 2: ('y', 'C', 'ddd', 'bbb', 'descy')},
-            {'actions': {'xxx': ['ccc', 'aaa'], 'yyy': ['ddd', 'bbb']},
-             'descriptions': {'xxx': 'descx', 'yyy': 'descy'}})
-    assert page.dialog_data == {'ccc/aaa': 'descx'}
-    # stand van page vóór de aanroep van de dialoog terugzetten t,b.v. assert statement
-    page = types.SimpleNamespace(dialog_data={'descdict': {'desc': 'dict'},
-                                              'actions': {'xxx': ['ccc', 'aaa'],
-                                                          'yyy': ['ddd', 'bbb']}})
-    assert capsys.readouterr().out == (
-            f"called names2filenames with args ('settnames', {page}, True)\n"
-            "called read_keydefs_and_stuff with args ('fnamekb',)\n"
-            "called dml.read_data with args ('fnamedesc', {'xxx': '', 'yyy': 'descy'})\n"
-            f"called gui.show_dialog with args ({page}, {testee.AccelCompleteDialog})\n"
-            "called dml.write_data with args ('fnamedesc', {'xxx': 'descx', 'yyy': 'descy'})\n"
-            "called _translate_keyname with arg x\n"
-            "called _translate_keyname with arg y\n")
+    return
+    # de showinfo parameter is vervallenO
+    # assert testee.build_data(settnames, page, showinfo=False) == (
+    #         {1: ('x', '', 'ccc', 'aaa', ''), 2: ('y', 'C', 'ddd', 'bbb', 'descy')},
+    #         {'actions': {'xxx': ['ccc', 'aaa'], 'yyy': ['ddd', 'bbb']},
+    #          'descriptions': {'xxx': '', 'yyy': 'descy'},
+    #                                                    'olddescs': {'x': 'y'}})
+    # assert capsys.readouterr().out == (
+    #         f"called names2filenames with args ('settnames', {page}, False)\n"
+    #         "called read_keydefs_and_stuff with args ('fnamekb',)\n"
+    #         "called dml.read_data with args ('fnamedesc', {'xxx': '', 'yyy': 'descy'})\n"
+    #         "called _translate_keyname with arg x\n"
+    #         "called _translate_keyname with arg y\n")
+    # evenals het tonen van de CompletDialog
+    # assert testee.build_data(settnames, page) == (
+    #         {1: ('x', '', 'ccc', 'aaa', ''), 2: ('y', 'C', 'ddd', 'bbb', 'descy')},
+    #         {'actions': {'xxx': ['ccc', 'aaa'], 'yyy': ['ddd', 'bbb']},
+    #          'descriptions': {'xxx': '', 'yyy': 'descy'}})
+    # assert page.dialog_data == {'desc': 'dict'}
+    # # stand van page vóór de aanroep van de dialoog terugzetten t,b.v. assert statement
+    # page = types.SimpleNamespace(dialog_data={'descdict': {'desc': 'dict'},
+    #                                           'actions': {'xxx': ['ccc', 'aaa'],
+    #                                                       'yyy': ['ddd', 'bbb']},
+    #                                                    'olddescs': {'x': 'y'}})
+    # assert capsys.readouterr().out == (
+    #         f"called names2filenames with args ('settnames', namespace(), True)\n"
+    #         "called read_keydefs_and_stuff with args ('fnamekb',)\n"
+    #         "called dml.read_data with args ('fnamedesc', {'xxx': '', 'yyy': 'descy'})\n"
+    #         f"called gui.show_dialog with args ({page}, {testee.AccelCompleteDialog})\n"
+    #         "called _translate_keyname with arg x\n"
+    #         "called _translate_keyname with arg y\n")
+    # monkeypatch.setattr(testee, 'show_dialog', mock_show_2)
+    # assert testee.build_data(settnames, page) == (
+    #         {1: ('x', '', 'ccc', 'aaa', ''), 2: ('y', 'C', 'ddd', 'bbb', 'descy')},
+    #         {'actions': {'xxx': ['ccc', 'aaa'], 'yyy': ['ddd', 'bbb']},
+    #          'descriptions': {'xxx': '', 'yyy': 'descy'},
+    #                                                    'olddescs': {'x': 'y'}})
+    # assert page.dialog_data == {'desc': 'dict'}
+    # # stand van page vóór de aanroep van de dialoog terugzetten t,b.v. assert statement
+    # page = types.SimpleNamespace(dialog_data={'descdict': {'desc': 'dict'},
+    #                                           'actions': {'xxx': ['ccc', 'aaa'],
+    #                                                       'yyy': ['ddd', 'bbb']},
+    #                                                    'olddescs': {'x': 'y'}})
+    # assert capsys.readouterr().out == (
+    #         f"called names2filenames with args ('settnames', {page}, True)\n"
+    #         "called read_keydefs_and_stuff with args ('fnamekb',)\n"
+    #         "called dml.read_data with args ('fnamedesc', {'xxx': '', 'yyy': 'descy'})\n"
+    #         f"called gui.show_dialog with args ({page}, {testee.AccelCompleteDialog})\n"
+    #         "called _translate_keyname with arg x\n"
+    #         "called _translate_keyname with arg y\n")
+    # monkeypatch.setattr(testee, 'show_dialog', mock_show_3)
+    # assert testee.build_data(settnames, page) == (
+    #         {1: ('x', '', 'ccc', 'aaa', 'descx'), 2: ('y', 'C', 'ddd', 'bbb', 'descy')},
+    #         {'actions': {'xxx': ['ccc', 'aaa'], 'yyy': ['ddd', 'bbb']},
+    #          'descriptions': {'xxx': 'descx', 'yyy': 'descy'},
+    #                                                    'olddescs': {'x': 'y'}})
+    # assert page.dialog_data == {'ccc/aaa': 'descx'}
+    # # stand van page vóór de aanroep van de dialoog terugzetten t,b.v. assert statement
+    # page = types.SimpleNamespace(dialog_data={'descdict': {'desc': 'dict'},
+    #                                           'actions': {'xxx': ['ccc', 'aaa'],
+    #                                                       'yyy': ['ddd', 'bbb']}})
+    # assert capsys.readouterr().out == (
+    #         f"called names2filenames with args ('settnames', {page}, True)\n"
+    #         "called read_keydefs_and_stuff with args ('fnamekb',)\n"
+    #         "called dml.read_data with args ('fnamedesc', {'xxx': '', 'yyy': 'descy'})\n"
+    #         f"called gui.show_dialog with args ({page}, {testee.AccelCompleteDialog})\n"
+    #         "called dml.write_data with args ('fnamedesc', {'xxx': 'descx', 'yyy': 'descy'})\n"
+    #         "called _translate_keyname with arg x\n"
+    #         "called _translate_keyname with arg y\n")
+
+
+def test_compare_descriptions():
+    """unittest for gtkaccel_keys.compare_descriptions
+    """
+    cmddict = {'x': 'y', 'a': 'b', 'p': '', 'g': 'h'}
+    olddescs = {'x': 'y', 'a': 'c', 'p':'q'}
+    testee.compare_descriptions(cmddict, olddescs) == ({'x': 'y', 'a': 'b', 'p': 'q', 'g': 'h'},
+                                                       {'a': 'c'})
 
 
 def test_names2filenames(monkeypatch, capsys):
