@@ -425,13 +425,8 @@ class FilesDialog(qtw.QDialog):
             if dlg == qtw.QDialog.DialogCode.Accepted:
                 for row, name in reversed(checked):  # reversed niet nodig als ik checked niet aanpas
                     keydef_name, prg_name = '', ''
-                    # try:
                     keydef_name = self.paths[row][1].input.text()
                     prg_name = self.settingsdata[name][0]
-                    # except KeyError:
-                    #     shared.log_exc('')
-                    # shared.log(f'{keydef_name=}')
-                    # shared.log(f'{prg_name=}')
                     if self.remove_data and keydef_name:  # kan keydef_name wel leeg zijn?
                         self.data_to_remove.append(keydef_name)
                     if self.remove_code and prg_name:     # kan prg_name wel leeg zijn?
@@ -977,10 +972,7 @@ class EntryDialog(qtw.QDialog):
         new_values = collections.defaultdict(list)
         for rowid in range(self.p0list.rowCount()):
             for colid in range(self.p0list.columnCount()):
-                # try:
                 value = self.p0list.item(rowid, colid).text()
-                # except AttributeError:
-                #     value = ''
                 new_values[rowid + 1].append(value.replace('\\n', '\n'))
         self.master.book.page.data = new_values
         super().accept()

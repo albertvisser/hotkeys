@@ -287,14 +287,9 @@ class HotkeyPanel:
                     self.otherstuff = self.reader.update_otherstuff_inbound(self.otherstuff)
 
         if nodata:
-            # print('init HotkeyPanel with no data', nodata)
             self.gui.setup_empty_screen(nodata, self.title)
             return
 
-        # try:
-        #     self.has_extrapanel = bool(int(self.settings[shared.SettType.DETS.value]))
-        # except KeyError:
-        #     shared.log_exc()
         self.has_extrapanel = self.settings[shared.SettType.DETS.value]
         self.title = self.settings[shared.SettType.PNL.value]  # "PanelName"]
 
@@ -326,13 +321,15 @@ class HotkeyPanel:
 
         plugin decides if they're also saved back into the tool settings
         """
+        ok = False
         self.parent.data = self.data
-        try:
+        if hasattr(self.reader, 'savekeys'):
             self.reader.savekeys(self)
-        except AttributeError:
-            shared.log_exc()
-        writejson(self.pad, self.reader, self.settings, self.column_info, self.data, self.otherstuff)
-        self.set_title(modified=False)
+            writejson(self.pad, self.reader, self.settings, self.column_info, self.data,
+                      self.otherstuff)
+            self.set_title(modified=False)
+            ok = True
+        return ok
 
     def setcaptions(self):
         """update captions according to selected language
@@ -418,10 +415,8 @@ class HotkeyPanel:
 
         self.contextslist, self.commandslist, self.defkeys = [], [], []
         self.contextactionsdict, self.omsdict, self.descriptions, self.olddescs = {}, {}, {}, {}
-        try:
+        if hasattr(self.reader, 'add_extra_attributes'):
             self.reader.add_extra_attributes(self)  # user exit, kan self.keylist leegmaken
-        except AttributeError:
-            shared.log_exc()
         # if self.keylist:  check niet nodig, wordt altijd ingesteld
         self.keylist.sort()
 
@@ -1034,10 +1029,7 @@ class Editor:
         """
         if not self.book.page.modified and not gui.ask_question(self.gui, 'Q_NOCHG'):
             return
-        try:
-            self.book.page.savekeys()
-        except AttributeError:
-            shared.log_exc()
+        if not self.book.page.savekeys():
             gui.show_message(self.gui, 'I_DEFSAV')
             return
         gui.show_message(self.gui, 'I_RSTRT')
@@ -1542,7 +1534,6 @@ class Editor:
             else:
                 # self.change_setting('initial', oldpref, pref)
                 write_config(self.ini, nobackup=True)
-
         # super().close()
         self.gui.close()
 

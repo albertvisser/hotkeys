@@ -731,12 +731,6 @@ class ExtraSettingsDialog(wx.Dialog):
 
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         self.c_showdet = wx.CheckBox(pnl, label=self.master.captions['S_DETS'])
-        # try:
-        #     if self.master.book.page.settings[shared.SettType.DETS.value] == '1':
-        #         self.c_showdet.SetValue(True)
-        # except KeyError:
-        #     shared.log_exc()
-        # met #1050 kan dit vereenvoudigd worden tot
         self.c_showdet.setValue(self.master.book.page.settings[shared.SettType.DETS.value])
         hsizer.Add(self.c_showdet)
         vsizer.Add(hsizer, 0, wx.LEFT | wx.RIGHT, 5)
@@ -744,9 +738,6 @@ class ExtraSettingsDialog(wx.Dialog):
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         self.c_redef = wx.CheckBox(pnl, label=self.master.captions['T_MAKE'].format(
             self.master.captions['S_RSAV']))
-        # if self.master.book.page.settings[shared.SettType.RDEF.value] == '1':
-        #     self.c_redef.SetValue(True)
-        # met #1050 kan dit vereenvoudigd worden tot
         self.c_redef.setValue(self.master.book.page.settings[shared.SettType.RDEF.value])
         hsizer.Add(self.c_redef)
         vsizer.Add(hsizer, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 5)
@@ -970,10 +961,7 @@ class EntryDialog(wx.Dialog):
         new_values = collections.defaultdict(list)
         for rowid in range(self.p0list.GetNumberRows()):
             for colid in range(self.p0list.GetNumberCols()):
-                try:
-                    value = self.p0list.GetCellValue(rowid, colid)
-                except IndexError:  # AttributeError:
-                    value = ''
+                value = self.p0list.GetCellValue(rowid, colid)
                 new_values[rowid + 1].append(value.replace('\\n', '\n'))
         self.master.book.page.data = new_values
         return True

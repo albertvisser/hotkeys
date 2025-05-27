@@ -251,11 +251,8 @@ class SingleDataInterface(qtw.QFrame):
         self.screenfields = []
         self.frm = qtw.QFrame(self)
         frameheight = 90
-        # try:
         if hasattr(self.master.reader, 'get_frameheight'):
             frameheight = self.master.reader.get_frameheight()  # user exit
-        # except AttributeError:
-        #     shared.log_exc()
         self.frm.setMaximumHeight(frameheight)
 
         self.cmb_key = self.cmb_context = self.cmb_commando = self.cmb_controls = None
@@ -296,7 +293,6 @@ class SingleDataInterface(qtw.QFrame):
         sizer1.addStretch()
         self.fieldhandler.layout_commandfields(sizer2)
 
-        # try:
         if hasattr(self.master.reader, 'layout_extra_fields_topline'):
             self.master.reader.layout_extra_fields_topline(self, sizer1)  # user exit
 

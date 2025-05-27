@@ -557,15 +557,11 @@ def test_hotkeypanel_savekeys(monkeypatch, capsys):
         print('called writejson with args', args)
     def mock_savekeys(arg):
         print('called Reader.savekeys with arg', arg)
-        raise AttributeError
-    def mock_savekeys_2(arg):
-        print('called Reader.savekeys with arg', arg)
     def mock_set_title(**kwargs):
         print('called HotkeyPanel.set_title with args', kwargs)
     monkeypatch.setattr(testee.shared, 'log_exc', mock_logexc)
     monkeypatch.setattr(testee, 'writejson', mock_writejson)
     testobj = setup_hotkeypanel(monkeypatch, capsys)
-    testobj.reader.savekeys = mock_savekeys
     testobj.pad = 'xxxx.json'
     testobj.settings = ['settings']
     testobj.column_info = ['column', 'info']
@@ -573,16 +569,13 @@ def test_hotkeypanel_savekeys(monkeypatch, capsys):
     testobj.otherstuff = ['other', 'stuff']
     testobj.set_title = mock_set_title
     testobj.parent.parent.ini = {'lang': 'en'}
-    testobj.savekeys()
-    assert capsys.readouterr().out == (f"called Reader.savekeys with arg {testobj}\n"
-                                       "called shared.log_exc\n"
-                                       f"called writejson with args ('xxxx.json', {testobj.reader},"
-                                       " ['settings'],"
-                                       " ['column', 'info'], ['data'], ['other', 'stuff'])\n"
-                                       "called HotkeyPanel.set_title with args {'modified': False}\n")
-
-    testobj.reader.savekeys = mock_savekeys_2
-    testobj.savekeys()
+    assert not testobj.savekeys()
+    assert testobj.parent.data == testobj.data
+    assert capsys.readouterr().out == ""
+    testobj.parent.data = []
+    testobj.reader.savekeys = mock_savekeys
+    assert testobj.savekeys()
+    assert testobj.parent.data == testobj.data
     assert capsys.readouterr().out == (f"called Reader.savekeys with arg {testobj}\n"
                                        f"called writejson with args ('xxxx.json', {testobj.reader},"
                                        " ['settings'],"
@@ -754,7 +747,7 @@ def test_hotkeypanel_add_extra_attributes(monkeypatch, capsys):
     assert testobj.contextactionsdict == {}
     assert testobj.omsdict == {}
     assert testobj.descriptions == {}
-    assert capsys.readouterr().out == "called shared.log_exc\n"
+    assert capsys.readouterr().out == ""
     testobj.reader = types.SimpleNamespace(add_extra_attributes=mock_add)
     testobj.add_extra_attributes()
     assert testobj.init_origdata == ['', False, False, False, False, '', '', '', '', '', '', '']
@@ -1641,6 +1634,11 @@ class MockHotkeyPanel:
         """stub
         """
         print('called HotkeyPanel.readkeys')
+    def savekeys(self):
+        """stub
+        """
+        print('called HotkeyPanel.savekeys')
+        return False
     def populate_list(self):
         """stub
         """
@@ -2236,10 +2234,12 @@ def test_editor_m_save(monkeypatch, capsys):
         print('called shared.log_exc')
     def mock_savekeys():
         print('called HotkeyPanel.savekeys')
+        return True
     monkeypatch.setattr(testee.shared, 'log_exc', mock_log)
     monkeypatch.setattr(testee.gui, 'show_message', mock_show)
     testobj = setup_editor(monkeypatch, capsys)
     testobj.book.page = MockHotkeyPanel(testobj.book, '')
+    testobj.book.page.reader = types.SimpleNamespace()
     assert capsys.readouterr().out == (
             f"called HotkeyPanel.__init__ with args ({testobj.book}, '')\n")
     testobj.book.page.modified = False
@@ -2251,18 +2251,18 @@ def test_editor_m_save(monkeypatch, capsys):
     testobj.m_save(event=None)
     assert capsys.readouterr().out == (
             f"called gui.ask_question with args ({testobj.gui}, 'Q_NOCHG')\n"
-            "called shared.log_exc\n"
+            "called HotkeyPanel.savekeys\n"
             f"called gui.show_message with args ({testobj.gui}, 'I_DEFSAV')\n")
     testobj.book.page.modified = True
     monkeypatch.setattr(testee.gui, 'ask_question', mock_ask)
     testobj.m_save(event=None)
     assert capsys.readouterr().out == (
-            "called shared.log_exc\n"
+            "called HotkeyPanel.savekeys\n"
             f"called gui.show_message with args ({testobj.gui}, 'I_DEFSAV')\n")
     monkeypatch.setattr(testee.gui, 'ask_question', mock_ask_2)
     testobj.m_save(event=None)
     assert capsys.readouterr().out == (
-            "called shared.log_exc\n"
+            "called HotkeyPanel.savekeys\n"
             f"called gui.show_message with args ({testobj.gui}, 'I_DEFSAV')\n")
     testobj.book.page.savekeys = mock_savekeys
     testobj.m_save(event=None)

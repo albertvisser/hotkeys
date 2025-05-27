@@ -60,11 +60,12 @@ def get_text(win, message_id='', text='', args=None):
     als <text> is opgegeven wordt die gebruikt
     <args> bevat een list van waarden die in de tekst kunnen worden ingevuld
     """
-    try:
-        win = win.editor
-    except AttributeError:
-        with contextlib.suppress(AttributeError):
-            win = win.master
+    # try:
+    #     win = win.editor
+    # except AttributeError:
+    #     with contextlib.suppress(AttributeError):
+    #         win = win.master
+    win = get_appropriate_window(win)
     if message_id:
         text = win.captions[message_id].replace(' / ', '\n')
     elif not text:
@@ -86,11 +87,20 @@ def get_open_title(win, message_id, oms):
 
 def get_title(win):
     "retourneer de titel voor de te tonen pagina"
-    try:
-        title = win.title
-    except AttributeError:
-        try:
-            title = win.editor.title
-        except AttributeError:
-            title = win.master.title
-    return title
+    # try:
+    #     title = win.title
+    # except AttributeError:
+    #     try:
+    #         title = win.editor.title
+    #     except AttributeError:
+    #         title = win.master.title
+    return get_appropriate_window(win).title
+
+
+def get_appropriate_window(win):
+    "find the widget associated with a window"
+    if hasattr(win, 'editor'):
+        win = win.editor
+    elif hasattr(win, 'master'):
+        win = win.master
+    return win

@@ -126,12 +126,8 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         self.screenfields = []
         self._box = box = wx.Panel(self)
         frameheight = 90
-        # try:
         if hasattr(self.master.reader, 'get_frameheight'):
             frameheight = self.master.reader.get_frameheight()  # user exit
-        # except AttributeError:
-        #    shared.log_exc()
-        # box.setMaximumHeight(frameheight)
 
         if 'C_KEY' in self.master.fields:
             self.lbl_key = wx.StaticText(box, label=self.master.captions['C_KTXT'] + " ")
@@ -267,22 +263,14 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
             sizer2.Add(self.cmb_commando, 0, wx.ALIGN_CENTER_VERTICAL)
             sizer1.Add(sizer2, 0)
 
-        # try:
         if hasattr(self.master.reader, 'layout_extra_fields_topline'):
             self.master.reader.layout_extra_fields_topline(self, sizer1)  # user exit
-        # except AttributeError:
-        #     shared.log_exc()
 
         sizer1.Add(self.b_save, 0)
         sizer1.Add(self.b_del, 0)
         bsizer.Add(sizer1, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
         self.toplinesizer = sizer1
 
-        # try:
-        #     test = self.master.reader.layout_extra_fields_nextline
-        # except AttributeError:
-        #     shared.log_exc()
-        # else:
         if hasattr(self.master.reader, 'layout_extra_fields_nextline'):
             sizer1 = wx.BoxSizer(wx.HORIZONTAL)
             self.master.reader.layout_extra_fields_nextline(self, sizer1)  # user exit
@@ -294,11 +282,8 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
             sizer1.Add(self.txt_oms, 1, wx.EXPAND)
             # sizer1.Add(sizer2, 1, wx.EXPAND)
 
-        # try:
         if hasattr(self.master.reader, 'layout_extra_fields'):
             self.master.reader.layout_extra_fields(self, sizer1)  # user exit
-        # except AttributeError:
-        #     shared.log_exc()
 
         bsizer.Add(sizer1, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
 
