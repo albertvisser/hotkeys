@@ -32,7 +32,7 @@ def _translate_keyname(inp):
     return convert.get(inp, inp)
 
 
-def build_data(page, showinfo=True):
+def build_data(page):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het keydef bestand
     """
@@ -42,14 +42,11 @@ def build_data(page, showinfo=True):
     initial = page.settings.get('AC_KEYS', '')
 
     kbfile = ''
-    if showinfo:
-        ok = show_cancel_message(page.gui, text=INSTRUCTIONS)
-        if ok:
-            kbfile = get_file_to_open(page.gui, extension='XML files (*.xml)', start=initial)
-            # if kbfile:
-            #     page.settings['AC_KEYS'] = kbfile
-    else:
-        kbfile = initial
+    ok = show_cancel_message(page.gui, text=INSTRUCTIONS)
+    if ok:
+        kbfile = get_file_to_open(page.gui, extension='XML files (*.xml)', start=initial)
+        # if kbfile:
+        #     page.settings['AC_KEYS'] = kbfile
     if not kbfile:
         return {}, {}
 

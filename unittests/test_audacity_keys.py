@@ -44,29 +44,18 @@ def test_build_data(monkeypatch, capsys):
     monkeypatch.setattr(testee, 'build_commandsdict', mock_build)
     monkeypatch.setattr(testee, 'INSTRUCTIONS', 'instructions')
     page = types.SimpleNamespace(settings={}, gui='pagegui', descriptions={})
-    assert testee.build_data(page, showinfo=False) == ({}, {})
-    assert capsys.readouterr().out == ("")
-    assert testee.build_data(page, showinfo=True) == ({}, {})
+    assert testee.build_data(page) == ({}, {})
     assert capsys.readouterr().out == (
             "called show_cancel_message with args ('pagegui',) {'text': 'instructions'}\n")
     page = types.SimpleNamespace(settings={'AC_KEYS': 'ac_keys'}, gui='pagegui', descriptions={})
-    assert testee.build_data(page, showinfo=False) == ({'short': 'cuts'},
-                                                       {'commands': {'com': 'mands'},
-                                                        'olddescs': {}})
-    assert capsys.readouterr().out == ("called ET.parse with arg 'ac_keys'\n"
-                                       "called build_commandlist with arg 'xmlroot'\n")
-    assert testee.build_data(page, showinfo=True) == ({}, {})
-    assert capsys.readouterr().out == (
-            "called show_cancel_message with args ('pagegui',) {'text': 'instructions'}\n")
-
     monkeypatch.setattr(testee, 'show_cancel_message', mock_show_2)
-    assert testee.build_data(page, showinfo=True) == ({}, {})
+    assert testee.build_data(page) == ({}, {})
     assert capsys.readouterr().out == (
             "called show_cancel_message with args ('pagegui',) {'text': 'instructions'}\n"
             "called get_file_to_open with args"
             " ('pagegui',) {'extension': 'XML files (*.xml)', 'start': 'ac_keys'}\n")
     monkeypatch.setattr(testee, 'get_file_to_open', mock_get_2)
-    assert testee.build_data(page, showinfo=True) == ({'short': 'cuts'},
+    assert testee.build_data(page) == ({'short': 'cuts'},
                                                       {'commands': {'com': 'mands'},
                                                        'olddescs': {}})
     assert capsys.readouterr().out == (

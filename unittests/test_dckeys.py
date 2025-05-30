@@ -262,26 +262,6 @@ def test_build_data(monkeypatch, capsys):
     monkeypatch.setattr(testee, 'show_message', mock_show)
     page = types.SimpleNamespace(name='', settings={}, descriptions={'x': 'y'})
     page.gui = types.SimpleNamespace()
-    assert testee.build_data(page, showinfo=False) == (
-            {'short': 'cuts'},
-            {'olddescs': {'old': 'descs'},'stdkeys': {'std': 'keys'},
-             'defaults': {'def': 'aults'}, 'cmddict': {'cmd': 'dict'},
-             'contexts': ['con', 'texts'], 'restrictions': ['con', 'trols'],
-             'cmdparms': {'params': ''}, 'catdict': {'cat': 'dict'}})
-    assert capsys.readouterr().out == (
-            f"called MockBuilder.__init__ with args ({page}, False)\n"
-            "called MockBuilder.get_settings_pathnames with args ()\n"
-            "called get_data_from_xml with arg kbf\n"
-            "called MockBuilder.get_keydefs with args ('xml data',)\n"
-            "called get_data_from_html with arg keys\n"
-            "called MockBuilder.get_stdkeys with args ('html_data',)\n"
-            "called get_data_from_xml with arg sett\n"
-            "called MockBuilder.get_toolbarcmds with args ('xml data',)\n"
-            "called get_data_from_html with arg cmds\n"
-            "called MockBuilder.get_cmddict with args ('html_data',)\n"
-            "called MockBuilder.assemble_shortcuts\n"
-            "called MockBuilder.compare_descriptions with args ({'x': 'y'},)\n"
-            "called MockBuilder.format_shortcuts with args ()\n")
     assert testee.build_data(page) == (
             {'short': 'cuts'},
             {'olddescs': {'old': 'descs'},'stdkeys': {'std': 'keys'},
@@ -289,7 +269,7 @@ def test_build_data(monkeypatch, capsys):
              'contexts': ['con', 'texts'], 'restrictions': ['con', 'trols'],
              'cmdparms': {'params': ''}, 'catdict': {'cat': 'dict'}})
     assert capsys.readouterr().out == (
-            f"called MockBuilder.__init__ with args ({page}, True)\n"
+            f"called MockBuilder.__init__ with args ({page},)\n"
             "called MockBuilder.get_settings_pathnames with args ()\n"
             "called MockBuilder.check_path_setting with args ('kbf',)\n"
             "called get_data_from_xml with arg kbf\n"
@@ -315,7 +295,7 @@ def test_build_data(monkeypatch, capsys):
     # mimic the original settings path before entering it in check_path_setting
     page.settings = {}
     assert capsys.readouterr().out == (
-            f"called MockBuilder.__init__ with args ({page}, True)\n"
+            f"called MockBuilder.__init__ with args ({page},)\n"
             "called MockBuilder.get_settings_pathnames with args ()\n"
             "called MockBuilder.check_path_setting with args ('',)\n"
             f"called gui.show_message with args ({page.gui},)"
@@ -342,7 +322,7 @@ def test_build_data(monkeypatch, capsys):
     # mimic the original settings path before entering it in check_path_setting
     page.settings = {}
     assert capsys.readouterr().out == (
-            f"called MockBuilder.__init__ with args ({page}, True)\n"
+            f"called MockBuilder.__init__ with args ({page},)\n"
             "called MockBuilder.get_settings_pathnames with args ()\n"
             "called MockBuilder.check_path_setting with args ('',)\n"
             "called get_data_from_xml with arg newkbf\n"
@@ -381,9 +361,8 @@ class TestCsvBuilder:
         """unittest for CsvBuilder.__init__
         """
         page = types.SimpleNamespace(descriptions='olddescs')
-        testobj = testee.CsvBuilder(page, True)
+        testobj = testee.CsvBuilder(page)
         assert testobj.page == page
-        assert testobj.showinfo
         assert testobj.olddescs == 'olddescs'
         assert testobj.definedkeys == {}
         assert testobj.stdkeys == {}

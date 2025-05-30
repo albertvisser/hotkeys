@@ -576,11 +576,9 @@ def merge_command_dicts(dict_from_text, dict_from_src):
     return {y[0]: (x, y[1]) for x, y in newfromsrc.items()}
 
 
-def build_data(page, showinfo=True):
+def build_data(page):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het keydef bestand
-
-    showinfo argument is for API compatibility
     """
     settings = page.settings
     olddescs = page.descriptions    # veilig stellen om straks te vergelijken

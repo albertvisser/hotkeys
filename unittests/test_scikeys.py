@@ -568,7 +568,7 @@ def test_build_data(monkeypatch, capsys, tmp_path):
     (tmp_path / 'user').mkdir()
     (tmp_path / 'user' / 'user.properties').touch()
     (tmp_path / 'user' / 'userdata').touch()  # 642->639
-    assert testee.build_data(page, showinfo=True) == ({
+    assert testee.build_data(page) == ({
         0: (('A', ''), 'C', '*', '*', 'S', 111, ''),
         1: (('X', ''), 'A', '*', '*', 'S', '', 'qqq'),
         2: (('x', ''), 'y', 'z', 'q', 'S', 'r', 's'),
@@ -608,7 +608,7 @@ def test_build_data(monkeypatch, capsys, tmp_path):
             "called compare_and_keep with args ({}, {1: ('command-1', 'desc-1'), 3: ('command-3',"
             " 'desc-3')}, {111: ('command-2', 'desc-2'), 104: ('command-4', 'desc-4')})\n")
     monkeypatch.setattr(testee.sys, 'platform', 'win32x')
-    assert testee.build_data(page, showinfo=True) == ({
+    assert testee.build_data(page) == ({
         0: (('A', ''), 'C', '*', '*', 'S', 111, ''),
         1: (('X', ''), 'A', '*', '*', 'S', '', 'qqq'),
         2: (('x', ''), 'y', 'z', 'q', 'S', 'r', 's'),
@@ -648,7 +648,7 @@ def test_build_data(monkeypatch, capsys, tmp_path):
             "called compare_and_keep with args ({}, {1: ('command-1', 'desc-1'), 3: ('command-3',"
             " 'desc-3')}, {111: ('command-2', 'desc-2'), 104: ('command-4', 'desc-4')})\n")
     monkeypatch.setattr(testee.sys, 'platform', 'other')
-    assert testee.build_data(page, showinfo=True) == ({
+    assert testee.build_data(page) == ({
         0: (('X', ''), 'A', '*', '*', 'S', '', 'qqq'),
         1: (('x', ''), 'y', 'z', 'q', 'S', 'r', 's'),
         2: (('x', ''), 'y', 'z', 'q', 'U', 'r', 's')}, {

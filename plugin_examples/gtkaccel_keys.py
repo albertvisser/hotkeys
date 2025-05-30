@@ -48,13 +48,13 @@ def _translate_keyname(inp):
     return convert.get(inp, inp)
 
 
-def build_data(settnames, page, showinfo=True):
+def build_data(settnames, page):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het keydef bestand
     """
     olddescs = page.otherstuff['descriptions']
     shortcuts = {}
-    kbfile, descfile = names2filenames(settnames, page, showinfo)
+    kbfile, descfile = names2filenames(settnames, page)
     if not kbfile and not descfile:
         return {}, {}
     stuffdict = read_keydefs_and_stuff(kbfile)
@@ -74,15 +74,14 @@ def build_data(settnames, page, showinfo=True):
     #     msg, descdict = dml.read_data(descfile, omsdict)
     #     if msg:
     #         print(msg)
-    #     elif showinfo:
-    #         page.dialog_data = {'descdict': descdict, 'actions': actions}  # , 'omsdict': omsdict}
-    #         if show_dialog(page, AccelCompleteDialog):
-    #             result = page.dialog_data
-    #             if result != descdict:
-    #                 reverse_lookup = {'/'.join(y): x for x, y in actions.items()}
-    #                 for key, value in result.items():
-    #                     omsdict[reverse_lookup[key]] = value
-    #                 dml.write_data(descfile, omsdict)
+    #     page.dialog_data = {'descdict': descdict, 'actions': actions}  # , 'omsdict': omsdict}
+    #     if show_dialog(page, AccelCompleteDialog):
+    #         result = page.dialog_data
+    #         if result != descdict:
+    #             reverse_lookup = {'/'.join(y): x for x, y in actions.items()}
+    #             for key, value in result.items():
+    #                 omsdict[reverse_lookup[key]] = value
+    #             dml.write_data(descfile, omsdict)
 
     lastkey = 0
     for key, mods, command in keydefs:
@@ -204,7 +203,7 @@ def compare_descriptions(cmddict, olddescs):
     return cmddict, olddescs
 
 
-def names2filenames(settnames, page, showinfo):
+def names2filenames(settnames, page):
     """get the pathnames of the setting files and create them if necessary
 
     currently only two settings will be processed
@@ -214,18 +213,15 @@ def names2filenames(settnames, page, showinfo):
             initial = page.settings[name]
         except KeyError:
             initial = ''
-        if showinfo:
-            oms = ' - '.join((page.captions['C_SELFIL'], FDESC[ix]))
-            if not initial:
-                initial = os.path.dirname(__file__)
-                fname = get_file_to_save(page.gui, oms=oms, start=initial)
-            else:
-                fname = get_file_to_open(page.gui, oms=oms, start=initial)
-            if fname and fname != initial:
-                page.settings[name] = fname
-                page.settings["extra"][name] = FDESC[ix]
+        oms = ' - '.join((page.captions['C_SELFIL'], FDESC[ix]))
+        if not initial:
+            initial = os.path.dirname(__file__)
+            fname = get_file_to_save(page.gui, oms=oms, start=initial)
         else:
-            fname = initial
+            fname = get_file_to_open(page.gui, oms=oms, start=initial)
+        if fname and fname != initial:
+            page.settings[name] = fname
+            page.settings["extra"][name] = FDESC[ix]
         if ix == 0:
             kbfile = fname
             if not fname:

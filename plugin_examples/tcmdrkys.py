@@ -213,7 +213,7 @@ def translate_keyname(inp):
     return convert.get(inp, inp)
 
 
-def build_data(page, showinfo=True):
+def build_data(page):
     """implementation of generic function to build the keydef file
 
     zo geschreven komt her erop neer dat de te rebuilden gegevens in het match file zitten
@@ -230,21 +230,18 @@ def build_data(page, showinfo=True):
     # page.cmdlist_data.update({usrdict[y]: uomsdict[x] for x, y in usrdict.items()}
     page.matchlist_data = shared.load_matchdata(page.matchfile)
 
-    if showinfo:
-        ok = editor.gui.show_dialog(page, MergeDialog)
-        if ok:
-            shared.save_matchdata(page.tempdata, page.matchfile)
-            shortcuts, ix = {}, 0
-            for keytext, cmd in page.tempdata:
-                key, mods = keytext.split(' ', 1)
-                desc = page.cmdlist_data[cmd]['oms'] if cmd else page.keylist_data[(key, mods)]['oms']
-                ix += 1
-                shortcuts[ix] = (translate_keyname(key), mods, 'S', cmd, desc)
-        else:
-            # shortcuts = []
-            return None
+    ok = editor.gui.show_dialog(page, MergeDialog)
+    if ok:
+        shared.save_matchdata(page.tempdata, page.matchfile)
+        shortcuts, ix = {}, 0
+        for keytext, cmd in page.tempdata:
+            key, mods = keytext.split(' ', 1)
+            desc = page.cmdlist_data[cmd]['oms'] if cmd else page.keylist_data[(key, mods)]['oms']
+            ix += 1
+            shortcuts[ix] = (translate_keyname(key), mods, 'S', cmd, desc)
     else:
-        shortcuts = []
+        # shortcuts = []
+        return None
     return shortcuts, {}
 
 

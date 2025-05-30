@@ -223,7 +223,7 @@ def analyze_keydefs(root):  # , cat_name):
     return cmddict, dflt_assign, cmdparms, command_list
 
 
-def build_data(page, showinfo=True):
+def build_data(page):
     """lees de keyboard definities uit het/de settings file(s) van het tool zelf
     en geef ze terug voor schrijven naar het csv bestand
 
@@ -233,17 +233,16 @@ def build_data(page, showinfo=True):
     """
     olddescs = page.descriptions    # veilig stellen om straks te vergelijken
                                     # en te bewaren wat niet uit de tool settings komt
-    builder = CsvBuilder(page, showinfo)
+    builder = CsvBuilder(page)
     kbfile, dc_keys, dc_cmds, dc_sett, dc_desc = builder.get_settings_pathnames()
     # breakpoint()
-    if showinfo:
-        while True:
-            new_kbfile = builder.check_path_setting(kbfile)
-            if new_kbfile and (not kbfile or new_kbfile != kbfile):
-                kbfile = page.settings['DC_PATH'] = new_kbfile
-            if kbfile:
-                break
-            show_message(builder.page.gui, text="You MUST provide a name for the settings file")
+    while True:
+        new_kbfile = builder.check_path_setting(kbfile)
+        if new_kbfile and (not kbfile or new_kbfile != kbfile):
+            kbfile = page.settings['DC_PATH'] = new_kbfile
+        if kbfile:
+            break
+        show_message(builder.page.gui, text="You MUST provide a name for the settings file")
     # map toets + context op o.a. commando
     builder.get_keydefs(get_data_from_xml(kbfile))
     # map omschrijvingen op standaard toets definities
@@ -286,9 +285,8 @@ class CsvBuilder:
     unmappable = "Confirmation" # deze kan ik niet mappen maar dat is geloof ik niet erg
     skip_contexts = ("intro", "options")
 
-    def __init__(self, page, showinfo):
+    def __init__(self, page):
         self.page = page
-        self.showinfo = showinfo
         self.olddescs = self.page.descriptions  # veilig stellen om straks te vergelijken
                                                 # en te bewaren wat niet uit de tool settings komt
         self.definedkeys, self.stdkeys, self.cmddict, self.tbcmddict = {}, {}, {}, {}
@@ -463,19 +461,6 @@ class CsvBuilder:
                     parm = test.text if test is not None else ''
                     # self.tbcmddict[key] = (desc, cmd, parm)
                     self.tbcmddict[(toolbarid, key)] = (desc, cmd, parm)
-
-    # def add_missing_descriptions(self, desclist):
-    #     """update missing descriptions in cmddict
-    #     """
-    #     if self.showinfo:
-    #         self.page.dialog_data = {'descdict': dict(desclist), 'cmddict': self.cmddict}
-    #         if show_dialog(self.page, DcCompleteDialog):
-    #             desclist = list(self.page.dialog_data['descdict'].items())
-    #     for command, description in desclist:
-    #         if command not in self.cmddict or not self.cmddict[command]:
-    #             self.cmddict[command] = description
-    #     # self.desclist = desclist
-    #     return desclist
 
     def compare_descriptions(self, olddescs):
         "identify and keep differing descriptions"
