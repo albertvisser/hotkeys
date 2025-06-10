@@ -92,7 +92,7 @@ called Signal.connect with args ({testobj.on_item_selected},)
 called Tree.header
 called Header.__init__
 called Header.setSectionsClickable with value True
-called Header.resizeSection for col 0 width 10
+called Header.resizeSection with args (0, 10)
 called Header.setStretchLastSection with arg True
 called HotkeyPanel.populate_list
 called Tree.setSortingEnabled with arg True
@@ -884,8 +884,8 @@ class TestSingleDataInterface:
                                            "called Tree.setHeaderLabels with arg `['head', 'ers']`\n"
                                            "called Tree.header\ncalled Header.__init__\n"
                                            "called Header.setSectionsClickable with value True\n"
-                                           "called Header.resizeSection for col 0 width 10\n"
-                                           "called Header.resizeSection for col 1 width 20\n"
+                                           "called Header.resizeSection with args (0, 10)\n"
+                                           "called Header.resizeSection with args (1, 20)\n"
                                            "called Header.setStretchLastSection with arg True\n")
 
     def test_set_title(self, monkeypatch, capsys):
@@ -917,9 +917,9 @@ class TestSingleDataInterface:
         assert result.data(0, testee.core.Qt.ItemDataRole.UserRole) == 'key'
         assert capsys.readouterr().out == (
                 "called TreeItem.__init__ with args ()\n"
-                "called TreeItem.setData to `key` with role"
-                f" {testee.core.Qt.ItemDataRole.UserRole} for col 0\n"
-                f"called TreeItem.data for col 0 role {testee.core.Qt.ItemDataRole.UserRole}\n")
+                "called TreeItem.setData with args"
+                f" (0, {testee.core.Qt.ItemDataRole.UserRole!r}, 'key')\n"
+                f"called TreeItem.data with args (0, {testee.core.Qt.ItemDataRole.UserRole!r})\n")
 
     def test_set_listitemtext(self, monkeypatch, capsys):
         """unittest for SingleDataInterface.set_listitemtext
@@ -928,7 +928,7 @@ class TestSingleDataInterface:
         item = mockqtw.MockTreeItem()
         assert capsys.readouterr().out == "called TreeItem.__init__ with args ()\n"
         testobj.set_listitemtext(item, 1, 'value')
-        assert capsys.readouterr().out == ("called TreeItem.setText with arg `value` for col 1\n"
+        assert capsys.readouterr().out == ("called TreeItem.setText with args (1, 'value')\n"
                                            "called TreeItem.setTooltip with args (1, 'value')\n")
 
     def test_add_listitem(self, monkeypatch, capsys):
@@ -1133,11 +1133,11 @@ class TestSingleDataInterface:
         item.setData(0, testee.core.Qt.ItemDataRole.UserRole, 'data')
         assert capsys.readouterr().out == (
                 "called TreeItem.__init__ with args ()\n"
-                "called TreeItem.setData to `data` with role"
-                f" {testee.core.Qt.ItemDataRole.UserRole} for col 0\n")
+                "called TreeItem.setData with args"
+                f" (0, {testee.core.Qt.ItemDataRole.UserRole!r}, 'data')\n")
         assert testobj.get_itemdata(item) == "data"
         assert capsys.readouterr().out == (
-                f"called TreeItem.data for col 0 role {testee.core.Qt.ItemDataRole.UserRole}\n")
+                f"called TreeItem.data with args (0, {testee.core.Qt.ItemDataRole.UserRole!r})\n")
 
     def test_get_selected_keydef(self, monkeypatch, capsys):
         """unittest for SingleDataInterface.get_selected_keydef
@@ -1433,7 +1433,7 @@ class TestTabbedInterface:
         testobj.b_filter = mockqtw.MockPushButton('xxx')
         assert capsys.readouterr().out == "called PushButton.__init__ with args ('xxx',) {}\n"
         assert testobj.get_filter_state_text() == "xxx"
-        assert capsys.readouterr().out == ""
+        assert capsys.readouterr().out == "called PushButton.text\n"
 
     def test_get_search_text(self, monkeypatch, capsys):
         """unittest for TabbedInterface.get_search_text
@@ -1460,8 +1460,8 @@ class TestTabbedInterface:
         assert capsys.readouterr().out == "called Tree.__init__\n"
         assert testobj.get_found_keydef_position() == ('xxx', 'yyy')
         assert capsys.readouterr().out == ("called Tree.currentItem\n"
-                                           "called TreeItem.text for col 0\n"
-                                           "called TreeItem.text for col 1\n")
+                                           "called TreeItem.text with arg 0\n"
+                                           "called TreeItem.text with arg 1\n")
 
     def test_enable_search_text(self, monkeypatch, capsys):
         """unittest for TabbedInterface.enable_search_text
@@ -1503,11 +1503,11 @@ class TestTabbedInterface:
         testobj.set_found_keydef_position()
         assert capsys.readouterr().out == ("called Tree.topLevelItemCount\n"
                                            "called Tree.topLevelItem with arg 0\n"
-                                           "called TreeItem.text for col 0\n"
-                                           "called TreeItem.text for col 1\n"
+                                           "called TreeItem.text with arg 0\n"
+                                           "called TreeItem.text with arg 1\n"
                                            "called Tree.topLevelItem with arg 1\n"
-                                           "called TreeItem.text for col 0\n"
-                                           "called TreeItem.text for col 1\n"
+                                           "called TreeItem.text with arg 0\n"
+                                           "called TreeItem.text with arg 1\n"
                                            f"called Tree.setCurrentItem with arg `{item}`\n")
 
     def test_set_filter_state_text(self, monkeypatch, capsys):
