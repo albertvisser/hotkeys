@@ -456,114 +456,6 @@ class PropertiesFile:
                 for defkey in value:
                     data.append([key[2], 'C'] + list(defkey) + [''])
 
-    # substitueren levert meer gedoe op dan me waard is
-    # def _do_substitutions(self, prop, value):
-    #     """helper method to substitute symbols by values definied earlier in the file
-    #     """
-    #     fnaam = os.path.basename(self._fnaam)
-    #     self.all_props.update(self.properties)
-    #     # start variable substitution in prop
-    #     regel = ""
-    #     test = prop.split(self._var_start)
-    #     regel += test[0]
-    #     for item in test[1:]:
-    #         if self._substitution_not_possible(item, [regel]):
-    #             continue
-    #         # don't care about platform here; just take first value
-    #         varnaam, eind = item.split(self._var_end)
-    #         # regel += list(self.properties[varnaam].values())[0] + eind
-    #         regel += list(self.all_props[varnaam].values())[0] + eind
-    #     prop = regel
-
-    #     # start variable substitution in value
-    #     regel = ""
-    #     test = value.split(self._var_start)
-    #     returnvalues = []
-    #     regel += test[0]
-
-    #     variants = {}
-    #     for item in test[1:]:
-    #         if self._substitution_not_possible(item, [regel]):
-    #             continue
-    #         varnaam, eind = item.split(self._var_end)
-    #         # if self._platform == self._default_platform:
-    #         #     for platform, data in self._create_variants(varnaam, regel, eind):
-    #         #         variants[platform] = data
-    #         #         ## returnvalues.append((prop, platform, data))
-    #         #     continue
-    #         # current platform is not defined for this property
-    #         if variants:  # can't work with  regel  anymore
-    #             for platform, data in variants.items():
-    #                 try:
-    #                     # data += self.properties[varnaam][platform] + eind
-    #                     data += self.all_props[varnaam][platform] + eind
-    #                 except KeyError:
-    #                     log(f"{fnaam:25} can't create all needed variants for {varnaam}")
-    #                 else:
-    #                     variants[platform] = data
-    #         elif self._platform == self._default_platform:
-    #             for platform, data in self._create_variants(varnaam, regel, eind):
-    #                 variants[platform] = data
-    #                 ## returnvalues.append((prop, platform, data))
-    #             continue
-    #         else:
-    #             test = self._expand_from_other(varnaam, regel, eind)
-    #             if test:
-    #                 regel = test
-    #             else:
-    #                 log(f'{fnaam:25} property {prop} substitution failed for platform'
-    #                     f' {self._platform}')
-    #                 regel += self._var_start + item
-    #     if variants:
-    #         for platform, data in variants.items():
-    #             returnvalues.append((prop, platform, data))
-    #     else:
-    #         returnvalues.append((prop, self._platform, regel))
-    #     return returnvalues
-
-    # def _substitution_not_possible(self, item, regel):
-    #     """signal to not substitute if not possible
-
-    #     regel wordt als list aangeboden zodat deze gemuteerd teruggegeven kan worden
-    #     """
-    #     fnaam = os.path.basename(self._fnaam)
-    #     try:
-    #         varnaam, eind = item.split(self._var_end)
-    #     except ValueError:
-    #         regel[0] += self._var_start + item
-    #         log(f"{fnaam:25} no variable found in line '{regel}'")
-    #         return True
-    #     if varnaam not in self.properties:
-    #         regel[0] += self._var_start + item
-    #         log(f"{fnaam:25} no substitution possible for {varnaam} in line {regel}")
-    #         return True
-    #     return False
-
-    # def _create_variants(self, varnaam, regel, eind):
-    #     """helper method to create multiple definitions for a property if applicable
-    #     """
-    #     returnvalues = []
-    #     # create variants for defined substitutions
-    #     for defined_platform in self.properties[varnaam]:
-    #         returnvalues.append((defined_platform,
-    #                              regel + self.properties[varnaam][defined_platform] + eind))
-    #     return returnvalues
-
-    # def _expand_from_other(self, varnaam, regel, eind):
-    #     """helper method to expand definition if applicable
-    #     """
-    #     found = False
-    #     for defined_platform, definition in self.properties[varnaam].items():
-    #         if (defined_platform == self._default_platform
-    #                 or (self._platform, defined_platform) in self._acceptable_combinations):
-    #             found = True
-    #             break
-    #     if found:
-    #         regel += definition + eind
-    #     else:
-    #         regel = ''
-    #     return regel
-
 
 def merge_command_dicts(dict_from_text, dict_from_src):
     """voeg dictionaries vanuit verschillende bronnen samen
@@ -665,6 +557,8 @@ def merge_keydefs(default_keys, userdef_keys, menu_commands, internal_commands):
     sentinel = (chr(255), '', '', '')
     gen_def = (x for x in sorted(default_keys))
     user_def = (x for x in sorted(userdef_keys))
+    menu_desc = dict(menu_commands.values())
+    int_desc = dict(internal_commands.values())
     shortcuts = {}
     num = 0
     contexts_list = set()
@@ -693,17 +587,20 @@ def merge_keydefs(default_keys, userdef_keys, menu_commands, internal_commands):
         # the last item can be a command; if so, get the description
         # add the description as a new last item; if not present, add an empty string
         # so now we get one column more
-        menu_desc = dict(menu_commands.values())
-        int_desc = dict(internal_commands.values())
-        test = new_item[-2]
-        if test in menu_desc:
-            new_item[-1] = menu_desc[test]
-        elif test in int_desc:
-            new_item[-1] = int_desc[test]
-        elif test.startswith('IDM_BUFFER'):
-            new_item[-1] = "Switch to buffer " + str(int(test[-1]) + 1)
-        shortcuts[num] = new_item
+        shortcuts[num] = add_description_to_item(new_item, menu_desc, int_desc)
     return shortcuts, contexts_list
+
+
+def add_description_to_item(new_item, menu_desc, int_desc):
+    "find description and add to item"
+    test = new_item[-2]
+    if test in menu_desc:
+        new_item[-1] = menu_desc[test]
+    elif test in int_desc:
+        new_item[-1] = int_desc[test]
+    elif test.startswith('IDM_BUFFER'):
+        new_item[-1] = "Switch to buffer " + str(int(test[-1]) + 1)
+    return new_item
 
 
 def compare_and_keep(olddescs, menudescs, intdescs):

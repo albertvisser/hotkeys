@@ -685,17 +685,69 @@ def test_build_data(monkeypatch, capsys, tmp_path):
             " 'desc-3')}, {111: ('command-2', 'desc-2'), 104: ('command-4', 'desc-4')})\n")
 
 
-def _test_merge_keydefs(monkeypatch, capsys):
+def test_merge_keydefs(monkeypatch, capsys):
     """unittest for scikeys.merge_keydefs
     """
-    default_keys = {}
-    userdef_keys = {}
-    menu_commands = {}
-    internal_commands = {}
+    def mock_add(*args):
+        print('called add_description_to_item with args', args)
+        return args[0]
+    monkeypatch.setattr(testee, 'add_description_to_item', mock_add)
+    default_keys = []
+    userdef_keys = []
+    menu_commands = {'menu': ('com', 'mands')}
+    internal_commands = {'int': ('ern', 'al'), 'com': ('man', 'ds')}
     assert testee.merge_keydefs(default_keys, userdef_keys,
-                                menu_commands, internal_commands) == ({}, [])
+                                menu_commands, internal_commands) == ({}, set())
     assert capsys.readouterr().out == ("")
+    default_keys = [('key', 'mods', 'context', 'platform', 'S', 'command', 'desc')]
+    userdef_keys = []
+    assert testee.merge_keydefs(default_keys, userdef_keys, menu_commands, internal_commands) == ({
+        1: ['key', 'mods', 'context', 'platform', 'S', 'command', 'desc']}, {'context'})
+    assert capsys.readouterr().out == (
+            "called add_description_to_item with args"
+            " (['key', 'mods', 'context', 'platform', 'S', 'command', 'desc'],"
+            " {'com': 'mands'}, {'ern': 'al', 'man': 'ds'})\n")
+    default_keys = []
+    userdef_keys = [('key', 'mods', 'context', 'platform', 'U', 'command', 'desc')]
+    assert testee.merge_keydefs(default_keys, userdef_keys, menu_commands, internal_commands) == ({
+        1: ['key', 'mods', 'context', 'platform', 'U', 'command', 'desc']}, {'context'})
+    assert capsys.readouterr().out == (
+            "called add_description_to_item with args"
+            " (['key', 'mods', 'context', 'platform', 'U', 'command', 'desc'],"
+            " {'com': 'mands'}, {'ern': 'al', 'man': 'ds'})\n")
+    default_keys = [('key', 'mods', 'context', 'platform', 'S', 'command1', 'desc1')]
+    userdef_keys = [('key', 'mods', 'context', 'platform', 'U', 'command2', 'desc2')]
+    assert testee.merge_keydefs(default_keys, userdef_keys, menu_commands, internal_commands) == ({
+        1: ['key', 'mods', 'context', 'platform', 'U', 'command2', 'desc2']}, {'context'})
+    assert capsys.readouterr().out == (
+            "called add_description_to_item with args"
+            " (['key', 'mods', 'context', 'platform', 'U', 'command2', 'desc2'],"
+            " {'com': 'mands'}, {'ern': 'al', 'man': 'ds'})\n")
+    default_keys = [('key', '', 'context', 'platform', 'S', 'command1', 'desc1')]
+    userdef_keys = [('key', 'mods', 'context', 'platform', 'U', 'command2', 'desc2')]
+    assert testee.merge_keydefs(default_keys, userdef_keys, menu_commands, internal_commands) == ({
+        1: ['key', '', 'context', 'platform', 'S', 'command1', 'desc1'],
+        2: ['key', 'mods', 'context', 'platform', 'U', 'command2', 'desc2']}, {'context'})
+    assert capsys.readouterr().out == (
+            "called add_description_to_item with args"
+            " (['key', '', 'context', 'platform', 'S', 'command1', 'desc1'],"
+            " {'com': 'mands'}, {'ern': 'al', 'man': 'ds'})\n"
+            "called add_description_to_item with args"
+            " (['key', 'mods', 'context', 'platform', 'U', 'command2', 'desc2'],"
+            " {'com': 'mands'}, {'ern': 'al', 'man': 'ds'})\n")
 
+def test_add_description_to_item():
+    "unittest for scikeys.test_add_description_to_item"
+    menu_desc = {'IDM_XXX': 'xxxxxxx'}
+    int_desc = {'Command': 'yyyyyy'}
+    assert testee.add_description_to_item(['x', 'y', 'z', 'q'], menu_desc, int_desc) == [
+            'x', 'y', 'z', 'q']
+    assert testee.add_description_to_item(['', '', 'IDM_XXX', ''], menu_desc, int_desc) == [
+            '', '', 'IDM_XXX', 'xxxxxxx']
+    assert testee.add_description_to_item(['', '', 'IDM_BUFFER_1', ''], menu_desc, int_desc) == [
+            '', '', 'IDM_BUFFER_1', 'Switch to buffer 2']
+    assert testee.add_description_to_item(['', '', 'Command', ''], menu_desc, int_desc) == [
+            '', '', 'Command', 'yyyyyy']
 
 def test_compare_and_keep():
     """unittest for scikeys.compare_and_keep
