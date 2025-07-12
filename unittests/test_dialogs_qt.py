@@ -10,24 +10,24 @@ called Dialog.__init__ with args None () {{}}
 called Dialog.setWindowTitle with args ('a title',)
 called VBox.__init__
 called Label.__init__ with args ('', {testobj})
-called VBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>
+called VBox.addWidget with arg MockLabel
 called HBox.__init__
 called RadioButton.__init__ with args ('', {testobj}) {{}}
 called RadioButton.setChecked with arg `False`
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockRadioButton'>
+called HBox.addWidget with arg MockRadioButton
 called ComboBox.__init__
 called ComboBox.addItems with arg ['p', 'p']
 called ComboBox.setEditable with arg `True`
 called ComboBox.setCurrentIndex with arg `0`
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockComboBox'>
+called HBox.addWidget with arg MockComboBox
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
 called RadioButton.__init__ with args ('', {testobj}) {{}}
 called RadioButton.setChecked with arg `False`
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockRadioButton'>
+called HBox.addWidget with arg MockRadioButton
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called VBox.addLayout with arg MockHBoxLayout
 called ButtonBox.__init__ with args ()
 called ButtonBox.addButton with args (1,)
 called ButtonBox.addButton with args (2,)
@@ -35,24 +35,24 @@ called Signal.connect with args ({testobj.accept},)
 called Signal.connect with args ({testobj.reject},)
 called HBox.__init__
 called HBox.addStretch
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockButtonBox'>
+called HBox.addWidget with arg MockButtonBox
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
-called Dialog.setLayout
+called VBox.addLayout with arg MockHBoxLayout
+called Dialog.setLayout with arg MockVBoxLayout
 """
 filebrowse = """\
 called Frame.__init__
-called Frame.setWindowTitle wth arg '{title}'
+called Frame.setWindowTitle with arg '{title}'
 called Frame.setFrameStyle with arg `34`
 called VBox.__init__
 called HBox.__init__
 called LineEdit.__init__
 called LineEdit.setMinimumWidth with arg `200`
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLineEdit'>
+called HBox.addWidget with arg MockLineEdit
 called PushButton.__init__ with args ('xxx', {testobj}) {{'clicked': {testobj.browse}}}
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockPushButton'>
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
-called Frame.setLayout with arg of type <class 'mockgui.mockqtwidgets.MockVBoxLayout'>
+called HBox.addWidget with arg MockPushButton
+called VBox.addLayout with arg MockHBoxLayout
+called Frame.setLayout with arg MockVBoxLayout
 """
 setup = """\
 called Frame.__init__
@@ -61,22 +61,22 @@ called Dialog.setWindowTitle with args ('T_INIKDEF',)
 called Grid.__init__
 called Label.__init__ with args ('T_NAMOF s_plgnam T_ISMADE', {testobj})
 called LineEdit.__init__
-called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'> at (1, 0, 1, 3)
-called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLineEdit'> at (1, 3)
+called Grid.addWidget with arg MockLabel at (1, 0, 1, 3)
+called Grid.addWidget with arg MockLineEdit at (1, 3)
 called Label.__init__ with args ('S_PNLNAM', {testobj})
 called LineEdit.__init__
-called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'> at (2, 0, 1, 3)
-called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLineEdit'> at (2, 3)
+called Grid.addWidget with arg MockLabel at (2, 0, 1, 3)
+called Grid.addWidget with arg MockLineEdit at (2, 3)
 called CheckBox.__init__ with text 'T_MAKE S_RBLD'
-called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'> at (3, 0, 1, 4)
+called Grid.addWidget with arg MockCheckBox at (3, 0, 1, 4)
 called CheckBox.__init__ with text 'S_DETS'
-called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'> at (4, 0, 1, 4)
+called Grid.addWidget with arg MockCheckBox at (4, 0, 1, 4)
 called CheckBox.__init__ with text 'T_MAKE S_RSAV'
-called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'> at (5, 0, 1, 4)
+called Grid.addWidget with arg MockCheckBox at (5, 0, 1, 4)
 called Label.__init__ with args ('Q_SAVLOC', {testobj})
-called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'> at (6, 0, 1, 2)
+called Grid.addWidget with arg MockLabel at (6, 0, 1, 2)
 called gui.FileBrowseButton with args ({testobj},) {{'text': 'editor/plugins/Name_hotkeys.json', 'level_down': True}}
-called Grid.addWidget with arg of type <class 'test_dialogs_qt.TestSetupDialog.test_init.<locals>.MockFileBrowseButton'> at (6, 2, 1, 3)
+called Grid.addWidget with arg MockFileBrowseButton at (6, 2, 1, 3)
 called ButtonBox.__init__ with args ()
 called ButtonBox.addButton with args (1,)
 called ButtonBox.addButton with args (2,)
@@ -86,16 +86,16 @@ called VBox.__init__
 called VBox.addStretch
 called HBox.__init__
 called HBox.addStretch
-called HBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockGridLayout'>
+called HBox.addLayout with arg MockGridLayout
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
 called HBox.addStretch
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockButtonBox'>
+called HBox.addWidget with arg MockButtonBox
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called VBox.addLayout with arg MockHBoxLayout
 called VBox.addStretch
-called Dialog.setLayout
+called Dialog.setLayout with arg MockVBoxLayout
 """
 delete = """\
 called Frame.__init__
@@ -104,26 +104,26 @@ called Dialog.setWindowTitle with args ('title',)
 called VBox.__init__
 called HBox.__init__
 called Label.__init__ with args ('xxx', {testobj})
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>
+called HBox.addWidget with arg MockLabel
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
 called CheckBox.__init__ with text 'yyy'
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'>
+called HBox.addWidget with arg MockCheckBox
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
 called CheckBox.__init__ with text 'zzz'
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'>
+called HBox.addWidget with arg MockCheckBox
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called VBox.addLayout with arg MockHBoxLayout
 called ButtonBox.__init__ with args ()
 called ButtonBox.addButton with args (1,)
 called ButtonBox.addButton with args (2,)
 called Signal.connect with args ({testobj.accept},)
 called Signal.connect with args ({testobj.reject},)
-called VBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockButtonBox'>
-called Dialog.setLayout
+called VBox.addWidget with arg MockButtonBox
+called Dialog.setLayout with arg MockVBoxLayout
 """
 files = """\
 called Frame.__init__
@@ -134,30 +134,30 @@ called VBox.__init__
 called HBox.__init__
 called Label.__init__ with args ('xxx', {testobj})
 called HBox.addStretch
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>
+called HBox.addWidget with arg MockLabel
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
 called HBox.addSpacing
 called Label.__init__ with args ('yyy', {testobj})
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>, kwargs {{'alignment': <PyQt5.QtCore.Qt.Alignment object at 0x7a29459e62e0>}}
+called HBox.addWidget with arg MockLabel, kwargs {{'alignment': <PyQt5.QtCore.Qt.Alignment object at 0x7a29459e62e0>}}
 called HBox.addSpacing
 called Label.__init__ with args ('zzz', {testobj})
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>, kwargs {{'alignment': 128}}
+called HBox.addWidget with arg MockLabel, kwargs {{'alignment': 128}}
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called VBox.addLayout with arg MockHBoxLayout
 called Frame.__init__
 called ScrollArea.__init__ with args ({testobj},)
-called ScrollArea.setWidget with arg of type `<class 'mockgui.mockqtwidgets.MockFrame'>`
+called ScrollArea.setWidget with arg `MockFrame`
 called ScrollArea.setWidgetResizable with arg `True`
 called ScrollArea.verticalScrollBar
 called Grid.__init__
 called FilesDialog.add_row with args ({testobj}, 'name', 'path')
 called VBox.__init__
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockGridLayout'>
+called VBox.addLayout with arg MockGridLayout
 called VBox.addStretch
-called Frame.setLayout with arg of type <class 'mockgui.mockqtwidgets.MockVBoxLayout'>
-called VBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockScrollArea'>
+called Frame.setLayout with arg MockVBoxLayout
+called VBox.addWidget with arg MockScrollArea
 called ButtonBox.__init__ with args ()
 called ButtonBox.addButton with args ('aaa', 9)
 called PushButton.__init__ with args () {{}}
@@ -173,10 +173,10 @@ called Signal.connect with args ({testobj.accept},)
 called Signal.connect with args ({testobj.reject},)
 called HBox.__init__
 called HBox.addStretch
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockButtonBox'>
+called HBox.addWidget with arg MockButtonBox
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
-called Dialog.setLayout
+called VBox.addLayout with arg MockHBoxLayout
+called Dialog.setLayout with arg MockVBoxLayout
 """
 columns = """\
 called Frame.__init__
@@ -186,26 +186,26 @@ called VBox.__init__
 called HBox.__init__
 called Label.__init__ with args ('COLSET XXX', {testobj})
 called HBox.addStretch
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>
+called HBox.addWidget with arg MockLabel
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
 called HBox.addSpacing
 called Label.__init__ with args ('TTL', {testobj})
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>, kwargs {{'alignment': <PyQt5.QtCore.Qt.Alignment object at 0x74690d32c050>}}
+called HBox.addWidget with arg MockLabel, kwargs {{'alignment': <PyQt5.QtCore.Qt.Alignment object at 0x74690d32c050>}}
 called HBox.addSpacing
 called Label.__init__ with args ('WID', {testobj})
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>, kwargs {{'alignment': 128}}
+called HBox.addWidget with arg MockLabel, kwargs {{'alignment': 128}}
 called HBox.addSpacing
 called Label.__init__ with args ('IND', {testobj})
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>, kwargs {{'alignment': 128}}
+called HBox.addWidget with arg MockLabel, kwargs {{'alignment': 128}}
 called Label.__init__ with args ('SEQ', {testobj})
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>, kwargs {{'alignment': 128}}
+called HBox.addWidget with arg MockLabel, kwargs {{'alignment': 128}}
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called VBox.addLayout with arg MockHBoxLayout
 called Frame.__init__
 called ScrollArea.__init__ with args ({testobj},)
-called ScrollArea.setWidget with arg of type `<class 'mockgui.mockqtwidgets.MockFrame'>`
+called ScrollArea.setWidget with arg `MockFrame`
 called ScrollArea.setAlignment with arg 64
 called ScrollArea.setWidgetResizable with arg `True`
 called ScrollArea.verticalScrollBar
@@ -213,10 +213,10 @@ called VBox.__init__
 called ColumsSettingsDialog.add_row with args ({testobj}, 'xxx', 5, 0, 0)
 called ColumsSettingsDialog.add_row with args ({testobj}, 'yyy', 10, 1, 1)
 called VBox.__init__
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockVBoxLayout'>
+called VBox.addLayout with arg MockVBoxLayout
 called VBox.addStretch
-called Frame.setLayout with arg of type <class 'mockgui.mockqtwidgets.MockVBoxLayout'>
-called VBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockScrollArea'>
+called Frame.setLayout with arg MockVBoxLayout
+called VBox.addWidget with arg MockScrollArea
 called ButtonBox.__init__ with args ()
 called ButtonBox.addButton with args ('ADDCOL', 9)
 called PushButton.__init__ with args () {{}}
@@ -232,15 +232,15 @@ called Signal.connect with args ({testobj.accept},)
 called Signal.connect with args ({testobj.reject},)
 called HBox.__init__
 called HBox.addStretch
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockButtonBox'>
+called HBox.addWidget with arg MockButtonBox
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
-called Dialog.setLayout
+called VBox.addLayout with arg MockHBoxLayout
+called Dialog.setLayout with arg MockVBoxLayout
 """
 addcol_1 = """\
 called CheckBox.__init__
 called HBox.__init__
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'>
+called HBox.addWidget with arg MockCheckBox
 called ComboBox.__init__
 called ComboBox.addItems with arg ['xxx', 'yyy']
 called ComboBox.setEditable with arg `True`
@@ -253,7 +253,7 @@ called ComboBox.setCurrentIndex with arg `0`
 """
 addcol_3 = """\
 called Signal.connect with args ({testobj.on_text_changed},)
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockComboBox'>
+called HBox.addWidget with arg MockComboBox
 called HBox.__init__
 called HBox.addSpacing
 called SpinBox.__init__
@@ -264,17 +264,17 @@ called SpinBox.setValue with arg '5'
 """
 addcol_4 = """\
 called SpinBox.setFixedWidth with arg '48'
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockSpinBox'>
+called HBox.addWidget with arg MockSpinBox
 called HBox.addSpacing
-called HBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called HBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
 called HBox.addSpacing
 called CheckBox.__init__
 called CheckBox.setChecked with arg {flag}
 called CheckBox.setFixedWidth with arg '32'
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'>
+called HBox.addWidget with arg MockCheckBox
 called HBox.addSpacing
-called HBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called HBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
 called HBox.addSpacing
 called SpinBox.__init__
@@ -282,10 +282,10 @@ called SpinBox.setMinimum with arg '1'
 called SpinBox.setMaximum with arg '99'
 called SpinBox.setValue with arg '2'
 called SpinBox.setFixedWidth with arg '36'
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockSpinBox'>
+called HBox.addWidget with arg MockSpinBox
 called HBox.addStretch
-called HBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called HBox.addLayout with arg MockHBoxLayout
+called VBox.addLayout with arg MockHBoxLayout
 called Scrollbar.maximum
 called Scrollbar.setMaximum with value `161`
 called Scrollbar.maximum
@@ -297,30 +297,30 @@ called Dialog.setWindowTitle with args ('title',)
 called VBox.__init__
 called HBox.__init__
 called Label.__init__ with args ('xxx\\nyyy', {testobj})
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called HBox.addWidget with arg MockLabel
+called VBox.addLayout with arg MockHBoxLayout
 called Grid.__init__
 called Label.__init__ with args ('text id', {testobj})
-called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'> at (0, 0)
+called Grid.addWidget with arg MockLabel at (0, 0)
 called Label.__init__ with args ('En', {testobj})
-called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'> at (0, 1)
+called Grid.addWidget with arg MockLabel at (0, 1)
 called Label.__init__ with args ('Nl', {testobj})
-called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'> at (0, 2)
+called Grid.addWidget with arg MockLabel at (0, 2)
 """
 newcols_middle = """\
 called LineEdit.__init__
 called LineEdit.setText with arg `Q0`
-called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLineEdit'> at (1, 0)
+called Grid.addWidget with arg MockLineEdit at (1, 0)
 called LineEdit.__init__
 called LineEdit.setEnabled with arg False
 called LineEdit.setText with arg `qq`
-called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLineEdit'> at (1, 1)
+called Grid.addWidget with arg MockLineEdit at (1, 1)
 called LineEdit.__init__
 called LineEdit.setText with arg `qq`
-called Grid.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLineEdit'> at (1, 2)
+called Grid.addWidget with arg MockLineEdit at (1, 2)
 """
 newcols_end = """\
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockGridLayout'>
+called VBox.addLayout with arg MockGridLayout
 called ButtonBox.__init__ with args ()
 called ButtonBox.addButton with args (1,)
 called ButtonBox.addButton with args (2,)
@@ -328,10 +328,10 @@ called Signal.connect with args ({testobj.accept},)
 called Signal.connect with args ({testobj.reject},)
 called HBox.__init__
 called HBox.addStretch
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockButtonBox'>
+called HBox.addWidget with arg MockButtonBox
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
-called Dialog.setLayout
+called VBox.addLayout with arg MockHBoxLayout
+called Dialog.setLayout with arg MockVBoxLayout
 """
 extra_start = """\
 called Dialog.__init__ with args {testobj.parent} () {{}}
@@ -342,53 +342,53 @@ called VBox.__init__
 called HBox.__init__
 called Label.__init__ with args ('xxx', {testobj})
 called LineEdit.__init__
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLineEdit'>
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called HBox.addWidget with arg MockLabel
+called HBox.addWidget with arg MockLineEdit
+called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
 called Label.__init__ with args ('yyy', {testobj})
 called LineEdit.__init__
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLineEdit'>
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called HBox.addWidget with arg MockLabel
+called HBox.addWidget with arg MockLineEdit
+called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
 called CheckBox.__init__ with text 'zzz aaa'
 called CheckBox.setChecked with arg {action}
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'>
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called HBox.addWidget with arg MockCheckBox
+called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
 called CheckBox.__init__ with text 'ccc'
 called CheckBox.setChecked with arg {action}
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'>
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called HBox.addWidget with arg MockCheckBox
+called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
 called CheckBox.__init__ with text 'zzz bbb'
 called CheckBox.setChecked with arg {action}
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockCheckBox'>
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
-called Frame.setLayout with arg of type <class 'mockgui.mockqtwidgets.MockVBoxLayout'>
+called HBox.addWidget with arg MockCheckBox
+called VBox.addLayout with arg MockHBoxLayout
+called Frame.setLayout with arg MockVBoxLayout
 called Frame.setFrameStyle with arg `38`
-called VBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockFrame'>
+called VBox.addWidget with arg MockFrame
 called Frame.__init__
 called VBox.__init__
 called HBox.__init__
 called Label.__init__ with args ('ddd', {testobj})
 called HBox.addStretch
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>
+called HBox.addWidget with arg MockLabel
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
 called HBox.addSpacing
 called Label.__init__ with args ('eee', {testobj})
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>, kwargs {{'alignment': {testee.core.Qt.AlignmentFlag.AlignHCenter!r}}}
+called HBox.addWidget with arg MockLabel, kwargs {{'alignment': {testee.core.Qt.AlignmentFlag.AlignHCenter!r}}}
 called HBox.addSpacing
 called Label.__init__ with args ('fff', {testobj})
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>, kwargs {{'alignment': {testee.core.Qt.AlignmentFlag.AlignHCenter!r}}}
+called HBox.addWidget with arg MockLabel, kwargs {{'alignment': {testee.core.Qt.AlignmentFlag.AlignHCenter!r}}}
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called VBox.addLayout with arg MockHBoxLayout
 called Frame.__init__
 called ScrollArea.__init__ with args ({testobj},)
-called ScrollArea.setWidget with arg of type `<class 'mockgui.mockqtwidgets.MockFrame'>`
+called ScrollArea.setWidget with arg `MockFrame`
 called ScrollArea.setWidgetResizable with arg `True`
 called ScrollArea.verticalScrollBar
 called Grid.__init__
@@ -403,23 +403,23 @@ called ExtraSettingsDialog.add_row with args ('XYZ', 'xyz', 'xxyyzz')
 called ExtraSettingsDialog.add_row with args ('ABC', 'abc', '')
 """
 extra_end = """\
-called Frame.setLayout with arg of type <class 'mockgui.mockqtwidgets.MockGridLayout'>
+called Frame.setLayout with arg MockGridLayout
 called Frame.setFrameStyle with arg `32`
 called ScrollArea.ensureVisible with args (0, 0)
-called VBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockScrollArea'>
+called VBox.addWidget with arg MockScrollArea
 called HBox.__init__
 called HBox.addStretch
 called PushButton.__init__ with args ('add', {testobj}) {{}}
 called Signal.connect with args ({testobj.add_setting},)
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockPushButton'>
+called HBox.addWidget with arg MockPushButton
 called PushButton.__init__ with args ('rem', {testobj}) {{}}
 called Signal.connect with args ({testobj.remove_settings},)
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockPushButton'>
+called HBox.addWidget with arg MockPushButton
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
-called Frame.setLayout with arg of type <class 'mockgui.mockqtwidgets.MockVBoxLayout'>
+called VBox.addLayout with arg MockHBoxLayout
+called Frame.setLayout with arg MockVBoxLayout
 called Frame.setFrameStyle with arg `38`
-called VBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockFrame'>
+called VBox.addWidget with arg MockFrame
 called ButtonBox.__init__ with args ()
 called ButtonBox.addButton with args (1,)
 called ButtonBox.addButton with args (2,)
@@ -427,10 +427,10 @@ called Signal.connect with args ({testobj.accept},)
 called Signal.connect with args ({testobj.reject},)
 called HBox.__init__
 called HBox.addStretch
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockButtonBox'>
+called HBox.addWidget with arg MockButtonBox
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
-called Dialog.setLayout
+called VBox.addLayout with arg MockHBoxLayout
+called Dialog.setLayout with arg MockVBoxLayout
 """
 entry_start = """\
 called Dialog.__init__ with args {testobj.parent} () {{}}
@@ -444,28 +444,28 @@ called Header.__init__
 called Table.setColumnCount with arg '2'
 called Table.setHorizontalHeaderLabels with arg '['xxxx', 'yyyy']'
 called Table.horizontalHeader
-called Header.resizeSection for col 0 width 1
-called Header.resizeSection for col 1 width 2
+called Header.resizeSection with args (0, 1)
+called Header.resizeSection with args (1, 2)
 """
 entry_middle = """\
 called Table.insertRow with arg '0'
 called TableItem.__init__ with arg ''
 called TableItem.setText with arg 'xx'
-called Table.setItem with args (0, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called Table.setItem with args (0, 0, MockTableItem)
 called TableItem.__init__ with arg ''
 called TableItem.setText with arg 'yy'
-called Table.setItem with args (0, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called Table.setItem with args (0, 1, MockTableItem)
 called Table.insertRow with arg '1'
 called TableItem.__init__ with arg ''
 called TableItem.setText with arg 'aa'
-called Table.setItem with args (1, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called Table.setItem with args (1, 0, MockTableItem)
 called TableItem.__init__ with arg ''
 called TableItem.setText with arg 'bb'
-called Table.setItem with args (1, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)
+called Table.setItem with args (1, 1, MockTableItem)
 """
 entry_end = """\
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockTable'>
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called HBox.addWidget with arg MockTable
+called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
 called HBox.addStretch
 called ButtonBox.__init__ with args ()
@@ -481,10 +481,10 @@ called ButtonBox.addButton with args (2,)
 called PushButton.__init__ with args () {{}}
 called Signal.connect with args ({testobj.accept},)
 called Signal.connect with args ({testobj.reject},)
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockButtonBox'>
+called HBox.addWidget with arg MockButtonBox
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
-called Dialog.setLayout
+called VBox.addLayout with arg MockHBoxLayout
+called Dialog.setLayout with arg MockVBoxLayout
 """
 complete = """\
 called Dialog.__init__ with args {testobj.parent} () {{}}
@@ -504,8 +504,8 @@ called Header.setStretchLastSection with arg True
 called CompleteDialog.build_table
 called Table.setColumnWidth with args (0, 260)
 called Table.setColumnWidth with args (1, 520)
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockTable'>
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called HBox.addWidget with arg MockTable
+called VBox.addLayout with arg MockHBoxLayout
 called ButtonBox.__init__ with args ()
 called ButtonBox.addButton with args (4,)
 called ButtonBox.addButton with args (2,)
@@ -513,10 +513,10 @@ called Signal.connect with args ({testobj.accept},)
 called Signal.connect with args ({testobj.reject},)
 called HBox.__init__
 called HBox.addStretch
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockButtonBox'>
+called HBox.addWidget with arg MockButtonBox
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
-called Dialog.setLayout
+called VBox.addLayout with arg MockHBoxLayout
+called Dialog.setLayout with arg MockVBoxLayout
 called Table.setCurrentCell with args (0, 1)
 """
 
@@ -1170,12 +1170,9 @@ class TestFilesDialog:
         assert isinstance(testobj.paths[0][1], testee.FileBrowseButton)
         assert capsys.readouterr().out == (
                 "called CheckBox.__init__ with text 'name'\n"
-                "called Grid.addWidget with arg of type"
-                " <class 'mockgui.mockqtwidgets.MockCheckBox'> at (1, 0)\n"
+                "called Grid.addWidget with arg MockCheckBox at (1, 0)\n"
                 f"called gui.FileBrowseButton with args ({testobj},) {{'text': ''}}\n"
-                "called Grid.addWidget with arg of type"
-                " <class 'test_dialogs_qt.TestFilesDialog.test_add_row"
-                ".<locals>.MockFileBrowseButton'> at (1, 1)\n"
+                "called Grid.addWidget with arg MockFileBrowseButton at (1, 1)\n"
                 "called Scrollbar.maximum\n"
                 "called Scrollbar.setMaximum with value `151`\n"
                 "called Scrollbar.maximum\n"
@@ -1193,12 +1190,9 @@ class TestFilesDialog:
         assert isinstance(testobj.paths[0][1], testee.FileBrowseButton)
         assert capsys.readouterr().out == (
                 "called CheckBox.__init__ with text 'name'\n"
-                "called Grid.addWidget with arg of type"
-                " <class 'mockgui.mockqtwidgets.MockCheckBox'> at (1, 0)\n"
+                "called Grid.addWidget with arg MockCheckBox at (1, 0)\n"
                 f"called gui.FileBrowseButton with args ({testobj},) {{'text': 'path'}}\n"
-                "called Grid.addWidget with arg of type"
-                " <class 'test_dialogs_qt.TestFilesDialog.test_add_row"
-                ".<locals>.MockFileBrowseButton'> at (1, 1)\n"
+                "called Grid.addWidget with arg MockFileBrowseButton at (1, 1)\n"
                 "called Scrollbar.maximum\n"
                 "called Scrollbar.setMaximum with value `151`\n"
                 "called Scrollbar.maximum\n"
@@ -1226,12 +1220,9 @@ class TestFilesDialog:
         assert not testobj.paths
         assert not testobj.settingsdata
         assert capsys.readouterr().out == (
-                "called Grid.removeWidget with arg of type"
-                " <class 'mockgui.mockqtwidgets.MockCheckBox'>\n"
+                "called Grid.removeWidget with arg MockCheckBox\n"
                 "called CheckBox.close\n"
-                "called Grid.removeWidget with arg of type"
-                " <class 'test_dialogs_qt.TestFilesDialog.test_delete_row"
-                ".<locals>.MockFileBrowseButton'>\n"
+                "called Grid.removeWidget with arg MockFileBrowseButton\n"
                 "called gui.FileBrowseButton.close\n")
 
     def test_add_program(self, monkeypatch, capsys):
@@ -1603,20 +1594,15 @@ class TestColumnSettingsDialog:
         assert capsys.readouterr().out == (
                 "called SpinBox.value\ncalled SpinBox.setValue with arg '0'\n"
                 "called SpinBox.value\ncalled SpinBox.setValue with arg '1'\n"
-                "called VBox.removeWidget with arg of type"
-                " <class 'mockgui.mockqtwidgets.MockCheckBox'>\n"
+                "called VBox.removeWidget with arg MockCheckBox\n"
                 "called CheckBox.close\n"
-                "called VBox.removeWidget with arg of type"
-                " <class 'mockgui.mockqtwidgets.MockWidget'>\n"
+                "called VBox.removeWidget with arg MockWidget\n"
                 "called Widget.close\n"
-                "called VBox.removeWidget with arg of type"
-                " <class 'mockgui.mockqtwidgets.MockWidget'>\n"
+                "called VBox.removeWidget with arg MockWidget\n"
                 "called Widget.close\n"
-                "called VBox.removeWidget with arg of type"
-                " <class 'mockgui.mockqtwidgets.MockSpinBox'>\n"
+                "called VBox.removeWidget with arg MockSpinBox\n"
                 "called SpinBox.close\n"
-                "called VBox.removeWidget with arg of type"
-                " <class 'mockgui.mockqtwidgets.MockWidget'>\n"
+                "called VBox.removeWidget with arg MockWidget\n"
                 "called Widget.close\ncalled VBox.itemAt with arg 0\ncalled VBox.removeItem\n")
 
     def test_on_text_changed(self, monkeypatch, capsys):
@@ -1945,18 +1931,14 @@ class TestExtraSettingsDialog:
         assert isinstance(testobj.data[0][2], testee.qtw.QLineEdit)
         assert capsys.readouterr().out == (
                 "called CheckBox.__init__\n"
-                "called Grid.addWidget with arg of type"
-                " <class 'mockgui.mockqtwidgets.MockCheckBox'> at (1, 0)\n"
+                "called Grid.addWidget with arg MockCheckBox at (1, 0)\n"
                 "called LineEdit.__init__\n"
                 "called LineEdit.setFixedWidth with arg `88`\n"
-                "called Grid.addWidget with arg of type"
-                " <class 'mockgui.mockqtwidgets.MockLineEdit'> at (1, 1)\n"
+                "called Grid.addWidget with arg MockLineEdit at (1, 1)\n"
                 "called LineEdit.__init__\n"
-                "called Grid.addWidget with arg of type"
-                " <class 'mockgui.mockqtwidgets.MockLineEdit'> at (1, 2)\n"
+                "called Grid.addWidget with arg MockLineEdit at (1, 2)\n"
                 "called LineEdit.__init__\n"
-                "called Grid.addWidget with arg of type"
-                " <class 'mockgui.mockqtwidgets.MockLineEdit'> at (2, 2)\n"
+                "called Grid.addWidget with arg MockLineEdit at (2, 2)\n"
                 "called Scrollbar.maximum\ncalled Scrollbar.setMaximum with value `161`\n"
                 "called Scrollbar.maximum\ncalled Scrollbar.setValue with value `99`\n")
         testobj.add_row(name='xx', value='yy', desc='zz')
@@ -1970,19 +1952,16 @@ class TestExtraSettingsDialog:
         assert isinstance(testobj.data[1][2], testee.qtw.QLineEdit)
         assert capsys.readouterr().out == (
                 "called CheckBox.__init__\n"
-                "called Grid.addWidget with arg of type"
-                " <class 'mockgui.mockqtwidgets.MockCheckBox'> at (3, 0)\n"
+                "called Grid.addWidget with arg "
+                "MockCheckBox at (3, 0)\n"
                 "called LineEdit.__init__\n"
                 "called LineEdit.setFixedWidth with arg `88`\n"
                 "called LineEdit.setReadOnly with arg `True`\n"
-                "called Grid.addWidget with arg of type"
-                " <class 'mockgui.mockqtwidgets.MockLineEdit'> at (3, 1)\n"
+                "called Grid.addWidget with arg MockLineEdit at (3, 1)\n"
                 "called LineEdit.__init__\n"
-                "called Grid.addWidget with arg of type"
-                " <class 'mockgui.mockqtwidgets.MockLineEdit'> at (3, 2)\n"
+                "called Grid.addWidget with arg MockLineEdit at (3, 2)\n"
                 "called LineEdit.__init__\n"
-                "called Grid.addWidget with arg of type"
-                " <class 'mockgui.mockqtwidgets.MockLineEdit'> at (4, 2)\n"
+                "called Grid.addWidget with arg MockLineEdit at (4, 2)\n"
                 "called Scrollbar.maximum\ncalled Scrollbar.setMaximum with value `161`\n"
                 "called Scrollbar.maximum\ncalled Scrollbar.setValue with value `99`\n")
 
@@ -2004,17 +1983,14 @@ class TestExtraSettingsDialog:
         testobj.delete_row(1)
         assert testobj.checks == ['']
         assert testobj.data == [[]]
-        assert capsys.readouterr().out == ("called Grid.removeWidget with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockCheckBox'>\n"
+        assert capsys.readouterr().out == ("called Grid.removeWidget with arg "
+                                           "MockCheckBox\n"
                                            "called CheckBox.close\n"
-                                           "called Grid.removeWidget with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockLineEdit'>\n"
+                                           "called Grid.removeWidget with arg MockLineEdit\n"
                                            "called LineEdit.close\n"
-                                           "called Grid.removeWidget with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockLineEdit'>\n"
+                                           "called Grid.removeWidget with arg MockLineEdit\n"
                                            "called LineEdit.close\n"
-                                           "called Grid.removeWidget with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockLineEdit'>\n"
+                                           "called Grid.removeWidget with arg MockLineEdit\n"
                                            "called LineEdit.close\n")
 
     def test_add_setting(self, monkeypatch, capsys):
@@ -2207,12 +2183,10 @@ class TestEntryDialog:
                 "called Table.columnCount\n"
                 "called TableItem.__init__ with arg ''\n"
                 "called TableItem.setText with arg ''\n"
-                "called Table.setItem with args"
-                " (1, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called Table.setItem with args (1, 0, MockTableItem)\n"
                 "called TableItem.__init__ with arg ''\n"
                 "called TableItem.setText with arg ''\n"
-                "called Table.setItem with args"
-                " (1, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called Table.setItem with args (1, 1, MockTableItem)\n"
                 "called Table.scrollToBottom\n")
 
     def test_delete_key(self, monkeypatch, capsys):
@@ -2259,26 +2233,26 @@ class TestEntryDialog:
                 "called Table.setRowCount with arg '2'\n"
                 "called Table.setColumnCount with arg '2'\n"
                 "called TableItem.__init__ with arg '0x0'\n"
-                "called Table.setItem with args"
-                " (0, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called Table.setItem with args (0, 0, MockTableItem)\n"
                 "called TableItem.__init__ with arg '0x1'\n"
-                "called Table.setItem with args"
-                " (0, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called Table.setItem with args (0, 1, MockTableItem)\n"
                 "called TableItem.__init__ with arg '1x0'\n"
-                "called Table.setItem with args"
-                " (1, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called Table.setItem with args (1, 0, MockTableItem)\n"
                 "called TableItem.__init__ with arg '1x1'\n"
-                "called Table.setItem with args"
-                " (1, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n")
+                "called Table.setItem with args (1, 1, MockTableItem)\n")
         testobj.accept()
         assert testobj.master.book.page.data == {1: ['0x0', '0x1'], 2: ['1x0', '1x1']}
         assert capsys.readouterr().out == ("called Table.rowCount\n"
                                            "called Table.columnCount\n"
                                            "called Table.item with args (0, 0)\n"
+                                           "called TableItem.text\n"
                                            "called Table.item with args (0, 1)\n"
+                                           "called TableItem.text\n"
                                            "called Table.columnCount\n"
                                            "called Table.item with args (1, 0)\n"
+                                           "called TableItem.text\n"
                                            "called Table.item with args (1, 1)\n"
+                                           "called TableItem.text\n"
                                            "called Dialog.accept\n")
 
 
@@ -2357,24 +2331,24 @@ class TestCompleteDialog:
                 "called Table.setRowCount with arg '2'\n"
                 "called Table.setColumnCount with arg '2'\n"
                 "called TableItem.__init__ with arg '0x0'\n"
-                "called Table.setItem with args"
-                " (0, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called Table.setItem with args (0, 0, MockTableItem)\n"
                 "called TableItem.__init__ with arg '0x1'\n"
-                "called Table.setItem with args"
-                " (0, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called Table.setItem with args (0, 1, MockTableItem)\n"
                 "called TableItem.__init__ with arg '1x0'\n"
-                "called Table.setItem with args"
-                " (1, 0, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called Table.setItem with args (1, 0, MockTableItem)\n"
                 "called TableItem.__init__ with arg '1x1'\n"
-                "called Table.setItem with args"
-                " (1, 1, item of type <class 'mockgui.mockqtwidgets.MockTableItem'>)\n")
+                "called Table.setItem with args (1, 1, MockTableItem)\n")
         testobj.accept()
         assert testobj.master.dialog_data == {'0x0': '0x1', '1x0': '1x1'}
         assert capsys.readouterr().out == ("called Table.rowCount\n"
                                            "called Table.item with args (0, 0)\n"
+                                           "called TableItem.text\n"
                                            "called Table.item with args (0, 1)\n"
+                                           "called TableItem.text\n"
                                            "called Table.item with args (1, 0)\n"
+                                           "called TableItem.text\n"
                                            "called Table.item with args (1, 1)\n"
+                                           "called TableItem.text\n"
                                            "called Dialog.accept\n")
 
     def test_read_data(self, monkeypatch, capsys):
@@ -2413,50 +2387,41 @@ class TestCompleteDialog:
                 "called TableItem.setText with arg 'a'\n"
                 "called TableItem.flags\n"
                 "called TableItem.setFlags with arg ItemFlag.NoItemFlags\n"
-                "called Table.setItem with args (0, 0, item of type"
-                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called Table.setItem with args (0, 0, MockTableItem)\n"
                 "called TableItem.__init__ with arg ''\n"
                 "called TableItem.setText with arg 'b'\n"
-                "called Table.setItem with args (0, 1, item of type"
-                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called Table.setItem with args (0, 1, MockTableItem)\n"
                 "called TableItem.__init__ with arg ''\n"
                 "called TableItem.setText with arg 'c'\n"
                 "called TableItem.flags\n"
                 "called TableItem.setFlags with arg ItemFlag.NoItemFlags\n"
-                "called Table.setItem with args (0, 2, item of type"
-                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called Table.setItem with args (0, 2, MockTableItem)\n"
                 "called TableItem.__init__ with arg ''\n"
                 "called TableItem.setText with arg 'p'\n"
                 "called TableItem.flags\n"
                 "called TableItem.setFlags with arg ItemFlag.NoItemFlags\n"
-                "called Table.setItem with args (1, 0, item of type"
-                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called Table.setItem with args (1, 0, MockTableItem)\n"
                 "called TableItem.__init__ with arg ''\n"
                 "called TableItem.setText with arg 'q'\n"
-                "called Table.setItem with args (1, 1, item of type"
-                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called Table.setItem with args (1, 1, MockTableItem)\n"
                 "called TableItem.__init__ with arg ''\n"
                 "called TableItem.setText with arg ''\n"
                 "called TableItem.flags\n"
                 "called TableItem.setFlags with arg ItemFlag.NoItemFlags\n"
-                "called Table.setItem with args (1, 2, item of type"
-                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called Table.setItem with args (1, 2, MockTableItem)\n"
                 "called TableItem.__init__ with arg ''\n"
                 "called TableItem.setText with arg 'x'\n"
                 "called TableItem.flags\n"
                 "called TableItem.setFlags with arg ItemFlag.NoItemFlags\n"
-                "called Table.setItem with args (2, 0, item of type"
-                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called Table.setItem with args (2, 0, MockTableItem)\n"
                 "called TableItem.__init__ with arg ''\n"
                 "called TableItem.setText with arg 'y'\n"
-                "called Table.setItem with args (2, 1, item of type"
-                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n"
+                "called Table.setItem with args (2, 1, MockTableItem)\n"
                 "called TableItem.__init__ with arg ''\n"
                 "called TableItem.setText with arg ''\n"
                 "called TableItem.flags\n"
                 "called TableItem.setFlags with arg ItemFlag.NoItemFlags\n"
-                "called Table.setItem with args (2, 2, item of type"
-                " <class 'mockgui.mockqtwidgets.MockTableItem'>)\n")
+                "called Table.setItem with args (2, 2, MockTableItem)\n")
 
 
 def test_show_dialog(monkeypatch, capsys):

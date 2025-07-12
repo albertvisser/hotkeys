@@ -8,17 +8,17 @@ from editor import gui_qt as testee
 maingui = """\
 called Frame.__init__
 called VBox.__init__
-called VBox.addWidget with arg of type <class 'test_qtgui.MockTabbedInterface'>
+called VBox.addWidget with arg MockTabbedInterface
 called HBox.__init__
 called HBox.addStretch
 called PushButton.__init__ with args ('Exit text', {testobj}) {{}}
 called Signal.connect with args ({testobj.editor.exit},)
 called PushButton.setDefault with arg `True`
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockPushButton'>
+called HBox.addWidget with arg MockPushButton
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
-called Frame.setLayout with arg of type <class 'mockgui.mockqtwidgets.MockVBoxLayout'>
-called MainWidget.setCentralWindow with arg of type `<class 'mockgui.mockqtwidgets.MockFrame'>`
+called VBox.addLayout with arg MockHBoxLayout
+called Frame.setLayout with arg MockVBoxLayout
+called MainWidget.setCentralWindow with arg `MockFrame`
 called MainWindow.show
 called Application.exec
 """
@@ -27,10 +27,10 @@ called VBox.__init__
 called HBox.__init__
 called HBox.addStretch
 called Label.__init__ with args ('nodata', {testobj})
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>
+called HBox.addWidget with arg MockLabel
 called HBox.addStretch
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
-called Frame.setLayout with arg of type <class 'mockgui.mockqtwidgets.MockVBoxLayout'>
+called VBox.addLayout with arg MockHBoxLayout
+called Frame.setLayout with arg MockVBoxLayout
 """
 tabbed1 = """\
 called ComboBox.__init__
@@ -62,24 +62,24 @@ called VBox.__init__
 called HBox.__init__
 called HBox.addSpacing
 called Label.__init__ with args ('', {testobj})
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockComboBox'>
+called HBox.addWidget with arg MockLabel
+called HBox.addWidget with arg MockComboBox
 called HBox.addStretch
 called Label.__init__ with args ('', {testobj})
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockComboBox'>
+called HBox.addWidget with arg MockLabel
+called HBox.addWidget with arg MockComboBox
 called Label.__init__ with args (':', {testobj})
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockLabel'>
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockComboBox'>
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockPushButton'>
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockPushButton'>
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockPushButton'>
+called HBox.addWidget with arg MockLabel
+called HBox.addWidget with arg MockComboBox
+called HBox.addWidget with arg MockPushButton
+called HBox.addWidget with arg MockPushButton
+called HBox.addWidget with arg MockPushButton
 called HBox.addSpacing
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockStackedWidget'>
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
-called Frame.setLayout with arg of type <class 'mockgui.mockqtwidgets.MockVBoxLayout'>
+called HBox.addWidget with arg MockStackedWidget
+called VBox.addLayout with arg MockHBoxLayout
+called Frame.setLayout with arg MockVBoxLayout
 called TabbedInterface.setcaptions
 """
 sdilist_start = """\
@@ -97,12 +97,12 @@ called Header.setStretchLastSection with arg True
 called HotkeyPanel.populate_list
 called Tree.setSortingEnabled with arg True
 called HBox.__init__
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockTreeWidget'>
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
-called SingleDataInterface.layout_extra_fields with arg of type <class 'mockgui.mockqtwidgets.MockVBoxLayout'>
+called HBox.addWidget with arg MockTreeWidget
+called VBox.addLayout with arg MockHBoxLayout
+called SingleDataInterface.layout_extra_fields with arg MockVBoxLayout
 """
 sdilist_end = """\
-called Frame.setLayout with arg of type <class 'mockgui.mockqtwidgets.MockVBoxLayout'>
+called Frame.setLayout with arg MockVBoxLayout
 called SingleDataInterface.set_listselection with arg 0
 """
 sdiextra_start = """\
@@ -111,28 +111,28 @@ called VBox.__init__
 called HBox.__init__
 called HBox.__init__
 called fieldhandler.layout_keymodfields
-called HBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called HBox.addLayout with arg MockHBoxLayout
 called HBox.addStretch
 called fieldhandler.layout_commandfields
 """
 sdiextra_middle_11 = """\
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockPushButton'>
-called HBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockPushButton'>
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called HBox.addWidget with arg MockPushButton
+called HBox.addWidget with arg MockPushButton
+called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
 """
 sdiextra_middle_12 = "called fieldhandler.layout_descfield\n"
 sdiextra_middle_21 = "called plugin.layout_extra_fields_topline\n"
 sdiextra_middle_22 = """\
 called plugin.layout_extra_fields_nextline
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
+called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
 """
 sdiextra_middle_23 = "called plugin.layout_extra_fields\n"
 sdiextra_end = """\
-called VBox.addLayout with arg of type <class 'mockgui.mockqtwidgets.MockHBoxLayout'>
-called Frame.setLayout with arg of type <class 'mockgui.mockqtwidgets.MockVBoxLayout'>
-called VBox.addWidget with arg of type <class 'mockgui.mockqtwidgets.MockFrame'>
+called VBox.addLayout with arg MockHBoxLayout
+called Frame.setLayout with arg MockVBoxLayout
+called VBox.addWidget with arg MockFrame
 """
 
 @pytest.fixture
@@ -553,37 +553,37 @@ class TestFieldHandler:
         testobj.master.keylist = None
         testobj.layout_keymodfields(sizer)
         assert capsys.readouterr().out == ("called HBox.__init__\n"
-                                           "called HBox.addWidget with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockLabel'>\n"
-                                           "called HBox.addWidget with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockLineEdit'>\n"
+                                           "called HBox.addWidget with arg "
+                                           "MockLabel\n"
+                                           "called HBox.addWidget with arg "
+                                           "MockLineEdit\n"
                                            "called HBox.addStretch\n"
-                                           "called VBox.addLayout with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockHBoxLayout'>\n")
+                                           "called VBox.addLayout with arg "
+                                           "MockHBoxLayout\n")
         testobj.master.keylist = ['x']
         testobj.layout_keymodfields(sizer)
         assert capsys.readouterr().out == ("called HBox.__init__\n"
-                                           "called HBox.addWidget with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockLabel'>\n"
-                                           "called HBox.addWidget with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockComboBox'>\n"
+                                           "called HBox.addWidget with arg "
+                                           "MockLabel\n"
+                                           "called HBox.addWidget with arg "
+                                           "MockComboBox\n"
                                            "called HBox.addStretch\n"
-                                           "called VBox.addLayout with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockHBoxLayout'>\n")
+                                           "called VBox.addLayout with arg "
+                                           "MockHBoxLayout\n")
         testobj.master.fields = ['C_MODS']
         testobj.layout_keymodfields(mockqtw.MockVBoxLayout())
         assert capsys.readouterr().out == ("called VBox.__init__\ncalled HBox.__init__\n"
-                                           "called HBox.addWidget with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockCheckBox'>\n"
-                                           "called HBox.addWidget with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockCheckBox'>\n"
-                                           "called HBox.addWidget with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockCheckBox'>\n"
-                                           "called HBox.addWidget with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockCheckBox'>\n"
+                                           "called HBox.addWidget with arg "
+                                           "MockCheckBox\n"
+                                           "called HBox.addWidget with arg "
+                                           "MockCheckBox\n"
+                                           "called HBox.addWidget with arg "
+                                           "MockCheckBox\n"
+                                           "called HBox.addWidget with arg "
+                                           "MockCheckBox\n"
                                            "called HBox.addStretch\n"
-                                           "called VBox.addLayout with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockHBoxLayout'>\n")
+                                           "called VBox.addLayout with arg "
+                                           "MockHBoxLayout\n")
 
     def test_layout_commandfields(self, monkeypatch, capsys):
         """unittest for FieldHandler.layout_commandfields
@@ -603,21 +603,21 @@ class TestFieldHandler:
         testobj.master.fields = ['C_CNTXT']
         testobj.layout_commandfields(sizer)
         assert capsys.readouterr().out == ("called HBox.__init__\n"
-                                           "called HBox.addWidget with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockLabel'>\n"
-                                           "called HBox.addWidget with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockComboBox'>\n"
-                                           "called VBox.addLayout with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockHBoxLayout'>\n")
+                                           "called HBox.addWidget with arg "
+                                           "MockLabel\n"
+                                           "called HBox.addWidget with arg "
+                                           "MockComboBox\n"
+                                           "called VBox.addLayout with arg "
+                                           "MockHBoxLayout\n")
         testobj.master.fields = ['C_CMD']
         testobj.layout_commandfields(sizer)
         assert capsys.readouterr().out == ("called HBox.__init__\n"
-                                           "called HBox.addWidget with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockLineEdit'>\n"
-                                           "called HBox.addWidget with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockComboBox'>\n"
-                                           "called VBox.addLayout with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockHBoxLayout'>\n")
+                                           "called HBox.addWidget with arg "
+                                           "MockLineEdit\n"
+                                           "called HBox.addWidget with arg "
+                                           "MockComboBox\n"
+                                           "called VBox.addLayout with arg "
+                                           "MockHBoxLayout\n")
 
     def test_layout_descfield(self, monkeypatch, capsys):
         """unittest for FieldHandler.layout_descfield
@@ -633,10 +633,10 @@ class TestFieldHandler:
         testobj.master.fields = ['C_DESC']
         testobj.layout_descfield(sizer)
         assert capsys.readouterr().out == ("called HBox.__init__\n"
-                                           "called HBox.addWidget with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockEditorWidget'>\n"
-                                           "called VBox.addLayout with arg of type"
-                                           " <class 'mockgui.mockqtwidgets.MockHBoxLayout'>\n")
+                                           "called HBox.addWidget with arg "
+                                           "MockEditorWidget\n"
+                                           "called VBox.addLayout with arg "
+                                           "MockHBoxLayout\n")
 
 
 class TestSingleDataInterface:
@@ -694,7 +694,7 @@ class TestSingleDataInterface:
         def mock_populate():
             print('called HotkeyPanel.populate_list')
         def mock_layout(arg):
-            print(f'called SingleDataInterface.layout_extra_fields with arg of type {type(arg)}')
+            print(f'called SingleDataInterface.layout_extra_fields with arg {type(arg).__name__}')
         def mock_set(arg):
             print(f'called SingleDataInterface.set_listselection with arg {arg}')
         monkeypatch.setattr(testee.qtw, 'QVBoxLayout', mockqtw.MockVBoxLayout)
@@ -1771,8 +1771,8 @@ class TestGui:
         monkeypatch.setattr(testee.Gui, 'setCentralWidget', mockqtw.MockMainWindow.setCentralWidget)
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.setup_tabs()
-        assert capsys.readouterr().out == ("called MainWidget.setCentralWindow with arg of type"
-                                           " `<class 'test_qtgui.MockTabbedInterface'>`\n")
+        assert capsys.readouterr().out == (
+                "called MainWidget.setCentralWindow with arg `MockTabbedInterface`\n")
 
     def test_setup_menu(self, monkeypatch, capsys):
         """unittest for Gui.setup_menu

@@ -21,17 +21,11 @@ def test_layout_extra_fields(monkeypatch, capsys):
     testee.layout_extra_fields(win, layout)
     assert capsys.readouterr().out == (
             "called Grid.__init__\n"
-            "called Grid.addWidget with arg of type"
-            " <class 'mockgui.mockqtwidgets.MockLabel'> at (0, 0)\n"
-            "called Grid.addWidget with arg of type"
-            " <class 'mockgui.mockqtwidgets.MockLineEdit'> at (0, 1)\n"
-            "called Grid.addWidget with arg of type"
-            " <class 'mockgui.mockqtwidgets.MockLabel'> at (1, 0)\n"
+            "called Grid.addWidget with arg MockLabel at (0, 0)\n"
+            "called Grid.addWidget with arg MockLineEdit at (0, 1)\n"
+            "called Grid.addWidget with arg MockLabel at (1, 0)\n"
             "called HBox.__init__\n"
-            "called HBox.addWidget with arg of type"
-            " <class 'mockgui.mockqtwidgets.MockComboBox'>\n"
+            "called HBox.addWidget with arg MockComboBox\n"
             "called HBox.addStretch\n"
-            "called Grid.addLayout with arg of type"
-            " <class 'mockgui.mockqtwidgets.MockHBoxLayout'> at (1, 1)\n"
-            "called VBox.addLayout with arg of type"
-            " <class 'mockgui.mockqtwidgets.MockGridLayout'>\n")
+            "called Grid.addLayout with arg MockHBoxLayout at (1, 1)\n"
+            "called VBox.addLayout with arg MockGridLayout\n")
