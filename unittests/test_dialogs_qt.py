@@ -67,11 +67,11 @@ called Label.__init__ with args ('S_PNLNAM', {testobj})
 called LineEdit.__init__
 called Grid.addWidget with arg MockLabel at (2, 0, 1, 3)
 called Grid.addWidget with arg MockLineEdit at (2, 3)
-called CheckBox.__init__ with text 'T_MAKE S_RBLD'
+called CheckBox.__init__ with args ('T_MAKE S_RBLD', {testobj})
 called Grid.addWidget with arg MockCheckBox at (3, 0, 1, 4)
-called CheckBox.__init__ with text 'S_DETS'
+called CheckBox.__init__ with args ('S_DETS', {testobj})
 called Grid.addWidget with arg MockCheckBox at (4, 0, 1, 4)
-called CheckBox.__init__ with text 'T_MAKE S_RSAV'
+called CheckBox.__init__ with args ('T_MAKE S_RSAV', {testobj})
 called Grid.addWidget with arg MockCheckBox at (5, 0, 1, 4)
 called Label.__init__ with args ('Q_SAVLOC', {testobj})
 called Grid.addWidget with arg MockLabel at (6, 0, 1, 2)
@@ -108,12 +108,12 @@ called HBox.addWidget with arg MockLabel
 called HBox.addStretch
 called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
-called CheckBox.__init__ with text 'yyy'
+called CheckBox.__init__ with args ('yyy', {testobj})
 called HBox.addWidget with arg MockCheckBox
 called HBox.addStretch
 called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
-called CheckBox.__init__ with text 'zzz'
+called CheckBox.__init__ with args ('zzz', {testobj})
 called HBox.addWidget with arg MockCheckBox
 called HBox.addStretch
 called VBox.addLayout with arg MockHBoxLayout
@@ -238,7 +238,7 @@ called VBox.addLayout with arg MockHBoxLayout
 called Dialog.setLayout with arg MockVBoxLayout
 """
 addcol_1 = """\
-called CheckBox.__init__
+called CheckBox.__init__ with args ({testobj},)
 called HBox.__init__
 called HBox.addWidget with arg MockCheckBox
 called ComboBox.__init__
@@ -269,7 +269,7 @@ called HBox.addSpacing
 called HBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
 called HBox.addSpacing
-called CheckBox.__init__
+called CheckBox.__init__ with args ({testobj},)
 called CheckBox.setChecked with arg {flag}
 called CheckBox.setFixedWidth with arg '32'
 called HBox.addWidget with arg MockCheckBox
@@ -352,17 +352,17 @@ called HBox.addWidget with arg MockLabel
 called HBox.addWidget with arg MockLineEdit
 called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
-called CheckBox.__init__ with text 'zzz aaa'
+called CheckBox.__init__ with args ('zzz aaa', {testobj})
 called CheckBox.setChecked with arg {action}
 called HBox.addWidget with arg MockCheckBox
 called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
-called CheckBox.__init__ with text 'ccc'
+called CheckBox.__init__ with args ('ccc', {testobj})
 called CheckBox.setChecked with arg {action}
 called HBox.addWidget with arg MockCheckBox
 called VBox.addLayout with arg MockHBoxLayout
 called HBox.__init__
-called CheckBox.__init__ with text 'zzz bbb'
+called CheckBox.__init__ with args ('zzz bbb', {testobj})
 called CheckBox.setChecked with arg {action}
 called HBox.addWidget with arg MockCheckBox
 called VBox.addLayout with arg MockHBoxLayout
@@ -1169,7 +1169,7 @@ class TestFilesDialog:
         assert testobj.paths[0][0] == 'name'
         assert isinstance(testobj.paths[0][1], testee.FileBrowseButton)
         assert capsys.readouterr().out == (
-                "called CheckBox.__init__ with text 'name'\n"
+                f"called CheckBox.__init__ with args ('name', {testobj})\n"
                 "called Grid.addWidget with arg MockCheckBox at (1, 0)\n"
                 f"called gui.FileBrowseButton with args ({testobj},) {{'text': ''}}\n"
                 "called Grid.addWidget with arg MockFileBrowseButton at (1, 1)\n"
@@ -1189,7 +1189,7 @@ class TestFilesDialog:
         assert testobj.paths[0][0] == 'name'
         assert isinstance(testobj.paths[0][1], testee.FileBrowseButton)
         assert capsys.readouterr().out == (
-                "called CheckBox.__init__ with text 'name'\n"
+                f"called CheckBox.__init__ with args ('name', {testobj})\n"
                 "called Grid.addWidget with arg MockCheckBox at (1, 0)\n"
                 f"called gui.FileBrowseButton with args ({testobj},) {{'text': 'path'}}\n"
                 "called Grid.addWidget with arg MockFileBrowseButton at (1, 1)\n"
@@ -1336,13 +1336,13 @@ class TestFilesDialog:
         check_c = mockqtw.MockCheckBox('zzz')
         file_c = MockFileBrowseButton('ccc')
         check_c.setChecked(True)
-        assert capsys.readouterr().out == ("called CheckBox.__init__ with text 'xxx'\n"
+        assert capsys.readouterr().out == (f"called CheckBox.__init__ with args ('xxx',)\n"
                                            "called gui.FileBrowseButton with args ('aaa',) {}\n"
                                            "called LineEdit.__init__\n"
-                                           "called CheckBox.__init__ with text 'yyy'\n"
+                                           f"called CheckBox.__init__ with args ('yyy',)\n"
                                            "called gui.FileBrowseButton with args ('bbb',) {}\n"
                                            "called LineEdit.__init__\n"
-                                           "called CheckBox.__init__ with text 'zzz'\n"
+                                           f"called CheckBox.__init__ with args ('zzz',)\n"
                                            "called gui.FileBrowseButton with args ('ccc',) {}\n"
                                            "called LineEdit.__init__\n"
                                            "called CheckBox.setChecked with arg True\n")
@@ -1930,7 +1930,7 @@ class TestExtraSettingsDialog:
         assert isinstance(testobj.data[0][1], testee.qtw.QLineEdit)
         assert isinstance(testobj.data[0][2], testee.qtw.QLineEdit)
         assert capsys.readouterr().out == (
-                "called CheckBox.__init__\n"
+                f"called CheckBox.__init__ with args ({testobj},)\n"
                 "called Grid.addWidget with arg MockCheckBox at (1, 0)\n"
                 "called LineEdit.__init__\n"
                 "called LineEdit.setFixedWidth with arg `88`\n"
@@ -1951,7 +1951,7 @@ class TestExtraSettingsDialog:
         assert isinstance(testobj.data[1][1], testee.qtw.QLineEdit)
         assert isinstance(testobj.data[1][2], testee.qtw.QLineEdit)
         assert capsys.readouterr().out == (
-                "called CheckBox.__init__\n"
+                f"called CheckBox.__init__ with args ({testobj},)\n"
                 "called Grid.addWidget with arg "
                 "MockCheckBox at (3, 0)\n"
                 "called LineEdit.__init__\n"

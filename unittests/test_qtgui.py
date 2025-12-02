@@ -18,7 +18,7 @@ called HBox.addWidget with arg MockPushButton
 called HBox.addStretch
 called VBox.addLayout with arg MockHBoxLayout
 called Frame.setLayout with arg MockVBoxLayout
-called MainWidget.setCentralWindow with arg `MockFrame`
+called MainWidget.setCentralWidget with arg `MockFrame`
 called MainWindow.show
 called Application.exec
 """
@@ -342,19 +342,19 @@ class TestFieldHandler:
         assert testobj.gui.screenfields == [testobj.gui.cb_ctrl, testobj.gui.cb_alt,
                                             testobj.gui.cb_shift, testobj.gui.cb_win]
         assert capsys.readouterr().out == (
-                "called CheckBox.__init__ with text '+ xxx'\n"
+                f"called CheckBox.__init__ with args ('+ xxx', {testobj.gui.frm})\n"
                 "called CheckBox.setChecked with arg False\n"
                 f"called Signal.connect with args (functools.partial({testobj.master.on_checkbox},"
                 f" {testobj.gui.cb_ctrl}),)\n"
-                "called CheckBox.__init__ with text '+ yyy'\n"
+                f"called CheckBox.__init__ with args ('+ yyy', {testobj.gui.frm})\n"
                 "called CheckBox.setChecked with arg False\n"
                 f"called Signal.connect with args (functools.partial({testobj.master.on_checkbox},"
                 f" {testobj.gui.cb_alt}),)\n"
-                "called CheckBox.__init__ with text '+ zzz'\n"
+                f"called CheckBox.__init__ with args ('+ zzz', {testobj.gui.frm})\n"
                 "called CheckBox.setChecked with arg False\n"
                 f"called Signal.connect with args (functools.partial({testobj.master.on_checkbox},"
                 f" {testobj.gui.cb_shift}),)\n"
-                "called CheckBox.__init__ with text '+ qqq'\n"
+                f"called CheckBox.__init__ with args ('+ qqq', {testobj.gui.frm})\n"
                 "called CheckBox.setChecked with arg False\n"
                 f"called Signal.connect with args (functools.partial({testobj.master.on_checkbox},"
                 f" {testobj.gui.cb_win}),)\n")
@@ -1772,7 +1772,7 @@ class TestGui:
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.setup_tabs()
         assert capsys.readouterr().out == (
-                "called MainWidget.setCentralWindow with arg `MockTabbedInterface`\n")
+                "called MainWidget.setCentralWidget with arg `MockTabbedInterface`\n")
 
     def test_setup_menu(self, monkeypatch, capsys):
         """unittest for Gui.setup_menu

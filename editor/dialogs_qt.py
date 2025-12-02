@@ -197,7 +197,7 @@ class SetupDialog(qtw.QDialog):
         self.c_rebuild = qtw.QCheckBox(self.parent.master.captions['T_MAKE'].format(
             self.parent.master.captions['S_RBLD']), self)
         grid.addWidget(self.c_rebuild, 3, 0, 1, 4)
-        self.c_details = qtw.QCheckBox(self.parent.master.captions['S_DETS'])
+        self.c_details = qtw.QCheckBox(self.parent.master.captions['S_DETS'], self)
         grid.addWidget(self.c_details, 4, 0, 1, 4)
         self.c_redef = qtw.QCheckBox(self.parent.master.captions['T_MAKE'].format(
             self.parent.master.captions['S_RSAV']), self)
