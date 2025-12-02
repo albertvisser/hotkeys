@@ -663,13 +663,6 @@ class TestGui:
         testobj = testee.Gui(parent=None)
         assert capsys.readouterr().out == ("")
 
-    def _test_resize_empty_screen(self, monkeypatch, capsys):
-        """unittest for Gui.resize_empty_screen
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        assert testobj.resize_empty_screen(wid, hig) == "expected_result"
-        assert capsys.readouterr().out == ("")
-
     def _test_go(self, monkeypatch, capsys):
         """unittest for Gui.go
         """
@@ -696,13 +689,6 @@ class TestGui:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         assert testobj.statusbar_message(message) == "expected_result"
-        assert capsys.readouterr().out == ("")
-
-    def _test_setup_tabs(self, monkeypatch, capsys):
-        """unittest for Gui.setup_tabs
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        assert testobj.setup_tabs() == "expected_result"
         assert capsys.readouterr().out == ("")
 
     def _test_setup_menu(self, monkeypatch, capsys):

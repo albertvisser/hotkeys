@@ -729,11 +729,6 @@ class Gui(qtw.QMainWindow):
         self.menu_bar = self.menuBar()
         self.menuitems = {}  # []
 
-    def resize_empty_screen(self, wid, hig):
-        """full size not needed for a single message
-        """
-        self.resize(wid, hig)
-
     def go(self):
         "build and show the interface"
         frm = qtw.QFrame(self)
@@ -759,10 +754,6 @@ class Gui(qtw.QMainWindow):
     def statusbar_message(self, message):
         "show a message in the statusbar"
         self.sb.showMessage(message)
-
-    def setup_tabs(self):
-        "add the tabbed widget to the interface"
-        self.setCentralWidget(self.editor.book.gui)
 
     def setup_menu(self, minimal=False):
         """build menus and actions

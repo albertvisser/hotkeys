@@ -1723,16 +1723,6 @@ class TestGui:
                                            "called MainWindow.menuBar\n"
                                            "called MenuBar.__init__\n")
 
-    def test_resize_empty_screen(self, monkeypatch, capsys):
-        """unittest for Gui.resize_empty_screen
-        """
-        def mock_resize(*args):
-            print('called Gui.resize with args', args)
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.resize = mock_resize
-        testobj.resize_empty_screen(10, 20)
-        assert capsys.readouterr().out == ("called Gui.resize with args (10, 20)\n")
-
     def test_go(self, monkeypatch, capsys, expected_output):
         """unittest for Gui.go
         """
@@ -1764,15 +1754,6 @@ class TestGui:
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.statusbar_message('message')
         assert capsys.readouterr().out == ("called StatusBar.showMessage with arg `message`\n")
-
-    def test_setup_tabs(self, monkeypatch, capsys):
-        """unittest for Gui.setup_tabs
-        """
-        monkeypatch.setattr(testee.Gui, 'setCentralWidget', mockqtw.MockMainWindow.setCentralWidget)
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.setup_tabs()
-        assert capsys.readouterr().out == (
-                "called MainWidget.setCentralWidget with arg `MockTabbedInterface`\n")
 
     def test_setup_menu(self, monkeypatch, capsys):
         """unittest for Gui.setup_menu

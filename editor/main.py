@@ -39,7 +39,7 @@ for everything that's not in here
 the default code in the main program will be used.
 """
 '''
-initial_config = {'plugins': [], 'lang': 'english.lng', 'startup': 'Remember', 'initial': ''}
+initial_config = {'plugins': [], 'lang': 'english.lng', 'startup': shared.mode_r, 'initial': ''}
 initial_columns = [["C_KEY", 120, False], ["C_MODS", 90, False], ["C_DESC", 292, False]]
 
 
@@ -942,7 +942,8 @@ class Editor:
         if ini.exists():
             self.ini = read_config(ini)
         else:
-            self.ini = {'lang': 'english.lng', 'plugins': [], 'startup': 'Remember', 'filename': ini}
+            self.ini = initial_config
+            self.ini['filename'] = ini
         appslist = [x[0] for x in self.ini['plugins']]
         if args.start and args.start not in appslist:
             raise ValueError(f"Can't start with {args.start}: possible values are {appslist}")
@@ -954,21 +955,11 @@ class Editor:
         self.gui.set_window_title(self.title)
         self.gui.statusbar_message(self.captions["T_HELLO"].format(self.captions["T_MAIN"]))
         self.book = ChoiceBook(self)
-        self.gui.setup_tabs()
         if self.ini.get('title', ''):
             self.title = self.ini['title']
         self.forgetatexit = False
         if self.ini['plugins']:
-            start = 0
-            startapp = args.start
-            if startapp:
-                with contextlib.suppress(ValueError):
-                    start = [x for x, y in self.ini['plugins']].index(startapp) + 1
-                    self.forgetatexit = True
-            if not start and self.ini.get('initial', ''):
-                start = [x for x, y in self.ini['plugins']].index(self.ini['initial']) + 1
-            start -= 1
-            if start >= 0:
+            if (start := self.determine_startapp_index(args.start, appslist)) >= 0:
                 self.book.gui.set_selected_tool(start)
                 self.book.on_page_changed(start)
             self.setcaptions()
@@ -979,16 +970,18 @@ class Editor:
             self.gui.setup_menu(minimal=True)
         self.gui.go()
 
-    # deze methode wordt niet meer gebruikt
-    # def show_empty_screen(self):
-    #     """what to do when there's no data to show
-    #     """
-    #     message = self.captions["EMPTY_CONFIG_TEXT"]
-    #     self.book = SimpleNamespace()
-    #     self.book.gui = gui.DummyPage(self.gui, message)
-    #     self.book.page = SimpleNamespace()
-    #     self.book.page.gui = self.book.gui
-    #     self.gui.resize_empty_screen(640, 80)
+    def determine_startapp_index(self, startapp, all_apps):
+        "find index of screen to show at startup"
+        start = -1
+        if startapp in all_apps:
+            # with contextlib.suppress(ValueError):
+            start = all_apps.index(startapp)  #  + 1
+            self.forgetatexit = True
+        # if not start and self.ini.get('initial', ''):
+        elif self.ini.get('initial', ''):
+            start = all_apps.index(self.ini['initial'])  #  + 1
+        # start -= 1
+        return start
 
     def get_menudata(self):
         """provide the application's menu definition to the program

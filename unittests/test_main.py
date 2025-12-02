@@ -2054,7 +2054,7 @@ def test_editor_init(monkeypatch, capsys):
     args = types.SimpleNamespace(conf='', start='')
     testobj = testee.Editor(args)
     assert testobj.ini == {'lang': 'english.lng', 'plugins': [], 'filename': testee.CONF,
-                           'startup': 'Remember'}
+                           'startup': 'Remember', 'initial': ''}
     assert testobj.pluginfiles == {}
     assert isinstance(testobj.book, testee.ChoiceBook)
     assert testobj.book.page.settings == {'PluginName': '', 'PanelName': '', 'RebuildData': False,
@@ -2071,7 +2071,6 @@ def test_editor_init(monkeypatch, capsys):
             "called Gui.statusbar_message with args ('hello from maintitle',)\n"
             f"called ChoiceBook.__init__ with arg '{testobj}'\n"
             "called TabbedInterface.__init__ with args ()\n"
-            "called Gui.setup_tabs\n"
             "called Gui.setup_menu with args {'minimal': True}\n"
             "called Gui.go\n")
     monkeypatch.setattr(testee.pathlib.Path, 'exists', lambda *x: True)
@@ -2093,7 +2092,6 @@ def test_editor_init(monkeypatch, capsys):
             "called Gui.statusbar_message with args ('hello from maintitle',)\n"
             f"called ChoiceBook.__init__ with arg '{testobj}'\n"
             "called TabbedInterface.__init__ with args ()\n"
-            "called Gui.setup_tabs\n"
             "called TabbedInterface.set_selected_tool with arg '1'\n"
             "called ChoiceBook.on_page_changed with arg '1'\n"
             "called Editor.setcaptions\n"
@@ -2122,7 +2120,6 @@ def test_editor_init(monkeypatch, capsys):
             "called Gui.statusbar_message with args ('hello from maintitle',)\n"
             f"called ChoiceBook.__init__ with arg '{testobj}'\n"
             "called TabbedInterface.__init__ with args ()\n"
-            "called Gui.setup_tabs\n"
             "called TabbedInterface.set_selected_tool with arg '0'\n"
             "called ChoiceBook.on_page_changed with arg '0'\n"
             "called Editor.setcaptions\n"
@@ -2143,7 +2140,6 @@ def test_editor_init(monkeypatch, capsys):
             "called Gui.statusbar_message with args ('hello from maintitle',)\n"
             f"called ChoiceBook.__init__ with arg '{testobj}'\n"
             "called TabbedInterface.__init__ with args ()\n"
-            "called Gui.setup_tabs\n"
             "called Editor.setcaptions\n"
             "called Gui.go\n")
 

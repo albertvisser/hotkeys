@@ -28,21 +28,6 @@ class MyListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, listmix.ListRowHig
         listmix.ListRowHighlighter.__init__(self)
 
 
-class DummyPage(wx.Panel):
-    "simulate some HotKeyPanel functionality"
-    def __init__(self, parent, message):
-        super().__init__(parent)
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(wx.StaticText(self, label=message))
-        self.SetSizer(sizer)
-        sizer.Fit(self)
-
-    def exit(self):
-        """simulate processing triggered by exit button
-        """
-        return True
-
-
 class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
     """base class voor het gedeelte van het hoofdscherm met de listcontrol erin
 
@@ -783,11 +768,6 @@ class Gui(wx.Frame):
         self.menuitems = {}
         self.SetMenuBar(self.menu_bar)
 
-    def resize_empty_screen(self, wid, hig):
-        """full size not needed for a single message
-        """
-        self.SetSize(wid, hig)
-
     def go(self):
         "build and show the interface"
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -813,12 +793,6 @@ class Gui(wx.Frame):
     def statusbar_message(self, message):
         "show a message in the statusbar"
         self.sb.SetStatusText(message)
-
-    def setup_tabs(self):
-        """build the tabbed widget into the interface
-
-        for compatibility - has already happened elsewhere in the application
-        """
 
     def setup_menu(self):
         """build menus and actions
