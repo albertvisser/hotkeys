@@ -13,4 +13,4 @@ def layout_extra_fields(win, layout):
     line += 1
     sizer.addWidget(win.lbl_controls, line, 0)
     sizer.addWidget(win.cmb_controls, line, 1)
-    layout.addLayout(sizer, 1)
+    layout.addLayout(sizer)

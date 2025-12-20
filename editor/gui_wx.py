@@ -1,20 +1,10 @@
 """HotKeys main program - gui specific code - wxPython version
 """
-# import os
-# import sys
-# import functools
-import io
-import contextlib
 import wx
 import wx.adv
 import wx.lib.mixins.listctrl as listmix
 from wx.lib.embeddedimage import PyEmbeddedImage
 from editor import shared
-
-
-def getbitmap(data):
-    "return bitmap created from PNG data - the old way using textIO"
-    return wx.BitmapFromImage(wx.ImageFromStream(io.StringIO(data)))
 
 
 class MyListCtrl(wx.ListCtrl, listmix.ListCtrlAutoWidthMixin, listmix.ListRowHighlighter):
@@ -36,32 +26,33 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
     definieert feitelijk een "custom widget"
     """
     def __init__(self, parent, master):
-        super().__init__(parent.pnl)
+        wx.Panel.__init__(self, parent.pnl)   # niet via super() i.v.m. mixin apart __init__en
         self.parent = parent
         self.master = master
-        self.defchanged = False
         self.olditem = None
+        self._savestates = (False, False)
+        self._sizer = wx.BoxSizer(wx.VERTICAL)
 
     def setup_empty_screen(self, nodata, title):
         """build a subscreen with only a message
         """
-        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(wx.StaticText(self, label=nodata))
-        self.SetSizer(sizer)
-        self.title = title
+        self._sizer.Add(sizer)
 
-    def setup_list(self):
+    def setup_list(self, colheaders, colwidths, callback):
         """add the list widget to the interface
         """
         self.imglist = wx.ImageList(16, 16)
 
         # ik dacht dat ik dit netjes gekopieerd had maar als ik op een kolomheader klik
-        # krijg ik toch een segfault
+        # krijg ik toch een traceback. Hij geeft een KeyError in de mixin code: 121 bij DC bijv.
         # ook nadat ik de volgorde van al dit gelijk maak aan die in de demo
         smalluparrow = PyEmbeddedImage(
             b"iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAADxJ"
             b"REFUOI1jZGRiZqAEMFGke2gY8P/f3/9kGwDTjM8QnAaga8JlCG3CAJdt2MQxDCAUaOjyjKMp"
             b"cRAYAABS2CPsss3BWQAAAABJRU5ErkJggg==")
+        # self.sm_up = self.imglist.Add(smalluparrow.GetBitmap())
         self.sm_up = self.imglist.Add(smalluparrow.GetBitmap())
 
         smalldnarrow = PyEmbeddedImage(
@@ -70,230 +61,138 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
             b"bcPlKrwugGnCFy6Mo3mBAQChDgRlP4RC7wAAAABJRU5ErkJggg==")
         self.sm_dn = self.imglist.Add(smalldnarrow.GetBitmap())
 
-        self.p0list = MyListCtrl(self, size=(1140, 594), style=wx.LC_REPORT | wx.BORDER_SUNKEN |
-           wx.LC_HRULES | wx.LC_SINGLE_SEL)
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        if self.master.column_info:
-            for col, inf in enumerate(self.master.column_info):
-                title, width = inf[:2]
-                self.p0list.AppendColumn(self.master.captions[title])
-                if col <= len(self.master.column_info):
-                    self.p0list.SetColumnWidth(col, width)
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        p0list = MyListCtrl(self, size=(1140, 594), style=wx.LC_REPORT | wx.BORDER_SUNKEN
+                            # | wx.LC_HRULES
+                            | wx.LC_SINGLE_SEL)
+        for col, title in enumerate(colheaders):
+            p0list.AppendColumn(title)
+            p0list.SetColumnWidth(col, colwidths[col])
 
-            self.master.populate_list()
+        # self.Bind(wx.EVT_LIST_ITEM_SELECTED, callback, p0list)
+        p0list.Bind(wx.EVT_LIST_ITEM_SELECTED, callback)
+        # self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.on_item_deselected, p0list)
+        p0list.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.on_item_deselected)
+        # self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.on_item_activated, p0list)
+        p0list.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.on_item_activated)
 
-            # Now that the list exists we can init the other base class,
-            # see wx/lib/mixins/listctrl.py
-            self.itemDataMap = self.master.data  # nodig voor ColumnSorterMixin
-            listmix.ColumnSorterMixin.__init__(self, len(self.master.column_info))
-            self.SortListItems(0, True)
+        p0list.SetImageList(self.imglist, wx.IMAGE_LIST_SMALL)
 
-            self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.on_item_selected, self.p0list)
-            self.Bind(wx.EVT_LIST_ITEM_DESELECTED, self.on_item_deselected, self.p0list)
-            self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.on_item_activated, self.p0list)
-            # self.Bind(wx.EVT_LIST_COL_CLICK, self.on_column_click, self.p0list)
-            # self.p0list.Bind(wx.EVT_LEFT_DCLICK, self.on_doubleclick)
+        sizer.Add(p0list, 1, wx.EXPAND | wx.ALL, 5)
+        self._sizer.Add(sizer)
+        return p0list
 
-        self.p0list.SetImageList(self.imglist, wx.IMAGE_LIST_SMALL)
+    def start_extrapanel(self, frameheight):
+        "start a new area for screen widgets"
+        self._frm = wx.Panel(self, size=(-1, frameheight + 30))
+        self._sizer.Add(self._frm, 0, wx.EXPAND | wx.LEFT | wx.RIGHT)
+        vsizer = wx.BoxSizer(wx.VERTICAL)
+        vsizer.AddSpacer(5)
+        self._frm.SetSizer(vsizer)
+        return vsizer
 
-        sizer.Add(self.p0list, 1, wx.EXPAND | wx.ALL, 5)
+    def start_line(self, vsizer):
+        "start a new line of widgets in the given screen"
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        vsizer.Add(hsizer, 0, wx.EXPAND | wx.ALL, 5)
+        return hsizer
 
-        if self.master.has_extrapanel:
-            self.layout_extra_fields(sizer)
+    def add_label_to_line(self, hsizer, text, add=True):
+        "add the given text to the given screen line"
+        fld = wx.StaticText(self._frm, label=text + " ")
+        if add:
+            hsizer.Add(fld, 0, wx.ALIGN_CENTER_VERTICAL)
+        return fld
 
-        self.SetAutoLayout(True)
-        self.SetSizer(sizer)
-        sizer.Fit(self)
+    def add_textfield_to_line(self, hsizer, width=None, callback=None, add=True):
+        "add a field to enter text on the given screen line"
+        if not width:
+            width = -1
+        fld = wx.TextCtrl(self._frm, size=(width, -1))
+        if callback:
+            fld.Bind(wx.EVT_TEXT, callback)
+        if add:
+            hsizer.Add(fld, 0, wx.ALIGN_CENTER_VERTICAL)
+        return fld
 
-    def add_extra_fields(self):
-        """fields showing details for selected keydef, to make editing possible
-        """
-        self.screenfields = []
-        self._box = box = wx.Panel(self)
-        frameheight = 90
-        if hasattr(self.master.reader, 'get_frameheight'):
-            frameheight = self.master.reader.get_frameheight()  # user exit
+    def add_combobox_to_line(self, hsizer, items, width=None, add=True):
+        "add a combobox with the given caption and a standard callback"
+        if not width:
+            width = -1
+        cmb = wx.ComboBox(self._frm, size=(width, -1), style=wx.CB_READONLY, choices=items)
+        cmb.Bind(wx.EVT_COMBOBOX, self.master.on_combobox)
+        if add:
+            hsizer.Add(cmb, 0, wx.ALIGN_CENTER_VERTICAL)
+        return cmb
 
-        if 'C_KEY' in self.master.fields:
-            self.lbl_key = wx.StaticText(box, label=self.master.captions['C_KTXT'] + " ")
-            if self.master.keylist is None:
-                ted = wx.TextCtrl(box, size=(90, -1))
-                ted.Bind(wx.EVT_TEXT, self.master.on_text)
-                self.screenfields.append(ted)
-                self.txt_key = ted
-            else:
-                cb = wx.ComboBox(box, size=(140, -1), style=wx.CB_READONLY,
-                                 choices=self.master.keylist)  # niet sorteren
-                cb.Bind(wx.EVT_COMBOBOX, self.master.on_combobox)
-                self.screenfields.append(cb)
-                self.cmb_key = cb
+    def add_checkbox_to_line(self, hsizer, text):
+        "add a checkbox with the given caption and a standard callback"
+        cb = wx.CheckBox(self._frm, label=text)
+        cb.SetValue(False)
+        cb.Bind(wx.EVT_CHECKBOX, self.master.on_checkbox)
+        hsizer.Add(cb, 0, wx.ALIGN_CENTER_VERTICAL)
+        return cb
 
-        if 'C_MODS' in self.master.fields:
-            for ix, x in enumerate(('M_CTRL', 'M_ALT', 'M_SHFT', 'M_WIN')):
-                cb = wx.CheckBox(box, label=self.master.captions[x].join(("+ ", "")))
-                cb.SetValue(False)
-                self.screenfields.append(cb)
-                cb.Bind(wx.EVT_CHECKBOX, self.master.on_checkbox)
-                if ix == 0:
-                    self.cb_ctrl = cb
-                elif ix == 1:
-                    self.cb_alt = cb
-                elif ix == 2:
-                    self.cb_shift = cb
-                elif ix == 3:
-                    self.cb_win = cb
+    def add_separator_to_line(self, hsizer):
+        "separate the keydef from the definition"
+        hsizer.AddStretchSpacer()
 
-        if 'C_CNTXT' in self.master.fields:
-            self.lbl_context = wx.StaticText(box, label=self.master.captions['C_CNTXT'])
-            cb = wx.ComboBox(box, size=(110, -1), style=wx.CB_READONLY,
-                             choices=self.master.contextslist)
-            cb.Bind(wx.EVT_COMBOBOX, self.master.on_combobox)
-            self.screenfields.append(cb)
-            self.cmb_context = cb
+    def add_button_to_line(self, hsizer, text, callback):
+        "add a button with the given text and callback"
+        btn = wx.Button(self._frm, label=text)
+        btn.Enable(False)
+        btn.Bind(wx.EVT_BUTTON, callback)
+        hsizer.Add(btn, 0)
+        return btn
 
-        if 'C_CMD' in self.master.fields:
-            self.txt_cmd = wx.StaticText(box, label=self.master.captions['C_CTXT'] + " ")
-            cb = wx.ComboBox(box, size=(150, -1), style=wx.CB_READONLY)
-            if 'C_CNTXT' not in self.master.fields:  # load on choosing context
-                cb.SetItems(self.master.commandslist)
-            cb.Bind(wx.EVT_COMBOBOX, self.master.on_combobox)
-            self.screenfields.append(cb)
-            self.cmb_commando = cb
+    def add_descfield_to_line(self, hsizer):
+        "add a text field for the description"
+        fld = wx.TextCtrl(self._frm, style=wx.TE_MULTILINE | wx.TE_READONLY)
+        hsizer.Add(fld, 1, wx.EXPAND | wx.ALL, 5)
+        return fld
 
-        if 'C_PARMS' in self.master.fields:
-            self.lbl_parms = wx.StaticText(box, label=self.master.captions['C_PARMS'])
-            self.txt_parms = wx.TextCtrl(box, size=(280, -1))
-            self.screenfields.append(self.txt_parms)
-
-        if 'C_CTRL' in self.master.fields:
-            self.lbl_controls = wx.StaticText(box, label=self.master.captions['C_CTRL'])
-            cb = wx.ComboBox(box, choices=self.master.controlslist, style=wx.CB_READONLY)
-            # cb.Bind(wx.EVT_COMBOBOX, functools.partial(on_combobox, self, cb, str))
-            self.screenfields.append(cb)
-            self.cmb_controls = cb
-
-        if 'C_BPARMS' in self.master.fields:
-            self.pre_parms_label = wx.StaticText(box)
-            self.pre_parms_text = wx.TextCtrl(box)
-            self.screenfields.append(self.pre_parms_text)
-
-        if 'C_APARMS' in self.master.fields:
-            self.post_parms_label = wx.StaticText(box)
-            self.post_parms_text = wx.TextCtrl(box)
-            self.screenfields.append(self.post_parms_text)
-
-        if 'C_FEAT' in self.master.fields:
-            self.feature_label = wx.StaticText(box)
-            self.feature_select = wx.ComboBox(box, choices=self.master.featurelist,
-                                              style=wx.CB_READONLY)
-            self.screenfields.append(self.feature_select)
-
-        if 'C_DESC' in self.master.fields:
-            self.txt_oms = wx.TextCtrl(box, size=(480, 40), style=wx.TE_MULTILINE | wx.TE_READONLY)
-
-        self.b_save = wx.Button(box, label=self.master.captions['C_SAVE'])
-        self.b_save.Enable(False)
-        self.b_save.Bind(wx.EVT_BUTTON, self.on_update)
-        self.b_del = wx.Button(box, label=self.master.captions['C_DEL'])
-        self.b_del.Enable(False)
-        self.b_del.Bind(wx.EVT_BUTTON, self.on_delete)
-        self._savestates = (False, False)
-
-    def set_extrascreen_editable(self, switch):
+    def set_extrapanel_editable(self, screenfields, buttons, switch):
         """open up fields in extra screen when applicable
         """
-        for widget in self.screenfields:
+        for widget in screenfields:
             widget.Enable(switch)
-        ## if 'C_CMD' in self.fields:
         if switch:
             state_s, state_d = self._savestates
         else:
-            self._savestates = (self.b_save.IsEnabled(), self.b_del.IsEnabled())
+            self._savestates = (buttons[0].IsEnabled(), buttons[1].IsEnabled())
             state_s, state_d = False, False
-        self.b_save.Enable(state_s)
-        self.b_del.Enable(state_d)
+        buttons[0].Enable(state_s)
+        buttons[1].Enable(state_d)
 
-    def layout_extra_fields(self, sizer):
-        """add the extra fields to the layout
-        """
-        bsizer = wx.BoxSizer(wx.VERTICAL)
-        bsizer.AddSpacer(5)
+    def finalize_screen(self):
+        "last actions to add the screen to the display"
+        self.itemDataMap = {int(x): y for x, y in self.master.data.items()}
+        listmix.ColumnSorterMixin.__init__(self, len(self.master.column_info))
+        self.SortListItems(0, True)
+        self.master.p0list.RefreshRows()
+        self.master.p0list.Select(0)
 
-        sizer1 = wx.BoxSizer(wx.HORIZONTAL)
-
-        sizer2 = wx.BoxSizer(wx.HORIZONTAL)
-        if 'C_KEY' in self.master.fields:
-            sizer2.Add(self.lbl_key, 0, wx.ALIGN_CENTER_VERTICAL)
-            if self.master.keylist is None:
-                sizer2.Add(self.txt_key, 0, wx.ALIGN_CENTER_VERTICAL)
-            else:
-                sizer2.Add(self.cmb_key, 0, wx.ALIGN_CENTER_VERTICAL)
-        if 'C_MODS' in self.master.fields:
-            sizer2.Add(self.cb_ctrl, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
-            sizer2.Add(self.cb_alt, 0, wx.ALIGN_CENTER_VERTICAL)
-            sizer2.Add(self.cb_shift, 0, wx.ALIGN_CENTER_VERTICAL)
-            sizer2.Add(self.cb_win, 0, wx.ALIGN_CENTER_VERTICAL)
-        sizer1.Add(sizer2, 0)
-
-        sizer1.AddStretchSpacer(1)
-        if 'C_CNTXT' in self.master.fields:
-            sizer2 = wx.BoxSizer(wx.HORIZONTAL)
-            sizer2.Add(self.lbl_context, 0, wx.ALIGN_CENTER_VERTICAL)
-            sizer2.Add(self.cmb_context, 0, wx.ALIGN_CENTER_VERTICAL)
-            sizer1.Add(sizer2, 0)
-
-        if 'C_CMD' in self.master.fields:
-            sizer2 = wx.BoxSizer(wx.HORIZONTAL)
-            sizer2.Add(self.txt_cmd, 0, wx.ALIGN_CENTER_VERTICAL)
-            sizer2.Add(self.cmb_commando, 0, wx.ALIGN_CENTER_VERTICAL)
-            sizer1.Add(sizer2, 0)
-
-        if hasattr(self.master.reader, 'layout_extra_fields_topline'):
-            self.master.reader.layout_extra_fields_topline(self, sizer1)  # user exit
-
-        sizer1.Add(self.b_save, 0)
-        sizer1.Add(self.b_del, 0)
-        bsizer.Add(sizer1, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
-        self.toplinesizer = sizer1
-
-        if hasattr(self.master.reader, 'layout_extra_fields_nextline'):
-            sizer1 = wx.BoxSizer(wx.HORIZONTAL)
-            self.master.reader.layout_extra_fields_nextline(self, sizer1)  # user exit
-            bsizer.Add(sizer1, 0)
-
-        sizer1 = wx.BoxSizer(wx.HORIZONTAL)
-        if 'C_DESC' in self.master.fields:
-            # sizer2 = wx.BoxSizer(wx.VERTICAL)
-            sizer1.Add(self.txt_oms, 1, wx.EXPAND)
-            # sizer1.Add(sizer2, 1, wx.EXPAND)
-
-        if hasattr(self.master.reader, 'layout_extra_fields'):
-            self.master.reader.layout_extra_fields(self, sizer1)  # user exit
-
-        bsizer.Add(sizer1, 1, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
-
-        self._box.SetSizer(bsizer)
-        # bsizer.Fit(self._box)
-        sizer.Add(self._box, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.EXPAND | wx.ALL, 2)
+        self.SetAutoLayout(True)
+        self.SetSizer(self._sizer)
+        self._sizer.Fit(self)
 
     def resize_if_necessary(self):
         """to be called on changing the language
         """
-        self.toplinesizer.Layout()  # misschien is dit bij wx variant nodig terwijl het bij de qt
-                                    # variant vanzelf gebeurt?
+        # self.toplinesizer.Layout()
+        # misschien is dit bij wx variant nodig terwijl het bij de qt variant vanzelf gebeurt?
+        # of zitten nu alle mogelijke topline velden in de main code en is dit niet meer nodig?
 
     def on_item_deselected(self, event):
         """callback op het niet meer geselecteerd zijn van een item
 
         onthou het item om later te vragen of de key definitie moet worden bijgewerkt
         """
-        # check 1: zitten we niet te vroeg in het proces?
         if self.master.initializing_screen:
             return
         item = event.GetItem()
         if not item:  # bv. bij p0list.clear()
             return
-        # print('in on_item_deselected, item is', item)
         self.olditem = item
 
     def on_item_selected(self, event):
@@ -309,53 +208,35 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         """
         # print('in on_item_activated', event)
         self.current_item = event.GetItem()  # GetEventIndex()
+        # uitgezocht dat dit nergens (meer) wordt gebruikt
 
-    def on_update(self, event):
-        """callback for editing kb shortcut
-        """
-        # print('in on_update', event)
-        self.master.apply_changes()
-        self.p0list.SetFocus()
+    def set_focus_to(self, widget):
+        "set the field to start inputting data"
+        widget.SetFocus()
 
-    def on_delete(self, event):
-        """callback for deleting kb shortcut
-        """
-        # print('in on_delete', event)
-        self.master.apply_deletion()()
-        self.p0list.SetFocus()
-
-    # hulproutine t.b.v. managen column properties
-
-    def update_columns(self, oldcount, newcount):
+    def update_columns(self, p0list, oldcount, newcount):
         "delete and insert columns"
         hlp = oldcount
         while hlp > newcount:
-            self.p0list.DeleteColumn(0)
+            p0list.DeleteColumn(0)
             hlp -= 1
         hlp = newcount
         while hlp > oldcount:
-            self.p0list.AppendColumn('')
+            p0list.AppendColumn('')
             hlp -= 1
 
-    def refresh_headers(self, headers):
+    def refresh_headers(self, p0list, column_info):
         "apply changes in the column headers"
-        print(headers)
-        print(self.master.column_info)
-        for indx, coldata in enumerate(self.master.column_info):
-            hdr = self.p0list.GetColumn(indx)
-            print(hdr, hdr.GetText(), headers[indx])
-            # if headers[indx] != hdr.GetText():
-            hdr.SetText(headers[indx])
+        for indx, coldata in enumerate(column_info):
+            hdr = p0list.GetColumn(indx)
+            hdr.SetText(coldata[0])
             hdr.SetWidth(coldata[1])
-            self.p0list.SetColumn(indx, hdr)
-        self.p0list.resizeLastColumn(100)
-
-    def enable_buttons(self, state=True):
-        """anders wordt de gelijknamige methode van de Panel base class geactiveerd"""
+            p0list.SetColumn(indx, hdr)
+        p0list.resizeLastColumn(100)   # misschien te weinig
 
     def GetListCtrl(self):
         """ten behoeve van de columnsorter mixin"""
-        return self.p0list
+        return self.master.p0list
 
     def GetSortImages(self):
         """ten behoeve van de columnsorter mixin"""
@@ -364,75 +245,102 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
     def OnSortOrderChanged(self):
         """ten behoeve van de columnsorter mixin
         na het sorteren moeten de regels weer om en om gekleurd worden"""
-        self.p0list.RefreshRows()
+        self.master.p0list.RefreshRows()
 
-# -- helper methods (called from master class) --
     def set_title(self, title):
         """set screen title
         """
         self.master.parent.parent.gui.SetTitle(title)
 
-    def clear_list(self):
+    def clear_list(self, p0list):
         "reset listcontrol"
-        self.p0list.DeleteAllItems()  # of ClearAll() - doet ook de kolommen
-        # self.p0list.DeleteAllColumns()  - maar moeten de kolommen wel weg?
+        p0list.DeleteAllItems()
 
     def build_listitem(self, key):
         "create a new item for the list"
-        # item = wx.ListItem()
-        # item.SetData(key)
-        itemlist = [key]  # item]
-        return itemlist  # "new_item" is in dit geval een list
+        # # item = wx.ListItem()
+        # # item.SetData(key)
+        # itemlist = [key]  # item]
+        # return itemlist  # "new_item" is in dit geval een list
+        indx = self.master.p0list.Append(key)
+        self.master.p0list.SetItemData(indx, int(key))
+        return indx
 
-    def set_listitemtext(self, itemlist, indx, value):
+    # def set_listitemtext(self, itemlist, indx, value):
+    def set_listitemtext(self, itemindex, columnindex, value):
         "set the text for a list item"
-        # print('item', itemlist, 'index', indx, 'value', value)
-        # "new_item" is in dit geval een list die verderop wordt toegevoegd aan de control
-        # self.p0list.SetItem(item, indx, value)
-        # if indx == 0:
-        #     item = itemlist.pop()
-        # else:
-        #     item = wx.ListItem()
-        # item.SetColumn(indx)
-        # item.SetText(value)
-        itemlist.append(value)
-        return itemlist
+        # # print('item', itemlist, 'index', indx, 'value', value)
+        # # "new_item" is in dit geval een list die verderop wordt toegevoegd aan de control
+        # # self.p0list.SetItem(item, indx, value)
+        # # if indx == 0:
+        # #     item = itemlist.pop()
+        # # else:
+        # #     item = wx.ListItem()
+        # # item.SetColumn(indx)
+        # # item.SetText(value)
+        # itemlist.append(value)
+        # return itemlist
+        self.master.p0list.SetItem(itemindex, columnindex, value)
 
-    def add_listitem(self, itemlist):
+    # def add_listitem(self, p0list, itemlist):
+    def add_listitem(self, p0list, itemindex):
         "add an item to the list"
-        # "new_item" is in dit geval een list die verderop wordt toegevoegd aan de control
-        key = itemlist.pop(0)
-        indx = self.p0list.Append(itemlist)
-        for ix, value in enumerate(itemlist):
-            self.p0list.SetItem(indx, ix, value)
-        self.p0list.SetItemData(indx, key)
+        # build_item heeft dit hier eigenlijk al gedaan
+        # key = itemlist.pop(0)
+        # indx = p0list.Append(itemlist)
+        # for ix, value in enumerate(itemlist):
+        #     p0list.SetItem(indx, ix, value)
+        # p0list.SetItemData(indx, int(key))
 
-    def set_listselection(self, pos):
+    def set_listselection(self, p0list, pos):
         "highlight the selected item in the list"
-        self.p0list.Select(pos)
+        p0list.Select(pos)
 
-    def getfirstitem(self):
+    def getfirstitem(self, p0list):
         "return first item in list"
-        return self.p0list.GetItem(0)
+        return p0list.GetItem(0)
 
-    # used by on_text
+    def get_listitem_at_position(self, p0list, item):
+        "return the index of a given keydef entry"
+        return item.GetId()  # indexOfTopLevelItem(item)
+
+    def get_itemdata(self, item):
+        "return the data associated with a listitem"
+        return str(item.GetData())
+
+    def get_listbox_selection(self, p0list):
+        "return the currently selected keydef and its position in the list"
+        pos = p0list.GetFirstSelected()
+        return p0list.GetItem(pos), pos
+
+    def get_listitem_position(self, p0list, item):
+        "return the index of a given keydef entry"
+        raise NotImplementedError
+
     def get_widget_text(self, event):
         "return the text entered in a textfield"
         return event.GetEventWidget().GetValue()
 
-    def enable_save(self, state):
-        "make save button accessible"
-        self.b_save.Enable(state)
+    def set_textfield_value(self, txt, value):
+        "set the text for a textfield"
+        txt.SetValue(value)
 
-    # used by on_combobox
+    def enable_button(self, button, state):
+        "make button accessible"
+        button.Enable(state)
+
     def get_choice_value(self, event):
-        "return the value chosen in a combobox (and the widget itself)"
+        """return the value chosen in a combobox (and the widget itself)
+
+        this method is used from within the onchange callback
+        """
         cb = event.GetEventWidget()
         return cb, cb.GetValue()
 
-    def get_combobox_text(self, cb):
+    def get_combobox_value(self, cb):
         "return the text entered/selected in a combobox"
         return cb.GetValue()
+        # return cmb.GetStringSelection()
         # return cb.GetText() - staat niet in de documentatie van dit ComboBox of TextEntry
 
     def init_combobox(self, cb, choices=None):
@@ -440,37 +348,6 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         cb.Clear()
         if choices is not None:
             cb.AppendItems(choices)
-
-    def set_label_text(self, lbl, value):
-        "set the text for a label / static text"
-        lbl.SetLabel(value)
-
-    def set_textfield_value(self, txt, value):
-        "set the text for a textfield"
-        txt.SetValue(value)
-
-    # used by on_checkbox
-    def get_check_value(self, event):
-        "return the state set in a checkbox (and the widget itself)"
-        cb = event.GetEventWidget()
-        return cb, cb.GetValue()
-
-    def get_checkbox_state(self, cb):
-        "return the state set in a checkbox (without the widget)"
-        return cb.GetValue()
-
-    # used by refresh_extrascreen
-    def enable_delete(self, state):
-        "make delete button accessible"
-        self.b_del.Enable(state)
-
-    def get_itemdata(self, item):
-        "return the data associated with a listitem"
-        return item.GetData()
-
-    def set_checkbox_state(self, cb, state):
-        "set the state for a checkbox"
-        cb.SetValue(state)
 
     def set_combobox_string(self, cmb, value, valuelist):
         "set the selection for a combobox"
@@ -482,18 +359,26 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
             return
         cmb.SetSelection(ix)
 
-    def get_combobox_selection(self, cmb):
-        "get the selection for a combobox"
-        return cmb.GetStringSelection()
+    def set_label_text(self, lbl, value):
+        "set the text for a label / static text"
+        lbl.SetLabel(value)
 
-    # used by apply_changes en apply_deletion
-    def get_selected_keydef(self):
-        "return the currently selected keydef"
-        return self.p0list.GetFirstSelected()
+    # used by on_checkbox
+    def get_check_value(self, event):
+        """return the state set in a checkbox (and the widget itself)
 
-    def get_keydef_position(self, item):
-        "return the index of a given keydef entry"
-        return item.GetId()  # indexOfTopLevelItem(item)
+        this method is used from within the onchange callback
+        """
+        cb = event.GetEventWidget()
+        return cb, cb.GetValue()
+
+    def get_checkbox_state(self, cb):
+        "return the state set in a checkbox (without the widget)"
+        return cb.GetValue()
+
+    def set_checkbox_state(self, cb, state):
+        "set the state for a checkbox"
+        cb.SetValue(state)
 
 
 class TabbedInterface(wx.Panel):
@@ -504,229 +389,117 @@ class TabbedInterface(wx.Panel):
         self.parent = parent
         self.master = master
 
-    def setup_selector(self):
+    def setup_selector(self, callback):
         "create the selector"
         # print('in setup_selector')
-        self.sel = wx.ComboBox(self, size=(140, -1), style=wx.CB_READONLY)
-        self.sel.Bind(wx.EVT_COMBOBOX, self.after_changing_page)
+        sel = wx.ComboBox(self, size=(140, -1), style=wx.CB_READONLY)
+        sel.Bind(wx.EVT_COMBOBOX, callback)  # self.after_changing_page)
         # als ik echt met een choicebook werkte, kon ik deze *twee*  gebruiken:
         # self.book.Bind(wx.EVT_CHOICEBOOK_PAGE_CHANGED, self.OnPageChanged)
         # self.book.Bind(wx.EVT_CHOICEBOOK_PAGE_CHANGING, self.OnPageChanging)
         self.pnl = wx.Simplebook(self)
         # self.pnl = wx.Choicebook(self)
-
-    def setup_search(self):
-        "add the search widgets to the interface"
-        self.find_loc = wx.ComboBox(self, size=(140, -1), style=wx.CB_READONLY)
-        self.find = wx.ComboBox(self, size=(140, -1), style=wx.CB_DROPDOWN)
-        self.find.Bind(wx.EVT_TEXT, self.after_changing_text)
-        self.b_next = wx.Button(self, label='next')
-        self.b_next.Bind(wx.EVT_BUTTON, self.master.find_next)
-        self.b_next.Enable(False)
-        self.b_prev = wx.Button(self, label='prev')
-        self.b_prev.Bind(wx.EVT_BUTTON, self.master.find_prev)
-        self.b_prev.Enable(False)
-        self.b_filter = wx.Button(self, label=self.parent.editor.captions['C_FILTER'])
-        self.b_filter.Bind(wx.EVT_BUTTON, self.master.filter)
-        self.b_filter.Enable(False)
-        self.filter_on = False
+        return sel
 
     def add_subscreen(self, win):
         "add a screen to the tabbed widget"
-        self.pnl.AddPage(win.gui, '')
+        self.pnl.AddPage(win, '')
 
-    def add_to_selector(self, txt):
+    def add_to_selector(self, selector, txt):
         "add an option to the selector"
-        # print('appending to selector:', txt)
-        self.sel.Append(txt)
+        selector.Append(txt)
 
-    def format_screen(self):
-        "realize the screen"
+    def start_display(self):
+        "build the screen container"
         vbox = wx.BoxSizer(wx.VERTICAL)
+        return vbox
+
+    def start_line(self, vbox):
+        "add a line to the screen container"
         hbox = wx.BoxSizer(wx.HORIZONTAL)
-        hbox.AddSpacer(10)
-        self.sel_text = wx.StaticText(self)  # , label='', size=(80, -1))
-        hbox.Add(self.sel_text, 0, wx.ALIGN_CENTER_VERTICAL)
-        hbox.Add(self.sel, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
-        hbox.AddStretchSpacer(1)
-        self.find_text = wx.StaticText(self)  # , label='', size=(80, -1))
-        hbox.Add(self.find_text, 0, wx.ALIGN_CENTER_VERTICAL)
-        hbox.Add(self.find_loc, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
-        hbox.Add(wx.StaticText(self, label=' : '), 0, wx.ALIGN_CENTER_VERTICAL)
-        hbox.Add(self.find, 0, wx.ALIGN_CENTER_VERTICAL)
-        hbox.Add(self.b_filter, 0)
-        hbox.Add(self.b_next, 0)
-        hbox.Add(self.b_prev, 0)
-        hbox.AddSpacer(10)
-        self.headlinesizer = hbox
         vbox.Add(hbox, 0, wx.EXPAND)
-        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        return hbox
+
+    def add_margin_to_line(self, hbox):
+        "add the fixed margin"
+        hbox.AddSpacer(10)
+
+    def add_text_to_line(self, hbox, text=""):
+        "add a fixed text"
+        text = wx.StaticText(self, label=text)  # , size=(80, -1))
+        hbox.Add(text, 0, wx.ALIGN_CENTER_VERTICAL)
+        return text
+
+    def add_selector_to_line(self, hbox, widget):
+        "add the book selector to the line"
+        hbox.Add(widget, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
+
+    def add_combobox_to_line(self, hbox, minwidth=0, editable=False, callback=None):
+        "add a combobox selector"
+        # size = (-1, -1) if minwidth == 0 else (minwidth, -1)
+        style = wx.CB_READONLY if not editable else wx.CB_DROPDOWN
+        # if minwidth:
+        #     cmb = wx.ComboBox(self, size=(minwidth, -1), style=style)
+        # else:
+        #     cmb = wx.ComboBox(self, style=style)
+        cmb = wx.ComboBox(self, style=style)
+        if callback:
+            cmb.Bind(wx.EVT_TEXT, callback)
+        hbox.Add(cmb, 0, wx.ALIGN_CENTER_VERTICAL)
+        # hbox.Add(self.find_loc, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
+        return cmb
+
+    def add_separator_to_line(self, hbox):
+        "separate the selector from the search-related widgets"
+        hbox.AddStretchSpacer()
+
+    def add_button_to_line(self, hbox, text, callback, enabled):
+        "add a button with the given text and callback "
+        btn = wx.Button(self, label=text)
+        btn.Bind(wx.EVT_BUTTON, callback)
+        btn.Enable(enabled)
+        hbox.Add(btn, 0)
+        return btn
+
+    def add_list_to_line(self, hbox):
+        "add the list with keydefs to the display"
         hbox.Add(self.pnl, 0)
-        vbox.Add(hbox, 0)
+
+    def finalize_display(self, vbox):
+        "realize the layout"
         self.SetAutoLayout(True)
         self.SetSizer(vbox)
         vbox.Fit(self)
         # vbox.SetSizeHints(self)
-        self.setcaptions()
         self.Show()
 
-    def setcaptions(self):
-        """update captions according to selected language
-        """
-        self.sel_text.SetLabel(self.parent.editor.captions['C_SELPRG'])
-        self.find_text.SetLabel(self.parent.editor.captions['C_FIND'])
-        if self.filter_on:
-            self.b_filter.SetLabel(self.parent.editor.captions['C_FLTOFF'])
-        else:
-            self.b_filter.SetLabel(self.parent.editor.captions['C_FILTER'])
-        self.b_next.SetLabel(self.parent.editor.captions['C_NEXT'])
-        self.b_prev.SetLabel(self.parent.editor.captions['C_PREV'])
-        self.headlinesizer.Layout()
-        with contextlib.suppress(AttributeError):  # exit button bestaat nog niet bij initialisatie
-            self.parent.b_exit.SetLabel(self.parent.editor.captions['C_EXIT'])
+    def setcaption(self, widget, caption):
+        "set the given widget's caption (this is intended for label fields)"
+        widget.SetLabel(caption)
 
-    def after_changing_page(self, event):
+    def on_pagechange(self, event):  # after_changing_page(self, event):
         """callback for change in tool page selector
         """
-        self.master.on_page_changed(event.GetEventObject().GetSelection())  # GetValue())  # for now
+        self.master.on_page_changed(event.GetEventObject().GetSelection())
 
     # used by on_page_changed
     def get_panel(self):
         "return the currently selected panel's index"
         return self.pnl.GetCurrentPage()
 
-    def get_selected_tool(self):
-        "return the currently selected panel's name"
-        return self.sel.GetStringSelection()
+    # def get_selected_tool(self):
+    #     "return the currently selected panel's name"
+    #     return self.sel.GetStringSelection()
 
     def set_selected_panel(self, indx):
         "set the index of the panel to be selected"
         self.pnl.SetSelection(indx)
 
-    def update_search(self, items):
-        "refresh the search-related widgets"
-        self.find_loc.Clear()
-        self.find_loc.AppendItems(items)
-        self.find_loc.SetSelection(len(items) - 1)
-        if self.master.page.filtertext:
-            self.find.SetValue(self.master.page.filtertext)
-            self.b_filter.SetText(self.parent.captions['C_FLTOFF'])
-            self.enable_search_buttons(filter=True)
-        else:
-            self.find.SetValue('')
-            self.find.Enable(True)
-            self.init_search_buttons()
-
-    def after_changing_text(self, event):
-        """callback for change in search text
-        """
-        text = event.GetEventObject().GetValue()
-        if text:
-            self.master.on_text_changed(text)
-
-    # used by on_text_changed
-    def get_search_col(self):
-        "return the currently selected search column"
-        return self.find_loc.GetStringSelection()
-
-    def find_items(self, page, text):
-        "return the items that contain the text to search for"
-        result = []
-        for i in range(page.gui.p0list.GetItemCount()):
-            # item = page.gui.p0list.GetItem(i)
-            if text in page.gui.p0list.GetItemText(i, self.master.zoekcol):
-                result.append(i)  # tem) - geen items maar indexes in de lijst opnemen
-        return result
-
-    def init_search_buttons(self):
-        "set the search-related buttons to their initial values (i.e. disabled)"
-        self.enable_search_buttons(next=False, prev=False, filter=False)
-
-    def set_selected_keydef_item(self, page, index):
-        "select a search result in the list"
-        item = self.master.items_found[index]
-        page.gui.p0list.Select(item)
-        page.gui.p0list.EnsureVisible(item)
-
-    def enable_search_buttons(self, next=None, prev=None, filter=None):
-        "set the appropriate search-related button(s) to the given value)s)"
-        if next is not None:
-            self.b_next.Enable(next)
-        if prev is not None:
-            self.b_prev.Enable(prev)
-        if filter is not None:
-            self.b_filter.Enable(filter)
-
-    # used by filter
-    def get_filter_state_text(self):
-        "return the current text of the filter button"
-        return str(self.b_filter.GetLabel())
-
-    def get_search_text(self):
-        "return the text to search for"
-        return self.find.GetValue()
-
-    def get_found_keydef_position(self):
-        "return the position marker of the current search result"
-        plist = self.master.page.gui.p0list
-        item = plist.GetFirstSelected()
-        return plist.GetItemText(item, 0), plist.GetItemText(item, 1)
-
-    def enable_search_text(self, value):
-        "block or unblock entering/selecting a search text"
-        self.find.Enable(value)
-
-    def set_found_keydef_position(self):
-        "find the next search rel=sult acoording to position marker(?)"
-        plist = self.master.page.gui.p0list
-        for i in range(plist.GetItemCount()):
-            if (plist.GetItemText(i, 0), plist.GetItemText(i, 1)) == self.master.reposition:
-                plist.Select(i)
-                break
-
-    def set_filter_state_text(self, state):
-        "set the text for the filter button"
-        self.b_filter.SetLabel(state)
-
-    # hulproutines t.b.v. managen bestandslocaties
-
-    def get_selected_index(self):
-        "get index of selected item"
-        return self.sel.GetSelection()  # currentIndex()
-
-    def clear_selector(self):
-        "reset selector"
-        self.sel.Clear()
-
-    def remove_tool(self, indx, program, program_list):
-        """remove a tool from the confguration"""
-        win = self.pnl.GetPage(indx)
-        self.pnl.RemovePage(indx)
-        if program in program_list:
-            return win.master  # keep the widget (will be re-added)
-        win.Destroy()  # lose the widget
-        return None
-
-    def add_tool(self, program, win):
-        "add a tool to the configuration"
-        self.add_subscreen(win)
-        self.add_to_selector(program)
-
-    def get_new_selection(self, item):
-        "find the index to set the new selection to"
-        return self.sel.GetSelection()  # findText(item)
-
-    def set_selected_tool(self, selection):
-        "set the new selection index"
-        self.sel.SetSelection(selection)
-
-    # hulproutines t.b.v. managen tool specifieke settings
-
-    def get_selected_panel(self):
+    def get_selected_panel(self, indx):
         "return index and handle of the selected panel"
-        indx = self.sel.GetSelection()
+        # indx = self.sel.GetSelection()
         win = self.pnl.GetPage(indx)
-        return indx, win
+        return win
 
     def replace_panel(self, indx, win, newwin):
         "replace a panel with a modified version"
@@ -734,23 +507,130 @@ class TabbedInterface(wx.Panel):
         self.pnl.SetSelection(newwin)  # or ChangeSelection to avoid sending events
         self.pnl.RemovePage(win)
 
-    def set_panel_editable(self, test_redef):
-        "(re)set editability of the current panel"
-        win = self.pnl.GetCurrentPage()
-        win.set_extrascreen_editable(test_redef)
+    # def set_panel_editable(self, test_redef):
+    #     "(re)set editability of the current panel"
+    #     win = self.pnl.GetCurrentPage()
+    #     win.set_extrapanel_editable(test_redef)
+
+    def enable_widget(self, widget, state):
+        "make the specified widget usable (or not)"
+        widget.Enable(state)
+
+    # def update_search(self, items):
+    #     "refresh the search-related widgets"
+    def refresh_combobox(self, cmb, items=None):
+        "refill the values for the given checkbox and select the last one"
+        cmb.Clear()
+        if items:
+            cmb.AppendItems(items)
+            cmb.SetSelection(len(items) - 1)
+
+    def get_combobox_value(self, cmb):
+        "return the given combobox's value"
+        # return cmb.GetStringSelection()
+        return cmb.GetValue()
+
+    def set_combobox_text(self, cmb, text):
+        "set the text for the given combobox"
+        cmb.SetValue(text)
+        if text:
+            cmb.Enable(True)
+
+    def get_combobox_index(self, cmb):
+        "get index of selected item"
+        return cmb.GetSelection()
+
+    def on_textchange(self, event):     # after_changing_text(self, event):
+        """callback for change in search text
+        """
+        text = event.GetEventObject().GetValue()
+        if text:
+            self.master.on_text_changed(text)
+
+    # used by on_text_changed
+    def get_search_col(self, cb):
+        "return the currently selected search column"
+        return cb.GetStringSelection()
+
+    # def get_new_selection(self, item):
+    def get_combobox_index_for_item(self, cb, item):
+        "find the index to set the new selection to"
+        return cb.GetSelection()  # findText(item)
+
+    # def set_selected_tool(self, selection):
+    def set_combobox_index(self, selector, selection):
+        "set the new selection index"
+        selector.SetSelection(selection)
+
+    # used by filter
+    def get_button_text(self, button):
+        "return the current text of the filter button"
+        return button.GetLabel()
+
+    def set_button_text(self, button, state):
+        "set the text for the filter button"
+        button.SetLabel(state)
+
+    def find_items(self, p0list, zoekcol, text):
+        "return the items that contain the text to search for"
+        result = []
+        for i in range(p0list.GetItemCount()):
+            # item = page.gui.p0list.GetItem(i)
+            if text in p0list.GetItemText(i, zoekcol):
+                result.append(i + 1)  # tem) - geen items maar indexes in de lijst opnemen
+        return result
+
+    def set_selected_keydef_item(self, p0list, items, index):
+        "select a search result in the list"
+        item = items[index]
+        p0list.Select(item)
+        p0list.EnsureVisible(item)
+
+    # def get_search_text(self):
+    #     "return the text to search for"
+    #     return self.find.GetValue()
+
+    def get_found_keydef_position(self, p0list):
+        "return the position marker of the current search result"
+        item = p0list.GetFirstSelected()
+        return p0list.GetItemText(item, 0), p0list.GetItemText(item, 1)
+
+    def set_found_keydef_position(self, p0list, pos):
+        "find the next search rel=sult acoording to position marker(?)"
+        for i in range(p0list.GetItemCount()):
+            if (p0list.GetItemText(i, 0), p0list.GetItemText(i, 1)) == pos:
+                p0list.Select(i)
+                break
+
+    # hulproutines t.b.v. managen bestandslocaties
+
+    # def clear_selector(self):
+    #     "reset selector"
+    #     self.sel.Clear()
+
+    def remove_tool(self, indx, program, program_list):
+        """remove a tool from the confguration"""
+        win = self.pnl.GetPage(indx)
+        self.pnl.RemovePage(indx)
+        if program in program_list:
+            return win.master   # keep the widget (will be re-added)
+        win.Destroy()           # lose the widget
+        return None             # explicit return to accentuate difference
+
+    # hulproutines t.b.v. managen tool specifieke settings
 
     # hulproutine t.b.v. managen column properties
 
-    def refresh_locs(self, headers):
-        "apply changes in the selector for `search in column`"
-        self.find_loc.Clear()
-        self.find_loc.AppendItems(headers)
+    # def refresh_locs(self, headers):
+    #     "apply changes in the selector for `search in column`"
+    #     self.find_loc.Clear()
+    #     self.find_loc.AppendItems(headers)
 
     # hulpfunctie t.b.v. afsluiten: bepalen te onthouden tool
 
-    def get_selected_text(self):
-        "get text of selected item"
-        return self.sel.GetStringselection()
+    # def get_selected_text(self):
+    #     "get text of selected item"
+    #     return self.sel.GetStringselection()
 
 
 class Gui(wx.Frame):
@@ -760,21 +640,33 @@ class Gui(wx.Frame):
         self.app = wx.App()
         wid = 1140 if shared.LIN else 688
         hig = 594
-        super().__init__(None, size=(wid, hig), style=wx.DEFAULT_FRAME_STYLE |
-            # wx.BORDER_SIMPLE |
-            wx.NO_FULL_REPAINT_ON_RESIZE)
+        super().__init__(None, size=(wid, hig), style=wx.DEFAULT_FRAME_STYLE
+                         # | wx.BORDER_SIMPLE
+                         | wx.NO_FULL_REPAINT_ON_RESIZE)
         self.sb = self.CreateStatusBar()
         self.menu_bar = wx.MenuBar()
         self.menuitems = {}
         self.SetMenuBar(self.menu_bar)
 
-    def go(self):
-        "build and show the interface"
+    def start_display(self):
+        "setup the screen container"
         sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.editor.book.gui, 1, wx.EXPAND | wx.ALL, 5)
-        self.b_exit = wx.Button(self, label=self.editor.captions['C_EXIT'])
-        self.b_exit.Bind(wx.EVT_BUTTON, self.editor.exit)
-        sizer.Add(self.b_exit, 0, wx.ALIGN_CENTER_HORIZONTAL)
+        return sizer
+
+    def add_choicebook_to_display(self, vbox, bookgui):
+        "main portion of the interface"
+        vbox.Add(bookgui, 1, wx.EXPAND | wx.ALL, 5)
+
+    def add_exitbutton_to_display(self, vbox, buttondef):
+        "a single button at the bottom"
+        text, callback = buttondef
+        btn = wx.Button(self, label=text)
+        btn.Bind(wx.EVT_BUTTON, callback)
+        vbox.Add(btn, 0, wx.ALIGN_CENTER_HORIZONTAL)
+        return btn
+
+    def go(self, sizer):
+        "finish and show the interface"
         self.SetSizer(sizer)
         self.SetAutoLayout(True)
         sizer.Fit(self)
@@ -822,7 +714,7 @@ class Gui(wx.Frame):
                             self.menuitems[selitem] = item, shortcut
                             submenu.Append(item)
                             self.Bind(wx.EVT_MENU, callback_, id=item.GetId())
-                        menu.AppendSubMenu(submenu, self.editor.captions[sel])
+                        menu.AppendSubMenu(submenu, self.editor.captions[subsel])
                         self.menuitems[subsel] = submenu, ''
             if has_items:
                 oldmenu = self.menu_bar.Replace(ix, menu, self.editor.captions[title])
@@ -832,7 +724,8 @@ class Gui(wx.Frame):
             self.menuitems[title] = menu, ''
             ix += 1
 
-    def setcaptions(self):
+    # def setcaptions(self):
+    def update_menutitles(self):
         "set title for menuitem or action"
         topmenus = [x[0] for x in self.menu_bar.GetMenus()]
         for menu, item in self.menuitems.items():
@@ -840,16 +733,16 @@ class Gui(wx.Frame):
             try:
                 oldtitle = subitem.GetTitle()  # als deze kan dan is het een menu
             except AttributeError:
-                subitem.SetText('\t'.join((self.editor.captions[menu], shortcut)))
+                subitem.SetItemLabel('\t'.join((self.editor.captions[menu], shortcut)))
             else:
                 # dit stelt de titel van het menu in
                 subitem.SetTitle(self.editor.captions[menu])
                 # maar ik zoek de titel van het bijbehorende menuitem (in het bovenliggende menu)
                 pmenu = subitem.GetParent()
                 if pmenu:
-                    for mitem in pmenu.GetMenuItems():
-                        if mitem.IsSubMenu():
-                            pmenu.SetLabel(mitem.GetId(), self.editor.captions[menu])
+                    for m_item in pmenu.GetMenuItems():
+                        if m_item.IsSubMenu():
+                            pmenu.SetLabel(m_item.GetId(), self.editor.captions[menu])
                 else:
                     self.menu_bar.Replace(topmenus.index(subitem), subitem,
                                           self.editor.captions[menu])

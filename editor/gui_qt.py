@@ -1,195 +1,11 @@
 """HotKeys main program - gui specific code - Qt version
 """
 import sys
-import contextlib
 import functools
 import PyQt6.QtWidgets as qtw
 import PyQt6.QtGui as gui
 import PyQt6.QtCore as core
 from editor import shared
-
-
-class FieldHandler:
-    """Processing for showing extra fields on screen
-    """
-    def __init__(self, sdi):
-        self.gui = sdi
-        self.master = sdi.master
-
-    def build_fields(self):
-        """determine which build function to call
-        """
-        if 'C_KEY' in self.master.fields:
-            self.build_keyfield()
-        if 'C_MODS' in self.master.fields:
-            self.build_modfields()
-        if 'C_CNTXT' in self.master.fields:
-            self.build_context_field()
-        if 'C_CMD' in self.master.fields:
-            self.build_command_field()
-        if 'C_PARMS' in self.master.fields:
-            self.build_parms_field()
-        if 'C_CTRL' in self.master.fields:
-            self.build_control_field()
-        if 'C_BPARMS' in self.master.fields:
-            self.build_preparms_field()
-        if 'C_APARMS' in self.master.fields:
-            self.build_postparms_field()
-        if 'C_FEAT' in self.master.fields:
-            self.build_featurefield()
-        if 'C_DESC' in self.master.fields:
-            self.build_descfield()
-
-    def build_keyfield(self):
-        """build fields for key(s)
-        """
-        self.gui.lbl_key = qtw.QLabel(self.master.captions['C_KTXT'] + " ", self.gui.frm)
-        if self.master.keylist is None:
-            ted = qtw.QLineEdit(self.gui.frm)
-            ted.setMaximumWidth(90)
-            ted.textChanged[str].connect(functools.partial(self.master.on_text, ted, str))
-            self.gui.screenfields.append(ted)
-            self.gui.txt_key = ted
-        else:
-            cb = qtw.QComboBox(self.gui.frm)
-            cb.setMaximumWidth(90)
-            cb.addItems(self.master.keylist)  # niet sorteren
-            cb.currentTextChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
-            self.gui.screenfields.append(cb)
-            self.gui.cmb_key = cb
-
-    def build_modfields(self):
-        """build fields for modifiers
-        """
-        for ix, x in enumerate(('M_CTRL', 'M_ALT', 'M_SHFT', 'M_WIN')):
-            cb = qtw.QCheckBox(self.master.captions[x].join(("+ ", "")), self.gui.frm)
-            cb.setChecked(False)
-            self.gui.screenfields.append(cb)
-            cb.stateChanged.connect(functools.partial(self.master.on_checkbox, cb))
-            if ix == 0:
-                self.gui.cb_ctrl = cb
-            elif ix == 1:
-                self.gui.cb_alt = cb
-            elif ix == 2:
-                self.gui.cb_shift = cb
-            else:  # if ix == 3:  # geen andere mogelijkheid
-                self.gui.cb_win = cb
-
-    def build_context_field(self):
-        """build field for context
-        """
-        self.gui.lbl_context = qtw.QLabel(self.master.captions['C_CNTXT'], self.gui.frm)
-        cb = qtw.QComboBox(self.gui.frm)
-        cb.addItems(self.master.contextslist)
-        cb.setMaximumWidth(110)
-        cb.currentTextChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
-        self.gui.screenfields.append(cb)
-        self.gui.cmb_context = cb
-
-    def build_command_field(self):
-        """build field for command
-        """
-        self.gui.txt_cmd = qtw.QLabel(self.master.captions['C_CTXT'] + " ", self.gui.frm)
-        cb = qtw.QComboBox(self.gui.frm)
-        cb.setMaximumWidth(150)
-        if 'C_CNTXT' not in self.master.fields:  # load on choosing context
-            cb.addItems(self.master.commandslist)
-        cb.currentTextChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
-        self.gui.screenfields.append(cb)
-        self.gui.cmb_commando = cb
-
-    def build_parms_field(self):
-        """build field for command parameters
-        """
-        self.gui.lbl_parms = qtw.QLabel(self.master.captions['C_PARMS'], self.gui.frm)
-        self.gui.txt_parms = qtw.QLineEdit(self.gui.frm)
-        self.gui.txt_parms.setMaximumWidth(280)
-        self.gui.screenfields.append(self.gui.txt_parms)
-
-    def build_control_field(self):
-        """build field for gui element
-        """
-        self.gui.lbl_controls = qtw.QLabel(self.master.captions['C_CTRL'], self.gui.frm)
-        cb = qtw.QComboBox(self.gui.frm)
-        cb.addItems(self.master.controlslist)
-        cb.currentTextChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
-        self.gui.screenfields.append(cb)
-        self.gui.cmb_controls = cb
-
-    def build_preparms_field(self):
-        """build field for arguments preceding the keycombo
-        """
-        self.gui.pre_parms_label = qtw.QLabel(self.gui.frm)
-        self.gui.pre_parms_text = qtw.QLineEdit(self.gui.frm)
-        self.gui.screenfields.append(self.gui.pre_parms_text)
-
-    def build_postparms_field(self):
-        """build field for arguments following the keycombo
-        """
-        self.gui.post_parms_label = qtw.QLabel(self.gui.frm)
-        self.gui.post_parms_text = qtw.QLineEdit(self.gui.frm)
-        self.gui.screenfields.append(self.gui.post_parms_text)
-
-    def build_featurefield(self):
-        """build field for feature
-        """
-        self.gui.feature_label = qtw.QLabel(self.gui.frm)
-        self.gui.feature_select = qtw.QComboBox(self.gui.frm)
-        self.gui.feature_select.addItems(self.master.featurelist)
-        self.gui.screenfields.append(self.gui.feature_select)
-        # hoeft feature niet aan de callback gekoppeld of ben ik hier niet verder mee gegaan
-        # omdat ik dit toch niet gebruik?
-
-    def build_descfield(self):
-        """build field for description
-        """
-        self.gui.txt_oms = qtw.QTextEdit(self.gui.frm)
-        self.gui.txt_oms.setReadOnly(True)
-
-    def layout_keymodfields(self, sizer):
-        """layout fields for key and modifiers
-        """
-        if 'C_KEY' in self.master.fields:
-            sizer3 = qtw.QHBoxLayout()
-            sizer3.addWidget(self.gui.lbl_key)
-            if self.master.keylist is None:
-                sizer3.addWidget(self.gui.txt_key)
-            else:
-                sizer3.addWidget(self.gui.cmb_key)
-            sizer3.addStretch()
-            sizer.addLayout(sizer3)
-
-        if 'C_MODS' in self.master.fields:
-            sizer3 = qtw.QHBoxLayout()
-            sizer3.addWidget(self.gui.cb_ctrl)
-            sizer3.addWidget(self.gui.cb_alt)
-            sizer3.addWidget(self.gui.cb_shift)
-            sizer3.addWidget(self.gui.cb_win)
-            sizer3.addStretch()
-            sizer.addLayout(sizer3)
-
-    def layout_commandfields(self, sizer):
-        """layout fields for command and context
-        """
-        if 'C_CNTXT' in self.master.fields:
-            sizer2 = qtw.QHBoxLayout()
-            sizer2.addWidget(self.gui.lbl_context)
-            sizer2.addWidget(self.gui.cmb_context)
-            sizer.addLayout(sizer2)
-
-        if 'C_CMD' in self.master.fields:
-            sizer2 = qtw.QHBoxLayout()
-            sizer2.addWidget(self.gui.txt_cmd)
-            sizer2.addWidget(self.gui.cmb_commando)
-            sizer.addLayout(sizer2)
-
-    def layout_descfield(self, sizer):
-        """layout description field
-        """
-        if 'C_DESC' in self.master.fields:
-            sizer2 = qtw.QVBoxLayout()
-            sizer2.addWidget(self.gui.txt_oms)
-            sizer.addLayout(sizer2, 2)
 
 
 class SingleDataInterface(qtw.QFrame):
@@ -201,120 +17,130 @@ class SingleDataInterface(qtw.QFrame):
         super().__init__(parent)
         self.parent = parent  # .parent()
         self.master = master
-        self.p0list = qtw.QTreeWidget(self)
-        self.fieldhandler = FieldHandler(self)
+        self._savestates = (False, False)
+        # self.fieldhandler = FieldHandler(self)
+        self._sizer = qtw.QVBoxLayout()
 
     def setup_empty_screen(self, nodata, title):
         """build a subscreen with only a message
         """
-        sizer = qtw.QVBoxLayout()
+        # self._sizer = qtw.QVBoxLayout()
+        self.title = title
         hsizer = qtw.QHBoxLayout()
+        self._sizer.addLayout(hsizer)
         hsizer.addStretch()
         hsizer.addWidget(qtw.QLabel(nodata, self))
         hsizer.addStretch()
-        sizer.addLayout(hsizer)
-        self.setLayout(sizer)
-        self.title = title
 
-    def setup_list(self):
+    def setup_list(self, colheaders, colwidths, callback):
         """add the list widget to the interface
         """
-        sizer = qtw.QVBoxLayout()
-        if self.master.column_info:
-            self.p0list.setHeaderLabels([self.master.captions[col[0]] for col in
-                                         self.master.column_info])
-            self.p0list.setAlternatingRowColors(True)
-            self.p0list.currentItemChanged.connect(self.on_item_selected)
-            hdr = self.p0list.header()
-            hdr.setSectionsClickable(True)
-            for indx, col in enumerate(self.master.column_info):
-                # if indx <= len(self.master.column_info):  overbodige afvraging
-                hdr.resizeSection(indx, col[1])
-            hdr.setStretchLastSection(True)
-            self.master.populate_list()
-            self.p0list.setSortingEnabled(True)
-            sizer1 = qtw.QHBoxLayout()
-            sizer1.addWidget(self.p0list)
-            sizer.addLayout(sizer1)
+        sizer1 = qtw.QHBoxLayout()
+        p0list = qtw.QTreeWidget(self)
+        sizer1.addWidget(p0list)
+        self._sizer.addLayout(sizer1)
+        p0list.setHeaderLabels(colheaders)
+        p0list.setAlternatingRowColors(True)
+        p0list.currentItemChanged.connect(callback)
+        hdr = p0list.header()
+        hdr.setSectionsClickable(True)
+        for indx, col in enumerate(colwidths):
+            hdr.resizeSection(indx, col)
+        hdr.setStretchLastSection(True)
+        p0list.setSortingEnabled(True)
+        return p0list
 
-        # indien van toepassing: toevoegen van de rest van de GUI aan de layout
-        if self.master.has_extrapanel:
-            self.layout_extra_fields(sizer)
+    def start_extrapanel(self, frameheight):
+        "start a new area for screen widgets"
+        self._frm = qtw.QFrame(self)
+        # self._frm.setMaximumHeight(frameheight)
+        # self._frm.setMinimumHeight(frameheight)
+        # self._frm.resize(-1, frameheight)
+        self._frm.setFixedHeight(frameheight)
+        self._sizer.addWidget(self._frm)
+        vbox = qtw.QVBoxLayout()
+        self._frm.setLayout(vbox)
+        # self._sizer.addWidget(self._frm)
+        # vbox.addWidget(self._frm)
+        # self._sizer.addLayout(vbox)
+        return vbox
 
-        self.setLayout(sizer)
-        # shared.log(self.master.otherstuff)
-        self.set_listselection(0)
+    def start_line(self, vbox):
+        "start a new line of widgets in the given screen"
+        hbox = qtw.QHBoxLayout()
+        vbox.addLayout(hbox)
+        return hbox
 
-    def add_extra_fields(self):
-        """fields showing details for selected keydef, to make editing possible
-        """
-        self.screenfields = []
-        self.frm = qtw.QFrame(self)
-        frameheight = 90
-        if hasattr(self.master.reader, 'get_frameheight'):
-            frameheight = self.master.reader.get_frameheight()  # user exit
-        self.frm.setMaximumHeight(frameheight)
+    def add_label_to_line(self, hbox, text, **kwargs):
+        "add the given text to the given screen line"
+        fld = qtw.QLabel(text, self._frm)
+        hbox.addWidget(fld)
+        return fld
 
-        self.cmb_key = self.cmb_context = self.cmb_commando = self.cmb_controls = None
-        self.fieldhandler.build_fields()
+    def add_textfield_to_line(self, hbox, width=None, callback=None, **kwargs):
+        "add a field to enter text on the given screen line"
+        fld = qtw.QLineEdit(self._frm)
+        if width:
+            fld.setMaximumWidth(width)
+        if callback:
+            fld.textChanged.connect(callback)
+        hbox.addWidget(fld)
+        return fld
 
-        self.b_save = qtw.QPushButton(self.master.captions['C_SAVE'], self.frm)
-        self.b_save.setEnabled(False)
-        self.b_save.clicked.connect(self.on_update)
-        self.b_del = qtw.QPushButton(self.master.captions['C_DEL'], self.frm)
-        self.b_del.setEnabled(False)
-        self.b_del.clicked.connect(self.on_delete)
-        self._savestates = (False, False)
+    def add_combobox_to_line(self, hbox, items, width=None, **kwargs):
+        "add a combobox with the given caption and a standard callback"
+        cb = qtw.QComboBox(self._frm)
+        if width:
+            cb.setMaximumWidth(width)
+        cb.addItems(items)
+        cb.currentTextChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
+        hbox.addWidget(cb)
+        return cb
 
-    def set_extrascreen_editable(self, switch):
+    def add_checkbox_to_line(self, hbox, text):
+        "add a checkbox with the given caption and a standard callback"
+        cb = qtw.QCheckBox(text, self._frm)
+        cb.stateChanged.connect(functools.partial(self.master.on_checkbox, cb))
+        hbox.addWidget(cb)
+        return cb
+
+    def add_separator_to_line(self, hbox):
+        "separate the keydef from the definition"
+        hbox.addStretch()
+
+    def add_button_to_line(self, hbox, text, callback):
+        "add a button with the given text and callback"
+        btn = qtw.QPushButton(text, self._frm)
+        btn.setEnabled(False)
+        btn.clicked.connect(callback)
+        hbox.addWidget(btn)
+        return btn
+
+    def add_descfield_to_line(self, hbox):  # , frameheight):
+        "add a text field for the description"
+        fld = qtw.QTextEdit(self._frm)
+        # fld.setMaximumHeight(frameheight)
+        # self._frm.setMinimumHeight(frameheight)
+        fld.setReadOnly(True)
+        hbox.addWidget(fld, 1)   # proportie wordt gebruikt om de eventuele extra kolom in te perken
+        return fld
+
+    def set_extrapanel_editable(self, screenfields, buttons, switch):
         """open up fields in extra screen when applicable
         """
-        for widget in self.screenfields:
+        for widget in screenfields:
             widget.setEnabled(switch)
-        ## if 'C_CMD' in self.fields:
         if switch:
             state_s, state_d = self._savestates
         else:
-            self._savestates = (self.b_save.isEnabled(), self.b_del.isEnabled())
+            self._savestates = (buttons[0].isEnabled(), buttons[1].isEnabled())
             state_s, state_d = False, False
-        self.b_save.setEnabled(state_s)
-        self.b_del.setEnabled(state_d)
+        buttons[0].setEnabled(state_s)
+        buttons[1].setEnabled(state_d)
 
-    def layout_extra_fields(self, sizer):
-        """add the extra fields to the layout
-        """
-        bsizer = qtw.QVBoxLayout()
-
-        sizer1 = qtw.QHBoxLayout()
-        sizer2 = qtw.QHBoxLayout()
-        self.fieldhandler.layout_keymodfields(sizer2)
-
-        sizer1.addLayout(sizer2)
-        sizer1.addStretch()
-        self.fieldhandler.layout_commandfields(sizer2)
-
-        if hasattr(self.master.reader, 'layout_extra_fields_topline'):
-            self.master.reader.layout_extra_fields_topline(self, sizer1)  # user exit
-
-        sizer1.addWidget(self.b_save)
-        sizer1.addWidget(self.b_del)
-        bsizer.addLayout(sizer1)
-
-        if hasattr(self.master.reader, 'layout_extra_fields_nextline'):
-            sizer1 = qtw.QHBoxLayout()
-            self.master.reader.layout_extra_fields_nextline(self, sizer1)  # user exit
-            bsizer.addLayout(sizer1)
-
-        sizer1 = qtw.QHBoxLayout()
-        self.fieldhandler.layout_descfield(sizer1)
-
-        if hasattr(self.master.reader, 'layout_extra_fields'):
-            self.master.reader.layout_extra_fields(self, sizer1)  # user exit
-
-        bsizer.addLayout(sizer1)
-
-        self.frm.setLayout(bsizer)
-        sizer.addWidget(self.frm)
+    def finalize_screen(self):
+        "last actions to add the screen to the display"
+        self.setLayout(self._sizer)
 
     def resize_if_necessary(self):
         """to be called on changing the language
@@ -327,50 +153,31 @@ class SingleDataInterface(qtw.QFrame):
         if newitem and self.master.has_extrapanel:
             self.master.process_changed_selection(newitem, olditem)
 
-    def on_update(self):
-        """callback for editing kb shortcut
-        """
-        self.master.apply_changes()
-        self.p0list.setFocus()
+    def set_focus_to(self, widget):
+        "set the field to start inputting data"
+        widget.setFocus()
 
-    def on_delete(self):
-        """callback for deleting kb shortcut
-        """
-        self.master.apply_deletion()
-        self.p0list.setFocus()
-
-    # hulproutine t.b.v. managen column properties
-
-    def update_columns(self, oldcount, newcount):
+    def update_columns(self, p0list, oldcount, newcount):
         "delete and insert columns"
-        return  # wx code, not sure if I need this
-        hlp = oldcount
-        while hlp > newcount:
-            self.p0list.DeleteColumn(0)
-            hlp -= 1
-        hlp = newcount
-        while hlp > oldcount:
-            self.p0list.AppendColumn()
-            hlp -= 1
+        p0list.setColumnCount(newcount)
 
-    def refresh_headers(self, headers):
+    def refresh_headers(self, p0list, column_info):
         "apply changes in the column headers"
-        self.p0list.setColumnCount(len(headers))
-        self.p0list.setHeaderLabels(headers)
-        hdr = self.p0list.header()
+        p0list.setColumnCount(len(column_info))
+        p0list.setHeaderLabels([x[0] for x in column_info])
+        hdr = p0list.header()
         hdr.setSectionsClickable(True)
-        for indx, col in enumerate(self.master.column_info):
+        for indx, col in enumerate(column_info):
             hdr.resizeSection(indx, col[1])
         hdr.setStretchLastSection(True)
 
-# -- helper methods (called from master class) --
     def set_title(self, title):
         "set screen title"
         self.master.parent.parent.gui.setWindowTitle(title)
 
-    def clear_list(self):
+    def clear_list(self, p0list):
         "reset listcontrol"
-        self.p0list.clear()
+        p0list.clear()
 
     def build_listitem(self, key):
         "create a new item for the list"
@@ -382,38 +189,60 @@ class SingleDataInterface(qtw.QFrame):
         "set the text for a list item"
         item.setText(indx, value)
         item.setToolTip(indx, value)
+        # return item
 
-    def add_listitem(self, new_item):
+    def add_listitem(self, p0list, new_item):
         "add an item to the list"
-        self.p0list.addTopLevelItem(new_item)
+        p0list.addTopLevelItem(new_item)
 
-    def set_listselection(self, pos):
+    def set_listselection(self, p0list, pos):
         "highlight the selected item in the list"
-        self.p0list.setCurrentItem(self.p0list.topLevelItem(pos))
+        p0list.setCurrentItem(p0list.topLevelItem(pos))
 
-    def getfirstitem(self):
+    def getfirstitem(self, p0list):
         "return first item in list"
-        return self.p0list.topLevelItem(0)
+        return p0list.topLevelItem(0)
 
-    # used by on_text
+    def get_listitem_at_position(self, p0list, pos):
+        "return the index of a given keydef entry"
+        return p0list.topLevelItem(pos)
+
+    def get_itemdata(self, item):
+        "return the data associated with a listitem"
+        return item.data(0, core.Qt.ItemDataRole.UserRole)
+
+    def get_listbox_selection(self, p0list):
+        "return the currently selected keydef and its position in the list"
+        item = p0list.currentItem()
+        return item, p0list.indexOfTopLevelItem(item)
+
+    def get_listitem_position(self, p0list, item):
+        "return the index of a given keydef entry"
+        return p0list.indexOfTopLevelItem(item)
+
     def get_widget_text(self, ted, text):
         "return the text entered in a textfield"
-        # text = str(text)    # Niet meer nodig denk ik (PyQt > 4)
         hlp = ted.text()
         if text != hlp:
             text = hlp
         return text
 
-    def enable_save(self, state):
-        "make save button accessible"
-        self.b_save.setEnabled(state)
+    def set_textfield_value(self, txt, value):
+        "set the text for a textfield (LineEdit, ComboBox of TextEdit)"
+        txt.setText(value)
 
-    # used by on_combobox
+    def enable_button(self, button, state):
+        "make button accessible"
+        button.setEnabled(state)
+
     def get_choice_value(self, cb, dummy, text):
-        "return the value chosen in a combobox (and the widget itself)"
+        """return the value chosen in a combobox (and the widget itself)
+
+        this method is used from within the partialed onchange callback
+        """
         return cb, text
 
-    def get_combobox_text(self, cb):
+    def get_combobox_value(self, cb):
         "return the text entered/selected in a combobox"
         return cb.currentText()
 
@@ -423,44 +252,6 @@ class SingleDataInterface(qtw.QFrame):
         if choices is not None:
             cb.addItems(choices)
 
-    def set_label_text(self, lbl, value):
-        "set the text for a label / static text"
-        lbl.setText(value)
-
-    def set_textfield_value(self, txt, value):
-        "set the text for a textfield (LineEdit, ComboBox of TextEdit)"
-        txt.setText(value)
-
-    # used by on_checkbox
-    def get_check_value(self, cb, state):
-        """return the state set in a checkbox (and the widget itself)
-
-        in deze variant worden de vanuit de callback binnengekomen gegevens doorgegeven
-        """
-        return cb, state
-
-    def get_checkbox_state(self, cb):
-        "return the state set in a checkbox (without the widget)"
-        return cb.isChecked()
-
-    # used by on_item_selected
-    def get_keydef_at_position(self, pos):
-        "return the index of a given keydef entry"
-        return self.p0list.topLevelItem(pos)
-
-    # used by refresh_extrascreen
-    def enable_delete(self, state):
-        "make delete button accessible"
-        self.b_del.setEnabled(state)
-
-    def get_itemdata(self, item):
-        "return the data associated with a listitem"
-        return item.data(0, core.Qt.ItemDataRole.UserRole)
-
-    def set_checkbox_state(self, cb, state):
-        "set the state for a checkbox"
-        cb.setChecked(state)
-
     def set_combobox_string(self, cmb, value, valuelist):
         "set the selection for a combobox"
         try:
@@ -469,256 +260,257 @@ class SingleDataInterface(qtw.QFrame):
             return
         cmb.setCurrentIndex(ix)
 
-    def get_combobox_selection(self, cmb):
-        "get the selection for a combobox"
-        return cmb.currentText()
+    def set_label_text(self, lbl, value):
+        "set the text for a label / static text"
+        lbl.setText(value)
 
-    # used by apply_changes en apply_deletion
-    def get_selected_keydef(self):
-        "return the currently selected keydef"
-        return self.p0list.currentItem()
+    def get_check_value(self, cb, state):
+        """return the state set in a checkbox (and the widget itself)
 
-    def get_keydef_position(self, item):
-        "return the index of a given keydef entry"
-        return self.p0list.indexOfTopLevelItem(item)
+        this method is used from within the partialed onchange callback
+        """
+        return cb, state
+
+    def get_checkbox_state(self, cb):
+        "return the state set in a checkbox (without the widget)"
+        return cb.isChecked()
+
+    def set_checkbox_state(self, cb, state):
+        "set the state for a checkbox"
+        cb.setChecked(state)
 
 
 class TabbedInterface(qtw.QFrame):
-    """ Als QTabwidget, maar met selector in plaats van tabs
+    """Als QTabwidget, maar met selector in plaats van tabs
     """
     def __init__(self, parent, master):
         super().__init__(parent)
         self.parent = parent
         self.master = master
 
-    def setup_selector(self):
+    def setup_selector(self, callback):
         "create the selector"
-        self.sel = qtw.QComboBox(self)
-        self.sel.currentIndexChanged.connect(self.master.on_page_changed)
-        self.pnl = qtw.QStackedWidget(self)
-
-    def setup_search(self):
-        "add the search-related widgets to the interface"
-        self.find_loc = qtw.QComboBox(self)
-        self.find_loc.setMinimumContentsLength(5)
-        self.find_loc.setEditable(False)
-        self.find = qtw.QComboBox(self)
-        self.find.setMinimumContentsLength(20)
-        self.find.setEditable(True)
-        self.find.editTextChanged.connect(self.master.on_text_changed)
-        self.b_next = qtw.QPushButton("", self)
-        self.b_next.clicked.connect(self.master.find_next)
-        self.b_next.setEnabled(False)
-        self.b_prev = qtw.QPushButton('', self)
-        self.b_prev.clicked.connect(self.master.find_prev)
-        self.b_prev.setEnabled(False)
-        self.b_filter = qtw.QPushButton(self.parent.editor.captions['C_FILTER'], self)
-        self.b_filter.clicked.connect(self.master.filter)
-        self.b_filter.setEnabled(False)
-        self.filter_on = False
+        sel = qtw.QComboBox(self)
+        sel.currentIndexChanged.connect(callback)
+        self._pnl = qtw.QStackedWidget(self)
+        return sel
 
     def add_subscreen(self, win):
         "add a screen to the tabbed widget"
-        self.pnl.addWidget(win.gui)
+        self._pnl.addWidget(win)
 
-    def add_to_selector(self, txt):
+    def add_to_selector(self, selector, text):
         "add an option to the selector"
-        self.sel.addItem(txt)
+        selector.addItem(text)
 
-    def format_screen(self):
-        "realize the screen"
+    def start_display(self):
+        "build the screen container"
         vbox = qtw.QVBoxLayout()
+        return vbox
+
+    def start_line(self, vbox):
+        "add a line to the screen container"
         hbox = qtw.QHBoxLayout()
+        vbox.addLayout(hbox)
+        return hbox
+
+    def add_margin_to_line(self, hbox):
+        "add the fixed margin"
         hbox.addSpacing(10)
-        self.sel_text = qtw.QLabel("", self)
-        hbox.addWidget(self.sel_text)
-        hbox.addWidget(self.sel)
+
+    def add_text_to_line(self, hbox, text=""):
+        "add a fixed text"
+        text = qtw.QLabel(text, self)
+        hbox.addWidget(text)
+        return text
+
+    def add_selector_to_line(self, hbox, widget):
+        "add the book selector to the line"
+        hbox.addWidget(widget)
+
+    def add_combobox_to_line(self, hbox, minwidth=0, editable=False, callback=None):
+        "add a combobox selector"
+        cmb = qtw.QComboBox(self)
+        if minwidth > 0:
+            cmb.setMinimumContentsLength(minwidth)
+        cmb.setEditable(editable)
+        if callback:
+            cmb.editTextChanged.connect(callback)
+        hbox.addWidget(cmb)
+        return cmb
+
+    def add_separator_to_line(self, hbox):
+        "separate the selector from the search-related widgets"
         hbox.addStretch()
-        self.find_text = qtw.QLabel("", self)
-        hbox.addWidget(self.find_text)
-        hbox.addWidget(self.find_loc)
-        hbox.addWidget(qtw.QLabel(":", self))
-        hbox.addWidget(self.find)
-        hbox.addWidget(self.b_filter)
-        hbox.addWidget(self.b_next)
-        hbox.addWidget(self.b_prev)
-        hbox.addSpacing(10)
-        vbox.addLayout(hbox)
-        hbox = qtw.QHBoxLayout()
-        hbox.addWidget(self.pnl)
-        vbox.addLayout(hbox)
 
+    def add_button_to_line(self, hbox, text, callback, enabled):
+        "add a button with the given text and callback "
+        btn = qtw.QPushButton(text, self)
+        btn.clicked.connect(callback)
+        btn.setEnabled(enabled)
+        hbox.addWidget(btn)
+        return btn
+
+    def add_list_to_line(self, hbox):
+        "add the list with keydefs to the display"
+        hbox.addWidget(self._pnl)
+
+    def finalize_display(self, vbox):
+        "realize the layout"
         self.setLayout(vbox)
-        self.setcaptions()
 
-    def setcaptions(self):
-        """update captions according to selected language
+    def setcaption(self, widget, caption):
+        "set the given widget's caption (this is intended for label fields)"
+        widget.setText(caption)
+
+    def on_pagechange(self, pagenum):  # after_changing_page(self, event):
+        """callback for change in tool page selector
         """
-        self.b_next.setText(self.parent.editor.captions['C_NEXT'])
-        self.b_prev.setText(self.parent.editor.captions['C_PREV'])
-        self.sel_text.setText(self.parent.editor.captions['C_SELPRG'])
-        self.find_text.setText(self.parent.editor.captions['C_FIND'])
-        if self.filter_on:
-            self.b_filter.setText(self.parent.editor.captions['C_FLTOFF'])
-        else:
-            self.b_filter.setText(self.parent.editor.captions['C_FILTER'])
-        with contextlib.suppress(AttributeError):  # exit button bestaat nog niet bij initialisatie
-            self.parent.b_exit.setText(self.parent.editor.captions['C_EXIT'])
+        self.master.on_page_changed(pagenum)
 
     # used by on_page_changed
     def get_panel(self):
         "return the currently selected panel's index"
-        return self.pnl.currentWidget()
+        return self._pnl.currentWidget()
 
-    def get_selected_tool(self):
-        "return the currently selected panel's name"
-        return self.sel.currentText()
+    # def get_selected_tool(self, selector):
+    #     "return the currently selected panel's name"
+    #     return selector.currentText()
+
+    def get_selected_panel(self, indx):
+        "return handle of the selected (indicated) panel"
+        # indx = self.sel.currentIndex()
+        win = self._pnl.widget(indx)
+        return win
 
     def set_selected_panel(self, indx):
         "set the index of the panel to be selected"
-        self.pnl.setCurrentIndex(indx)
-
-    def update_search(self, items):
-        "refresh the search-related widgets"
-        self.find_loc.clear()
-        self.find_loc.addItems(items)
-        self.find_loc.setCurrentText(items[-1])
-        if self.master.page.filtertext:
-            self.find.setEditText(self.master.page.filtertext)
-            self.b_filter.setText(self.parent.captions['C_FLTOFF'])
-            self.enable_search_buttons(filter=True)
-        else:
-            self.find.setEditText('')
-            self.find.setEnabled(True)
-            self.init_search_buttons()
-
-    # used by on_text_changed
-    def get_search_col(self):
-        "return the currently selected search column"
-        return self.find_loc.currentText()
-
-    def find_items(self, page, text):
-        "return the items that contain the text to search for"
-        return page.gui.p0list.findItems(text, core.Qt.MatchFlag.MatchContains, self.master.zoekcol)
-
-    def init_search_buttons(self):
-        "set the search-related buttons to their initial values (i.e. disabled)"
-        self.enable_search_buttons(next=False, prev=False, filter=False)
-
-    def set_selected_keydef_item(self, page, index):
-        "select a search result in the list"
-        item = self.master.items_found[index]
-        page.gui.p0list.setCurrentItem(item)
-        page.gui.p0list.scrollToItem(item)
-
-    def enable_search_buttons(self, next=None, prev=None, filter=None):
-        "set the appropriate search-related button(s) to the given value)s)"
-        if next is not None:
-            self.b_next.setEnabled(next)
-        if prev is not None:
-            self.b_prev.setEnabled(prev)
-        if filter is not None:
-            self.b_filter.setEnabled(filter)
-
-    # used by filter
-    def get_filter_state_text(self):
-        "return the current text of the filter button"
-        return self.b_filter.text()
-
-    def get_search_text(self):
-        "return the text to search for"
-        return self.find.currentText()
-
-    def get_found_keydef_position(self):
-        "return the position marker of the current search result"
-        item = self.master.page.gui.p0list.currentItem()
-        return item.text(0), item.text(1)
-
-    def enable_search_text(self, value):
-        "block or unblock entering/selecting a search text"
-        self.find.setEnabled(value)
-
-    def set_found_keydef_position(self):
-        "find the next search rel=sult acoording to position marker(?)"
-        for ix in range(self.master.page.gui.p0list.topLevelItemCount()):
-            item = self.master.page.gui.p0list.topLevelItem(ix)
-            if (item.text(0), item.text(1)) == self.master.reposition:
-                self.master.page.gui.p0list.setCurrentItem(item)
-                break
-
-    def set_filter_state_text(self, state):
-        "set the text for the filter button"
-        self.b_filter.setText(state)
-
-    # hulproutines t.b.v. managen bestandslocaties
-
-    def get_selected_index(self):
-        "get index of selected item"
-        return self.sel.currentIndex()
-
-    def clear_selector(self):
-        "reset selector"
-        self.sel.clear()
-
-    def remove_tool(self, indx, program, program_list):
-        """remove a tool from the confguration"""
-        win = self.pnl.widget(indx)
-        self.pnl.removeWidget(win)
-        if program in program_list:
-            return win.master  # keep the widget (will be re-added)
-        win.close()  # lose the widget
-        return None
-
-    def add_tool(self, program, win):
-        "add a tool to the configuration"
-        self.add_subscreen(win)
-        self.add_to_selector(program)
-
-    def get_new_selection(self, item):
-        "find the index to set the new selection to"
-        return self.sel.findText(item)
-
-    def set_selected_tool(self, selection):
-        "set the new selection index"
-        self.sel.setCurrentIndex(selection)
-
-    # hulproutines t.b.v. managen tool specifieke settings
-
-    def get_selected_panel(self):
-        "return index and handle of the selected panel"
-        indx = self.sel.currentIndex()
-        win = self.pnl.widget(indx)
-        return indx, win
+        self._pnl.setCurrentIndex(indx)
 
     def replace_panel(self, indx, win, newwin):
         "replace a panel with a modified version"
-        self.pnl.insertWidget(indx, newwin)
-        self.pnl.setCurrentIndex(indx)
-        self.pnl.removeWidget(win)
+        self._pnl.insertWidget(indx, newwin)
+        self._pnl.setCurrentIndex(indx)
+        self._pnl.removeWidget(win)
 
-    def set_panel_editable(self, test_redef):
-        "(re)set editability of the current panel"
-        win = self.pnl.currentWidget()
-        win.set_extrascreen_editable(test_redef)
+    # def set_panel_editable(self, test_redef):
+    #     "(re)set editability of the current panel"
+    #     win = self._pnl.currentWidget()
+    #     win.set_extrascreen_editable(test_redef)
+
+    def enable_widget(self, widget, state):
+        "make the specified widget usable (or not)"
+        widget.setEnabled(state)
+
+    # def update_search_checkbox_items(self, cmb, items):
+    def refresh_combobox(self, cmb, items=None):
+        "refill the values for the given checkbox and select the last one"
+        cmb.clear()
+        if items:
+            cmb.addItems(items)
+            cmb.setCurrentText(items[-1])
+
+    def get_combobox_value(self, cmb):
+        "return the given combobox's value"
+        return cmb.currentText()
+
+    def set_combobox_text(self, cmb, text):
+        "set the text for the given combobox"
+        cmb.setEditText(text)
+        if text:
+            cmb.setEnabled(True)
+
+    def get_combobox_index(self, cmb):
+        "get index of selected item"
+        return cmb.currentIndex()
+
+    def on_textchange(self, text):
+        """callback for change in search text selector
+        """
+        self.master.on_text_changed(text)
+
+    # used by on_text_changed
+    def get_search_col(self, cmb):
+        "return the currently selected search column"
+        return cmb.currentText()
+
+    # def get_new_selection(self, item):
+    def get_combobox_index_for_item(self, cb, item):
+        "find the index to set the new selection to"
+        # return self.sel.findText(item)
+        return cb.findText(item)
+
+    def set_combobox_index(self, selector, selection):
+        "set the new selection index"
+        selector.setCurrentIndex(selection)
+
+    # used by filter
+    def get_button_text(self, button):
+        "return the current text of the filter button"
+        return button.text()
+
+    def set_button_text(self, button, state):
+        "set the text for the filter button"
+        button.setText(state)
+
+    def find_items(self, p0list, zoekcol, text):
+        "return the items that contain the text to search for"
+        return p0list.findItems(text, core.Qt.MatchFlag.MatchContains, zoekcol)
+
+    def set_selected_keydef_item(self, p0list, items, index):
+        "select a search result in the list"
+        item = items[index]
+        p0list.setCurrentItem(item)
+        p0list.scrollToItem(item)
+
+    # def get_search_text(self):
+    #     "return the text to search for"
+    #     return self.find.currentText()
+
+    def get_found_keydef_position(self, p0list):
+        "return the position marker of the current search result"
+        item = p0list.currentItem()
+        return item.text(0), item.text(1)
+
+    def set_found_keydef_position(self, p0list, pos):
+        "find the next search rel=sult acoording to position marker(?)"
+        for ix in range(p0list.topLevelItemCount()):
+            item = p0list.topLevelItem(ix)
+            if (item.text(0), item.text(1)) == pos:
+                p0list.setCurrentItem(item)
+                break
+
+    # def clear_selector(self):
+    #     "reset selector"
+    #     self.sel.clear()
+
+    def remove_tool(self, indx, program, program_list):
+        """remove a tool from the confguration"""
+        win = self._pnl.widget(indx)
+        self._pnl.removeWidget(win)
+        if program in program_list:
+            return win.master   # keep the widget (will be re-added)
+        win.close()             # lose the widget
+        return None             # explicit return to accentuate difference
 
     # hulproutine t.b.v. managen column properties
 
-    def refresh_locs(self, headers):
-        "apply changes in the selector for `search in column`"
-        self.find_loc.clear()
-        self.find_loc.addItems(headers)
+    # def refresh_locs(self, headers):
+    #     "apply changes in the selector for `search in column`"
+    #     self.find_loc.clear()
+    #     self.find_loc.addItems(headers)
 
     # hulpfunctie t.b.v. afsluiten: bepalen te onthouden tool
 
-    def get_selected_text(self):
-        "get text of selected item"
-        return self.sel.currentText()
+    # def get_selected_text(self):
+    #     "get text of selected item"
+    #     return self.sel.currentText()
 
 
 class Gui(qtw.QMainWindow):
     """Main GUI"""
-    def __init__(self, parent=None):
-        self.editor = parent
+    def __init__(self, master):
+        self.editor = master
         self.app = qtw.QApplication(sys.argv)
         super().__init__()
         # self.init_gui()
@@ -729,21 +521,33 @@ class Gui(qtw.QMainWindow):
         self.menu_bar = self.menuBar()
         self.menuitems = {}  # []
 
-    def go(self):
-        "build and show the interface"
-        frm = qtw.QFrame(self)
+    def start_display(self):
+        "setup the screen container"
+        self._frm = qtw.QFrame(self)
         vbox = qtw.QVBoxLayout()
-        vbox.addWidget(self.editor.book.gui)
+        return vbox
+
+    def add_choicebook_to_display(self, vbox, bookgui):
+        "main portion of the interface"
+        vbox.addWidget(bookgui)
+
+    def add_exitbutton_to_display(self, vbox, buttondef):
+        "a single button at the bottom"
+        text, callback = buttondef
         hbox = qtw.QHBoxLayout()
         hbox.addStretch()
-        self.b_exit = qtw.QPushButton(self.editor.captions['C_EXIT'], self)
-        self.b_exit.clicked.connect(self.editor.exit)
-        self.b_exit.setDefault(True)
-        hbox.addWidget(self.b_exit)
+        btn = qtw.QPushButton(text, self)
+        btn.clicked.connect(callback)
+        btn.setDefault(True)
+        hbox.addWidget(btn)
         hbox.addStretch()
         vbox.addLayout(hbox)
-        frm.setLayout(vbox)
-        self.setCentralWidget(frm)
+        return btn
+
+    def go(self, vbox):
+        "finish and show the interface"
+        self._frm.setLayout(vbox)
+        self.setCentralWidget(self._frm)
         self.show()
         sys.exit(self.app.exec())
 
@@ -805,7 +609,7 @@ class Gui(qtw.QMainWindow):
             act.setEnabled(self.editor.book.page.settings.get(shared.SettType.RDEF.value, False))
         return act
 
-    def setcaptions(self):
+    def update_menutitles(self):
         "set title for menuitem or action"
         for menu, item in self.menuitems.items():
             try:
