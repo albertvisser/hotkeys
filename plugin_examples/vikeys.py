@@ -7,7 +7,7 @@ import string
 import pathlib
 import contextlib
 import collections
-from .vikeys_gui import layout_extra_fields_topline
+# from .vikeys_gui import layout_extra_fields_topline
 CONTEXTS = ['Normal mode', 'Insert mode', 'Visual mode', 'Command-line editing']
 KINDS = ['Window commands', 'Text objects']
 EXCMD = "EX commands"
