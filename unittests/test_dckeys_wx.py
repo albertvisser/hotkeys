@@ -12,10 +12,10 @@ def test_layout_extra_fields(monkeypatch, capsys):
                                 cmb_controls='combobox')
     testee.layout_extra_fields(win, layout)
     assert capsys.readouterr().out == (
-            "called BoxSizer.__init__ with args ('',)\n"
-            "called FlexGridSizer.__init__ with args (2, 2, 2) {}\n"
-            f"called FlexGridSizer.Add with args <item> (0, {testee.wx.ALIGN_CENTER_VERTICAL})\n"
-            f"called FlexGridSizer.Add with args <item> (1, {testee.wx.EXPAND})\n"
-            f"called FlexGridSizer.Add with args <item> (0, {testee.wx.ALIGN_CENTER_VERTICAL})\n"
-            f"called FlexGridSizer.Add with args <item> (1, {testee.wx.EXPAND})\n"
-            f"called  sizer.Add with args <item> (0, {testee.wx.LEFT}, 5)\n")
+        "called BoxSizer.__init__ with args ('',)\n"
+        "called FlexGridSizer.__init__ with args (2, 2, 2) {}\n"
+        f"called FlexGridSizer.Add with args ('parms', 0, {testee.wx.ALIGN_CENTER_VERTICAL})\n"
+        f"called FlexGridSizer.Add with args ('parmstxt', 1, {testee.wx.EXPAND})\n"
+        f"called FlexGridSizer.Add with args ('controls', 0, {testee.wx.ALIGN_CENTER_VERTICAL})\n"
+        f"called FlexGridSizer.Add with args ('combobox', 1, {testee.wx.EXPAND})\n"
+        f"called  sizer.Add with args MockFlexGridSizer (0, {testee.wx.LEFT}, 5)\n")
