@@ -108,7 +108,7 @@ class InitialToolDialog(wx.Dialog):
         hbox.Add(self.check_fixed, 0, wx.LEFT | wx.ALIGN_CENTER_VERTICAL, 5)
         self.sel_fixed = wx.ComboBox(self, size=(140, -1), style=wx.CB_DROPDOWN, choices=choices)
         self.sel_fixed.SetValue(oldpref)
-        hbox.Add(self.sel_fixed, 0, wx.ALIGN_RIGHT | wx.RIGHT, 5)
+        hbox.Add(self.sel_fixed, 0, wx.RIGHT, 5)
         vbox.Add(hbox, 0, wx.TOP, 2)
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         self.check_remember = wx.RadioButton(self, label=self.master.captions["T_RMBR"])
@@ -496,8 +496,7 @@ class ColumnSettingsDialog(wx.Dialog):
         hbox.Add(btn)
         hbox.Add(wx.Button(self, id=wx.ID_OK))
         hbox.Add(wx.Button(self, id=wx.ID_CANCEL))
-        self.sizer.Add(hbox, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_BOTTOM | wx.TOP | wx.BOTTOM,
-                       2)
+        self.sizer.Add(hbox, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.TOP | wx.BOTTOM, 2)
         self.sizer.SetSizeHints(self)
         self.SetSizer(self.sizer)
         self.initializing = False
@@ -937,7 +936,7 @@ class EntryDialog(wx.Dialog):
         hbox.Add(btn)
         hbox.Add(wx.Button(self, id=wx.ID_OK))
         hbox.Add(wx.Button(self, id=wx.ID_CANCEL))
-        self.sizer.Add(hbox, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_BOTTOM | wx.BOTTOM, 2)
+        self.sizer.Add(hbox, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.BOTTOM, 2)
         # self.sizer.SetSizeHints(self)
         self.SetSizer(self.sizer)
 
@@ -995,7 +994,7 @@ class CompleteDialog(wx.Dialog):
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         hbox.Add(wx.Button(self, id=wx.ID_OK))
         hbox.Add(wx.Button(self, id=wx.ID_CANCEL))
-        self.sizer.Add(hbox, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_BOTTOM | wx.BOTTOM, 2)
+        self.sizer.Add(hbox, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.BOTTOM, 2)
         self.SetSizer(self.sizer)
 
     def accept(self):
