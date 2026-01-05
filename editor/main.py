@@ -951,7 +951,7 @@ class ChoiceBook:
         if self.parent.book is None:        # leaving: not done setting up this object yet?
             # this can happen when the page_changed callback is being set up during __init__
             return
-        win = self.gui.get_panel()
+        win = self.gui.get_selected_panel()
         if win is None:                     # leaving: no page selected yet
             return
         self.page = win.master              # set to old selection
@@ -963,7 +963,7 @@ class ChoiceBook:
             # self.gui.get_selected_tool(self.sel)))
             self.gui.get_combobox_value(self.sel)))
         self.gui.set_selected_panel(indx)
-        win = self.gui.get_panel()
+        win = self.gui.get_selected_panel()
         self.page = win.master              # change to new selection
         self.parent.gui.setup_menu()
         if not all((self.page.settings, self.page.column_info, self.page.data)):
@@ -1198,7 +1198,7 @@ class Editor:
         current_paths = [y for x, y in self.ini["plugins"]]
 
         self.last_added = None  # wordt in de hierna volgende dialoog ingesteld
-        if gui.show_dialog(self, gui.FilesDialog):
+        if gui.show_dialog(FilesDialog(self).gui):
             # selection = self.book.gui.get_selected_index()
             selection = self.book.gui.get_combobox_index(self.book.sel)
             write_config(self.ini)
@@ -1259,63 +1259,6 @@ class Editor:
                 win = HotkeyPanel(self.book, loc)
             self.book.add_tool(program, win)
 
-    def accept_pathsettings(self, name_path_list, settingsdata, names_to_remove):
-        """check and confirm input from FilesDialog
-        """
-        # last_added leegmaken als deze niet meer bestaat
-        if self.last_added not in [x[0] for x in name_path_list]:
-            self.last_added = ''
-
-        # when setting is 'fixed', don't remember a startup tool that is removed from the config
-        # moet dit niet wachten tot na de controles? En is die write (dan) wel nodig?
-        mode = self.ini.get("startup", '')
-        pref = self.ini.get("initial", '')
-        if mode == shared.mode_f and pref not in [x[0] for x in self.ini['plugins']]:
-            self.ini['startup'] = shared.mode_r
-            write_config(self.ini)  # self.change_setting('startup', oldmode, mode)
-
-        for entry in name_path_list:
-            name, datafilename = entry
-            if name not in [x for x, y in self.ini['plugins']]:
-                if not self.check_plugin_settings(name, datafilename, settingsdata[name]):
-                    return False
-                self.pluginfiles[name] = settingsdata[name][0]
-        for filename in names_to_remove:
-            os.remove(normalize_cloc(filename))
-        newpathdata = {name: entry for name, entry in settingsdata.items() if len(entry) > 1}
-        self.ini["plugins"] = update_paths(name_path_list, newpathdata)  # , self.ini["lang"])
-        return True
-
-    def check_plugin_settings(self, name, datafilename, settingsdata):
-        """check if data for the plugin was entered correctly and is usable
-        """
-        if not datafilename:
-            gui.show_message(self.gui, text=self.captions['I_FILLALL'])
-            return False
-        prgname = settingsdata[0]
-        if not prgname:
-            # try to get the plugin name from the keydef file
-            try:
-                data = readjson(datafilename)
-            except (FileNotFoundError, IsADirectoryError, ValueError):
-                # shared.log_exc()
-                gui.show_message(self.gui, text=self.captions['I_NOKDEF'].format(datafilename))
-                return False
-            try:
-                prgname = data[0][shared.SettType.PLG.value]
-            except KeyError:
-                # shared.log_exc()
-                gui.show_message(self.gui, text=self.captions['I_NOPLNAM'].format(datafilename))
-                return False
-        if len(settingsdata) == 1:  # existing plugin
-            try:
-                _ = importlib.import_module(prgname)
-            except ImportError:
-                # shared.log_exc()
-                gui.show_message(self.gui, text=self.captions['I_NOPLREF'].format(datafilename))
-                return False
-        return True
-
     def m_rebuild(self, event=None):
         """rebuild keydef data from (updated) settings
         """
@@ -1348,22 +1291,6 @@ class Editor:
             mld = self.captions['I_NORBLD'].format(self.captions['I_#FOUND'].format(mld))
         gui.show_message(self.gui, text=mld)
 
-    def accept_pluginsettings(self, cloc, ploc, title, rebuild, details, redef):
-        """check and confirm input from SetupDialog
-        """
-        if cloc == "":
-            gui.show_message(self.gui, 'I_NEEDNAME')
-            return False
-        cloc = normalize_cloc(cloc)
-        if os.path.exists(cloc):
-            gui.show_message(self.gui, 'I_GOTSETFIL', args=[cloc])
-            return False
-        if importlib.util.find_spec(ploc):
-            gui.show_message(self.gui, 'I_GOTPLGFIL', args=[ploc])
-            return False
-        self.gui.data = [cloc, ploc, title, int(rebuild), int(details), int(redef)]
-        return True
-
     def m_tool(self, event=None):
         """define tool-specific settings
         """
@@ -1372,7 +1299,7 @@ class Editor:
                 self.book.page.settings[x] = '' if i < 2 else False
         old_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
         # #1050 is bedoeld om de omzetting bool(int(...)) overbodig te maken
-        if gui.show_dialog(self, gui.ExtraSettingsDialog):
+        if gui.show_dialog(ExtraSettingsDialog(self).gui):
             writejson(self.book.page.pad, self.book.page.reader, self.book.page.settings,
                       self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
             # new_redef = bool(int(self.book.page.settings[shared.SettType.RDEF.value]))
@@ -1384,59 +1311,15 @@ class Editor:
             self.gui.modify_menuitem('M_SAVE', new_redef)
             self.gui.modify_menuitem('M_RBLD', new_rbld)
             indx = self.book.gui.get_combobox_index(self.book.sel)
-            win = self.book.gui.get_selected_panel(indx)
+            win = self.book.gui.get_panel(indx)
             if new_dets != self.book.page.has_extrapanel:
                 self.book.page.has_extrapanel = new_dets
                 newwin = HotkeyPanel(self.book, self.ini["plugins"][indx][1]).gui
                 self.book.gui.replace_panel(indx, win, newwin)
             elif new_redef != old_redef and new_dets:
                 # self.book.gui.set_panel_editable(new_redef)
-                sdi = self.book.gui.get_panel()
+                sdi = self.book.gui.get_selected_panel()
                 sdi.set_extrapanel_editable(sdi.screenfields, [sdi.b_save, sdi.b_del], new_redef)
-
-    def accept_extrasettings(self, program, title, rebuild, showdet, redef, data):
-        "check and confirm the input from ExtraSettingsDialog"
-        if redef and not showdet:
-            gui.show_message(self.gui, "I_NODET")
-            return False
-        if showdet:
-            if not hasattr(self.book.page.reader, 'add_extra_attributes'):
-                shared.log_exc()
-                gui.show_message(self.gui, "I_IMPLXTRA")
-                return False
-        self.book.page.settings[shared.SettType.PLG.value] = program
-        self.book.page.settings[shared.SettType.PNL.value] = title
-        if self.book.page.title != title:
-            self.book.page.title = title
-            self.book.page.set_title()
-        # self.book.page.settings[shared.SettType.RBLD.value] = '1' if rebuild else '0'
-        # self.book.page.settings[shared.SettType.DETS.value] = '1' if showdet else '0'
-        # self.book.page.settings[shared.SettType.RDEF.value] = '1' if redef else '0'
-        # #1050 realiseren zou dit moeten vereenvoudigen tot
-        self.book.page.settings[shared.SettType.RBLD.value] = rebuild
-        self.book.page.settings[shared.SettType.DETS.value] = showdet
-        self.book.page.settings[shared.SettType.RDEF.value] = redef
-
-        settingsdict, settdescdict = {}, {}
-        for name, value, desc in data:
-            settingsdict[name] = value
-            settdescdict[name] = desc
-        self.remove_custom_settings()
-        self.book.page.settings.update(settingsdict)
-        self.book.page.settings['extra'] = settdescdict
-        return True
-
-    def remove_custom_settings(self):
-        """keep only settingtypes that are globally defined
-
-        non-globally defined settingtypes that are needed will be restored when merging them back in
-        """
-        todelete = []
-        for setting in self.book.page.settings:
-            if setting not in shared.settingnames:
-                todelete.append(setting)
-        for setting in todelete:
-            del self.book.page.settings[setting]
 
     def m_col(self, event=None):
         """define tool-specific settings: column properties
@@ -1446,7 +1329,7 @@ class Editor:
             gui.show_message(self.gui, 'I_ADDSET')
             return
         oldcolcount = len(self.book.page.column_info)
-        if not gui.show_dialog(self, gui.ColumnSettingsDialog):
+        if not gui.show_dialog(ColumnSettingsDialog(self).gui):
             return
         # if [x[:-1] for x in self.book.page.new_column_info] == self.book.page.column_info:
         if self.new_column_info == self.book.page.column_info:
@@ -1481,120 +1364,13 @@ class Editor:
             new_pagedata[key] = newvalue
         return new_pagedata
 
-    def accept_columnsettings(self, data):
-        "check and confirm input from columnsettings dialog"
-        # breakpoint()
-        # print(f"in accept_columnsettings, {data=}", flush=True)
-        column_info, new_titles = [], []
-        # checken op dubbele en vergeten namen
-        test = [x[0] for x in data]
-        if len(set(test)) != len(test):
-            gui.show_message(self.gui, 'I_DPLNAM')
-            return False, False  # not ok but continue with dialog
-        if not all(test):
-            gui.show_message(self.gui, 'I_MISSNAM')
-            return False, False  # not ok but continue with dialog
-        # checken op dubbele kolomnummers
-        test = [x[3] for x in data]
-        if len(set(test)) != len(test):
-            gui.show_message(self.gui, 'I_DPLCOL')
-            return False, False  # not ok but continue with dialog
-        # colno wordt alleen gebruikt voor het sorteren
-        # old_colno hebben we nog nodig voor build_new_pagedata
-        column_info = sorted(data, key=lambda x: x[2])
-        for value in column_info:
-            if value[0] not in self.col_names:
-                new_titles.append(value[0])
-        self.new_column_info = column_info
-        # for value in self.new_column_info:
-        for ix, value in enumerate(self.new_column_info):
-            if value[0] in self.col_names:
-                # value = (self.col_textids[self.col_names.index(value[0])], value[1:])
-                self.new_column_info[ix] = (self.col_textids[self.col_names.index(value[0])],
-                                            *value[1:])
-        if new_titles:
-            canceled, titles, colinfo = self.build_new_title_data(new_titles, column_info)
-            if canceled:
-                # gui.show_message(self.gui, 'T_CANCLD')
-                return False, True  # not ok, do not continue with dialog
-            for id_, name in titles:
-                self.captions[id_] = name
-                self.book.page.captions[id_] = name
-                # for value in self.new_column_info:
-                for ix, value in enumerate(self.new_column_info):
-                    if value[0] == name:
-                        # value = (id_, value[1:])
-                        self.new_column_info[ix] = (id_, *value[1:])
-        # print(f"in accept_columnsettings, {self.new_column_info=}", flush=True)
-        return True, False  # ok, done with dialog (but not canceled)
-
-    def build_new_title_data(self, new_titles, column_info):
-        """ask for column details, ids for new titles etc.
-        """
-        languages = [x.name for x in shared.HERELANG.iterdir() if x.suffix == ".lng"]
-        languages.sort()
-        for indx, name in enumerate(languages):
-            if name == self.ini['lang']:
-                colno = indx + 1
-                break
-        else:
-            colno = -1  # no languages defined: not possible here
-        self.dialog_data = {'textid': 'C_XXX', 'new_titles': new_titles,
-                            'languages': languages, 'colno': colno}
-        if not gui.show_dialog(self, gui.NewColumnsDialog):
-            return True, None, None  # dialog was canceled
-        for item in column_info:
-            for key, value in self.dialog_data[self.ini['lang']].items():
-                if item[0] == value:
-                    item[0] = key
-                    break
-        add_columntitledata(self.dialog_data)
-        for ix, item in enumerate(new_titles):
-            for name, value in self.dialog_data[self.ini['lang']].items():
-                if value == item:
-                    new_titles[ix] = (name, item)
-                    break
-        return False, new_titles, column_info  # not canceled
-
-    def accept_newcolumns(self, entries):
-        "check and confirm input from newcolumns dialog"
-        languages = self.dialog_data['languages']
-        modeltext = self.dialog_data['textid']
-        # get all the symbols from a language file
-        used_symbols = []
-        with (shared.HERELANG / self.ini['lang']).open() as _in:
-            for line in _in:
-                if line.strip() and not line.startswith('#'):
-                    used_symbols.append(line.split()[0])
-        # check and process the information entered
-        # print('accepting', entries)
-        self.dialog_data = collections.defaultdict(dict)
-        for row in entries:
-            for colno, col in enumerate(row):
-                entered = col
-                if not entered:
-                    gui.show_message(self.gui, 'T_NOTALL')
-                    return False
-                if colno == 0:
-                    if entered == modeltext:
-                        gui.show_message(self.gui, 'T_CHGSTD')
-                        return False
-                    if entered in used_symbols:
-                        gui.show_message(self.gui, 'T_NOTUNIQ', args=(entered,))
-                        return False
-                    used_symbols.append(entered)
-            for ix, col in enumerate(row[1:]):
-                # self.dialog_data[row[0]][self.languages[ix]] = col
-                self.dialog_data[languages[ix]][row[0]] = col
-        return True
-
     def m_entry(self, event=None):
         """manual entry of keyboard shortcuts
         """
         if not all((self.book.page.settings, self.book.page.column_info)):
             gui.show_message(self.gui, 'I_ADDCOL')
             return
-        if gui.show_dialog(self, gui.EntryDialog) and self.book.page.data:
+        if gui.show_dialog(EntryDialog(self).gui) and self.book.page.data:
             writejson(self.book.page.pad, self.book.page.reader, self.book.page.settings,
                       self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
             self.book.page.populate_list(self.book.page.p0list)
@@ -1608,7 +1384,7 @@ class Editor:
         if not hasattr(self.book.page.reader, 'update_descriptions'):
             gui.show_message(self.gui, 'I_NOMETH')
             return
-        if gui.show_dialog(self, gui.CompleteDialog):
+        if gui.show_dialog(CompleteDialog(self).gui):
             self.book.page.reader.update_descriptions(self.book.page, self.dialog_data)
             writejson(self.book.page.pad, self.book.page.reader, self.book.page.settings,
                       self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
@@ -1647,7 +1423,7 @@ class Editor:
         oldmode = self.ini.get("startup", None)
         oldpref = self.ini.get("initial", None)
         self.prefs = oldmode, oldpref
-        if gui.show_dialog(self, gui.InitialToolDialog):
+        if gui.show_dialog(InitialToolDialog(self).gui):
             changed = False
             mode, pref = self.prefs  # can be modified in the dialog
             mode = mode or oldmode
@@ -1658,17 +1434,6 @@ class Editor:
                 changed = changed or pref != oldpref  # True
             if changed:
                 write_config(self.ini)
-
-    def accept_startupsettings(self, fix, remember, pref):
-        """check and confirm input from initialToolDialog
-        """
-        if fix:
-            mode = shared.mode_f
-        elif remember:
-            mode = shared.mode_r
-        else:
-            mode = None
-        self.prefs = mode, pref
 
     def m_exit(self, event=None):
         """(menu) callback om het programma direct af te sluiten
@@ -1734,3 +1499,607 @@ class Editor:
         self.gui.update_menutitles()
         self.book.setcaptions()
         self.book.page.setcaptions()
+
+
+class InitialToolDialog:
+    """dialog to define which tool to show on startup
+    """
+    def __init__(self, parent):
+        self.parent = parent
+        oldmode, oldpref = parent.prefs
+        choices = [x[0] for x in parent.ini["plugins"]]
+        indx = choices.index(oldpref) if oldpref in choices else 0
+
+        self.gui = gui.InitialToolDialogGui(self, parent.gui, parent.title)
+        self.gui.add_text(parent.captions['M_PREF'])
+        self.check_fixed, self.sel_fixed = self.gui.add_radiobutton_line(
+            parent.captions['T_FIXED'], checked=oldmode == shared.mode_f, choices=choices,
+            indx=indx)
+        self.check_remember = self.gui.add_radiobutton_line(parent.captions['T_RMBR'],
+                                                            checked=oldmode == shared.mode_r)[0]
+        self.gui.add_okcancel_buttons()
+
+    def confirm(self):
+        """check and confirm input from initialToolDialog
+        """
+        if self.gui.get_radiobutton_value(self.check_fixed):
+            mode = shared.mode_f
+        elif self.gui.get_radiobutton_value(self.check_remember):
+            mode = shared.mode_r
+        else:
+            mode = None
+        self.parent.prefs = mode, self.gui.get_combobox_value(self.sel_fixed)
+        self.gui.accept()
+        return True
+
+
+class FilesDialog:
+    """dialoog met meerdere FileBrowseButtons
+
+    voor het instellen van de bestandslocaties
+    """
+    def __init__(self, parent):
+        self.parent = parent
+        self.gui = gui.FilesDialogGui(self, parent.gui, parent.title)
+        self.gui.add_explanation('\n'.join(parent.captions['T_TOOLS'].split(' / ')))
+        self.gui.add_captions([(parent.captions['C_PRGNAM'], 36), (parent.captions['C_KDEFLOC'], 84)])
+        self.scrl = self.gui.add_locationbrowserarea()
+        self.plugindata = []
+        self.checks = []
+        # self.paths = []
+        self.progs = []
+        self.settingsdata = {}
+        # settingsdata is een mapping van pluginnaam op een tuple van programmanaam en
+        # andere settings (alleen als er een nieuw keydef file voor moet worden aangemaakt)
+        for name, path in parent.ini["plugins"]:
+            check, browse = self.gui.add_row(name, path)
+            # self.checks.append(check)
+            # self.paths.append((name, browse))
+            self.checks.append((check, name, browse))
+            self.settingsdata[name] = (parent.pluginfiles[name],)
+        self.gui.finish_browserarea()
+        self.gui.add_buttons([(parent.captions['C_ADDPRG'], self.add_program),
+                              (parent.captions['C_REMPRG'], self.remove_programs),
+                              ('ok', self.gui.accept), ('cancel', self.gui.reject)])
+        self.gui.finish_display()
+
+    def add_program(self, *args):
+        """nieuwe rij aanmaken in self.gsizer"""
+        newtool, ok = gui.get_textinput(self, '', self.parent.captions['P_NEWPRG'])
+        if ok:
+            if newtool == "":
+                gui.show_message(self.parent, 'I_NEEDNAME')
+                return
+            self.last_added = newtool
+            dataloc = prgloc = ""
+            self.settingsdata[newtool] = (prgloc,)
+            if gui.ask_question(self.parent, 'P_INIKDEF'):
+                ok = gui.show_dialog(SetupDialog(self, newtool).gui)
+                if ok:
+                    self.settingsdata[newtool] = self.parent.data[1:]
+                    prgloc = self.parent.data[1]
+                    dataloc = self.parent.data[0]
+                    self.gui.add_row(newtool, path=dataloc,
+                                     buttoncaption=self.parent.captions['C_BRWS'],
+                                     dialogtitle=self.parent.captions['C_SELFIL'], tooltiptext="")
+
+    def remove_programs(self, *args):
+        """alle aangevinkte items verwijderen uit self.gsizer"""
+        checked = []
+        for x, y in enumerate(self.checks):
+            # if is_checked := self.gui.get_checkbox_value(y):
+            #     checked.append(x, is_checked)
+            if is_checked := self.gui.get_checkbox_value(y[0]):
+                checked.append((x, is_checked, y[1], self.gui.get_browser_value(y[2])))
+        if checked:
+            ok = gui.show_dialog(DeleteDialog(self).gui)
+            if ok:
+                # for row, name in reversed(checked):  # reversed niet nodig als ik checked niet aanpas
+                for row, check, name, path in reversed(checked):
+                    keydef_name, prg_name = '', ''
+                    # keydef_name = self.gui.get_browser_value(self.paths[row][1])
+                    keydef_name = path
+                    prg_name = self.settingsdata[name][0]
+                    if self.remove_data and keydef_name:  # kan keydef_name wel leeg zijn?
+                        self.data_to_remove.append(keydef_name)
+                    if self.remove_code and prg_name:     # kan prg_name wel leeg zijn?
+                        self.code_to_remove.append(prg_name.replace('.', '/') + '.py')
+                    # check = self.checks[row]
+                    # name, browse = self.paths[row]
+                    check, name, browse = self.checks[row]
+                    self.gui.delete_row(row, check, browse)
+                    self.checks.pop(row)
+                    # self.paths.pop(row)
+                    self.settingsdata.pop(name)
+
+    def confirm(self):
+        """check and confirm input from FilesDialog
+        """
+        name_path_list = [(x, self.gui.get_browser_value(y)) for x, y in self.paths]
+        settingsdata = self.settingsdata
+        names_to_remove = self.code_to_remove + self.data_to_remove
+        # last_added leegmaken als deze niet meer bestaat
+        if self.last_added not in [x[0] for x in name_path_list]:
+            self.last_added = ''
+
+        for entry in name_path_list:
+            name, datafilename = entry
+            if name not in [x for x, y in self.ini['plugins']]:
+                if not self.check_plugin_settings(name, datafilename, settingsdata[name]):
+                    return False
+                self.pluginfiles[name] = settingsdata[name][0]
+        for filename in names_to_remove:
+            os.remove(normalize_cloc(filename))
+        newpathdata = {name: entry for name, entry in settingsdata.items() if len(entry) > 1}
+        self.ini["plugins"] = update_paths(name_path_list, newpathdata)  # , self.ini["lang"])
+
+        # when setting is 'fixed', don't remember a startup tool that is removed from the config
+        # dit stond eerst vóór de controles maar moet volgens mij erna?
+        mode = self.ini.get("startup", '')
+        pref = self.ini.get("initial", '')
+        if mode == shared.mode_f and pref not in [x[0] for x in self.ini['plugins']]:
+            self.ini['startup'] = shared.mode_r
+        return True
+
+    def check_plugin_settings(self, name, filename, settingsdata):
+        """check if data for the plugin was entered correctly and is usable
+        """
+        if not filename:
+            gui.show_message(self.gui, text=self.parent.captions['I_FILLALL'])
+            return False
+        prgname = settingsdata[0]
+        if not prgname:
+            # try to get the plugin name from the keydef file
+            try:
+                data = readjson(filename)
+            except (FileNotFoundError, IsADirectoryError, ValueError):
+                gui.show_message(self.gui, text=self.parent.captions['I_NOKDEF'].format(filename))
+                return False
+            try:
+                prgname = data[0][shared.SettType.PLG.value]
+            except KeyError:
+                gui.show_message(self.gui, text=self.parent.captions['I_NOPLNAM'].format(filename))
+                return False
+        if len(settingsdata) == 1:  # existing plugin
+            try:
+                _ = importlib.import_module(prgname)
+            except ImportError:
+                gui.show_message(self.gui, text=self.parent.captions['I_NOPLREF'].format(filename))
+                return False
+        return True
+
+
+class SetupDialog:
+    """dialoog voor het opzetten van een keydef bestand
+
+    geeft de mogelijkheid om alvast wat instellingen vast te leggen en zorgt er
+    tevens voor dat het correcte formaat gebruikt wordt
+    """
+    def __init__(self, parent, name):
+        # FIXME: parent captions gaat hier niet werken, parent.parent.captions wel maar: LELIJK
+        self.gui = gui.SetupDialogGui(self, parent.gui, parent.captions['T_INIKDEF'])
+        text = parent.captions['T_NAMOF'].format(parent.captions['S_PLGNAM'].lower(),
+                                                 parent.captions['T_ISMADE'])
+        self.t_program = self.gui.add_textinput_line(text, f'editor.plugins.{name.lower()}_keys')
+        text = parent.captions['S_PNLNAM']
+        self.t_title = self.gui.add_textinput_line(text, f'{name} hotkeys')
+        self.c_rebuild = self.gui.add_checkbox_line(
+            parent.captions['T_MAKE'].format(parent.captions['S_RBLD']))
+        self.c_details = self.gui.add_checkbox_line(parent.captions['S_DETS'])
+        self.c_redef = self.gui.add_checkbox_line(
+            parent.captions['T_MAKE'].format(parent.captions['S_RSAV']))
+        text = parent.captions['Q_SAVLOC']
+        suggest = os.path.join('editor', 'plugins', f"{name}_hotkeys.json")
+        self.t_loc = self.gui.add_filebrowse_line(text, suggest,
+                                                  buttoncaption=parent.captions['C_BRWS'],
+                                                  dialogtitle=parent.captions['C_SELFIL'],
+                                                  tooltiptext="")
+        self.gui.add_okcancel_buttons()
+
+    def confirm(self):
+        """check and confirm input from SetupDialog
+        """
+        cloc = self.gui.get_filebrowse_value(self.t_loc)
+        ploc = self.gui.get_textinput_value(self.t_program)
+        title = self.gui.get_textinput_value(self.t_title)
+        rebuild = self.gui.get_checkbox_value(self.c_rebuild)
+        details = self.gui.get_checkbox_value(self.c_details)
+        redef = self.gui.get_checkbox_value(self.c_redef)
+        if cloc == "":
+            gui.show_message(self.gui, 'I_NEEDNAME')
+            return False
+        cloc = normalize_cloc(cloc)
+        if os.path.exists(cloc):
+            gui.show_message(self.gui, 'I_GOTSETFIL', args=[cloc])
+            return False
+        if importlib.util.find_spec(ploc):
+            gui.show_message(self.gui, 'I_GOTPLGFIL', args=[ploc])
+            return False
+        # nawee van #1050: omzetting bool(int(settng)) overbodig naken
+        # self.gui.data = [cloc, ploc, title, int(rebuild), int(details), int(redef)]
+        self.gui.data = [cloc, ploc, title, rebuild, details, redef]
+        return True
+
+
+class DeleteDialog:
+    """dialog for deleting a tool from the collection
+    """
+    def __init__(self, parent):
+        self.parent = parent
+        self.gui = gui.DeleteDialogGui(self, parent.gui, parent.title)
+        self.gui.add_text_line(parent.captions['Q_REMPRG'])
+        self.remove_keydefs = self.gui.add_checkbox_line(parent.captions['Q_REMKDEF'])
+        self.remove_plugins = self.gui.add_checkbox_line(parent.captions['Q_REMPLG'])
+        self.gui.add_okcancel_buttons()
+
+    def confirm(self):
+        "check and confirm input"
+        self.parent.remove_data = self.gui.get_checkbox_value(self.remove_keydefs)
+        self.parent.remove_code = self.gui.get_checkbox_value(self.remove_plugins)
+        return True
+
+
+class ColumnSettingsDialog:
+    """dialoog voor invullen tool specifieke instellingen
+    """
+    def __init__(self, parent):
+        self.parent = parent
+        self.initializing = True
+        self.gui = gui.ColumnSettingsDialogGui(self, parent.gui, parent.title)
+        text = parent.captions['T_COLSET'].format(
+            parent.book.page.settings[shared.SettType.PNL.value])
+        self.gui.add_explanation(text)
+        self.gui.add_captions([(parent.captions['C_TTL'], 41), (parent.captions['C_WID'], 102),
+                               (parent.captions['C_IND'], 8), (parent.captions['C_SEQ'], 0)])
+        # wx: 36, 137 (was 82), 100 (was 84), 44
+        self.scrl = self.gui.add_columndefs_area()
+        self.data, self.checks = [], []
+        self.rownum = -1
+        self.col_textids, self.col_names = parent.col_textids, parent.col_names
+        for item in parent.book.page.column_info:
+            self.add_row_to_display(*item)
+        self.gui.finalize_columndefs_area(self.scrl)
+        self.gui.add_buttons([(parent.captions['C_ADDCOL'], self.add_columndef),
+                              (parent.captions['C_REMCOL'], self.remove_columndefs),
+                              ('ok', self.gui.accept), ('cancel', self.gui.reject)])
+        self.initializing = False
+
+    def add_columndef(self):
+        """ruimte maken voor nieuwe kolom definitie
+        """
+        self.add_row_to_display()
+
+    def add_row_to_display(self, *columnsettings):
+        """nieuwe rij aanmaken in self.gsizer"""
+        self.rownum += 1
+        check = self.gui.add_checkbox_to_line(self.rownum, 0, '', 0, 0, 0)
+        selected = self.col_textids.index(columnsettings[0]) + 1 if columnsettings else 0
+        name = self.gui.add_combobox_to_line(self.rownum, 1, self.col_names, selected)
+        value = columnsettings[1] if columnsettings else 0
+        width = self.gui.add_spinbox_to_line(self.rownum, 2, value, (1, 999), 48, (20, 20))
+        value = columnsettings[2] if columnsettings else ''
+        colno = self.gui.add_checkbox_to_line(self.rownum, 3, value, 32, 40, 24)
+        flag = self.gui.add_spinbox_to_line(self.rownum, 4, self.rownum, (0, 99), 36, (68, 0))
+        self.gui.finalize_line(self.scrl, check)
+        self.checks.append(check)
+        old_colno = "new" if not columnsettings else colno
+        self.data.append((name, width, colno, flag, old_colno))
+
+    def remove_columndefs(self):
+        """alle aangevinkte items verwijderen uit self.gsizer"""
+        test = [self.gui.get_checkbox_value(x) for x in self.checks]
+        checked = [x for x, y in enumerate(test) if y]
+        if not any(test):
+            return
+        if gui.ask_question(self.parent, 'Q_REMCOL'):
+            for rownum in reversed(checked):
+                check = self.checks.pop(rownum)
+                data = self.data.pop(rownum)
+                for line in self.data:
+                    self.gui.adapt_column_index(data[2], line[2])
+                self.gui.delete_row(rownum, check, data)
+
+    def confirm(self):
+        "check and confirm input from columnsettings dialog"
+        data = [(self.gui.get_combobox_value(x), self.gui.get_spinbox_value(y),
+                 self.gui.get_checkbox_value(a), self.gui.get_spinbox_value(b) - 1, c)
+                for x, y, a, b, c in self.data]
+        column_info, new_titles = [], []
+        # checken op dubbele en vergeten namen
+        test = [x[0] for x in data]
+        if len(set(test)) != len(test):
+            gui.show_message(self.gui, 'I_DPLNAM')
+            return False
+        if not all(test):
+            gui.show_message(self.gui, 'I_MISSNAM')
+            return False
+        # checken op dubbele kolomnummers
+        test = [x[3] for x in data]
+        if len(set(test)) != len(test):
+            gui.show_message(self.gui, 'I_DPLCOL')
+            return False
+        # colno wordt alleen gebruikt voor het sorteren
+        # old_colno hebben we nog nodig voor build_new_pagedata
+        column_info = sorted(data, key=lambda x: x[2])
+        for value in column_info:
+            if value[0] not in self.col_names:
+                new_titles.append(value[0])
+        self.new_column_info = column_info
+        # for value in self.new_column_info:
+        for ix, value in enumerate(self.new_column_info):
+            if value[0] in self.col_names:
+                # value = (self.col_textids[self.col_names.index(value[0])], value[1:])
+                self.new_column_info[ix] = (self.col_textids[self.col_names.index(value[0])],
+                                            *value[1:])
+        if new_titles:
+            canceled, titles, colinfo = self.build_new_title_data(new_titles, column_info)
+            if canceled:
+                return False
+            for id_, name in titles:
+                self.captions[id_] = name
+                self.book.page.captions[id_] = name
+                # for value in self.new_column_info:
+                for ix, value in enumerate(self.new_column_info):
+                    if value[0] == name:
+                        # value = (id_, value[1:])
+                        self.new_column_info[ix] = (id_, *value[1:])
+        # print(f"in accept_columnsettings, {self.new_column_info=}", flush=True)
+        return True
+
+    def build_new_title_data(self, new_titles, column_info):
+        """ask for column details, ids for new titles etc.
+        """
+        languages = [x.name for x in shared.HERELANG.iterdir() if x.suffix == ".lng"]
+        languages.sort()
+        for indx, name in enumerate(languages):
+            if name == self.parent.ini['lang']:
+                colno = indx + 1
+                break
+        else:
+            colno = -1  # no languages defined: not really possible
+        self.dialog_data = {'textid': 'C_XXX', 'new_titles': new_titles,
+                            'languages': languages, 'colno': colno}
+        if not gui.show_dialog(NewColumnsDialog(self).gui):
+            return True, None, None  # dialog was canceled
+        for item in column_info:
+            for key, value in self.dialog_data[self.parent.ini['lang']].items():
+                if item[0] == value:
+                    item[0] = key
+                    break
+        add_columntitledata(self.dialog_data)
+        for ix, item in enumerate(new_titles):
+            for name, value in self.dialog_data[self.parent.ini['lang']].items():
+                if value == item:
+                    new_titles[ix] = (name, item)
+                    break
+        return False, new_titles, column_info  # not canceled
+
+
+class NewColumnsDialog:
+    """dialoog voor aanmaken nieuwe kolom-ids
+    """
+    # maak een regel voor elke nieuwe titel en neem de waarde over
+    # tevens in de kolom die overeenkomt met de huidige taalinstelling
+    # de betreffende text entry read-only maken
+    def __init__(self, parent):
+        self.widgets = []
+        self.gui = gui.NewColumnsDialogGui(self, parent.gui, parent.parent.title)
+        self.gui.add_explanation('\n'.join(parent.parent.captions['T_TRANS'].split(' / ')))
+        row = 0
+        self.gui.add_titles(['text_id'] + [x.split('.')[0].title()
+                                           for x in parent.dialog_data['languages']])
+        for item in parent.dialog_data['new_titles']:
+            row += 1
+            entry = self.gui.add_text_entry(parent.dialog_data['textid'], row, 0, True)
+            entry_row = [entry]
+            for ix, text in enumerate(parent.dialog_data['languages']):
+                enabled = ix + 1 == parent.dialog_data['colno']
+                entry = self.gui.add_text_entry(text, row, ix + 1, enabled)
+                entry_row.append(entry)
+            self.widgets.append(entry_row)
+        self.gui.add_okcancel_buttons()
+
+    # accept roept Editor.accept_newcolumns aan
+    # def accept_newcolumns(self, entries):
+    def confirm(self):
+        "check and confirm input from newcolumns dialog"
+        languages = self.parent.dialog_data['languages']
+        modeltext = self.parent.dialog_data['textid']
+        # get all the symbols from a language file
+        used_symbols = []
+        with (shared.HERELANG / self.ini['lang']).open() as _in:
+            for line in _in:
+                if line.strip() and not line.startswith('#'):
+                    used_symbols.append(line.split()[0])
+        # check and process the information entered
+        entries = [[self.gui.get_textentry_value(col) for col in row] for row in self.widgets]
+        self.parent.dialog_data = collections.defaultdict(dict)
+        for row in entries:
+            for colno, col in enumerate(row):
+                entered = col
+                if not entered:
+                    gui.show_message(self.gui, 'T_NOTALL')
+                    return False
+                if colno == 0:
+                    if entered == modeltext:
+                        gui.show_message(self.gui, 'T_CHGSTD')
+                        return False
+                    if entered in used_symbols:
+                        gui.show_message(self.gui, 'T_NOTUNIQ', args=(entered,))
+                        return False
+                    used_symbols.append(entered)
+            for ix, col in enumerate(row[1:]):
+                self.parent.dialog_data[languages[ix]][row[0]] = col
+        return True
+
+
+class ExtraSettingsDialog:
+    """dialoog voor invullen tool specifieke instellingen
+    """
+    def __init__(self, parent):
+        self.parent = parent
+        self.gui = gui.ExtraSettingsDialogGui(self, parent.gui, parent.title)
+        block = self.gui.start_block()
+
+        plugin_name = parent.book.page.settings[shared.SettType.PLG.value]
+        self.t_program = self.gui.add_textinput_line(block, parent.captions['S_PLGNAM'], plugin_name)
+
+        screen_name = parent.book.page.settings[shared.SettType.PNL.value]
+        self.t_title = self.gui.add_textinput_line(block, parent.captions['S_PNLNAM'], screen_name)
+
+        caption = parent.captions['T_MAKE'].format(parent.captions['S_RBLD'])
+        rebuildable = parent.book.page.settings[shared.SettType.RBLD.value]
+        self.c_rebuild = self.gui.add_checkbox_line(block, caption, rebuildable)
+
+        show_details = parent.book.page.settings[shared.SettType.DETS.value]
+        self.c_showdet = self.gui.add_checkbox_line(block, parent.captions['S_DETS'], show_details)
+
+        caption = parent.captions['T_MAKE'].format(parent.captions['S_RSAV'])
+        redefinable = parent.book.page.settings[shared.SettType.RDEF.value]
+        self.c_redef = self.gui.add_checkbox_line(block, caption, redefinable)
+
+        block = self.gui.start_block()
+        self.gui.add_text_line(block, parent.captions['T_XTRASET'].format(screen_name))
+        self.gui.add_titles(block, [(41, parent.captions['C_NAM']),
+                                    (52, parent.captions['C_VAL'])])
+        self.scroll = self.gui.add_inputarea(block)
+        self.fields = []
+        for name, value in parent.book.page.settings.items():
+            if name not in shared.settingnames and name != 'extra':
+                try:
+                    desc = parent.book.page.settings['extra'][name]
+                except KeyError:
+                    desc = ''
+                self.fields.append(self.gui.add_row(name, value, desc))
+        self.gui.finalize_inputarea(block, self.scroll)
+        self.gui.add_buttons(block, [(parent.captions['C_ADDSET'], self.add_setting),
+                                     (parent.captions['C_REMSET'], self.remove_settings)])
+        self.gui.add_okcancel_buttons()
+
+    def add_setting(self):
+        """nieuwe rij aanmaken in self.gsizer"""
+        self.fields.append(self.gui.add_row('', '', ''))
+
+    def remove_settings(self):
+        """alle aangevinkte items verwijderen uit self.gsizer"""
+        for row in reversed(self.fields):
+            if self.gui.get_checkbox_value(row[0]):
+                if gui.ask_question(self.parent, 'Q_REMSET'):
+                    rowindex = self.fields.index(row)
+                    self.gui.delete_row(rowindex)
+                    self.fields.pop(rowindex)
+
+    def confirm(self):
+        "check and confirm the input from ExtraSettingsDialog"
+        program = self.gui.get_textinput_value(self.t_program)
+        title = self.gui.get_textinput_value(self.t_title)
+        rebuild = self.gui.get_checkbox_value(self.c_rebuild)
+        showdet = self.gui.get_checkbox_value(self.c_showdet)
+        redef = self.gui.get_checkbox_value(self.c_redef)
+        self.gui.set_checkbox_value(self.c_showdet, False)   # reset in case of validation error
+        self.gui.set_checkbox_value(self.c_redef, False)   # reset in case of validation error
+        if redef and not showdet:
+            gui.show_message(self.gui, "I_NODET")
+            return False
+        if showdet:
+            if not hasattr(self.parent.book.page.reader, 'add_extra_attributes'):
+                # shared.log_exc()
+                gui.show_message(self.gui, "I_IMPLXTRA")
+                return False
+        self.parent.book.page.settings[shared.SettType.PLG.value] = program
+        self.parent.book.page.settings[shared.SettType.PNL.value] = title
+        if self.parent.book.page.title != title:
+            self.parent.book.page.title = title
+            self.parent.book.page.set_title()
+        self.parent.book.page.settings[shared.SettType.RBLD.value] = rebuild
+        self.parent.book.page.settings[shared.SettType.DETS.value] = showdet
+        self.parent.book.page.settings[shared.SettType.RDEF.value] = redef
+
+        settingsdict, settdescdict = {}, {}
+        for row in self.fields:
+            name = self.gui.get_textinput_value(row[0])
+            value = self.gui.get_textinput_value(row[1])
+            desc = self.gui.get_textinput_value(row[2])
+            settingsdict[name] = value
+            settdescdict[name] = desc
+        self.remove_custom_settings()
+        self.parent.book.page.settings.update(settingsdict)
+        self.parent.book.page.settings['extra'] = settdescdict
+        return True
+
+    def remove_custom_settings(self):
+        """keep only settingtypes that are globally defined
+
+        non-globally defined settingtypes that are needed will be restored when merging them back in
+        """
+        todelete = []
+        for setting in self.parent.book.page.settings:
+            if setting not in shared.settingnames:
+                todelete.append(setting)
+        for setting in todelete:
+            del self.parent.book.page.settings[setting]
+
+
+class EntryDialog:
+    """Dialog for Manual Entry
+    """
+    def __init__(self, parent):
+        self.parent = parent
+        self.gui = gui.EntryDialogGui(self, parent.gui, parent.title + ": manual entry")
+        headerdefs = [(parent.captions[x[0]], x[1]) for x in parent.book.page.column_info]
+        self.p0list = self.gui.add_table_to_display(headerdefs)
+        self.rowcount = -1
+        for row in parent.book.page.data.values():
+            self.rowcount += 1
+            self.gui.add_row(self.p0list, self.rowcount, row)
+        self.gui.add_buttons([(parent.captions['C_ADDKEY'], self.add_key),
+                              (parent.captions['C_REMKEY'], self.gui.delete_key),
+                              ('ok', self.gui.accept), ('cancel', self.gui.reject)])
+
+    def add_key(self):
+        "add a line to the grid"
+        self.rowcount += 1
+        empty_values = [''] * len(self.p0list[0])
+        self.gui.add_row(self.p0list, self.rowcount, empty_values)
+
+    def confirm(self):
+        "check and confirm input"
+        new_values = collections.defaultdict(list)
+        num_cols = self.gui.get_table_columns(self.p0list)
+        for rowid in range(self.rowcount):      # self.p0list.rowCount()):
+            for colid in range(num_cols):
+                value = self.gui.get_tableitem_value(self.p0list, rowid, colid)
+                new_values[rowid + 1].append(value.replace('\\n', '\n'))
+        self.parent.book.page.data = new_values
+
+
+class CompleteDialog:
+    """Dialog for entering / completing command descriptions
+    """
+    def __init__(self, parent):
+        self.parent = parent
+        # overgebleven afwijkende descriptions
+        self.gui = gui.CompleteDialogGui(self, parent.gui, parent.title + ": edit descriptions")
+        headerdefs = [(shared.get_text(parent, 'C_CMD'), 260),
+                      (shared.get_text(parent, 'C_DESC'), 520),
+                      ('value from earlier modification', 50)]
+        p0list = self.gui.add_table_to_display(headerdefs)
+        rownum = -1
+        olddescs = parent.book.page.otherstuff.get('olddescs', {})
+        self.fields = []
+        for key, desc in sorted(parent.book.page.descriptions.items()):
+            olddesc = olddescs[key] if key in olddescs and olddescs[key] != desc else ''
+            rownum += 1
+            self.fields.append(self.gui.add_row(p0list, rownum, key, desc, olddesc))
+        self.gui.add_okcancel_buttons()
+        self.gui.set_focus_to_list()
+
+    def confirm(self):
+        "check and confirm input"
+        new_values = {}
+        for key, value, oldvalue in self.fields:
+            cmd = self.gui.get_tableitem_value(key)
+            desc = self.gui.get_tableitem_value(value)
+            new_values[cmd] = desc
+        self.parent.dialog_data = new_values
+        return True

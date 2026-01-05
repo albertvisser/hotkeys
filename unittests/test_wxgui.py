@@ -3,7 +3,7 @@
 import types
 import pytest
 from mockgui import mockwxwidgets as mockwx
-from editor import gui_wx as testee
+from editor import wxgui as testee
 
 
 class MockGui:
@@ -62,11 +62,11 @@ class MockEditor:
         self.book = MockChoiceBook()
 
 
-class TestMyListCtrl:
-    """unittest for gui_wx.MyListCtrl
+class TestGui:
+    """unittest for gui_wx.Gui
     """
     def setup_testobj(self, monkeypatch, capsys):
-        """stub for gui_wx.MyListCtrl object
+        """stub for gui_wx.Gui object
 
         create the object skipping the normal initialization
         intercept messages during creation
@@ -75,26 +75,783 @@ class TestMyListCtrl:
         def mock_init(self, *args):
             """stub
             """
-            print('called MyListCtrl.__init__ with args', args)
-        monkeypatch.setattr(testee.MyListCtrl, '__init__', mock_init)
-        testobj = testee.MyListCtrl()
-        assert capsys.readouterr().out == 'called MyListCtrl.__init__ with args ()\n'
+            print('called Gui.__init__ with args', args)
+        monkeypatch.setattr(testee.Gui, '__init__', mock_init)
+        testobj = testee.Gui()
+        assert capsys.readouterr().out == 'called Gui.__init__ with args ()\n'
         return testobj
 
     def test_init(self, monkeypatch, capsys):
-        """unittest for MyListCtrl.__init__
+        """unittest for Gui.__init__
         """
-        monkeypatch.setattr(testee.wx, 'ListCtrl', mockwx.MockListCtrl)
-        monkeypatch.setattr(testee.wx.lib.mixins.listctrl, 'ListCtrlAutoWidthMixin',
-                            mockwx.MockListCtrlAutoWidthMixin)
-        monkeypatch.setattr(testee.wx.lib.mixins.listctrl, 'ListRowHighlighter',
-                            mockwx.MockListRowHighlighter)
-        testobj = testee.MyListCtrl('parent')
+        monkeypatch.setattr(testee.wx.Frame, '__init__', mockwx.MockFrame.__init__)
+        monkeypatch.setattr(testee.wx.Frame, 'CreateStatusBar', mockwx.MockFrame.CreateStatusBar)
+        monkeypatch.setattr(testee.wx, 'MenuBar', mockwx.MockMenuBar)
+        monkeypatch.setattr(testee.wx.Frame, 'SetMenuBar', mockwx.MockFrame.SetMenuBar)
+        master = MockEditor()
+        testee.shared.LIN = False
+        testobj = testee.Gui(master)
+        assert testobj.editor == master
+        assert isinstance(testobj.app, testee.wx.App)
+        assert isinstance(testobj.sb, mockwx.MockStatusBar)
+        assert isinstance(testobj.menu_bar, mockwx.MockMenuBar)
+        assert testobj.menuitems == {}
         assert capsys.readouterr().out == (
-                "called ListCtrl.__init__ with args"
-                " ('parent', -1, wx.Point(-1, -1), wx.Size(-1, -1), 0) {}\n"
-                "called ListCtrlAutoWidthMixin.__init__ with args () {}\n"
-                "called ListRowHighlighter.__init__ with args () {}\n")
+                "called frame.__init__ with args (None,) {'size': (688, 594), 'style': 541072960}\n"
+                "called Frame.CreateStatusBar\n"
+                "called StatusBar.__init__\n"
+                "called MenuBar.__init__ with args ()\n"
+                "called Frame.SetMenuBar with args (A MenuBar,)\n")
+        testee.shared.LIN = False
+        testobj = testee.Gui(master)
+        assert testobj.editor == master
+        assert isinstance(testobj.app, testee.wx.App)
+        assert isinstance(testobj.sb, mockwx.MockStatusBar)
+        assert isinstance(testobj.menu_bar, mockwx.MockMenuBar)
+        assert testobj.menuitems == {}
+        assert capsys.readouterr().out == (
+                "called frame.__init__ with args (None,) {'size': (688, 594), 'style': 541072960}\n"
+                "called Frame.CreateStatusBar\n"
+                "called StatusBar.__init__\n"
+                "called MenuBar.__init__ with args ()\n"
+                "called Frame.SetMenuBar with args (A MenuBar,)\n")
+
+    def test_start_display(self, monkeypatch, capsys):
+        """unittest for Gui.start_display
+        """
+        monkeypatch.setattr(testee.wx, 'BoxSizer', mockwx.MockBoxSizer)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        result = testobj.start_display()
+        assert isinstance(result, testee.wx.BoxSizer)
+        assert capsys.readouterr().out == "called BoxSizer.__init__ with args (8,)\n"
+
+    def test_add_choicebook_to_display(self, monkeypatch, capsys):
+        """unittest for Gui.add_choicebook_to_display
+        """
+        vbox = mockwx.MockBoxSizer()
+        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.add_choicebook_to_display(vbox, 'book')
+        assert capsys.readouterr().out == "called  sizer.Add with args ('book', 1, 8432, 5)\n"
+
+    def test_add_exitbutton_to_display(self, monkeypatch, capsys):
+        """unittest for Gui.add_exitbutton_to_display
+        """
+        def callback():
+            "dummy function just for reference"
+        monkeypatch.setattr(testee.wx, 'Button', mockwx.MockButton)
+        vbox = mockwx.MockBoxSizer()
+        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.add_exitbutton_to_display(vbox, ('exit', callback))
+        assert capsys.readouterr().out == (
+                f"called Button.__init__ with args ({testobj},) {{'label': 'exit'}}\n"
+                f"called Button.Bind with args ({testee.wx.EVT_BUTTON}, {callback}) {{}}\n"
+                "called  sizer.Add with args MockButton (0, 256)\n")
+
+    def test_go(self, monkeypatch, capsys):
+        """unittest for Gui.go
+        """
+        monkeypatch.setattr(testee.wx.Frame, 'SetMenuBar', mockwx.MockFrame.SetMenuBar)
+        monkeypatch.setattr(testee.wx.Frame, 'SetSizer', mockwx.MockFrame.SetSizer)
+        monkeypatch.setattr(testee.wx.Frame, 'SetAutoLayout', mockwx.MockFrame.SetAutoLayout)
+        monkeypatch.setattr(testee.wx.Frame, 'Show', mockwx.MockFrame.Show)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.app = mockwx.MockApp()
+        sizer = mockwx.MockBoxSizer()
+        assert capsys.readouterr().out == ("called app.__init__ with args ()\n"
+                                           "called BoxSizer.__init__ with args ()\n")
+        testobj.go(sizer)
+        assert capsys.readouterr().out == ("called Frame.SetSizer with args ( sizer,)\n"
+                                           "called Frame.SetAutoLayout with args (True,)\n"
+                                           f"called  sizer.Fit with args ({testobj},)\n"
+                                           "called frame.Show with args (True,)\n"
+                                           "called app.MainLoop\n")
+
+    def test_close(self, monkeypatch, capsys):
+        """unittest for Gui.close
+        """
+        monkeypatch.setattr(testee.wx.Frame, 'Close', mockwx.MockFrame.Close)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.close()
+        assert capsys.readouterr().out == ("called Frame.Close with arg True\n")
+
+    def test_set_window_title(self, monkeypatch, capsys):
+        """unittest for Gui.set_window_title
+        """
+        monkeypatch.setattr(testee.wx.Frame, 'SetTitle', mockwx.MockFrame.SetTitle)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.set_window_title('title')
+        assert capsys.readouterr().out == "called Frame.SetTitle with args ('title',)\n"
+
+    def test_statusbar_message(self, monkeypatch, capsys):
+        """unittest for Gui.statusbar_message
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.sb = mockwx.MockStatusBar()
+        assert capsys.readouterr().out == "called StatusBar.__init__\n"
+        testobj.statusbar_message('message')
+        assert capsys.readouterr().out == "called statusbar.SetStatusText with args ('message',)\n"
+
+    def test_setup_menu(self, monkeypatch, capsys):
+        """unittest for Gui.setup_menu
+        """
+        def callback():
+            "empty function just for reference"
+        def mock_get(self):
+            print('called MenuBar.GetMenus')
+            return []
+        def mock_get_2(self):
+            print('called MenuBar.GetMenus')
+            return ['x']
+        def mock_getdata():
+            print('called Editor.get_menudata')
+            return []
+        def mock_getdata_2():
+            print('called Editor.get_menudata')
+            return [('xxx', []), ('yyy', [-1])]
+        def mock_getdata_3():
+            print('called Editor.get_menudata')
+            return [('menu', [('menuitem', (callback, 'keycombo'))]),
+                    ('menu', [('submenu', [(('menuitem', (callback, 'keycombo')),), ''])])]
+        def mock_bind(self, *args, **kwargs):
+            # print('called Frame.Bind with args', args[:2])
+            print('called Frame.Bind with args', args, kwargs)
+        def mock_replace(self, *args):
+            print('called menubar.Replace with args', args)
+            return oldmenu
+        monkeypatch.setattr(testee.wx, 'Menu', mockwx.MockMenu)
+        monkeypatch.setattr(testee.wx, 'MenuItem', mockwx.MockMenuItem)
+        monkeypatch.setattr(mockwx.MockMenuBar, 'GetMenus', mock_get)
+        monkeypatch.setattr(testee.wx.Frame, 'Bind', mock_bind)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.menu_bar = mockwx.MockMenuBar()
+        testobj.menuitems = {}
+        assert capsys.readouterr().out == "called MenuBar.__init__ with args ()\n"
+        testobj.editor = types.SimpleNamespace(get_menudata=mock_getdata,
+                                               captions={'xxx': 'X', 'yyy': 'Y'})
+        testobj.setup_menu()
+        assert capsys.readouterr().out == ("called MenuBar.GetMenus\n"
+                                           "called Editor.get_menudata\n")
+        testobj.editor.get_menudata = mock_getdata_2
+        testobj.setup_menu()
+        assert capsys.readouterr().out == ("called MenuBar.GetMenus\n"
+                                           "called Editor.get_menudata\n"
+                                           "called Menu.__init__ with args ()\n"
+                                           "called menubar.Append with args (A Menu, 'X')\n"
+                                           "called Menu.__init__ with args ()\n"
+                                           "called menu.AppendSeparator with args ()\n"
+                                           "called menubar.Append with args (A Menu, 'Y')\n")
+        testobj.editor.captions = {'menu': 'menutext', 'menuitem': 'menuitemtext',
+                                   'submenu': 'submenutext'}
+        testobj.editor.get_menudata = mock_getdata_3
+        testobj.setup_menu()
+        assert capsys.readouterr().out == (
+                "called MenuBar.GetMenus\n"
+                "called Editor.get_menudata\n"
+                "called Menu.__init__ with args ()\n"
+                "called MenuItem.__init__ with args (None, -1) {'text': 'menuitemtext\\tkeycombo'}\n"
+                "called menu.Append with args MockMenuItem\n"
+                "called menuitem.GetId\n"
+                "called Frame.Bind with args"
+                f" ({testee.wx.EVT_MENU}, {callback}) {{'id': 'NewID'}}\n"
+                "called menubar.Append with args (A Menu, 'menutext')\n"
+                "called Menu.__init__ with args ()\n"
+                "called Menu.__init__ with args ()\n"
+                "called MenuItem.__init__ with args (None, -1) {'text': 'menuitemtext\\tkeycombo'}\n"
+                "called menu.Append with args MockMenuItem\n"
+                "called menuitem.GetId\n"
+                "called Frame.Bind with args"
+                f" ({testee.wx.EVT_MENU}, {callback}) {{'id': 'NewID'}}\n"
+                "called menu.AppendSubMenu with args (A Menu, 'submenutext')\n"
+                "called menubar.Append with args (A Menu, 'menutext')\n")
+        oldmenu = mockwx.MockMenu()
+        assert capsys.readouterr().out == "called Menu.__init__ with args ()\n"
+        monkeypatch.setattr(mockwx.MockMenuBar, 'GetMenus', mock_get_2)
+        monkeypatch.setattr(mockwx.MockMenuBar, 'Replace', mock_replace)
+        testobj.editor.get_menudata = mock_getdata_2
+        testobj.editor.captions = {'xxx': 'X', 'yyy': 'Y'}
+        testobj.setup_menu()
+        assert capsys.readouterr().out == ("called MenuBar.GetMenus\n"
+                                           "called Editor.get_menudata\n"
+                                           "called Menu.__init__ with args ()\n"
+                                           "called menubar.Replace with args (0, A Menu, 'X')\n"
+                                           "called menu.Destroy\n"
+                                           "called Menu.__init__ with args ()\n"
+                                           "called menu.AppendSeparator with args ()\n"
+                                           "called menubar.Replace with args (1, A Menu, 'Y')\n"
+                                           "called menu.Destroy\n")
+
+    def test_update_menutitles(self, monkeypatch, capsys):
+        """unittest for Gui.setcaptions
+        """
+        def mock_get():
+            print('called MenuBar.GetMenus')
+            return [(testmenu,)]
+        def mock_getitems(self):
+            print('called menu.GetMenuItems')
+            return [testmenuitem]
+        def mock_getparent(self):
+            print('called menu.GetParent')
+            return parentmenu
+        def mock_is(self):
+            print('called menuitem.IsSubMenu')
+            return True
+        monkeypatch.setattr(mockwx.MockMenuBar, 'GetMenus', mock_get)
+        testmenu = mockwx.MockMenu()
+        parentmenu = mockwx.MockMenu()
+        testmenuitem = mockwx.MockMenuItem()
+        assert capsys.readouterr().out == ("called Menu.__init__ with args ()\n"
+                                           "called Menu.__init__ with args ()\n"
+                                           "called MenuItem.__init__ with args () {}\n")
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.menu_bar = mockwx.MockMenuBar
+        testobj.menuitems = {}
+        testobj.update_menutitles()
+        assert capsys.readouterr().out == "called MenuBar.GetMenus\n"
+        testobj.editor = types.SimpleNamespace(captions={'menu': 'xxxxx', 'menuitem': 'yyyyyy'})
+        testobj.menuitems = {'menu': (testmenu, 'xx'),
+                             'menuitem': (testmenuitem, 'yy')}
+        testobj.update_menutitles()
+        assert capsys.readouterr().out == ("called MenuBar.GetMenus\n"
+                                           "called menu.GetTitle\n"
+                                           "called menu.SetTitle with arg 'xxxxx'\n"
+                                           "called menu.GetParent\n"
+                                           "called menubar.Replace with args (A Menu, 'xxxxx')\n"
+                                           "called menuitem.SetItemLabel with arg 'yyyyyy\tyy'\n")
+        monkeypatch.setattr(mockwx.MockMenu, 'GetParent', mock_getparent)
+        testobj.update_menutitles()
+        assert capsys.readouterr().out == ("called MenuBar.GetMenus\n"
+                                           "called menu.GetTitle\n"
+                                           "called menu.SetTitle with arg 'xxxxx'\n"
+                                           "called menu.GetParent\n"
+                                           "called menu.GetMenuItems\n"
+                                           "called menuitem.SetItemLabel with arg 'yyyyyy\tyy'\n")
+        monkeypatch.setattr(mockwx.MockMenu, 'GetMenuItems', mock_getitems)
+        testobj.update_menutitles()
+        assert capsys.readouterr().out == ("called MenuBar.GetMenus\n"
+                                           "called menu.GetTitle\n"
+                                           "called menu.SetTitle with arg 'xxxxx'\n"
+                                           "called menu.GetParent\n"
+                                           "called menu.GetMenuItems\n"
+                                           "called menuitem.IsSubMenu\n"
+                                           "called menuitem.SetItemLabel with arg 'yyyyyy\tyy'\n")
+        monkeypatch.setattr(mockwx.MockMenuItem, 'IsSubMenu', mock_is)
+        testobj.update_menutitles()
+        assert capsys.readouterr().out == ("called MenuBar.GetMenus\n"
+                                           "called menu.GetTitle\n"
+                                           "called menu.SetTitle with arg 'xxxxx'\n"
+                                           "called menu.GetParent\n"
+                                           "called menu.GetMenuItems\n"
+                                           "called menuitem.IsSubMenu\n"
+                                           "called menuitem.GetId\n"
+                                           "called menu.SetLabel with args ('NewID', 'xxxxx')\n"
+                                           "called menuitem.SetItemLabel with arg 'yyyyyy\tyy'\n")
+
+    def test_modify_menuitem(self, monkeypatch, capsys):
+        """unittest for Gui.modify_menuitem
+        """
+        m_item = mockwx.MockMenuItem()
+        assert capsys.readouterr().out == "called MenuItem.__init__ with args () {}\n"
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.menuitems = {'caption': [m_item]}
+        testobj.modify_menuitem('caption', 'setting')
+        assert capsys.readouterr().out == "called menuitem.Enable with arg setting\n"
+
+
+class TestTabbedInterface:
+    """unittest for gui_wx.TabbedInterface
+    """
+    def setup_testobj(self, monkeypatch, capsys):
+        """stub for gui_wx.TabbedInterface object
+
+        create the object skipping the normal initialization
+        intercept messages during creation
+        return the object so that other methods can be monkeypatched in the caller
+        """
+        def mock_init(self, *args):
+            """stub
+            """
+            print('called TabbedInterface.__init__ with args', args)
+        monkeypatch.setattr(testee.TabbedInterface, '__init__', mock_init)
+        testobj = testee.TabbedInterface()
+        assert capsys.readouterr().out == 'called TabbedInterface.__init__ with args ()\n'
+        return testobj
+
+    def test_init(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.__init__
+        """
+        monkeypatch.setattr(testee.wx.Panel, '__init__', mockwx.MockPanel.__init__)
+        testobj = testee.TabbedInterface('parent', 'master')
+        assert testobj.parent == 'parent'
+        assert testobj.master == 'master'
+        assert capsys.readouterr().out == "called Panel.__init__ with args ('parent',) {}\n"
+
+    def test_setup_selector(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.setup_selector
+        """
+        def callback():
+            "empty function for reference"
+        monkeypatch.setattr(testee.wx, 'ComboBox', mockwx.MockComboBox)
+        monkeypatch.setattr(testee.wx, 'Simplebook', mockwx.MockNoteBook)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        result = testobj.setup_selector(callback)
+        assert isinstance(result, testee.wx.ComboBox)
+        assert isinstance(testobj.pnl, testee.wx.Simplebook)
+        assert capsys.readouterr().out == (
+                "called ComboBox.__init__ with args"
+                f" ({testobj},) {{'size': (140, -1), 'style': 16}}\n"
+                f"called ComboBox.Bind with args ({testee.wx.EVT_COMBOBOX}, {callback}) {{}}\n"
+                f"called NoteBook.__init__ with args ({testobj},)\n")
+
+    def test_add_subscreen(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.add_subscreen
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.pnl = mockwx.MockNoteBook()
+        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
+        testobj.add_subscreen('win')
+        assert capsys.readouterr().out == "called NoteBook.AddPage with args ('win', '')\n"
+
+    def test_add_to_selector(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.add_to_selector
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        selector = mockwx.MockComboBox()
+        testobj.add_to_selector(selector, 'txt')
+        assert capsys.readouterr().out == ("called ComboBox.__init__ with args () {}\n"
+                                           "called combobox.Append with args ('txt',)\n")
+
+    def test_start_display(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.start_display
+        """
+        monkeypatch.setattr(testee.wx, 'BoxSizer', mockwx.MockBoxSizer)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        result = testobj.start_display()
+        assert isinstance(result, testee.wx.BoxSizer)
+        assert capsys.readouterr().out == "called BoxSizer.__init__ with args (8,)\n"
+
+    def test_start_line(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.start_line
+        """
+        monkeypatch.setattr(testee.wx, 'BoxSizer', mockwx.MockBoxSizer)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        vbox = mockwx.MockBoxSizer()
+        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
+        result = testobj.start_line(vbox)
+        assert isinstance(result, testee.wx.BoxSizer)
+        assert capsys.readouterr().out == (
+                "called BoxSizer.__init__ with args (4,)\n"
+                "called  sizer.Add with args MockBoxSizer (0, 8192)\n")
+
+    def test_add_margin_to_line(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.add_margin_to_line
+        """
+        hbox = mockwx.MockBoxSizer()
+        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.add_margin_to_line(hbox)
+        assert capsys.readouterr().out == "called  sizer.AddSpacer with args (10,)\n"
+
+    def test_add_text_to_line(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.add_text_to_line
+        """
+        monkeypatch.setattr(testee.wx, 'StaticText', mockwx.MockStaticText)
+        hbox = mockwx.MockBoxSizer()
+        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        result = testobj.add_text_to_line(hbox, 'xxx')
+        assert isinstance(result, testee.wx.StaticText)
+        assert capsys.readouterr().out == (
+                f"called StaticText.__init__ with args ({testobj},) {{'label': 'xxx'}}\n"
+                "called  sizer.Add with args MockStaticText (0, 2048)\n")
+
+    def test_add_selector_to_line(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.add_selector_to_line
+        """
+        widget = mockwx.MockControl()
+        hbox = mockwx.MockBoxSizer()
+        assert capsys.readouterr().out == ("called Control.__init__\n"
+                                           "called BoxSizer.__init__ with args ()\n")
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.add_selector_to_line(hbox, widget)
+        assert capsys.readouterr().out == "called  sizer.Add with args MockControl (0, 2064, 5)\n"
+
+    def test_add_combobox_to_line(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.add_combobox_to_line
+        """
+        def callback():
+            "dummy function"
+        monkeypatch.setattr(testee.wx, 'ComboBox', mockwx.MockComboBox)
+        hbox = mockwx.MockBoxSizer()
+        assert capsys.readouterr().out == ("called BoxSizer.__init__ with args ()\n")
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        result = testobj.add_combobox_to_line(hbox)
+        assert isinstance(result, testee.wx.ComboBox)
+        assert capsys.readouterr().out == (
+                f"called ComboBox.__init__ with args ({testobj},) {{'style': 16}}\n"
+                "called  sizer.Add with args MockComboBox (0, 2048)\n")
+        result = testobj.add_combobox_to_line(hbox, 10, True, callback)
+        assert isinstance(result, testee.wx.ComboBox)
+        assert capsys.readouterr().out == (
+                f"called ComboBox.__init__ with args ({testobj},) {{'style': 32}}\n"
+                f"called ComboBox.Bind with args ({testee.wx.EVT_TEXT}, {callback}) {{}}\n"
+                "called  sizer.Add with args MockComboBox (0, 2048)\n")
+
+    def test_add_separator_to_line(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.add_separator_to_line
+        """
+        hbox = mockwx.MockBoxSizer()
+        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.add_separator_to_line(hbox)
+        assert capsys.readouterr().out == "called  sizer.AddStretchSpacer\n"
+
+    def test_add_button_to_line(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.add_button_to_line
+        """
+        def callback():
+            "dummy function"
+        monkeypatch.setattr(testee.wx, 'Button', mockwx.MockButton)
+        hbox = mockwx.MockBoxSizer()
+        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        result = testobj.add_button_to_line(hbox, 'xxx', callback, 'enabled')
+        assert isinstance(result, testee.wx.Button)
+        assert capsys.readouterr().out == (
+                f"called Button.__init__ with args ({testobj},) {{'label': 'xxx'}}\n"
+                f"called Button.Bind with args ({testee.wx.EVT_BUTTON}, {callback}) {{}}\n"
+                "called Button.Enable with arg enabled\n"
+                "called  sizer.Add with args MockButton (0,)\n")
+
+    def test_add_list_to_line(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.add_list_to_line
+        """
+        hbox = mockwx.MockBoxSizer()
+        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.pnl = mockwx.MockFrame()
+        hbox = mockwx.MockBoxSizer()
+        assert capsys.readouterr().out == ("called frame.__init__ with args () {}\n"
+                                           "called BoxSizer.__init__ with args ()\n")
+        testobj.add_list_to_line(hbox)
+        assert capsys.readouterr().out == "called  sizer.Add with args MockFrame (0,)\n"
+
+    def test_finalize_display(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.finalize_display
+        """
+        monkeypatch.setattr(testee.wx.Panel, 'SetAutoLayout', mockwx.MockPanel.SetAutoLayout)
+        monkeypatch.setattr(testee.wx.Panel, 'SetSizer', mockwx.MockPanel.SetSizer)
+        monkeypatch.setattr(testee.wx.Panel, 'Show', mockwx.MockPanel.Show)
+        vbox = mockwx.MockBoxSizer()
+        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.finalize_display(vbox)
+        assert capsys.readouterr().out == ("called Panel.SetAutoLayout with args (True,)\n"
+                                           "called Panel.SetSizer with args ( sizer,)\n"
+                                           f"called  sizer.Fit with args ({testobj},)\n"
+                                           "called Panel.Show\n")
+
+    def test_setcaption(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.setcaption
+        """
+        widget = mockwx.MockControl()
+        assert capsys.readouterr().out == "called Control.__init__\n"
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.setcaption(widget, 'xxx')
+        assert capsys.readouterr().out == "called Control.SetLabel with args ('xxx',) {}\n"
+
+    def test_on_pagechange(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.on_pagechange
+        """
+        def mock_onpagechange(*args):
+            print('called ChoiceBook.on_page_changed with args', args)
+        def mock_get(self):
+            print('called event.GetEventObject')
+            return lb
+        monkeypatch.setattr(mockwx.MockEvent, 'GetEventObject', mock_get)
+        event = mockwx.MockEvent()
+        lb = mockwx.MockListBox()
+        assert capsys.readouterr().out == ("called event.__init__ with args ()\n"
+                                           "called ListBox.__init__ with args () {}\n")
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.master = types.SimpleNamespace(on_page_changed=mock_onpagechange)
+        testobj.on_pagechange(event)
+        assert capsys.readouterr().out == ("called event.GetEventObject\n"
+                                           "called listbox.GetSelection\n"
+                                           "called ChoiceBook.on_page_changed with args (1,)\n")
+
+    def test_get_panel(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.get_panel
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.pnl = mockwx.MockNoteBook()
+        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
+        assert testobj.get_panel() == "page"
+        assert capsys.readouterr().out == "called NoteBook.GetCurrentPage\n"
+
+    def test_set_selected_panel(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.set_selected_panel
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.pnl = mockwx.MockNoteBook()
+        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
+        testobj.set_selected_panel('indx')
+        assert capsys.readouterr().out == ("called NoteBook.SetSelection with args ('indx',)\n")
+
+    def test_get_selected_panel(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.get_selected_panel
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.pnl = mockwx.MockNoteBook()
+        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
+        assert testobj.get_selected_panel('indx') == "page"
+        assert capsys.readouterr().out == ("called NoteBook.GetPage with args ('indx',)\n")
+
+    def test_replace_panel(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.replace_panel
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.pnl = mockwx.MockNoteBook()
+        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
+        testobj.replace_panel('indx', 'win', 'newwin')
+        assert capsys.readouterr().out == (
+                "called NoteBook.InsertPage with args ('indx', 'newwin')\n"
+                "called NoteBook.SetSelection with args ('newwin',)\n"
+                "called NoteBook.RemovePage with args ('win',)\n")
+
+    # def test_set_panel_editable(self, monkeypatch, capsys):
+    #     """unittest for TabbedInterface.set_panel_editable
+    #     """
+    #     testobj = self.setup_testobj(monkeypatch, capsys)
+    #     testobj.pnl = mockwx.MockNoteBook()
+    #     assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
+    #     testobj.set_panel_editable(test_redef)
+    #     assert capsys.readouterr().out == ("")
+
+    def test_enable_widget(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.enable_widget
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        widget = mockwx.MockControl()
+        assert capsys.readouterr().out == "called Control.__init__\n"
+        testobj.enable_widget(widget, 'state')
+        assert capsys.readouterr().out == "called Control.Enable with arg state\n"
+
+    def test_refresh_combobox(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.refresh_combobox
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        cmb = mockwx.MockComboBox()
+        assert capsys.readouterr().out == "called ComboBox.__init__ with args () {}\n"
+        testobj.refresh_combobox(cmb)
+        assert capsys.readouterr().out == "called combobox.clear\n"
+        testobj.refresh_combobox(cmb, ['x', 'y'])
+        assert capsys.readouterr().out == ("called combobox.clear\n"
+                                           "called combobox.AppendItems with args (['x', 'y'],)\n"
+                                           "called combobox.SetSelection with args (1,)\n")
+
+    def test_get_combobox_value(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.get_combobox_value
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        cmb = mockwx.MockComboBox()
+        assert capsys.readouterr().out == "called ComboBox.__init__ with args () {}\n"
+        assert testobj.get_combobox_value(cmb) == "value from combobox"
+        assert capsys.readouterr().out == "called combobox.GetValue\n"
+
+    def test_set_combobox_text(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.set_combobox_text
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        cmb = mockwx.MockComboBox()
+        assert capsys.readouterr().out == "called ComboBox.__init__ with args () {}\n"
+        testobj.set_combobox_text(cmb, '')
+        assert capsys.readouterr().out == "called combobox.SetValue with args ('',)\n"
+        testobj.set_combobox_text(cmb, 'xxx')
+        assert capsys.readouterr().out == ("called combobox.SetValue with args ('xxx',)\n"
+                                           "called combobox.Enable with arg True\n")
+
+    def test_get_combobox_index(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.get_combobox_index
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        cmb = mockwx.MockComboBox()
+        assert capsys.readouterr().out == "called ComboBox.__init__ with args () {}\n"
+        testobj.get_combobox_index(cmb)
+        assert capsys.readouterr().out == "called combobox.GetSelection\n"
+
+    def test_on_textchange(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.on_textchange
+        """
+        def mock_ontextchange(*args):
+            print('called ChoiceBook.on_text_changed with args', args)
+        def mock_get(self):
+            print('called event.GetEventObject')
+            return txt
+        def mock_getv(self):
+            print('called text.GetValue')
+            return ''
+        monkeypatch.setattr(mockwx.MockEvent, 'GetEventObject', mock_get)
+        event = mockwx.MockEvent()
+        txt = mockwx.MockTextCtrl()
+        assert capsys.readouterr().out == ("called event.__init__ with args ()\n"
+                                           "called TextCtrl.__init__ with args () {}\n")
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.master = types.SimpleNamespace(on_text_changed=mock_ontextchange)
+        testobj.on_textchange(event)
+        assert capsys.readouterr().out == (
+                "called event.GetEventObject\n"
+                "called text.GetValue\n"
+                "called ChoiceBook.on_text_changed with args ('value from textctrl',)\n")
+        monkeypatch.setattr(mockwx.MockTextCtrl, 'GetValue', mock_getv)
+        testobj.on_textchange(event)
+        assert capsys.readouterr().out == (
+                "called event.GetEventObject\n"
+                "called text.GetValue\n")
+
+    def test_get_search_col(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.get_search_col
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        cmb = mockwx.MockComboBox()
+        assert capsys.readouterr().out == "called ComboBox.__init__ with args () {}\n"
+        assert testobj.get_search_col(cmb) == "current text"
+        assert capsys.readouterr().out == "called combobox.GetStringSelection\n"
+
+    def test_get_combobox_index_for_item(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.get_combobox_index_for_item
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        cb = mockwx.MockComboBox()
+        assert capsys.readouterr().out == "called ComboBox.__init__ with args () {}\n"
+        assert testobj.get_combobox_index_for_item(cb, 'item') == 'selection'
+        assert capsys.readouterr().out == "called combobox.GetSelection\n"
+
+    def test_set_combobox_index(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.set_combobox_index
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        cmb = mockwx.MockComboBox()
+        assert capsys.readouterr().out == "called ComboBox.__init__ with args () {}\n"
+        testobj.set_combobox_index(cmb, 'selection')
+        assert capsys.readouterr().out == "called combobox.SetSelection with args ('selection',)\n"
+
+    def test_get_button_text(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.get_button_text
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        button = mockwx.MockButton(label='xxx')
+        assert capsys.readouterr().out == "called Button.__init__ with args () {'label': 'xxx'}\n"
+        assert testobj.get_button_text(button) == "xxx"
+        assert capsys.readouterr().out == "called Button.GetLabel\n"
+
+    def test_set_button_text(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.set_button_text
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        button = mockwx.MockButton()
+        assert capsys.readouterr().out == "called Button.__init__ with args () {}\n"
+        testobj.set_button_text(button, "state")
+        assert capsys.readouterr().out == "called Button.SetLabel with arg 'state'\n"
+
+    def test_find_items(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.find_items
+        """
+        def mock_get(self, *args):
+            nonlocal counter
+            print('called ListCtrl.GetItemText with args', args)
+            counter += 1
+            if counter == 1:
+                return ''
+            return 'text'
+        def mock_count():
+            print('called ListCtrl.GetItemCount')
+            return 0
+        monkeypatch.setattr(mockwx.MockListCtrl, 'GetItemText', mock_get)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        p0list = mockwx.MockListCtrl()
+        assert capsys.readouterr().out == "called ListCtrl.__init__ with args () {}\n"
+        counter = 0
+        assert testobj.find_items(p0list, 'xxx', 'text') == [2]
+        assert capsys.readouterr().out == ("called ListCtrl.GetItemCount\n"
+                                           "called ListCtrl.GetItemText with args (0, 'xxx')\n"
+                                           "called ListCtrl.GetItemText with args (1, 'xxx')\n")
+        p0list.GetItemCount = mock_count
+        counter = 0
+        assert testobj.find_items(p0list, 'xxx', 'text') == []
+        assert capsys.readouterr().out == "called ListCtrl.GetItemCount\n"
+
+    def test_set_selected_keydef_item(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.set_selected_keydef_item
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        p0list = mockwx.MockListCtrl()
+        assert capsys.readouterr().out == "called ListCtrl.__init__ with args () {}\n"
+        testobj.set_selected_keydef_item(p0list, ['xxx', 'yyy', 'zzz'], 2)
+        assert capsys.readouterr().out == ("called ListCtrl.Select with args ('zzz',)\n"
+                                           "called ListCtrl.EnsureVisible with args ('zzz',)\n")
+
+    def test_get_found_keydef_position(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.get_found_keydef_position
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        # testobj.master.page = MockHotkeyPanel()
+        p0list = mockwx.MockListCtrl()
+        assert capsys.readouterr().out == "called ListCtrl.__init__ with args () {}\n"
+        assert testobj.get_found_keydef_position(p0list) == (-1, -1)
+        assert capsys.readouterr().out == ("called ListCtrl.GetFirstSelected\n"
+                                           "called ListCtrl.GetItemText with args (-1, 0)\n"
+                                           "called ListCtrl.GetItemText with args (-1, 1)\n")
+
+    def test_set_found_keydef_position(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.set_found_keydef_position
+        """
+        def mock_get(self, *args):
+            nonlocal counter
+            print('called ListCtrl.GetItemText with args', args)
+            counter += 1
+            return counter
+        def mock_count():
+            print('called ListCtrl.GetItemCount')
+            return 0
+        monkeypatch.setattr(mockwx.MockListCtrl, 'GetItemText', mock_get)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        p0list = mockwx.MockListCtrl()
+        assert capsys.readouterr().out == "called ListCtrl.__init__ with args () {}\n"
+        counter = 0
+        testobj.set_found_keydef_position(p0list, (3, 4))
+        assert capsys.readouterr().out == ("called ListCtrl.GetItemCount\n"
+                                           "called ListCtrl.GetItemText with args (0, 0)\n"
+                                           "called ListCtrl.GetItemText with args (0, 1)\n"
+                                           "called ListCtrl.GetItemText with args (1, 0)\n"
+                                           "called ListCtrl.GetItemText with args (1, 1)\n"
+                                           "called ListCtrl.Select with args (1,)\n")
+        p0list.GetItemCount = mock_count
+        counter = 0
+        testobj.set_found_keydef_position(p0list, (3, 4))
+        assert capsys.readouterr().out == "called ListCtrl.GetItemCount\n"
+
+    def test_remove_tool(self, monkeypatch, capsys):
+        """unittest for TabbedInterface.remove_tool
+        """
+        def mock_get(*args):
+            print('called NoteBook.GetPage with args', args)
+            return win
+        win = mockwx.MockPanel()
+        assert capsys.readouterr().out == "called Panel.__init__ with args () {}\n"
+        win.master = 'master'
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.pnl = mockwx.MockNoteBook()
+        testobj.pnl.GetPage = mock_get
+        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
+        assert testobj.remove_tool(1, 'program', []) is None
+        assert capsys.readouterr().out == ("called NoteBook.GetPage with args (1,)\n"
+                                           "called NoteBook.RemovePage with args (1,)\n"
+                                           "called Panel.Destroy with args ()\n")
+        assert testobj.remove_tool(1, 'program', ['program', 'list']) == "master"
+        assert capsys.readouterr().out == ("called NoteBook.GetPage with args (1,)\n"
+                                           "called NoteBook.RemovePage with args (1,)\n")
 
 
 class TestSingleDataInterface:
@@ -789,11 +1546,11 @@ class TestSingleDataInterface:
         assert capsys.readouterr().out == ("called checkbox.SetValue with args ('state',)\n")
 
 
-class TestTabbedInterface:
-    """unittest for gui_wx.TabbedInterface
+class TestMyListCtrl:
+    """unittest for gui_wx.MyListCtrl
     """
     def setup_testobj(self, monkeypatch, capsys):
-        """stub for gui_wx.TabbedInterface object
+        """stub for gui_wx.MyListCtrl object
 
         create the object skipping the normal initialization
         intercept messages during creation
@@ -802,493 +1559,87 @@ class TestTabbedInterface:
         def mock_init(self, *args):
             """stub
             """
-            print('called TabbedInterface.__init__ with args', args)
-        monkeypatch.setattr(testee.TabbedInterface, '__init__', mock_init)
-        testobj = testee.TabbedInterface()
-        assert capsys.readouterr().out == 'called TabbedInterface.__init__ with args ()\n'
+            print('called MyListCtrl.__init__ with args', args)
+        monkeypatch.setattr(testee.MyListCtrl, '__init__', mock_init)
+        testobj = testee.MyListCtrl()
+        assert capsys.readouterr().out == 'called MyListCtrl.__init__ with args ()\n'
         return testobj
 
     def test_init(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.__init__
+        """unittest for MyListCtrl.__init__
         """
-        monkeypatch.setattr(testee.wx.Panel, '__init__', mockwx.MockPanel.__init__)
-        testobj = testee.TabbedInterface('parent', 'master')
-        assert testobj.parent == 'parent'
-        assert testobj.master == 'master'
-        assert capsys.readouterr().out == "called Panel.__init__ with args ('parent',) {}\n"
-
-    def test_setup_selector(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.setup_selector
-        """
-        def callback():
-            "empty function for reference"
-        monkeypatch.setattr(testee.wx, 'ComboBox', mockwx.MockComboBox)
-        monkeypatch.setattr(testee.wx, 'Simplebook', mockwx.MockNoteBook)
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        result = testobj.setup_selector(callback)
-        assert isinstance(result, testee.wx.ComboBox)
-        assert isinstance(testobj.pnl, testee.wx.Simplebook)
+        monkeypatch.setattr(testee.wx, 'ListCtrl', mockwx.MockListCtrl)
+        monkeypatch.setattr(testee.wx.lib.mixins.listctrl, 'ListCtrlAutoWidthMixin',
+                            mockwx.MockListCtrlAutoWidthMixin)
+        monkeypatch.setattr(testee.wx.lib.mixins.listctrl, 'ListRowHighlighter',
+                            mockwx.MockListRowHighlighter)
+        testobj = testee.MyListCtrl('parent')
         assert capsys.readouterr().out == (
-                "called ComboBox.__init__ with args"
-                f" ({testobj},) {{'size': (140, -1), 'style': 16}}\n"
-                f"called ComboBox.Bind with args ({testee.wx.EVT_COMBOBOX}, {callback}) {{}}\n"
-                f"called NoteBook.__init__ with args ({testobj},)\n")
-
-    def test_add_subscreen(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.add_subscreen
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.pnl = mockwx.MockNoteBook()
-        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
-        testobj.add_subscreen('win')
-        assert capsys.readouterr().out == "called NoteBook.AddPage with args ('win', '')\n"
-
-    def test_add_to_selector(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.add_to_selector
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        selector = mockwx.MockComboBox()
-        testobj.add_to_selector(selector, 'txt')
-        assert capsys.readouterr().out == ("called ComboBox.__init__ with args () {}\n"
-                                           "called combobox.Append with args ('txt',)\n")
-
-    def test_start_display(self, monkeypatch, capsys):
-        """unittest for SingleDataInterface.start_display
-        """
-        monkeypatch.setattr(testee.wx, 'BoxSizer', mockwx.MockBoxSizer)
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        result = testobj.start_display()
-        assert isinstance(result, testee.wx.BoxSizer)
-        assert capsys.readouterr().out == "called BoxSizer.__init__ with args (8,)\n"
-
-    def test_start_line(self, monkeypatch, capsys):
-        """unittest for SingleDataInterface.start_line
-        """
-        monkeypatch.setattr(testee.wx, 'BoxSizer', mockwx.MockBoxSizer)
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        vbox = mockwx.MockBoxSizer()
-        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
-        result = testobj.start_line(vbox)
-        assert isinstance(result, testee.wx.BoxSizer)
-        assert capsys.readouterr().out == (
-                "called BoxSizer.__init__ with args (4,)\n"
-                "called  sizer.Add with args MockBoxSizer (0, 8192)\n")
-
-    def test_add_margin_to_line(self, monkeypatch, capsys):
-        """unittest for SingleDataInterface.add_margin_to_line
-        """
-        hbox = mockwx.MockBoxSizer()
-        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.add_margin_to_line(hbox)
-        assert capsys.readouterr().out == "called  sizer.AddSpacer with args (10,)\n"
-
-    def test_add_text_to_line(self, monkeypatch, capsys):
-        """unittest for SingleDataInterface.add_text_to_line
-        """
-        monkeypatch.setattr(testee.wx, 'StaticText', mockwx.MockStaticText)
-        hbox = mockwx.MockBoxSizer()
-        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        result = testobj.add_text_to_line(hbox, 'xxx')
-        assert isinstance(result, testee.wx.StaticText)
-        assert capsys.readouterr().out == (
-                f"called StaticText.__init__ with args ({testobj},) {{'label': 'xxx'}}\n"
-                "called  sizer.Add with args MockStaticText (0, 2048)\n")
-
-    def test_add_selector_to_line(self, monkeypatch, capsys):
-        """unittest for SingleDataInterface.add_selector_to_line
-        """
-        widget = mockwx.MockControl()
-        hbox = mockwx.MockBoxSizer()
-        assert capsys.readouterr().out == ("called Control.__init__\n"
-                                           "called BoxSizer.__init__ with args ()\n")
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.add_selector_to_line(hbox, widget)
-        assert capsys.readouterr().out == "called  sizer.Add with args MockControl (0, 2064, 5)\n"
-
-    def test_add_combobox_to_line(self, monkeypatch, capsys):
-        """unittest for SingleDataInterface.add_combobox_to_line
-        """
-        def callback():
-            "dummy function"
-        monkeypatch.setattr(testee.wx, 'ComboBox', mockwx.MockComboBox)
-        hbox = mockwx.MockBoxSizer()
-        assert capsys.readouterr().out == ("called BoxSizer.__init__ with args ()\n")
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        result = testobj.add_combobox_to_line(hbox)
-        assert isinstance(result, testee.wx.ComboBox)
-        assert capsys.readouterr().out == (
-                f"called ComboBox.__init__ with args ({testobj},) {{'style': 16}}\n"
-                "called  sizer.Add with args MockComboBox (0, 2048)\n")
-        result = testobj.add_combobox_to_line(hbox, 10, True, callback)
-        assert isinstance(result, testee.wx.ComboBox)
-        assert capsys.readouterr().out == (
-                f"called ComboBox.__init__ with args ({testobj},) {{'style': 32}}\n"
-                f"called ComboBox.Bind with args ({testee.wx.EVT_TEXT}, {callback}) {{}}\n"
-                "called  sizer.Add with args MockComboBox (0, 2048)\n")
-
-    def test_add_separator_to_line(self, monkeypatch, capsys):
-        """unittest for SingleDataInterface.add_separator_to_line
-        """
-        hbox = mockwx.MockBoxSizer()
-        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.add_separator_to_line(hbox)
-        assert capsys.readouterr().out == "called  sizer.AddStretchSpacer\n"
-
-    def test_add_button_to_line(self, monkeypatch, capsys):
-        """unittest for SingleDataInterface.add_button_to_line
-        """
-        def callback():
-            "dummy function"
-        monkeypatch.setattr(testee.wx, 'Button', mockwx.MockButton)
-        hbox = mockwx.MockBoxSizer()
-        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        result = testobj.add_button_to_line(hbox, 'xxx', callback, 'enabled')
-        assert isinstance(result, testee.wx.Button)
-        assert capsys.readouterr().out == (
-                f"called Button.__init__ with args ({testobj},) {{'label': 'xxx'}}\n"
-                f"called Button.Bind with args ({testee.wx.EVT_BUTTON}, {callback}) {{}}\n"
-                "called Button.Enable with arg enabled\n"
-                "called  sizer.Add with args MockButton (0,)\n")
-
-    def test_add_list_to_line(self, monkeypatch, capsys):
-        """unittest for SingleDataInterface.add_list_to_line
-        """
-        hbox = mockwx.MockBoxSizer()
-        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.pnl = mockwx.MockFrame()
-        hbox = mockwx.MockBoxSizer()
-        assert capsys.readouterr().out == ("called frame.__init__ with args () {}\n"
-                                           "called BoxSizer.__init__ with args ()\n")
-        testobj.add_list_to_line(hbox)
-        assert capsys.readouterr().out == "called  sizer.Add with args MockFrame (0,)\n"
-
-    def test_finalize_display(self, monkeypatch, capsys):
-        """unittest for SingleDataInterface.finalize_display
-        """
-        monkeypatch.setattr(testee.wx.Panel, 'SetAutoLayout', mockwx.MockPanel.SetAutoLayout)
-        monkeypatch.setattr(testee.wx.Panel, 'SetSizer', mockwx.MockPanel.SetSizer)
-        monkeypatch.setattr(testee.wx.Panel, 'Show', mockwx.MockPanel.Show)
-        vbox = mockwx.MockBoxSizer()
-        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.finalize_display(vbox)
-        assert capsys.readouterr().out == ("called Panel.SetAutoLayout with args (True,)\n"
-                                           "called Panel.SetSizer with args ( sizer,)\n"
-                                           f"called  sizer.Fit with args ({testobj},)\n"
-                                           "called Panel.Show\n")
-
-    def test_setcaption(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.setcaption
-        """
-        widget = mockwx.MockControl()
-        assert capsys.readouterr().out == "called Control.__init__\n"
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.setcaption(widget, 'xxx')
-        assert capsys.readouterr().out == "called Control.SetLabel with args ('xxx',) {}\n"
-
-    def test_on_pagechange(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.on_pagechange
-        """
-        def mock_onpagechange(*args):
-            print('called ChoiceBook.on_page_changed with args', args)
-        def mock_get(self):
-            print('called event.GetEventObject')
-            return lb
-        monkeypatch.setattr(mockwx.MockEvent, 'GetEventObject', mock_get)
-        event = mockwx.MockEvent()
-        lb = mockwx.MockListBox()
-        assert capsys.readouterr().out == ("called event.__init__ with args ()\n"
-                                           "called ListBox.__init__ with args () {}\n")
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.master = types.SimpleNamespace(on_page_changed=mock_onpagechange)
-        testobj.on_pagechange(event)
-        assert capsys.readouterr().out == ("called event.GetEventObject\n"
-                                           "called listbox.GetSelection\n"
-                                           "called ChoiceBook.on_page_changed with args (1,)\n")
-
-    def test_get_panel(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.get_panel
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.pnl = mockwx.MockNoteBook()
-        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
-        assert testobj.get_panel() == "page"
-        assert capsys.readouterr().out == "called NoteBook.GetCurrentPage\n"
-
-    def test_set_selected_panel(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.set_selected_panel
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.pnl = mockwx.MockNoteBook()
-        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
-        testobj.set_selected_panel('indx')
-        assert capsys.readouterr().out == ("called NoteBook.SetSelection with args ('indx',)\n")
-
-    def test_get_selected_panel(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.get_selected_panel
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.pnl = mockwx.MockNoteBook()
-        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
-        assert testobj.get_selected_panel('indx') == "page"
-        assert capsys.readouterr().out == ("called NoteBook.GetPage with args ('indx',)\n")
-
-    def test_replace_panel(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.replace_panel
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.pnl = mockwx.MockNoteBook()
-        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
-        testobj.replace_panel('indx', 'win', 'newwin')
-        assert capsys.readouterr().out == (
-                "called NoteBook.InsertPage with args ('indx', 'newwin')\n"
-                "called NoteBook.SetSelection with args ('newwin',)\n"
-                "called NoteBook.RemovePage with args ('win',)\n")
-
-    # def test_set_panel_editable(self, monkeypatch, capsys):
-    #     """unittest for TabbedInterface.set_panel_editable
-    #     """
-    #     testobj = self.setup_testobj(monkeypatch, capsys)
-    #     testobj.pnl = mockwx.MockNoteBook()
-    #     assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
-    #     testobj.set_panel_editable(test_redef)
-    #     assert capsys.readouterr().out == ("")
-
-    def test_enable_widget(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.enable_widget
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        widget = mockwx.MockControl()
-        assert capsys.readouterr().out == "called Control.__init__\n"
-        testobj.enable_widget(widget, 'state')
-        assert capsys.readouterr().out == "called Control.Enable with arg state\n"
-
-    def test_refresh_combobox(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.refresh_combobox
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        cmb = mockwx.MockComboBox()
-        assert capsys.readouterr().out == "called ComboBox.__init__ with args () {}\n"
-        testobj.refresh_combobox(cmb)
-        assert capsys.readouterr().out == "called combobox.clear\n"
-        testobj.refresh_combobox(cmb, ['x', 'y'])
-        assert capsys.readouterr().out == ("called combobox.clear\n"
-                                           "called combobox.AppendItems with args (['x', 'y'],)\n"
-                                           "called combobox.SetSelection with args (1,)\n")
-
-    def test_get_combobox_value(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.get_combobox_value
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        cmb = mockwx.MockComboBox()
-        assert capsys.readouterr().out == "called ComboBox.__init__ with args () {}\n"
-        assert testobj.get_combobox_value(cmb) == "value from combobox"
-        assert capsys.readouterr().out == "called combobox.GetValue\n"
-
-    def test_set_combobox_text(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.set_combobox_text
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        cmb = mockwx.MockComboBox()
-        assert capsys.readouterr().out == "called ComboBox.__init__ with args () {}\n"
-        testobj.set_combobox_text(cmb, '')
-        assert capsys.readouterr().out == "called combobox.SetValue with args ('',)\n"
-        testobj.set_combobox_text(cmb, 'xxx')
-        assert capsys.readouterr().out == ("called combobox.SetValue with args ('xxx',)\n"
-                                           "called combobox.Enable with arg True\n")
-
-    def test_get_combobox_index(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.get_combobox_index
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        cmb = mockwx.MockComboBox()
-        assert capsys.readouterr().out == "called ComboBox.__init__ with args () {}\n"
-        testobj.get_combobox_index(cmb)
-        assert capsys.readouterr().out == "called combobox.GetSelection\n"
-
-    def test_on_textchange(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.on_textchange
-        """
-        def mock_ontextchange(*args):
-            print('called ChoiceBook.on_text_changed with args', args)
-        def mock_get(self):
-            print('called event.GetEventObject')
-            return txt
-        def mock_getv(self):
-            print('called text.GetValue')
-            return ''
-        monkeypatch.setattr(mockwx.MockEvent, 'GetEventObject', mock_get)
-        event = mockwx.MockEvent()
-        txt = mockwx.MockTextCtrl()
-        assert capsys.readouterr().out == ("called event.__init__ with args ()\n"
-                                           "called TextCtrl.__init__ with args () {}\n")
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.master = types.SimpleNamespace(on_text_changed=mock_ontextchange)
-        testobj.on_textchange(event)
-        assert capsys.readouterr().out == (
-                "called event.GetEventObject\n"
-                "called text.GetValue\n"
-                "called ChoiceBook.on_text_changed with args ('value from textctrl',)\n")
-        monkeypatch.setattr(mockwx.MockTextCtrl, 'GetValue', mock_getv)
-        testobj.on_textchange(event)
-        assert capsys.readouterr().out == (
-                "called event.GetEventObject\n"
-                "called text.GetValue\n")
-
-    def test_get_search_col(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.get_search_col
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        cmb = mockwx.MockComboBox()
-        assert capsys.readouterr().out == "called ComboBox.__init__ with args () {}\n"
-        assert testobj.get_search_col(cmb) == "current text"
-        assert capsys.readouterr().out == "called combobox.GetStringSelection\n"
-
-    def test_get_combobox_index_for_item(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.get_combobox_index_for_item
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        cb = mockwx.MockComboBox()
-        assert capsys.readouterr().out == "called ComboBox.__init__ with args () {}\n"
-        assert testobj.get_combobox_index_for_item(cb, 'item') == 'selection'
-        assert capsys.readouterr().out == "called combobox.GetSelection\n"
-
-    def test_set_combobox_index(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.set_combobox_index
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        cmb = mockwx.MockComboBox()
-        assert capsys.readouterr().out == "called ComboBox.__init__ with args () {}\n"
-        testobj.set_combobox_index(cmb, 'selection')
-        assert capsys.readouterr().out == "called combobox.SetSelection with args ('selection',)\n"
-
-    def test_get_button_text(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.get_button_text
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        button = mockwx.MockButton(label='xxx')
-        assert capsys.readouterr().out == "called Button.__init__ with args () {'label': 'xxx'}\n"
-        assert testobj.get_button_text(button) == "xxx"
-        assert capsys.readouterr().out == "called Button.GetLabel\n"
-
-    def test_set_button_text(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.set_button_text
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        button = mockwx.MockButton()
-        assert capsys.readouterr().out == "called Button.__init__ with args () {}\n"
-        testobj.set_button_text(button, "state")
-        assert capsys.readouterr().out == "called Button.SetLabel with arg 'state'\n"
-
-    def test_find_items(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.find_items
-        """
-        def mock_get(self, *args):
-            nonlocal counter
-            print('called ListCtrl.GetItemText with args', args)
-            counter += 1
-            if counter == 1:
-                return ''
-            return 'text'
-        def mock_count():
-            print('called ListCtrl.GetItemCount')
-            return 0
-        monkeypatch.setattr(mockwx.MockListCtrl, 'GetItemText', mock_get)
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        p0list = mockwx.MockListCtrl()
-        assert capsys.readouterr().out == "called ListCtrl.__init__ with args () {}\n"
-        counter = 0
-        assert testobj.find_items(p0list, 'xxx', 'text') == [2]
-        assert capsys.readouterr().out == ("called ListCtrl.GetItemCount\n"
-                                           "called ListCtrl.GetItemText with args (0, 'xxx')\n"
-                                           "called ListCtrl.GetItemText with args (1, 'xxx')\n")
-        p0list.GetItemCount = mock_count
-        counter = 0
-        assert testobj.find_items(p0list, 'xxx', 'text') == []
-        assert capsys.readouterr().out == "called ListCtrl.GetItemCount\n"
-
-    def test_set_selected_keydef_item(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.set_selected_keydef_item
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        p0list = mockwx.MockListCtrl()
-        assert capsys.readouterr().out == "called ListCtrl.__init__ with args () {}\n"
-        testobj.set_selected_keydef_item(p0list, ['xxx', 'yyy', 'zzz'], 2)
-        assert capsys.readouterr().out == ("called ListCtrl.Select with args ('zzz',)\n"
-                                           "called ListCtrl.EnsureVisible with args ('zzz',)\n")
-
-    def test_get_found_keydef_position(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.get_found_keydef_position
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        # testobj.master.page = MockHotkeyPanel()
-        p0list = mockwx.MockListCtrl()
-        assert capsys.readouterr().out == "called ListCtrl.__init__ with args () {}\n"
-        assert testobj.get_found_keydef_position(p0list) == (-1, -1)
-        assert capsys.readouterr().out == ("called ListCtrl.GetFirstSelected\n"
-                                           "called ListCtrl.GetItemText with args (-1, 0)\n"
-                                           "called ListCtrl.GetItemText with args (-1, 1)\n")
-
-    def test_set_found_keydef_position(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.set_found_keydef_position
-        """
-        def mock_get(self, *args):
-            nonlocal counter
-            print('called ListCtrl.GetItemText with args', args)
-            counter += 1
-            return counter
-        def mock_count():
-            print('called ListCtrl.GetItemCount')
-            return 0
-        monkeypatch.setattr(mockwx.MockListCtrl, 'GetItemText', mock_get)
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        p0list = mockwx.MockListCtrl()
-        assert capsys.readouterr().out == "called ListCtrl.__init__ with args () {}\n"
-        counter = 0
-        testobj.set_found_keydef_position(p0list, (3, 4))
-        assert capsys.readouterr().out == ("called ListCtrl.GetItemCount\n"
-                                           "called ListCtrl.GetItemText with args (0, 0)\n"
-                                           "called ListCtrl.GetItemText with args (0, 1)\n"
-                                           "called ListCtrl.GetItemText with args (1, 0)\n"
-                                           "called ListCtrl.GetItemText with args (1, 1)\n"
-                                           "called ListCtrl.Select with args (1,)\n")
-        p0list.GetItemCount = mock_count
-        counter = 0
-        testobj.set_found_keydef_position(p0list, (3, 4))
-        assert capsys.readouterr().out == "called ListCtrl.GetItemCount\n"
-
-    def test_remove_tool(self, monkeypatch, capsys):
-        """unittest for TabbedInterface.remove_tool
-        """
-        def mock_get(*args):
-            print('called NoteBook.GetPage with args', args)
-            return win
-        win = mockwx.MockPanel()
-        assert capsys.readouterr().out == "called Panel.__init__ with args () {}\n"
-        win.master = 'master'
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.pnl = mockwx.MockNoteBook()
-        testobj.pnl.GetPage = mock_get
-        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
-        assert testobj.remove_tool(1, 'program', []) is None
-        assert capsys.readouterr().out == ("called NoteBook.GetPage with args (1,)\n"
-                                           "called NoteBook.RemovePage with args (1,)\n"
-                                           "called Panel.Destroy with args ()\n")
-        assert testobj.remove_tool(1, 'program', ['program', 'list']) == "master"
-        assert capsys.readouterr().out == ("called NoteBook.GetPage with args (1,)\n"
-                                           "called NoteBook.RemovePage with args (1,)\n")
+                "called ListCtrl.__init__ with args"
+                " ('parent', -1, wx.Point(-1, -1), wx.Size(-1, -1), 0) {}\n"
+                "called ListCtrlAutoWidthMixin.__init__ with args () {}\n"
+                "called ListRowHighlighter.__init__ with args () {}\n")
 
 
-class TestGui:
-    """unittest for gui_wx.Gui
+def _test_show_message(monkeypatch, capsys):
+    """unittest for dialogs_wx.show_message
+    """
+    assert testee.show_message(win, message_id='', text='', args=None) == "expected_result"
+
+
+def _test_show_cancel_message(monkeypatch, capsys):
+    """unittest for dialogs_wx.show_cancel_message
+    """
+    assert testee.show_cancel_message(win, message_id='', text='', args=None) == "expected_result"
+
+
+def _test_ask_question(monkeypatch, capsys):
+    """unittest for dialogs_wx.ask_question
+    """
+    assert testee.ask_question(win, message_id='', text='', args=None) == "expected_result"
+
+
+def _test_ask_ync_question(monkeypatch, capsys):
+    """unittest for dialogs_wx.ask_ync_question
+    """
+    assert testee.ask_ync_question(win, message_id='', text='', args=None) == "expected_result"
+
+
+def _test_get_textinput(monkeypatch, capsys):
+    """unittest for dialogs_wx.get_textinput
+    """
+    assert testee.get_textinput(win, text, prompt='') == "expected_result"
+
+
+def _test_get_choice(monkeypatch, capsys):
+    """unittest for dialogs_wx.get_choice
+    """
+    assert testee.get_choice(win, title, caption, choices, current) == "expected_result"
+
+
+def _test_get_file_to_open(monkeypatch, capsys):
+    """unittest for dialogs_wx.get_file_to_open
+    """
+    assert testee.get_file_to_open(win, oms='', extension='', start='') == "expected_result"
+
+
+def _test_get_file_to_save(monkeypatch, capsys):
+    """unittest for dialogs_wx.get_file_to_save
+    """
+    assert testee.get_file_to_save(win, oms='', extension='', start='') == "expected_result"
+
+
+def _test_show_dialog(monkeypatch, capsys):
+    """unittest for dialogs_wx.show_dialog
+    """
+    assert testee.show_dialog(win, cls) == "expected_result"
+
+
+class TestInitialToolDialog:
+    """unittest for dialogs_wx.InitialToolDialog
     """
     def setup_testobj(self, monkeypatch, capsys):
-        """stub for gui_wx.Gui object
+        """stub for dialogs_wx.InitialToolDialog object
 
         create the object skipping the normal initialization
         intercept messages during creation
@@ -1297,285 +1648,437 @@ class TestGui:
         def mock_init(self, *args):
             """stub
             """
-            print('called Gui.__init__ with args', args)
-        monkeypatch.setattr(testee.Gui, '__init__', mock_init)
-        testobj = testee.Gui()
-        assert capsys.readouterr().out == 'called Gui.__init__ with args ()\n'
+            print('called InitialToolDialog.__init__ with args', args)
+        monkeypatch.setattr(testee.InitialToolDialog, '__init__', mock_init)
+        testobj = testee.InitialToolDialog()
+        assert capsys.readouterr().out == 'called InitialToolDialog.__init__ with args ()\n'
         return testobj
 
-    def test_init(self, monkeypatch, capsys):
-        """unittest for Gui.__init__
+    def _test_init(self, monkeypatch, capsys):
+        """unittest for InitialToolDialog.__init__
         """
-        monkeypatch.setattr(testee.wx.Frame, '__init__', mockwx.MockFrame.__init__)
-        monkeypatch.setattr(testee.wx.Frame, 'CreateStatusBar', mockwx.MockFrame.CreateStatusBar)
-        monkeypatch.setattr(testee.wx, 'MenuBar', mockwx.MockMenuBar)
-        monkeypatch.setattr(testee.wx.Frame, 'SetMenuBar', mockwx.MockFrame.SetMenuBar)
-        master = MockEditor()
-        testee.shared.LIN = False
-        testobj = testee.Gui(master)
-        assert testobj.editor == master
-        assert isinstance(testobj.app, testee.wx.App)
-        assert isinstance(testobj.sb, mockwx.MockStatusBar)
-        assert isinstance(testobj.menu_bar, mockwx.MockMenuBar)
-        assert testobj.menuitems == {}
-        assert capsys.readouterr().out == (
-                "called frame.__init__ with args (None,) {'size': (688, 594), 'style': 541072960}\n"
-                "called Frame.CreateStatusBar\n"
-                "called StatusBar.__init__\n"
-                "called MenuBar.__init__ with args ()\n"
-                "called Frame.SetMenuBar with args (A MenuBar,)\n")
-        testee.shared.LIN = False
-        testobj = testee.Gui(master)
-        assert testobj.editor == master
-        assert isinstance(testobj.app, testee.wx.App)
-        assert isinstance(testobj.sb, mockwx.MockStatusBar)
-        assert isinstance(testobj.menu_bar, mockwx.MockMenuBar)
-        assert testobj.menuitems == {}
-        assert capsys.readouterr().out == (
-                "called frame.__init__ with args (None,) {'size': (688, 594), 'style': 541072960}\n"
-                "called Frame.CreateStatusBar\n"
-                "called StatusBar.__init__\n"
-                "called MenuBar.__init__ with args ()\n"
-                "called Frame.SetMenuBar with args (A MenuBar,)\n")
+        testobj = testee.InitialToolDialog(parent, master)
+        assert capsys.readouterr().out == ("")
 
-    def test_start_display(self, monkeypatch, capsys):
-        """unittest for Gui.start_display
-        """
-        monkeypatch.setattr(testee.wx, 'BoxSizer', mockwx.MockBoxSizer)
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        result = testobj.start_display()
-        assert isinstance(result, testee.wx.BoxSizer)
-        assert capsys.readouterr().out == "called BoxSizer.__init__ with args (8,)\n"
-
-    def test_add_choicebook_to_display(self, monkeypatch, capsys):
-        """unittest for Gui.add_choicebook_to_display
-        """
-        vbox = mockwx.MockBoxSizer()
-        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.add_choicebook_to_display(vbox, 'book')
-        assert capsys.readouterr().out == "called  sizer.Add with args ('book', 1, 8432, 5)\n"
-
-    def test_add_exitbutton_to_display(self, monkeypatch, capsys):
-        """unittest for Gui.add_exitbutton_to_display
-        """
-        def callback():
-            "dummy function just for reference"
-        monkeypatch.setattr(testee.wx, 'Button', mockwx.MockButton)
-        vbox = mockwx.MockBoxSizer()
-        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.add_exitbutton_to_display(vbox, ('exit', callback))
-        assert capsys.readouterr().out == (
-                f"called Button.__init__ with args ({testobj},) {{'label': 'exit'}}\n"
-                f"called Button.Bind with args ({testee.wx.EVT_BUTTON}, {callback}) {{}}\n"
-                "called  sizer.Add with args MockButton (0, 256)\n")
-
-    def test_go(self, monkeypatch, capsys):
-        """unittest for Gui.go
-        """
-        monkeypatch.setattr(testee.wx.Frame, 'SetMenuBar', mockwx.MockFrame.SetMenuBar)
-        monkeypatch.setattr(testee.wx.Frame, 'SetSizer', mockwx.MockFrame.SetSizer)
-        monkeypatch.setattr(testee.wx.Frame, 'SetAutoLayout', mockwx.MockFrame.SetAutoLayout)
-        monkeypatch.setattr(testee.wx.Frame, 'Show', mockwx.MockFrame.Show)
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.app = mockwx.MockApp()
-        sizer = mockwx.MockBoxSizer()
-        assert capsys.readouterr().out == ("called app.__init__ with args ()\n"
-                                           "called BoxSizer.__init__ with args ()\n")
-        testobj.go(sizer)
-        assert capsys.readouterr().out == ("called Frame.SetSizer with args ( sizer,)\n"
-                                           "called Frame.SetAutoLayout with args (True,)\n"
-                                           f"called  sizer.Fit with args ({testobj},)\n"
-                                           "called frame.Show with args (True,)\n"
-                                           "called app.MainLoop\n")
-
-    def test_close(self, monkeypatch, capsys):
-        """unittest for Gui.close
-        """
-        monkeypatch.setattr(testee.wx.Frame, 'Close', mockwx.MockFrame.Close)
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.close()
-        assert capsys.readouterr().out == ("called Frame.Close with arg True\n")
-
-    def test_set_window_title(self, monkeypatch, capsys):
-        """unittest for Gui.set_window_title
-        """
-        monkeypatch.setattr(testee.wx.Frame, 'SetTitle', mockwx.MockFrame.SetTitle)
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.set_window_title('title')
-        assert capsys.readouterr().out == "called Frame.SetTitle with args ('title',)\n"
-
-    def test_statusbar_message(self, monkeypatch, capsys):
-        """unittest for Gui.statusbar_message
+    def _test_accept(self, monkeypatch, capsys):
+        """unittest for InitialToolDialog.accept
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.sb = mockwx.MockStatusBar()
-        assert capsys.readouterr().out == "called StatusBar.__init__\n"
-        testobj.statusbar_message('message')
-        assert capsys.readouterr().out == "called statusbar.SetStatusText with args ('message',)\n"
+        assert testobj.accept() == "expected_result"
+        assert capsys.readouterr().out == ("")
 
-    def test_setup_menu(self, monkeypatch, capsys):
-        """unittest for Gui.setup_menu
-        """
-        def callback():
-            "empty function just for reference"
-        def mock_get(self):
-            print('called MenuBar.GetMenus')
-            return []
-        def mock_get_2(self):
-            print('called MenuBar.GetMenus')
-            return ['x']
-        def mock_getdata():
-            print('called Editor.get_menudata')
-            return []
-        def mock_getdata_2():
-            print('called Editor.get_menudata')
-            return [('xxx', []), ('yyy', [-1])]
-        def mock_getdata_3():
-            print('called Editor.get_menudata')
-            return [('menu', [('menuitem', (callback, 'keycombo'))]),
-                    ('menu', [('submenu', [(('menuitem', (callback, 'keycombo')),), ''])])]
-        def mock_bind(self, *args, **kwargs):
-            # print('called Frame.Bind with args', args[:2])
-            print('called Frame.Bind with args', args, kwargs)
-        def mock_replace(self, *args):
-            print('called menubar.Replace with args', args)
-            return oldmenu
-        monkeypatch.setattr(testee.wx, 'Menu', mockwx.MockMenu)
-        monkeypatch.setattr(testee.wx, 'MenuItem', mockwx.MockMenuItem)
-        monkeypatch.setattr(mockwx.MockMenuBar, 'GetMenus', mock_get)
-        monkeypatch.setattr(testee.wx.Frame, 'Bind', mock_bind)
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.menu_bar = mockwx.MockMenuBar()
-        testobj.menuitems = {}
-        assert capsys.readouterr().out == "called MenuBar.__init__ with args ()\n"
-        testobj.editor = types.SimpleNamespace(get_menudata=mock_getdata,
-                                               captions={'xxx': 'X', 'yyy': 'Y'})
-        testobj.setup_menu()
-        assert capsys.readouterr().out == ("called MenuBar.GetMenus\n"
-                                           "called Editor.get_menudata\n")
-        testobj.editor.get_menudata = mock_getdata_2
-        testobj.setup_menu()
-        assert capsys.readouterr().out == ("called MenuBar.GetMenus\n"
-                                           "called Editor.get_menudata\n"
-                                           "called Menu.__init__ with args ()\n"
-                                           "called menubar.Append with args (A Menu, 'X')\n"
-                                           "called Menu.__init__ with args ()\n"
-                                           "called menu.AppendSeparator with args ()\n"
-                                           "called menubar.Append with args (A Menu, 'Y')\n")
-        testobj.editor.captions = {'menu': 'menutext', 'menuitem': 'menuitemtext',
-                                   'submenu': 'submenutext'}
-        testobj.editor.get_menudata = mock_getdata_3
-        testobj.setup_menu()
-        assert capsys.readouterr().out == (
-                "called MenuBar.GetMenus\n"
-                "called Editor.get_menudata\n"
-                "called Menu.__init__ with args ()\n"
-                "called MenuItem.__init__ with args (None, -1) {'text': 'menuitemtext\\tkeycombo'}\n"
-                "called menu.Append with args MockMenuItem\n"
-                "called menuitem.GetId\n"
-                "called Frame.Bind with args"
-                f" ({testee.wx.EVT_MENU}, {callback}) {{'id': 'NewID'}}\n"
-                "called menubar.Append with args (A Menu, 'menutext')\n"
-                "called Menu.__init__ with args ()\n"
-                "called Menu.__init__ with args ()\n"
-                "called MenuItem.__init__ with args (None, -1) {'text': 'menuitemtext\\tkeycombo'}\n"
-                "called menu.Append with args MockMenuItem\n"
-                "called menuitem.GetId\n"
-                "called Frame.Bind with args"
-                f" ({testee.wx.EVT_MENU}, {callback}) {{'id': 'NewID'}}\n"
-                "called menu.AppendSubMenu with args (A Menu, 'submenutext')\n"
-                "called menubar.Append with args (A Menu, 'menutext')\n")
-        oldmenu = mockwx.MockMenu()
-        assert capsys.readouterr().out == "called Menu.__init__ with args ()\n"
-        monkeypatch.setattr(mockwx.MockMenuBar, 'GetMenus', mock_get_2)
-        monkeypatch.setattr(mockwx.MockMenuBar, 'Replace', mock_replace)
-        testobj.editor.get_menudata = mock_getdata_2
-        testobj.editor.captions = {'xxx': 'X', 'yyy': 'Y'}
-        testobj.setup_menu()
-        assert capsys.readouterr().out == ("called MenuBar.GetMenus\n"
-                                           "called Editor.get_menudata\n"
-                                           "called Menu.__init__ with args ()\n"
-                                           "called menubar.Replace with args (0, A Menu, 'X')\n"
-                                           "called menu.Destroy\n"
-                                           "called Menu.__init__ with args ()\n"
-                                           "called menu.AppendSeparator with args ()\n"
-                                           "called menubar.Replace with args (1, A Menu, 'Y')\n"
-                                           "called menu.Destroy\n")
 
-    def test_update_menutitles(self, monkeypatch, capsys):
-        """unittest for Gui.setcaptions
-        """
-        def mock_get():
-            print('called MenuBar.GetMenus')
-            return [(testmenu,)]
-        def mock_getitems(self):
-            print('called menu.GetMenuItems')
-            return [testmenuitem]
-        def mock_getparent(self):
-            print('called menu.GetParent')
-            return parentmenu
-        def mock_is(self):
-            print('called menuitem.IsSubMenu')
-            return True
-        monkeypatch.setattr(mockwx.MockMenuBar, 'GetMenus', mock_get)
-        testmenu = mockwx.MockMenu()
-        parentmenu = mockwx.MockMenu()
-        testmenuitem = mockwx.MockMenuItem()
-        assert capsys.readouterr().out == ("called Menu.__init__ with args ()\n"
-                                           "called Menu.__init__ with args ()\n"
-                                           "called MenuItem.__init__ with args () {}\n")
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.menu_bar = mockwx.MockMenuBar
-        testobj.menuitems = {}
-        testobj.update_menutitles()
-        assert capsys.readouterr().out == "called MenuBar.GetMenus\n"
-        testobj.editor = types.SimpleNamespace(captions={'menu': 'xxxxx', 'menuitem': 'yyyyyy'})
-        testobj.menuitems = {'menu': (testmenu, 'xx'),
-                             'menuitem': (testmenuitem, 'yy')}
-        testobj.update_menutitles()
-        assert capsys.readouterr().out == ("called MenuBar.GetMenus\n"
-                                           "called menu.GetTitle\n"
-                                           "called menu.SetTitle with arg 'xxxxx'\n"
-                                           "called menu.GetParent\n"
-                                           "called menubar.Replace with args (A Menu, 'xxxxx')\n"
-                                           "called menuitem.SetItemLabel with arg 'yyyyyy\tyy'\n")
-        monkeypatch.setattr(mockwx.MockMenu, 'GetParent', mock_getparent)
-        testobj.update_menutitles()
-        assert capsys.readouterr().out == ("called MenuBar.GetMenus\n"
-                                           "called menu.GetTitle\n"
-                                           "called menu.SetTitle with arg 'xxxxx'\n"
-                                           "called menu.GetParent\n"
-                                           "called menu.GetMenuItems\n"
-                                           "called menuitem.SetItemLabel with arg 'yyyyyy\tyy'\n")
-        monkeypatch.setattr(mockwx.MockMenu, 'GetMenuItems', mock_getitems)
-        testobj.update_menutitles()
-        assert capsys.readouterr().out == ("called MenuBar.GetMenus\n"
-                                           "called menu.GetTitle\n"
-                                           "called menu.SetTitle with arg 'xxxxx'\n"
-                                           "called menu.GetParent\n"
-                                           "called menu.GetMenuItems\n"
-                                           "called menuitem.IsSubMenu\n"
-                                           "called menuitem.SetItemLabel with arg 'yyyyyy\tyy'\n")
-        monkeypatch.setattr(mockwx.MockMenuItem, 'IsSubMenu', mock_is)
-        testobj.update_menutitles()
-        assert capsys.readouterr().out == ("called MenuBar.GetMenus\n"
-                                           "called menu.GetTitle\n"
-                                           "called menu.SetTitle with arg 'xxxxx'\n"
-                                           "called menu.GetParent\n"
-                                           "called menu.GetMenuItems\n"
-                                           "called menuitem.IsSubMenu\n"
-                                           "called menuitem.GetId\n"
-                                           "called menu.SetLabel with args ('NewID', 'xxxxx')\n"
-                                           "called menuitem.SetItemLabel with arg 'yyyyyy\tyy'\n")
+class TestFileBrowseButton:
+    """unittest for dialogs_wx.FileBrowseButton
+    """
+    def setup_testobj(self, monkeypatch, capsys):
+        """stub for dialogs_wx.FileBrowseButton object
 
-    def test_modify_menuitem(self, monkeypatch, capsys):
-        """unittest for Gui.modify_menuitem
+        create the object skipping the normal initialization
+        intercept messages during creation
+        return the object so that other methods can be monkeypatched in the caller
         """
-        m_item = mockwx.MockMenuItem()
-        assert capsys.readouterr().out == "called MenuItem.__init__ with args () {}\n"
+        def mock_init(self, *args):
+            """stub
+            """
+            print('called FileBrowseButton.__init__ with args', args)
+        monkeypatch.setattr(testee.FileBrowseButton, '__init__', mock_init)
+        testobj = testee.FileBrowseButton()
+        assert capsys.readouterr().out == 'called FileBrowseButton.__init__ with args ()\n'
+        return testobj
+
+    def _test_init(self, monkeypatch, capsys):
+        """unittest for FileBrowseButton.__init__
+        """
+        testobj = testee.FileBrowseButton(parent, text="", level_down=False)
+        assert capsys.readouterr().out == ("")
+
+    def _test_browse(self, monkeypatch, capsys):
+        """unittest for FileBrowseButton.browse
+        """
         testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.menuitems = {'caption': [m_item]}
-        testobj.modify_menuitem('caption', 'setting')
-        assert capsys.readouterr().out == "called menuitem.Enable with arg setting\n"
+        assert testobj.browse() == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+
+class TestSetupDialog:
+    """unittest for dialogs_wx.SetupDialog
+    """
+    def setup_testobj(self, monkeypatch, capsys):
+        """stub for dialogs_wx.SetupDialog object
+
+        create the object skipping the normal initialization
+        intercept messages during creation
+        return the object so that other methods can be monkeypatched in the caller
+        """
+        def mock_init(self, *args):
+            """stub
+            """
+            print('called SetupDialog.__init__ with args', args)
+        monkeypatch.setattr(testee.SetupDialog, '__init__', mock_init)
+        testobj = testee.SetupDialog()
+        assert capsys.readouterr().out == 'called SetupDialog.__init__ with args ()\n'
+        return testobj
+
+    def _test_init(self, monkeypatch, capsys):
+        """unittest for SetupDialog.__init__
+        """
+        testobj = testee.SetupDialog(parent, name)
+        assert capsys.readouterr().out == ("")
+
+    def _test_accept(self, monkeypatch, capsys):
+        """unittest for SetupDialog.accept
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.accept() == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+
+class TestDeleteDialog:
+    """unittest for dialogs_wx.DeleteDialog
+    """
+    def setup_testobj(self, monkeypatch, capsys):
+        """stub for dialogs_wx.DeleteDialog object
+
+        create the object skipping the normal initialization
+        intercept messages during creation
+        return the object so that other methods can be monkeypatched in the caller
+        """
+        def mock_init(self, *args):
+            """stub
+            """
+            print('called DeleteDialog.__init__ with args', args)
+        monkeypatch.setattr(testee.DeleteDialog, '__init__', mock_init)
+        testobj = testee.DeleteDialog()
+        assert capsys.readouterr().out == 'called DeleteDialog.__init__ with args ()\n'
+        return testobj
+
+    def _test_init(self, monkeypatch, capsys):
+        """unittest for DeleteDialog.__init__
+        """
+        testobj = testee.DeleteDialog(parent)
+        assert capsys.readouterr().out == ("")
+
+    def _test_accept(self, monkeypatch, capsys):
+        """unittest for DeleteDialog.accept
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.accept() == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+
+class TestFilesDialog:
+    """unittest for dialogs_wx.FilesDialog
+    """
+    def setup_testobj(self, monkeypatch, capsys):
+        """stub for dialogs_wx.FilesDialog object
+
+        create the object skipping the normal initialization
+        intercept messages during creation
+        return the object so that other methods can be monkeypatched in the caller
+        """
+        def mock_init(self, *args):
+            """stub
+            """
+            print('called FilesDialog.__init__ with args', args)
+        monkeypatch.setattr(testee.FilesDialog, '__init__', mock_init)
+        testobj = testee.FilesDialog()
+        assert capsys.readouterr().out == 'called FilesDialog.__init__ with args ()\n'
+        return testobj
+
+    def _test_init(self, monkeypatch, capsys):
+        """unittest for FilesDialog.__init__
+        """
+        testobj = testee.FilesDialog(parent, master)
+        assert capsys.readouterr().out == ("")
+
+    def _test_add_row(self, monkeypatch, capsys):
+        """unittest for FilesDialog.add_row
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.add_row(name, path='') == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+    def _test_delete_row(self, monkeypatch, capsys):
+        """unittest for FilesDialog.delete_row
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.delete_row(rownum) == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+    def _test_add_program(self, monkeypatch, capsys):
+        """unittest for FilesDialog.add_program
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.add_program(event) == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+    def _test_remove_programs(self, monkeypatch, capsys):
+        """unittest for FilesDialog.remove_programs
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.remove_programs(event) == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+    def _test_accept(self, monkeypatch, capsys):
+        """unittest for FilesDialog.accept
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.accept() == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+
+class TestColumnSettingsDialog:
+    """unittest for dialogs_wx.ColumnSettingsDialog
+    """
+    def setup_testobj(self, monkeypatch, capsys):
+        """stub for dialogs_wx.ColumnSettingsDialog object
+
+        create the object skipping the normal initialization
+        intercept messages during creation
+        return the object so that other methods can be monkeypatched in the caller
+        """
+        def mock_init(self, *args):
+            """stub
+            """
+            print('called ColumnSettingsDialog.__init__ with args', args)
+        monkeypatch.setattr(testee.ColumnSettingsDialog, '__init__', mock_init)
+        testobj = testee.ColumnSettingsDialog()
+        assert capsys.readouterr().out == 'called ColumnSettingsDialog.__init__ with args ()\n'
+        return testobj
+
+    def _test_init(self, monkeypatch, capsys):
+        """unittest for ColumnSettingsDialog.__init__
+        """
+        testobj = testee.ColumnSettingsDialog(parent, master)
+        assert capsys.readouterr().out == ("")
+
+    def _test_add_row(self, monkeypatch, capsys):
+        """unittest for ColumnSettingsDialog.add_row
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.add_row(name='', width='', is_flag=False, colno='') == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+    def _test_on_text_changed(self, monkeypatch, capsys):
+        """unittest for ColumnSettingsDialog.on_text_changed
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.on_text_changed(event) == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+    def _test_delete_row(self, monkeypatch, capsys):
+        """unittest for ColumnSettingsDialog.delete_row
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.delete_row(rownum) == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+    def _test_add_column(self, monkeypatch, capsys):
+        """unittest for ColumnSettingsDialog.add_column
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.add_column(event) == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+    def _test_remove_columns(self, monkeypatch, capsys):
+        """unittest for ColumnSettingsDialog.remove_columns
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.remove_columns(event) == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+    def _test_accept(self, monkeypatch, capsys):
+        """unittest for ColumnSettingsDialog.accept
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.accept() == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+
+class TestNewColumnsDialog:
+    """unittest for dialogs_wx.NewColumnsDialog
+    """
+    def setup_testobj(self, monkeypatch, capsys):
+        """stub for dialogs_wx.NewColumnsDialog object
+
+        create the object skipping the normal initialization
+        intercept messages during creation
+        return the object so that other methods can be monkeypatched in the caller
+        """
+        def mock_init(self, *args):
+            """stub
+            """
+            print('called NewColumnsDialog.__init__ with args', args)
+        monkeypatch.setattr(testee.NewColumnsDialog, '__init__', mock_init)
+        testobj = testee.NewColumnsDialog()
+        assert capsys.readouterr().out == 'called NewColumnsDialog.__init__ with args ()\n'
+        return testobj
+
+    def _test_init(self, monkeypatch, capsys):
+        """unittest for NewColumnsDialog.__init__
+        """
+        testobj = testee.NewColumnsDialog(parent, master)
+        assert capsys.readouterr().out == ("")
+
+    def _test_accept(self, monkeypatch, capsys):
+        """unittest for NewColumnsDialog.accept
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.accept() == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+
+class TestExtraSettingsDialog:
+    """unittest for dialogs_wx.ExtraSettingsDialog
+    """
+    def setup_testobj(self, monkeypatch, capsys):
+        """stub for dialogs_wx.ExtraSettingsDialog object
+
+        create the object skipping the normal initialization
+        intercept messages during creation
+        return the object so that other methods can be monkeypatched in the caller
+        """
+        def mock_init(self, *args):
+            """stub
+            """
+            print('called ExtraSettingsDialog.__init__ with args', args)
+        monkeypatch.setattr(testee.ExtraSettingsDialog, '__init__', mock_init)
+        testobj = testee.ExtraSettingsDialog()
+        assert capsys.readouterr().out == 'called ExtraSettingsDialog.__init__ with args ()\n'
+        return testobj
+
+    def _test_init(self, monkeypatch, capsys):
+        """unittest for ExtraSettingsDialog.__init__
+        """
+        testobj = testee.ExtraSettingsDialog(parent, master)
+        assert capsys.readouterr().out == ("")
+
+    def _test_add_row(self, monkeypatch, capsys):
+        """unittest for ExtraSettingsDialog.add_row
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.add_row(name='', value='', desc='') == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+    def _test_delete_row(self, monkeypatch, capsys):
+        """unittest for ExtraSettingsDialog.delete_row
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.delete_row(rownum) == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+    def _test_add_setting(self, monkeypatch, capsys):
+        """unittest for ExtraSettingsDialog.add_setting
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.add_setting(event) == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+    def _test_remove_settings(self, monkeypatch, capsys):
+        """unittest for ExtraSettingsDialog.remove_settings
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.remove_settings(event) == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+    def _test_accept(self, monkeypatch, capsys):
+        """unittest for ExtraSettingsDialog.accept
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.accept() == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+
+class TestEntryDialog:
+    """unittest for dialogs_wx.EntryDialog
+    """
+    def setup_testobj(self, monkeypatch, capsys):
+        """stub for dialogs_wx.EntryDialog object
+
+        create the object skipping the normal initialization
+        intercept messages during creation
+        return the object so that other methods can be monkeypatched in the caller
+        """
+        def mock_init(self, *args):
+            """stub
+            """
+            print('called EntryDialog.__init__ with args', args)
+        monkeypatch.setattr(testee.EntryDialog, '__init__', mock_init)
+        testobj = testee.EntryDialog()
+        assert capsys.readouterr().out == 'called EntryDialog.__init__ with args ()\n'
+        return testobj
+
+    def _test_init(self, monkeypatch, capsys):
+        """unittest for EntryDialog.__init__
+        """
+        testobj = testee.EntryDialog(parent, master)
+        assert capsys.readouterr().out == ("")
+
+    def _test_add_key(self, monkeypatch, capsys):
+        """unittest for EntryDialog.add_key
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.add_key(event) == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+    def _test_delete_key(self, monkeypatch, capsys):
+        """unittest for EntryDialog.delete_key
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.delete_key(event) == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+    def _test_accept(self, monkeypatch, capsys):
+        """unittest for EntryDialog.accept
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.accept() == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+
+class TestCompleteDialog:
+    """unittest for dialogs_wx.CompleteDialog
+    """
+    def setup_testobj(self, monkeypatch, capsys):
+        """stub for dialogs_wx.CompleteDialog object
+
+        create the object skipping the normal initialization
+        intercept messages during creation
+        return the object so that other methods can be monkeypatched in the caller
+        """
+        def mock_init(self, *args):
+            """stub
+            """
+            print('called CompleteDialog.__init__ with args', args)
+        monkeypatch.setattr(testee.CompleteDialog, '__init__', mock_init)
+        testobj = testee.CompleteDialog()
+        assert capsys.readouterr().out == 'called CompleteDialog.__init__ with args ()\n'
+        return testobj
+
+    def _test_init(self, monkeypatch, capsys):
+        """unittest for CompleteDialog.__init__
+        """
+        testobj = testee.CompleteDialog(parent, master)
+        assert capsys.readouterr().out == ("")
+
+    def _test_accept(self, monkeypatch, capsys):
+        """unittest for CompleteDialog.accept
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.accept() == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+    def _test_read_data(self, monkeypatch, capsys):
+        """unittest for CompleteDialog.read_data
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.read_data() == "expected_result"
+        assert capsys.readouterr().out == ("")
+
+    def _test_build_table(self, monkeypatch, capsys):
+        """unittest for CompleteDialog.build_table
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        assert testobj.build_table() == "expected_result"
+        assert capsys.readouterr().out == ("")
