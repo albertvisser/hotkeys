@@ -1163,9 +1163,11 @@ class TestSingleDataInterface:
         """
         monkeypatch.setattr(testee.qtw.QFrame, 'setLayout', mockqtw.MockFrame.setLayout)
         testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj._sizer = 'sizer'
-        testobj.finalize_screen()
-        assert capsys.readouterr().out == "called Frame.setLayout with arg str\n"
+        testobj._sizer = mockqtw.MockVBoxLayout()
+        testobj.p0list = 'p0list'
+        testobj.finalize_screen('p0list')
+        assert capsys.readouterr().out == ("called VBox.__init__\n"
+                                           "called Frame.setLayout with arg MockVBoxLayout\n")
 
     def _test_resize_if_necessary(self, monkeypatch, capsys):
         """unittest for SingleDataInterface.resize_if_necessary
@@ -1523,9 +1525,9 @@ def test_show_message(monkeypatch, capsys):
     monkeypatch.setattr(testee.shared, 'get_text', mock_get_text)
     monkeypatch.setattr(testee.shared, 'get_title', mock_get_title)
     monkeypatch.setattr(testee.qtw.QMessageBox, 'information', mock_info)
-    testee.show_message('win', message_id='xxx', text='yyy')
+    testee.show_message('win')
     assert capsys.readouterr().out == (
-            "called shared.get_text with args ('win', 'xxx', 'yyy', None)\n"
+            "called shared.get_text with args ('win', '', '', None)\n"
             "called shared.get_title with args ('win',)\n"
             "called MessageBox.information with args ('win', 'title', 'text')\n")
     testee.show_message('win', message_id='xxx', text='yyy', args={'aa': 'bbbb'})
@@ -1548,6 +1550,12 @@ def test_show_cancel_message(monkeypatch, capsys):
             "called shared.get_title with args ('win',)\n"
             f"called MessageBox.information with args ('win', 'title', 'text', {buttons!r})\n")
     monkeypatch.setattr(testee.qtw.QMessageBox, 'information', mock_info_2)
+    assert testee.show_cancel_message('win')
+    buttons = testee.qtw.QMessageBox.StandardButton.Ok | testee.qtw.QMessageBox.StandardButton.Cancel
+    assert capsys.readouterr().out == (
+            "called shared.get_text with args ('win', '', '', None)\n"
+            "called shared.get_title with args ('win',)\n"
+            f"called MessageBox.information with args ('win', 'title', 'text', {buttons!r})\n")
     assert testee.show_cancel_message('win', message_id='xxx', text='yyy', args={'aa': 'bbbb'})
     buttons = testee.qtw.QMessageBox.StandardButton.Ok | testee.qtw.QMessageBox.StandardButton.Cancel
     assert capsys.readouterr().out == (
@@ -1562,11 +1570,11 @@ def test_ask_question(monkeypatch, capsys):
     monkeypatch.setattr(testee.shared, 'get_text', mock_get_text)
     monkeypatch.setattr(testee.shared, 'get_title', mock_get_title)
     monkeypatch.setattr(testee.qtw.QMessageBox, 'question', mock_question)
-    assert not testee.ask_question('win', message_id='xxx', text='yyy')
+    assert not testee.ask_question('win')
     buttons = testee.qtw.QMessageBox.StandardButton.Yes | testee.qtw.QMessageBox.StandardButton.No
     yesbutton = testee.qtw.QMessageBox.StandardButton.Yes
     assert capsys.readouterr().out == (
-            "called shared.get_text with args ('win', 'xxx', 'yyy', None)\n"
+            "called shared.get_text with args ('win', '', '', None)\n"
             "called shared.get_title with args ('win',)\n"
             f"called MessageBox.question with args ('win', 'title', 'text', {buttons!r},"
             f" {yesbutton!r})\n")
@@ -1587,21 +1595,21 @@ def test_ask_ync_question(monkeypatch, capsys):
     monkeypatch.setattr(testee.shared, 'get_text', mock_get_text)
     monkeypatch.setattr(testee.shared, 'get_title', mock_get_title)
     monkeypatch.setattr(testee.qtw.QMessageBox, 'question', mock_question)
-    assert testee.ask_ync_question('win', message_id='xxx', text='yyy') == (False, False)
-    # buttons = testee.qtw.QMessageBox.StandardButton.Yes | testee.qtw.QMessageBox.StandardButton.No | testee.qtw.QMessageBox.StandardButton.Cancel
-    # # hier komt `buttons` ineens niet meer overeen met de buttons in de testee methode
-    # daarom stdout vergelijking maar laten zitten
-    # assert capsys.readouterr().out == (
-    #         "called shared.get_text with args ('win', 'xxx', 'yyy', None)\n"
-    #         "called shared.get_title with args ('win',)\n"
-    #         f"called MessageBox.question with args ('win', 'title', 'text', {buttons}")
+    assert testee.ask_ync_question('win') == (False, False)
+    buttons = (testee.qtw.QMessageBox.StandardButton.Yes | testee.qtw.QMessageBox.StandardButton.No
+               | testee.qtw.QMessageBox.StandardButton.Cancel)
+    assert capsys.readouterr().out == (
+            "called shared.get_text with args ('win', '', '', None)\n"
+            "called shared.get_title with args ('win',)\n"
+            "called MessageBox.question with args"
+            f" ('win', 'title', 'text', <StandardButton.Yes|No|Cancel: {buttons}>)\n")
     monkeypatch.setattr(testee.qtw.QMessageBox, 'question', mock_question_2)
     assert testee.ask_ync_question('win', message_id='xxx', text='yyy', args={}) == (True, False)
-    # buttons = testee.qtw.QMessageBox.StandardButton.Yes | testee.qtw.QMessageBox.StandardButton.No | testee.qtw.QMessageBox.StandardButton.Cancel
-    # assert capsys.readouterr().out == (
-    #         "called shared.get_text with args ('win', 'xxx', 'yyy', {})\n"
-    #         "called shared.get_title with args ('win',)\n"
-    #         f"called MessageBox.question with args ('win', 'title', 'text', {buttons}")
+    assert capsys.readouterr().out == (
+            "called shared.get_text with args ('win', 'xxx', 'yyy', {})\n"
+            "called shared.get_title with args ('win',)\n"
+            "called MessageBox.question with args"
+            f" ('win', 'title', 'text', <StandardButton.Yes|No|Cancel: {buttons}>)\n")
     monkeypatch.setattr(testee.qtw.QMessageBox, 'question', mock_question_3)
     assert testee.ask_ync_question('win', message_id='xxx', text='yyy',
                                    args={'aa': 'bbbb'}) == (False, True)
@@ -1880,26 +1888,9 @@ class TestFilesDialogGui:
         monkeypatch.setattr(testee.qtw.QDialog, '__init__', mockqtw.MockDialog.__init__)
         monkeypatch.setattr(testee.qtw.QDialog, 'resize', mockqtw.MockDialog.resize)
         monkeypatch.setattr(testee.qtw.QDialog, 'setWindowTitle', mockqtw.MockDialog.setWindowTitle)
-        # monkeypatch.setattr(testee.qtw.QDialog, 'accept', mockqtw.MockDialog.accept)
-        # monkeypatch.setattr(testee.qtw.QDialog, 'reject', mockqtw.MockDialog.reject)
         monkeypatch.setattr(testee.qtw.QDialog, 'setLayout', mockqtw.MockDialog.setLayout)
         monkeypatch.setattr(testee.qtw, 'QVBoxLayout', mockqtw.MockVBoxLayout)
-        # monkeypatch.setattr(testee.qtw, 'QCheckBox', mockqtw.MockCheckBox)
-        # monkeypatch.setattr(testee.FilesDialog, 'add_row', mock_add)
         testobj = testee.FilesDialogGui('master', 'parent', 'title')
-        assert testobj.code_to_remove == []
-        assert testobj.data_to_remove == []
-        # assert isinstance(testobj.scrl, testee.qtw.QScrollArea)
-        # assert testobj.bar == 'vertical scrollbar'
-        # assert isinstance(testobj.sizer, testee.qtw.QVBoxLayout)
-        # assert isinstance(testobj.gsizer, testee.qtw.QGridLayout)
-        # assert testobj.rownum == 0
-        # assert testobj.plugindata == []
-        # assert testobj.checks == []
-        # assert testobj.paths == []
-        # assert testobj.progs == []
-        # assert testobj.settingsdata == {'name': ('data', )}
-        # hier zit weer zo'n OR die blijkbaar een integer verandert in een object (Alignment)
         assert isinstance(testobj.sizer, testee.qtw.QVBoxLayout)
         assert capsys.readouterr().out == ("called Dialog.__init__ with args parent () {}\n"
                                            "called Dialog.resize with args (680, 400)\n"
@@ -2108,6 +2099,15 @@ class TestFilesDialogGui:
         assert testobj.get_browser_value(browser) == ''
         assert capsys.readouterr().out == "called LineEdit.text\n"
 
+    def test_get_checkbox_value(self, monkeypatch, capsys):
+        """unittest for FilesDialogGui.get_checkbox_value
+        """
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        cb = mockqtw.MockCheckBox()
+        assert capsys.readouterr().out == "called CheckBox.__init__\n"
+        assert not testobj.get_checkbox_value(cb)
+        assert capsys.readouterr().out == "called CheckBox.isChecked\n"
+
     def test_accept(self, monkeypatch, capsys):
         """unittest for FilesDialogGui.accept
         """
@@ -2274,7 +2274,8 @@ class TestSetupDialogGui:
         assert capsys.readouterr().out == (
                 f"called Label.__init__ with args ('text', {testobj})\n"
                 "called Grid.addWidget with arg MockLabel at (1, 0, 1, 3)\n"
-                "called LineEdit.__init__\n")
+                "called LineEdit.__init__\n"
+                "called Grid.addWidget with arg MockLineEdit at (1, 3)\n")
 
     def test_add_checkbox_line(self, monkeypatch, capsys):
         """unittest for SetupDialogGui.add_checkbox_line
@@ -2604,7 +2605,6 @@ class TestColumnSettingsDialogGui:
         assert isinstance(result, testee.qtw.QScrollArea)
         assert testobj.bar == 'vertical scrollbar'
         assert isinstance(testobj.gsizer, testee.qtw.QGridLayout)
-        assert testobj.rownum == 0
         assert capsys.readouterr().out == ("called Frame.__init__\n"
                                            f"called ScrollArea.__init__ with args ({testobj},)\n"
                                            "called ScrollArea.setWidget with arg `MockFrame`\n"
@@ -2677,7 +2677,7 @@ class TestColumnSettingsDialogGui:
         assert isinstance(result, testee.qtw.QCheckBox)
         assert capsys.readouterr().out == (
                 "called HBox.__init__\n"
-                f"called CheckBox.__init__ with args ({testobj},)\n"
+                f"called CheckBox.__init__ with args ('text', {testobj})\n"
                 "called HBox.addWidget with arg MockCheckBox\n"
                 "called HBox.addSpacing\n"
                 "called Grid.addLayout with arg MockHBoxLayout at ('row', 'col')\n")
@@ -2686,7 +2686,7 @@ class TestColumnSettingsDialogGui:
         assert capsys.readouterr().out == (
                 "called HBox.__init__\n"
                 "called HBox.addSpacing\n"
-                f"called CheckBox.__init__ with args ({testobj},)\n"
+                f"called CheckBox.__init__ with args ('text', {testobj})\n"
                 "called CheckBox.setFixedWidth with arg 'width'\n"
                 "called HBox.addWidget with arg MockCheckBox\n"
                 "called Grid.addLayout with arg MockHBoxLayout at ('row', 'col')\n")
@@ -2791,21 +2791,19 @@ class TestColumnSettingsDialogGui:
         monkeypatch.setattr(testee.qtw, 'QSpinBox', mockqtw.MockSpinBox)
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.gsizer = mockqtw.MockVBoxLayout()
-        testobj.rownum = 2
         check = mockqtw.MockCheckBox()
         spinner = mockqtw.MockSpinBox(1)
         w0 = mockqtw.MockWidget()
         w1 = mockqtw.MockWidget()
         w3 = mockqtw.MockWidget()
-        widgets = [w0, w1, spinner, w3, '']
+        widgets = [check, w0, w1, spinner, w3]
         assert capsys.readouterr().out == ("called VBox.__init__\n"
                                            "called CheckBox.__init__\n"
                                            "called SpinBox.__init__\n"
                                            "called Widget.__init__\n"
                                            "called Widget.__init__\n"
                                            "called Widget.__init__\n")
-        testobj.delete_row(0, check, widgets)
-        assert testobj.rownum == 1
+        testobj.delete_row(0, widgets)
         assert capsys.readouterr().out == (
                 "called VBox.removeWidget with arg MockCheckBox\n"
                 "called CheckBox.close\n"
@@ -3226,7 +3224,7 @@ class TestExtraSettingsDialogGui:
         testobj.bar = mockqtw.MockScrollBar()
         assert capsys.readouterr().out == ("called Grid.__init__\n"
                                            "called ScrollBar.__init__\n")
-        testobj.add_row('', 'value', 'desc')
+        testobj.add_row(testobj.gsizer, '', 'value', 'desc')
         assert testobj.rownum == 2
         assert capsys.readouterr().out == (
                 f"called CheckBox.__init__ with args ({testobj},)\n"
@@ -3240,7 +3238,7 @@ class TestExtraSettingsDialogGui:
                 "called Grid.addWidget with arg MockLineEdit at (2, 2)\n"
                 "called Scrollbar.maximum\ncalled Scrollbar.setMaximum with value `161`\n"
                 "called Scrollbar.maximum\ncalled Scrollbar.setValue with value `99`\n")
-        testobj.add_row('name', 'value', 'desc')
+        testobj.add_row(testobj.gsizer, 'name', 'value', 'desc')
         assert testobj.rownum == 4
         assert capsys.readouterr().out == (
                 f"called CheckBox.__init__ with args ({testobj},)\n"
@@ -3268,7 +3266,7 @@ class TestExtraSettingsDialogGui:
         assert capsys.readouterr().out == ("called CheckBox.__init__\ncalled LineEdit.__init__\n"
                                            "called LineEdit.__init__\ncalled LineEdit.__init__\n"
                                            "called Grid.__init__\n")
-        testobj.delete_row(1, [check, name, value, desc])
+        testobj.delete_row(testobj.gsizer, 1, [check, name, value, desc])
         assert capsys.readouterr().out == ("called Grid.removeWidget with arg MockCheckBox\n"
                                            "called CheckBox.close\n"
                                            "called Grid.removeWidget with arg MockLineEdit\n"

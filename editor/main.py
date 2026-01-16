@@ -245,6 +245,7 @@ class HotkeyPanel:
         self.settings, self.column_info, self.data, self.otherstuff = settings
         if nodata:
             self.gui.setup_empty_screen(nodata, self.title)
+            self.p0list = None
         else:
             self.parent.page = self
             self.title = self.settings[shared.SettType.PNL.value]  # "PanelName"]
@@ -266,7 +267,7 @@ class HotkeyPanel:
                                                  self.settings[shared.SettType.RDEF.value])
                 self.refresh_extrapanel(self.gui.getfirstitem(self.p0list))
                 self.gui.set_listselection(self.p0list, 0)
-        self.gui.finalize_screen()
+        self.gui.finalize_screen(self.p0list)
         self.initializing_screen = False
 
     def read_settings_from_path(self, pad):
@@ -1552,7 +1553,8 @@ class FilesDialog:
         # settingsdata is een mapping van pluginnaam op een tuple van programmanaam en
         # andere settings (alleen als er een nieuw keydef file voor moet worden aangemaakt)
         for name, path in parent.ini["plugins"]:
-            check, browse = self.gui.add_row(name, path)
+            check, browse = self.gui.add_row(name, path, buttoncaption=parent.captions['C_BRWS'],
+                                             dialogtitle=parent.captions['C_SELFIL'], tooltiptext="")
             # self.checks.append(check)
             # self.paths.append((name, browse))
             self.checks.append((check, name, browse))
@@ -1565,20 +1567,21 @@ class FilesDialog:
 
     def add_program(self, *args):
         """nieuwe rij aanmaken in self.gsizer"""
-        newtool, ok = gui.get_textinput(self, '', self.parent.captions['P_NEWPRG'])
+        newtool, ok = gui.get_textinput(self.gui, '', self.parent.captions['P_NEWPRG'])
         if ok:
             if newtool == "":
-                gui.show_message(self.parent, 'I_NEEDNAME')
+                gui.show_message(self.gui, 'I_NEEDNAME')  # ).parent, 'I_NEEDNAME')
                 return
             self.last_added = newtool
             dataloc = prgloc = ""
             self.settingsdata[newtool] = (prgloc,)
-            if gui.ask_question(self.parent, 'P_INIKDEF'):
+            if gui.ask_question(self.gui, 'P_INIKDEF'):
+                self.data = []
                 ok = gui.show_dialog(SetupDialog(self, newtool).gui)
                 if ok:
-                    self.settingsdata[newtool] = self.parent.data[1:]
-                    prgloc = self.parent.data[1]
-                    dataloc = self.parent.data[0]
+                    self.settingsdata[newtool] = self.data[1:]
+                    prgloc = self.data[1]
+                    dataloc = self.data[0]
                     self.gui.add_row(newtool, path=dataloc,
                                      buttoncaption=self.parent.captions['C_BRWS'],
                                      dialogtitle=self.parent.captions['C_SELFIL'], tooltiptext="")
@@ -1676,24 +1679,20 @@ class SetupDialog:
     tevens voor dat het correcte formaat gebruikt wordt
     """
     def __init__(self, parent, name):
-        # FIXME: parent captions gaat hier niet werken, parent.parent.captions wel maar: LELIJK
-        self.gui = gui.SetupDialogGui(self, parent.gui, parent.captions['T_INIKDEF'])
-        text = parent.captions['T_NAMOF'].format(parent.captions['S_PLGNAM'].lower(),
-                                                 parent.captions['T_ISMADE'])
+        self.parent = parent
+        captions = parent.parent.captions
+        self.gui = gui.SetupDialogGui(self, parent.gui, captions['T_INIKDEF'])
+        text = captions['T_NAMOF'].format(captions['S_PLGNAM'].lower(), captions['T_ISMADE'])
         self.t_program = self.gui.add_textinput_line(text, f'editor.plugins.{name.lower()}_keys')
-        text = parent.captions['S_PNLNAM']
+        text = captions['S_PNLNAM']
         self.t_title = self.gui.add_textinput_line(text, f'{name} hotkeys')
-        self.c_rebuild = self.gui.add_checkbox_line(
-            parent.captions['T_MAKE'].format(parent.captions['S_RBLD']))
-        self.c_details = self.gui.add_checkbox_line(parent.captions['S_DETS'])
-        self.c_redef = self.gui.add_checkbox_line(
-            parent.captions['T_MAKE'].format(parent.captions['S_RSAV']))
-        text = parent.captions['Q_SAVLOC']
+        self.c_rebuild = self.gui.add_checkbox_line(captions['T_MAKE'].format(captions['S_RBLD']))
+        self.c_details = self.gui.add_checkbox_line(captions['S_DETS'])
+        self.c_redef = self.gui.add_checkbox_line(captions['T_MAKE'].format(captions['S_RSAV']))
+        text = captions['Q_SAVLOC']
         suggest = os.path.join('editor', 'plugins', f"{name}_hotkeys.json")
-        self.t_loc = self.gui.add_filebrowse_line(text, suggest,
-                                                  buttoncaption=parent.captions['C_BRWS'],
-                                                  dialogtitle=parent.captions['C_SELFIL'],
-                                                  tooltiptext="")
+        self.t_loc = self.gui.add_filebrowse_line(text, suggest, buttoncaption=captions['C_BRWS'],
+                                                  dialogtitle=captions['C_SELFIL'], tooltiptext="")
         self.gui.add_okcancel_buttons()
 
     def confirm(self):
@@ -1715,9 +1714,7 @@ class SetupDialog:
         if importlib.util.find_spec(ploc):
             gui.show_message(self.gui, 'I_GOTPLGFIL', args=[ploc])
             return False
-        # nawee van #1050: omzetting bool(int(settng)) overbodig naken
-        # self.gui.data = [cloc, ploc, title, int(rebuild), int(details), int(redef)]
-        self.gui.data = [cloc, ploc, title, rebuild, details, redef]
+        self.parent.data = [cloc, ploc, title, rebuild, details, redef]
         return True
 
 
@@ -1726,10 +1723,11 @@ class DeleteDialog:
     """
     def __init__(self, parent):
         self.parent = parent
+        captions = parent.parent.captions
         self.gui = gui.DeleteDialogGui(self, parent.gui, parent.title)
-        self.gui.add_text_line(parent.captions['Q_REMPRG'])
-        self.remove_keydefs = self.gui.add_checkbox_line(parent.captions['Q_REMKDEF'])
-        self.remove_plugins = self.gui.add_checkbox_line(parent.captions['Q_REMPLG'])
+        self.gui.add_text_line(captions['Q_REMPRG'])
+        self.remove_keydefs = self.gui.add_checkbox_line(captions['Q_REMKDEF'])
+        self.remove_plugins = self.gui.add_checkbox_line(captions['Q_REMPLG'])
         self.gui.add_okcancel_buttons()
 
     def confirm(self):
@@ -1797,7 +1795,7 @@ class ColumnSettingsDialog:
                 data = self.data.pop(rownum)
                 for line in self.data:
                     self.gui.adapt_column_index(data[2], line[2])
-                self.gui.delete_row(rownum, check, data)
+                self.gui.delete_row(rownum, [check] + list(data)[:4])
 
     def confirm(self):
         "check and confirm input from columnsettings dialog"
@@ -1882,6 +1880,7 @@ class NewColumnsDialog:
     # tevens in de kolom die overeenkomt met de huidige taalinstelling
     # de betreffende text entry read-only maken
     def __init__(self, parent):
+        self.parent = parent
         self.widgets = []
         self.gui = gui.NewColumnsDialogGui(self, parent.gui, parent.parent.title)
         self.gui.add_explanation('\n'.join(parent.parent.captions['T_TRANS'].split(' / ')))
@@ -1970,7 +1969,7 @@ class ExtraSettingsDialog:
                     desc = parent.book.page.settings['extra'][name]
                 except KeyError:
                     desc = ''
-                self.fields.append(self.gui.add_row(name, value, desc))
+                self.fields.append(self.gui.add_row(self.scroll, name, value, desc))
         self.gui.finalize_inputarea(block, self.scroll)
         self.gui.add_buttons(block, [(parent.captions['C_ADDSET'], self.add_setting),
                                      (parent.captions['C_REMSET'], self.remove_settings)])
@@ -1978,7 +1977,7 @@ class ExtraSettingsDialog:
 
     def add_setting(self):
         """nieuwe rij aanmaken in self.gsizer"""
-        self.fields.append(self.gui.add_row('', '', ''))
+        self.fields.append(self.gui.add_row(self.scroll, '', '', ''))
 
     def remove_settings(self):
         """alle aangevinkte items verwijderen uit self.gsizer"""
@@ -1986,7 +1985,7 @@ class ExtraSettingsDialog:
             if self.gui.get_checkbox_value(row[0]):
                 if gui.ask_question(self.parent, 'Q_REMSET'):
                     rowindex = self.fields.index(row)
-                    self.gui.delete_row(rowindex)
+                    self.gui.delete_row(self.scroll, rowindex, row)
                     self.fields.pop(rowindex)
 
     def confirm(self):
@@ -2048,6 +2047,7 @@ class EntryDialog:
         self.gui = gui.EntryDialogGui(self, parent.gui, parent.title + ": manual entry")
         headerdefs = [(parent.captions[x[0]], x[1]) for x in parent.book.page.column_info]
         self.p0list = self.gui.add_table_to_display(headerdefs)
+        self.colcount = len(headerdefs)
         self.rowcount = -1
         for row in parent.book.page.data.values():
             self.rowcount += 1
@@ -2059,18 +2059,18 @@ class EntryDialog:
     def add_key(self):
         "add a line to the grid"
         self.rowcount += 1
-        empty_values = [''] * len(self.p0list[0])
+        empty_values = [''] * self.colcount
         self.gui.add_row(self.p0list, self.rowcount, empty_values)
 
     def confirm(self):
         "check and confirm input"
         new_values = collections.defaultdict(list)
-        num_cols = self.gui.get_table_columns(self.p0list)
-        for rowid in range(self.rowcount):      # self.p0list.rowCount()):
-            for colid in range(num_cols):
+        for rowid in range(self.rowcount):
+            for colid in range(self.colcount):
                 value = self.gui.get_tableitem_value(self.p0list, rowid, colid)
                 new_values[rowid + 1].append(value.replace('\\n', '\n'))
         self.parent.book.page.data = new_values
+        return True
 
 
 class CompleteDialog:

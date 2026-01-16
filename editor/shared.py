@@ -99,8 +99,14 @@ def get_title(win):
 
 def get_appropriate_window(win):
     "find the widget associated with a window"
+    # kijk of win een gui klasse is, zo ja ga naar de master ervan
+    # alleen bij de main gui heet deze editor ( TODO: aanpassen)
     if hasattr(win, 'editor'):
         win = win.editor
     elif hasattr(win, 'master'):
         win = win.master
+    # kijk of win een attribuut "captions" heeft; zo nee dan gaan we net zo lang naar de parent
+    # todat deze die heeft
+    while not hasattr(win, 'captions'):
+        win = win.parent
     return win

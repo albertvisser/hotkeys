@@ -449,7 +449,7 @@ class SingleDataInterface(qtw.QFrame):
         buttons[0].setEnabled(state_s)
         buttons[1].setEnabled(state_d)
 
-    def finalize_screen(self):
+    def finalize_screen(self, p0list):
         "last actions to add the screen to the display"
         self.setLayout(self._sizer)
 
@@ -743,8 +743,6 @@ class FilesDialogGui(qtw.QDialog):
         self.master = master
         self.title = title
         # self.last_added = ''
-        self.code_to_remove = []
-        self.data_to_remove = []
         super().__init__(parent)
         self.resize(680, 400)
         self.setWindowTitle(title)
@@ -843,6 +841,10 @@ class FilesDialogGui(qtw.QDialog):
         "return the text entered/selected in the browser widget"
         return browser.input.text()
 
+    def get_checkbox_value(self, cb):
+        "return the state of a checkbox"
+        return cb.isChecked()
+
     def accept(self):
         """send updates to parent and leave
         """
@@ -909,6 +911,7 @@ class SetupDialogGui(qtw.QDialog):
         self.lineno += 1
         self.grid.addWidget(qtw.QLabel(text, self), self.lineno, 0, 1, 3)
         ted = qtw.QLineEdit(suggest, self)
+        self.grid.addWidget(ted, self.lineno, 3)
         return ted
 
     def add_checkbox_line(self, text):
@@ -1051,8 +1054,6 @@ class ColumnSettingsDialogGui(qtw.QDialog):
         scroller.setWidgetResizable(True)
         self.bar = scroller.verticalScrollBar()
         self.gsizer = qtw.QGridLayout()
-        rownum = 0
-        self.rownum = rownum
         box = qtw.QVBoxLayout()
         box.addLayout(self.gsizer)
         box.addStretch()
@@ -1088,7 +1089,7 @@ class ColumnSettingsDialogGui(qtw.QDialog):
         hsizer = qtw.QHBoxLayout()
         if before:
             hsizer.addSpacing(before)
-        cb = qtw.QCheckBox(self)
+        cb = qtw.QCheckBox(text, self)
         if width:
             cb.setFixedWidth(width)
         hsizer.addWidget(cb)
@@ -1149,12 +1150,11 @@ class ColumnSettingsDialogGui(qtw.QDialog):
         if current_widget.value() > removed_widget.value():
             current_widget.setValue(current_widget.value() - 1)
 
-    def delete_row(self, rownum, check, widgets):
+    def delete_row(self, rownum, widgets):
         """remove a column settings row
         """
-        self.rownum -= 1
         # w_name, w_width, w_colno, w_flag, _ = self.data[rownum]
-        for widget in [check] + widgets[:4]:
+        for widget in widgets:
             self.gsizer.removeWidget(widget)
             widget.close()
         self.gsizer.removeItem(self.gsizer.itemAt(rownum))
@@ -1345,13 +1345,13 @@ class ExtraSettingsDialogGui(qtw.QDialog):
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
 
-    def add_row(self, name, value, desc):
+    def add_row(self, gsizer, name, value, desc):
         """add a row for defining a setting (name, value)
         """
         self.rownum += 1
         colnum = 0
         check = qtw.QCheckBox(self)
-        self.gsizer.addWidget(check, self.rownum, colnum)
+        gsizer.addWidget(check, self.rownum, colnum)
         # self.checks.append(check)
         colnum += 1
         w_name = qtw.QLineEdit(name, self)
@@ -1359,24 +1359,24 @@ class ExtraSettingsDialogGui(qtw.QDialog):
         if name:
             w_name.setReadOnly(True)
         ## w_name.setMaxLength(50)
-        self.gsizer.addWidget(w_name, self.rownum, colnum)
+        gsizer.addWidget(w_name, self.rownum, colnum)
         colnum += 1
         w_value = qtw.QLineEdit(value, self)
-        self.gsizer.addWidget(w_value, self.rownum, colnum)
+        gsizer.addWidget(w_value, self.rownum, colnum)
         self.rownum += 1
         w_desc = qtw.QLineEdit(desc, self)
-        self.gsizer.addWidget(w_desc, self.rownum, colnum)
+        gsizer.addWidget(w_desc, self.rownum, colnum)
         # self.data.append((w_name, w_value, w_desc))
         self.bar.setMaximum(self.bar.maximum() + 62)
         self.bar.setValue(self.bar.maximum())
         return check, w_name, w_value, w_desc
 
-    def delete_row(self, rowindex, fields):
+    def delete_row(self, gsizer, rowindex, fields):
         """delete a setting definition row
         """
         # rowindex is for api-compliance
         for widget in fields:
-            self.gsizer.removeWidget(widget)
+            gsizer.removeWidget(widget)
             widget.close()
 
     def get_checkbox_value(self, cb):

@@ -119,9 +119,30 @@ def test_get_open_title(monkeypatch, capsys):
 def test_get_title(monkeypatch, capsys):
     """unittest for shared.get_title
     """
+    def mock_get(arg):
+        print(f'called get_appropriate_window with arg {arg}')
+        return titlehaver
     titlehaver = types.SimpleNamespace(title='mytitle')
-    assert testee.get_title(titlehaver) == 'mytitle'
-    assert testee.get_title(types.SimpleNamespace(editor=titlehaver)) == 'mytitle'
-    assert testee.get_title(types.SimpleNamespace(master=titlehaver)) == 'mytitle'
+    monkeypatch.setattr(testee, 'get_appropriate_window', mock_get)
+    assert testee.get_title('win') == 'mytitle'
+    assert capsys.readouterr().out == "called get_appropriate_window with arg win\n"
+    return
+
+
+def test_get_appropriate_window(monkeypatch, capsys):
+    """unittest for shared.get_appropriate_window
+    """
+    win = types.SimpleNamespace(captions=[])
+    win2 = types.SimpleNamespace(parent=win)
+    win3 = types.SimpleNamespace(parent=win2)
+    assert testee.get_appropriate_window(win) == win
+    assert testee.get_appropriate_window(win2) == win
+    assert testee.get_appropriate_window(win3) == win
+    win4 = types.SimpleNamespace(editor=win2)
+    assert testee.get_appropriate_window(win4) == win
+    win5 = types.SimpleNamespace(master=win3)
+    assert testee.get_appropriate_window(win5) == win
+    win = types.SimpleNamespace()
+    win2 = types.SimpleNamespace(parent=win)
     with pytest.raises(AttributeError):
-        assert testee.get_title(types.Simplenamespace()) == ''
+        testee.get_appropriate_window(win2)

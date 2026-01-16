@@ -14,8 +14,8 @@ from editor import shared
 
 class Gui(wx.Frame):
     """Hoofdscherm van de applicatie"""
-    def __init__(self, parent=None):
-        self.editor = parent
+    def __init__(self, master):
+        self.editor = master
         self.app = wx.App()
         wid = 1140 if shared.LIN else 688
         hig = 594
@@ -531,13 +531,14 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         buttons[0].Enable(state_s)
         buttons[1].Enable(state_d)
 
-    def finalize_screen(self):
+    def finalize_screen(self, p0list):
         "last actions to add the screen to the display"
-        self.itemDataMap = {int(x): y for x, y in self.master.data.items()}
-        listmix.ColumnSorterMixin.__init__(self, len(self.master.column_info))
-        self.SortListItems(0, True)
-        self.master.p0list.RefreshRows()
-        self.master.p0list.Select(0)
+        if p0list:
+            self.itemDataMap = {int(x): y for x, y in self.master.data.items()}
+            listmix.ColumnSorterMixin.__init__(self, len(self.master.column_info))
+            self.SortListItems(0, True)
+            self.master.p0list.RefreshRows()
+            self.master.p0list.Select(0)
 
         self.SetAutoLayout(True)
         self.SetSizer(self._sizer)
@@ -910,10 +911,6 @@ class FilesDialogGui(wx.Dialog):
     def __init__(self, master, parent, title):
         # self.parent = parent
         self.master = master
-        # self.title = self.master.title
-        # self.last_added = ''
-        self.code_to_remove = []
-        self.data_to_remove = []
         super().__init__(parent, size=(680, 400), title=title)
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -999,7 +996,7 @@ class FilesDialogGui(wx.Dialog):
         check.Destroy()
         browse.Destroy()
         self.gsizer.Layout()
-        self.master.scrl.Fit()
+        self.scrl.Fit()
         self.sizer.Layout()
         # self.scrl.SetScrollbar(wx.VERTICAL, 0, 1, self.rownum * 52)
         # self.scrl.ScrollChildIntoView(browse)
@@ -1017,43 +1014,38 @@ class FilesDialogGui(wx.Dialog):
         "dummy method, needed because it's mapped to the cancel button"
 
 
-class FileBrowseButton(wx.Frame):  # note: wx has this built in
-    """Combination widget showing a text field and a button
-    making it possible to either manually enter a filename or select
-    one using a FileDialog
-    """
-    def __init__(self, parent, text="", level_down=False):
-        if level_down:
-            self.parent = parent.parent.master
-        else:
-            self.parent = parent.master
-        self.startdir = ''
-        if text:
-            self.startdir = os.path.dirname(text)
-        super().__init__(parent, style=wx.BORDER_RAISED)
-        vbox = wx.BoxSizer(wx.VERTICAL)()
-        box = wx.BoxSizer(wx.HORIZONTAL)()
-        self.input = wx.TextCtrl(self, size=(200, -1), value=text)
-        box.Add(self.input)
-        caption = self.parent.captions['C_BRWS']
-        self.button = wx.Button(self, label=caption)
-        self.button.Bind(wx.EVT_BUTTON, self.browse)
-        box.Add(self.button)
-        vbox.Add(box)
-        self.SetSizer(vbox)
-
-    def browse(self):
-        """callback for button
-        """
-        startdir = str(self.input.text()) or str(shared.HERE / 'plugins')
-        path = wx.FileDialog.getOpenFileName(self, self.parent.captions['C_SELFIL'], startdir)
-        if path[0]:
-            self.input.setText(path[0])
-
-    def accept(self):
-        """send updates to parent and leave
-        """
-        return self.master.confirm()
+# class FileBrowseButton(wx.Frame):  # note: wx has this built in
+#     """Combination widget showing a text field and a button
+#     making it possible to either manually enter a filename or select
+#     one using a FileDialog
+#     """
+#     def __init__(self, parent, text="", level_down=False):
+#         if level_down:
+#             self.parent = parent.parent.master
+#         else:
+#             self.parent = parent.master
+#         self.startdir = ''
+#         if text:
+#             self.startdir = os.path.dirname(text)
+#         super().__init__(parent, style=wx.BORDER_RAISED)
+#         vbox = wx.BoxSizer(wx.VERTICAL)()
+#         box = wx.BoxSizer(wx.HORIZONTAL)()
+#         self.input = wx.TextCtrl(self, size=(200, -1), value=text)
+#         box.Add(self.input)
+#         caption = self.parent.captions['C_BRWS']
+#         self.button = wx.Button(self, label=caption)
+#         self.button.Bind(wx.EVT_BUTTON, self.browse)
+#         box.Add(self.button)
+#         vbox.Add(box)
+#         self.SetSizer(vbox)
+#
+#     def browse(self):
+#         """callback for button
+#         """
+#         startdir = str(self.input.text()) or str(shared.HERE / 'plugins')
+#         path = wx.FileDialog.getOpenFileName(self, self.parent.captions['C_SELFIL'], startdir)
+#         if path[0]:
+#             self.input.setText(path[0])
 
 
 class SetupDialogGui(wx.Dialog):
@@ -1064,12 +1056,11 @@ class SetupDialogGui(wx.Dialog):
     """
     def __init__(self, master, parent, name):
         self.master = master
-        self.parent.data = []
-        super().__init__(parent, title=self.parent.master.captions['T_INIKDEF'])
+        super().__init__(parent, title=name)
         self.box = wx.BoxSizer(wx.VERTICAL)
         self.grid = wx.FlexGridSizer(2, 2, 2)
         self.lineno = -1
-        self.box.Add(self.gridi, 0, wx.ALL, 5)
+        self.box.Add(self.grid, 0, wx.ALL, 5)
         self.SetSizer(self.box)
 
     def add_textinput_line(self, text, suggest):
@@ -1123,8 +1114,7 @@ class SetupDialogGui(wx.Dialog):
         return fbb.input.GetValue()
 
     def accept(self):
-        """
-        set self.parent.loc to the chosen filename
+        """set self.parent.loc to the chosen filename
         write the settings to this file along with some sample data - deferred to
         confirmation of the filesdialog
         """
@@ -1135,7 +1125,7 @@ class DeleteDialogGui(wx.Dialog):
     """dialog for deleting a tool from the collection
     """
     def __init__(self, master, parent, title):
-        self.parent = parent
+        self.master = master
         super().__init__(parent)
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.SetSizeHints(self)
@@ -1203,7 +1193,6 @@ class ColumnSettingsDialogGui(wx.Dialog):
         "add a scrollarea for showing column definitions"
         self.scrl = wxsp.ScrolledPanel(self, style=wx.BORDER_RAISED)
         self.gsizer = wx.BoxSizer(wx.VERTICAL)
-        self.rownum = 0
         return self.scrl
 
     def finalize_columndefs_area(self, scroller):
@@ -1232,19 +1221,21 @@ class ColumnSettingsDialogGui(wx.Dialog):
 
     def add_checkbox_to_line(self, row, col, text, width, before, after):
         "add a checkbox to the screen line"
+        # row wordt in deze variant niet gebruikt omdat we niet met een grid werken
         if col == 0:
             self.rowsizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         if before:
             sizer.AddSpacer(before)
         width = width or 20
-        cb = wx.CheckBox(self.scrl, size=(width, -1))
+        cb = wx.CheckBox(self.scrl, text, size=(width, -1))
         sizer.Add(cb)
         if after:
             sizer.AddSpacer(after)
         # self.sizer.Add(cb, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.RIGHT, 40)
         # self.rowsizer.Add(cb, 0, wx.LEFT | wx.ALIGN_CENTER_VERTICAL, 2)
         self.rowsizer.Add(sizer, 0)  # , wx.LEFT | wx.ALIGN_CENTER_VERTICAL, 2)
+        return cb
 
     def add_combobox_to_line(self, row, col, values, selected):
         "add a combobox to the screen line"
@@ -1255,6 +1246,7 @@ class ColumnSettingsDialogGui(wx.Dialog):
         #     w_name.SetSelection('')
         cmb.Bind(wx.EVT_TEXT, self.on_text_changed)
         self.rowsizer.Add(cmb, 0, wx.LEFT, 2)
+        return cmb
 
     def add_spinbox_to_line(self, row, col, value, range, width, margins):
         "add a spinbox to the screen line"
@@ -1265,7 +1257,7 @@ class ColumnSettingsDialogGui(wx.Dialog):
             sizer.AddSpacer(before)
         sb = wx.SpinCtrl(self.scrl, size=(width + 80, -1), style=wx.SP_ARROW_KEYS)
         sb.SetRange(minval, maxval)
-        if width:
+        if value:
             sb.SetValue(value)
         sizer.Add(sb)
         if after:
@@ -1275,6 +1267,7 @@ class ColumnSettingsDialogGui(wx.Dialog):
         # self.rowsizer.Add(sb, 0, wx.LEFT | wx.RIGHT, 20)
         self.rowsizer.Add(sizer, 0)
         # omdat ze verschillend zijn beter geen margin flags gebruiken
+        return sb
 
     def finalize_line(self, scroller, check):
         "stuff to do now that the line is built"
@@ -1296,12 +1289,11 @@ class ColumnSettingsDialogGui(wx.Dialog):
         if current_widget.GetValue() > removed_widget.GetValue():
             current_widget.SetValue(current_widget.GetValue() - 1)
 
-    def delete_row(self, rownum, check, widgets):
+    def delete_row(self, rownum, widgets):
         """remove a column settings row
         """
-        self.rownum -= 1
         self.gsizer.Remove(rownum)
-        for widget in [check] + self.data[rownum][:4]:
+        for widget in widgets:
             widget.Destroy()
         self.gsizer.Layout()
         self.scrl.Fit()
@@ -1311,14 +1303,14 @@ class ColumnSettingsDialogGui(wx.Dialog):
         "change column width according to length of column title"
         win = event.GetEventObject()
         wintext = win.GetValue()
-        for ix, text in enumerate(win.GetItems()):
+        for ix, text in enumerate(win.GetItems()):    # autocomplete simulatie?
             if text.startswith(wintext):
                 win.SetSelection(ix)
                 wintext = text
                 break
-        for w_name, w_width in self.master.data[ix][:2]:
-            if w_name == win:
-                w_width.SetValue(10 * len(wintext))
+        for name, width, *ignore_the_rest in self.master.data:
+            if name == win:
+                width.SetValue(10 * len(wintext))
                 break
 
     def get_checkbox_value(self, cb):
@@ -1328,11 +1320,7 @@ class ColumnSettingsDialogGui(wx.Dialog):
     def accept(self):
         """save the changed settings and leave
         """
-        ok, cancel = self.master.confirm()
-        # onderstaande moet niet met True/False, heeft wx daar niet iets anders voor?
-        if ok or not cancel:
-            return True  # super().accept()
-        return False  # super().reject()
+        return self.master.confirm()
 
     def reject(self):
         "dummy method, needed because it's mapped to the cancel button"
@@ -1364,7 +1352,8 @@ class NewColumnsDialogGui(wx.Dialog):
         """maak een kop voor de id en een kop voor elke taal die ondersteund wordt
         """
         for name in titles:  # self.master.dialog_data['languages']:
-            self.gsizer.Add(wx.StaticText(self, label=name), 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 10)
+            self.gsizer.Add(wx.StaticText(self, label=name), 0,
+                            wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 10)
 
     def add_text_entry(self, text, row, col, enabled):
         "add a text entry field to a specfied location in the display grid"
@@ -1373,6 +1362,7 @@ class NewColumnsDialogGui(wx.Dialog):
         entry = wx.TextCtrl(self, value=text)
         entry.Enable(enabled)
         self.gsizer.Add(entry, 0, wx.ALL | wx.EXPAND)  # , row, col)
+        return entry
 
     def add_okcancel_buttons(self):
         "add a minimal button strip to the display"
@@ -1416,8 +1406,7 @@ class ExtraSettingsDialogGui(wx.Dialog):
         "add a line with some text and an input field to the block"
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         hsizer.Add(wx.StaticText(self.pnl, label=text), 0, wx.ALIGN_CENTER_VERTICAL)
-        field = wx.TextCtrl(self.pnl, size=(260, -1))
-        field.SetValue(inputsuggestion)
+        field = wx.TextCtrl(self.pnl, value=inputsuggestion, size=(260, -1))
         hsizer.Add(field, 0, wx.EXPAND | wx.TOP | wx.LEFT, 5)
         vsizer.Add(hsizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         return field
@@ -1477,7 +1466,7 @@ class ExtraSettingsDialogGui(wx.Dialog):
         hbox.Add(wx.Button(self, id=wx.ID_CANCEL))
         self.sizer.Add(hbox, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.BOTTOM, 2)
 
-    def add_row(self, name, value, desc):
+    def add_row(self, gsizer, name, value, desc):
         """add a row for defining a setting (name, value)
         """
         hbox = wx.BoxSizer(wx.HORIZONTAL)
@@ -1497,9 +1486,9 @@ class ExtraSettingsDialogGui(wx.Dialog):
         w_desc = wx.TextCtrl(self.scrl, value=desc, size=(320, -1))
         vsizer.Add(w_desc, 1)  # , wx.EXPAND | wx.RIGHT, 5)
         hbox.Add(vsizer, 0, wx.EXPAND | wx.RIGHT, 5)
-        self.gsizer.Add(hbox, 0, wx.EXPAND)
+        gsizer.Add(hbox, 0, wx.EXPAND)
         # self.data.append((w_name, w_value, w_desc))
-        self.gsizer.Layout()
+        gsizer.Layout()
         self.scrl.Fit()
         self.scrl.ScrollChildIntoView(w_desc)
         self.sizer.Layout()
@@ -1516,16 +1505,16 @@ class ExtraSettingsDialogGui(wx.Dialog):
         # print('after  scrolling')
         return check, w_name, w_value, w_desc
 
-    def delete_row(self, rowindex, fields):
+    def delete_row(self, gsizer, rowindex, fields):
         """delete a setting definition row
         """
         start = rowindex * 4
         end = start + 4
         for num in range(start, end):
-            self.gsizer.Remove(num)
+            gsizer.Remove(num)
         for widget in fields:
             widget.Destroy()
-        self.gsizer.Layout()
+        gsizer.Layout()
         self.scrl.Fit()
         self.sizer.Layout()
 
@@ -1540,12 +1529,14 @@ class ExtraSettingsDialogGui(wx.Dialog):
     def accept(self):
         """update settings and leave
         """
-        ok = self.master.confirm()
-        if not ok:
-            # eigenlijk moet de dialoog in dit geval opnieuw gestart worden
-            self.c_showdet.SetValue(False)
-            self.c_redef.SetValue(False)
-        return ok
+        # welk veld gereset moet worden is afhankelijk van de melding, dus beter niet (hier) doen
+        # ok = self.master.confirm()
+        # if not ok:
+        #     # eigenlijk moet de dialoog in dit geval opnieuw gestart worden
+        #     self.c_showdet.SetValue(False)
+        #     self.c_redef.SetValue(False)
+        # return ok
+        return self.master.confirm()
 
 
 class EntryDialogGui(wx.Dialog):
@@ -1601,18 +1592,16 @@ class EntryDialogGui(wx.Dialog):
         "remove selected line(s) from the grid"
         # selected_rows = []
         for row in p0list.GetSelectedRows():  # moet misschien reversed?
-            self.DeleteRows(row)
+           p0list.DeleteRows(row)
+
+    def get_tableitem_value(self, p0list, row, col):
+        "return the value entered in a table cell"
+        return p0list.GetCellValue(row, col)
 
     def accept(self):
         """send updates to parent and leave
         """
-        new_values = collections.defaultdict(list)
-        for rowid in range(self.p0list.GetNumberRows()):
-            for colid in range(self.p0list.GetNumberCols()):
-                value = self.p0list.GetCellValue(rowid, colid)
-                new_values[rowid + 1].append(value.replace('\\n', '\n'))
-        self.master.book.page.data = new_values
-        return True
+        return self.master.confirm()
 
     def reject(self):
         "dummy method, needed because it's mapped to the cancel button"
@@ -1661,9 +1650,10 @@ class CompleteDialogGui(wx.Dialog):
         hbox.Add(wx.Button(self, id=wx.ID_CANCEL))
         self.sizer.Add(hbox, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.BOTTOM, 2)
 
-    def set_focus_to_list(p0list):
+    def set_focus_to_list(self, p0list):
         """set "cursor" on the first editable field
         """
+        p0list.GoToCell(0, 1)
 
     def accept(self):
         """confirm changes

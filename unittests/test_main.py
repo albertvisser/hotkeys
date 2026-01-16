@@ -692,7 +692,7 @@ class TestHotkeyPanel:
                 f"called SingleDataInterface.__init__ with args ('parent gui', {testobj})\n"
                 "called HotkeyPanel.read_settings_from_path with arg 'path/to/settings'\n"
                 "called SDI.setup_empty_screen with args ('no data', 'A title')\n"
-                "called SDI.finalize_screen with args ()\n")
+                "called SDI.finalize_screen with args (None,)\n")
 
         monkeypatch.setattr(testee.HotkeyPanel, 'read_settings_from_path', mock_read)
         testobj.parent.parent.captions = {'fld1': 'head1', 'fld2': 'head2'}
@@ -713,7 +713,7 @@ class TestHotkeyPanel:
                 "called SDI.setup_list with args"
                 f" (['head1', 'head2'], [1, 2], {testobj.gui.on_item_selected})\n"
                 "called HotkeyPanel.populate_list with arg p0list\n"
-                "called SDI.finalize_screen with args ()\n")
+                "called SDI.finalize_screen with args ('p0list',)\n")
 
         monkeypatch.setattr(testee.HotkeyPanel, 'read_settings_from_path', mock_read_2)
         testobj = testee.HotkeyPanel(parent, 'path/to/settings')
@@ -742,7 +742,7 @@ class TestHotkeyPanel:
                 "called SDI.getfirstitem with args ('p0list',)\n"
                 "called HotkeyPanel.add_extrapanel_fields with arg first_item\n"
                 "called SDI.set_listselection with args ('p0list', 0)\n"
-                "called SDI.finalize_screen with args ()\n")
+                "called SDI.finalize_screen with args ('p0list',)\n")
 
     def test_read_settings_from_path(self, monkeypatch, capsys):
         """unittest for HotkeyPanel.read_settings_from_path
@@ -3596,8 +3596,8 @@ class TestFilesDialog:
             def add_locationbrowserarea(self):
                 print('called FilesDialogGui.add_locationbrowserarea')
                 return 'scroller'
-            def add_row(self, *args):
-                print('called FilesDialogGui.add_row with args', args)
+            def add_row(self, *args, **kwargs):
+                print('called FilesDialogGui.add_row with args', args, kwargs)
                 return f'cb_{args[0]}', f'sel_{args[0]}'
             def finish_browserarea(self):
                 print('called FilesDialogGui.finish_browserarea')
@@ -3616,7 +3616,8 @@ class TestFilesDialog:
                                       remove_program=callback)
         parent.ini = {'plugins': []}
         parent.captions = {'T_TOOLS': 'to/ols', 'C_PRGNAM': 'prgnam', 'C_KDEFLOC': 'kdefloc',
-                           'C_ADDPRG': 'addprg', 'C_REMPRG': 'remprg'}
+                           'C_ADDPRG': 'addprg', 'C_REMPRG': 'remprg', 'C_BRWS': 'brws',
+                           'C_SELFIL': 'selfil'}
         parent.pluginfiles = {}
         testobj = testee.FilesDialog(parent)
         assert testobj.scrl == 'scroller'
@@ -3650,8 +3651,10 @@ class TestFilesDialog:
                 "called FilesDialogGui.add_explanation with args ('to/ols',)\n"
                 "called FilesDialogGui.add_captions with args ([('prgnam', 36), ('kdefloc', 84)],)\n"
                 "called FilesDialogGui.add_locationbrowserarea\n"
-                "called FilesDialogGui.add_row with args ('x', 'path/to/x')\n"
-                "called FilesDialogGui.add_row with args ('y', 'path/to/y')\n"
+                "called FilesDialogGui.add_row with args ('x', 'path/to/x')"
+                " {'buttoncaption': 'brws', 'dialogtitle': 'selfil', 'tooltiptext': ''}\n"
+                "called FilesDialogGui.add_row with args ('y', 'path/to/y')"
+                " {'buttoncaption': 'brws', 'dialogtitle': 'selfil', 'tooltiptext': ''}\n"
                 "called FilesDialogGui.finish_browserarea\n"
                 "called FilesDialogGui.add_buttons with args"
                 f" ([('addprg', {testobj.add_program}), ('remprg', {testobj.remove_programs}),"
@@ -3705,34 +3708,39 @@ class TestFilesDialog:
         testobj.parent.data = ['data_loc', 'prgloc', 'yyy']
         testobj.add_program()
         assert capsys.readouterr().out == (
-                f"called get_textinput with args ({testobj}, '', 'newprg')\n")
+                f"called get_textinput with args ({testobj.gui}, '', 'newprg')\n")
         monkeypatch.setattr(testee.gui, 'get_textinput', mock_get_2)
         testobj.add_program()
         assert capsys.readouterr().out == (
-                f"called get_textinput with args ({testobj}, '', 'newprg')\n"
-                f"called show_message with args ({testobj.parent}, 'I_NEEDNAME')\n")
+                f"called get_textinput with args ({testobj.gui}, '', 'newprg')\n"
+                f"called show_message with args ({testobj.gui}, 'I_NEEDNAME')\n")
         monkeypatch.setattr(testee.gui, 'get_textinput', mock_get_3)
         testobj.add_program()
         assert capsys.readouterr().out == (
-                f"called get_textinput with args ({testobj}, '', 'newprg')\n"
-                f"called ask_question with args ({testobj.parent}, 'P_INIKDEF')\n")
+                f"called get_textinput with args ({testobj.gui}, '', 'newprg')\n"
+                f"called ask_question with args ({testobj.gui}, 'P_INIKDEF')\n")
                 # "called FilesDialog with args ('qqq',) {'path': ''}\n")
         monkeypatch.setattr(testee.gui, 'ask_question', mock_ask_2)
+        assert testobj.last_added == 'qqq'
+        assert testobj.settingsdata == {'qqq': ('',)}
         testobj.add_program()
         assert capsys.readouterr().out == (
-                f"called get_textinput with args ({testobj}, '', 'newprg')\n"
-                f"called ask_question with args ({testobj.parent}, 'P_INIKDEF')\n"
+                f"called get_textinput with args ({testobj.gui}, '', 'newprg')\n"
+                f"called ask_question with args ({testobj.gui}, 'P_INIKDEF')\n"
                 f"called SetupDialog.__init__ with args ({testobj}, 'qqq')\n"
                 "called gui.show_dialog with args ('SetupDialogGui',)\n")
                 # "called FilesDialog with args ('qqq',) {'path': ''}\n")
+        testobj.settingsdata = {}
         monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_2)
         testobj.add_program()
+        assert testobj.last_added == 'qqq'
+        assert testobj.settingsdata == {'qqq': ['bbb', 'ccc']}
         assert capsys.readouterr().out == (
-                f"called get_textinput with args ({testobj}, '', 'newprg')\n"
-                f"called ask_question with args ({testobj.parent}, 'P_INIKDEF')\n"
+                f"called get_textinput with args ({testobj.gui}, '', 'newprg')\n"
+                f"called ask_question with args ({testobj.gui}, 'P_INIKDEF')\n"
                 f"called SetupDialog.__init__ with args ({testobj}, 'qqq')\n"
                 "called gui.show_dialog with args ('SetupDialogGui',)\n"
-                "called FilesDialogGui.add_row with args ('qqq',) {'path': 'data_loc',"
+                "called FilesDialogGui.add_row with args ('qqq',) {'path': 'aaa',"
                 " 'buttoncaption': 'brws', 'dialogtitle': 'selfil', 'tooltiptext': ''}\n")
 
     def test_remove_programs(self, monkeypatch, capsys):
@@ -4037,11 +4045,12 @@ class TestSetupDialog:
             def add_okcancel_buttons(self, *args):
                 print('called SetupDialogGui.add_okcancel_buttons with args', args)
         monkeypatch.setattr(testee.gui, 'SetupDialogGui', MockGui)
-        parent = types.SimpleNamespace(gui='FilesDialogGui')
-        parent.captions = {'T_INIKDEF': 'inikdef', 'T_NAMOF': '{} of {}', 'T_ISMADE': 'ismade',
-                           'T_MAKE': 'make {}', 'S_PLGNAM': 'plgnam', 'S_PNLNAM': 'pnlnam',
-                           'S_RBLD': 'rbld', 'S_DETS': 'dets', 'S_RSAV': 'rsav',
-                           'Q_SAVLOC': 'savloc', 'C_BRWS': 'brws', 'C_SELFIL': 'selfil'}
+        parent = types.SimpleNamespace(gui='FilesDialogGui', parent=types.SimpleNamespace())
+        parent.parent.captions = {
+                'T_INIKDEF': 'inikdef', 'T_NAMOF': '{} of {}', 'T_ISMADE': 'ismade',
+                'T_MAKE': 'make {}', 'S_PLGNAM': 'plgnam', 'S_PNLNAM': 'pnlnam',
+                'S_RBLD': 'rbld', 'S_DETS': 'dets', 'S_RSAV': 'rsav',
+                'Q_SAVLOC': 'savloc', 'C_BRWS': 'brws', 'C_SELFIL': 'selfil'}
         testobj = testee.SetupDialog(parent, 'newplg')
         assert testobj.t_program == 'textinput'
         assert testobj.t_title == 'textinput'
@@ -4089,6 +4098,7 @@ class TestSetupDialog:
         monkeypatch.setattr(testee.importlib.util, 'find_spec', mock_find)
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.gui = MockGui()
+        testobj.parent = types.SimpleNamespace()
         testobj.t_loc = ''
         testobj.t_program = 'ploc'
         testobj.t_title = 'title'
@@ -4130,7 +4140,7 @@ class TestSetupDialog:
                 f" {{'args': ['ploc']}}\n")
         monkeypatch.setattr(testee.importlib.util, 'find_spec', mock_find_2)
         assert testobj.confirm()
-        assert testobj.gui.data == [f'{clocpath}', 'ploc', 'title', 'rebuld', 'details', 'redef']
+        assert testobj.parent.data == [f'{clocpath}', 'ploc', 'title', 'rebuld', 'details', 'redef']
         assert capsys.readouterr().out == (
                 "called SetupDialogGui.get_filebrowse_value with cloc\n"
                 "called SetupDialogGui.get_textinput_value with ploc\n"
@@ -4174,8 +4184,8 @@ class TestDeleteDialog:
             def add_okcancel_buttons(self, *args):
                 print('called DeleteDialogGui.add_okcancel_buttons')
         parent = types.SimpleNamespace(title='title', gui='FilesDialogGui',
-                                       captions={'Q_REMPRG': 'prg', 'Q_REMKDEF': 'kdef',
-                                                 'Q_REMPLG': 'plg'})
+                                       parent=types.SimpleNamespace())
+        parent.parent.captions={'Q_REMPRG': 'prg', 'Q_REMKDEF': 'kdef', 'Q_REMPLG': 'plg'}
         monkeypatch.setattr(testee.gui, 'DeleteDialogGui', MockGui)
         testobj = testee.DeleteDialog(parent)
         assert testobj.remove_keydefs == 'kdef'
@@ -4404,7 +4414,7 @@ class TestColumnSettingsDialog:
                 "called gui.ask_question with args parent Q_REMCOL\n")
         monkeypatch.setattr(testee.gui, 'ask_question', mock_ask_2)
         testobj.checks = ['checkbox1', 'checkbox2']
-        testobj.data = [('yyy', 7, False), ('xxx', 5, True)]
+        testobj.data = [('yyy', 7, False), ('xxx', 5, True, 'q', 'r')]
         testobj.remove_columndefs()
         assert testobj.checks == ['checkbox1']
         assert testobj.data == [('yyy', 7, False)]
@@ -4414,7 +4424,7 @@ class TestColumnSettingsDialog:
                 "called gui.ask_question with args parent Q_REMCOL\n"
                 "called ColumnSettingsDialogGui.adapt_column_index with args (True, False)\n"
                 "called ColumnSettingsDialogGui.delete_row with args"
-                " (1, 'checkbox2', ('xxx', 5, True))\n")
+                " (1, ['checkbox2', 'xxx', 5, True, 'q'])\n")
 
     def test_confirm(self, monkeypatch, capsys):
         """unittest for ColumnSettingsDialog.confirm
@@ -4945,7 +4955,7 @@ class TestExtraSettingsDialog:
                 print('called ExtraSettingsDialogGui.add_okcancel_buttons')
             def add_row(self, *args):
                 print('called ExtraSettingsDialogGui.add_row with args', args)
-                return args
+                return args[1:]
         def mock_add():
             "empty method used for reference"
         def mock_remove():
@@ -5036,8 +5046,8 @@ class TestExtraSettingsDialog:
                 # "called ExtraSettingsDialogGui.add_row with args ('RebuildData', 'rbld', '')\n"
                 # "called ExtraSettingsDialogGui.add_row with args ('ShowDetails', 'dets', '')\n"
                 # "called ExtraSettingsDialogGui.add_row with args ('RedefineKeys', 'rdef', '')\n"
-                "called ExtraSettingsDialogGui.add_row with args ('XYZ', 'xyz', '')\n"
-                "called ExtraSettingsDialogGui.add_row with args ('ABC', 'abc', '')\n"
+                "called ExtraSettingsDialogGui.add_row with args ('scroller', 'XYZ', 'xyz', '')\n"
+                "called ExtraSettingsDialogGui.add_row with args ('scroller', 'ABC', 'abc', '')\n"
                 "called ExtraSettingsDialogGui.finalize_inputarea with args ('block', 'scroller')\n"
                 "called ExtraSettingsDialogGui.add_buttons with args"
                 f" ('block', [('addset', {testobj.add_setting}),"
@@ -5049,14 +5059,15 @@ class TestExtraSettingsDialog:
         """
         def mock_add(*args):
             print('called ExtraSettingsDialogGui.add_row with args', args)
-            return args
+            return args[1:]
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.gui = types.SimpleNamespace(add_row=mock_add)
+        testobj.scroll = 'scroller'
         testobj.fields = []
         testobj.add_setting()
         assert testobj.fields == [('', '', '')]
         assert capsys.readouterr().out == (
-                "called ExtraSettingsDialogGui.add_row with args ('', '', '')\n")
+                "called ExtraSettingsDialogGui.add_row with args ('scroller', '', '', '')\n")
 
     def test_remove_settings(self, monkeypatch, capsys):
         """unittest for ExtraSettingsDialog.remove_settings
@@ -5073,40 +5084,43 @@ class TestExtraSettingsDialog:
         def mock_get_2(cb):
             print(f'called MockExtraSettingsDialogGui.get_checkbox_value with arg {cb}')
             return cb
-        def mock_delete(row):
-            print(f'called MockExtraSettingsDialogGui.delete_row with arg {row}')
+        def mock_delete(*args):
+            print('called MockExtraSettingsDialogGui.delete_row with args', args)
         monkeypatch.setattr(testee.gui, 'ask_question', mock_ask)
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.parent = 'parent'
         testobj.gui = types.SimpleNamespace(get_checkbox_value=mock_get, delete_row=mock_delete)
+        testobj.scroll = 'scroller'
         testobj.fields = []
         testobj.remove_settings()
         assert testobj.fields == []
         assert capsys.readouterr().out == ("")
-        testobj.fields = [('field1',), ('field2',)]
+        testobj.fields = [('field1a', 'field1b'), ('field2a', 'field2b')]
         testobj.remove_settings()
-        assert testobj.fields == [('field1',), ('field2',)]
+        assert testobj.fields == [('field1a', 'field1b'), ('field2a', 'field2b')]
         assert capsys.readouterr().out == (
-                "called MockExtraSettingsDialogGui.get_checkbox_value with arg field2\n"
-                "called MockExtraSettingsDialogGui.get_checkbox_value with arg field1\n")
+                "called MockExtraSettingsDialogGui.get_checkbox_value with arg field2a\n"
+                "called MockExtraSettingsDialogGui.get_checkbox_value with arg field1a\n")
         testobj.gui.get_checkbox_value = mock_get_2
         testobj.remove_settings()
-        assert testobj.fields == [('field1',), ('field2',)]
+        assert testobj.fields == [('field1a', 'field1b'), ('field2a', 'field2b')]
         assert capsys.readouterr().out == (
-                "called MockExtraSettingsDialogGui.get_checkbox_value with arg field2\n"
+                "called MockExtraSettingsDialogGui.get_checkbox_value with arg field2a\n"
                 "called gui.ask_question with args ('parent', 'Q_REMSET')\n"
-                "called MockExtraSettingsDialogGui.get_checkbox_value with arg field1\n"
+                "called MockExtraSettingsDialogGui.get_checkbox_value with arg field1a\n"
                 "called gui.ask_question with args ('parent', 'Q_REMSET')\n")
         monkeypatch.setattr(testee.gui, 'ask_question', mock_ask_2)
         testobj.remove_settings()
         assert testobj.fields == []
         assert capsys.readouterr().out == (
-                "called MockExtraSettingsDialogGui.get_checkbox_value with arg field2\n"
+                "called MockExtraSettingsDialogGui.get_checkbox_value with arg field2a\n"
                 "called gui.ask_question with args ('parent', 'Q_REMSET')\n"
-                "called MockExtraSettingsDialogGui.delete_row with arg 1\n"
-                "called MockExtraSettingsDialogGui.get_checkbox_value with arg field1\n"
+                "called MockExtraSettingsDialogGui.delete_row with args"
+                " ('scroller', 1, ('field2a', 'field2b'))\n"
+                "called MockExtraSettingsDialogGui.get_checkbox_value with arg field1a\n"
                 "called gui.ask_question with args ('parent', 'Q_REMSET')\n"
-                "called MockExtraSettingsDialogGui.delete_row with arg 0\n")
+                "called MockExtraSettingsDialogGui.delete_row with args"
+                " ('scroller', 0, ('field1a', 'field1b'))\n")
 
     def test_confirm(self, monkeypatch, capsys):
         """unittest for ExtraSettingsDialog.confirm
@@ -5285,6 +5299,7 @@ class TestEntryDialog:
         testobj = testee.EntryDialog(parent)
         assert testobj.p0list == 'p0list'
         assert testobj.rowcount == -1
+        assert testobj.colcount == 2
         assert capsys.readouterr().out == (
                 "called EntryDialogGui.__init__ with args"
                 f" ({testobj}, 'EditorGui', 'title: manual entry')\n"
@@ -5296,6 +5311,7 @@ class TestEntryDialog:
         testobj = testee.EntryDialog(parent)
         assert testobj.p0list == 'p0list'
         assert testobj.rowcount == 1
+        assert testobj.colcount == 2
         assert capsys.readouterr().out == (
                 "called EntryDialogGui.__init__ with args"
                 f" ({testobj}, 'EditorGui', 'title: manual entry')\n"
@@ -5315,6 +5331,7 @@ class TestEntryDialog:
         testobj.gui = types.SimpleNamespace(add_row=mock_add)
         testobj.p0list = [('x', 'y', 'z')]
         testobj.rowcount = 1
+        testobj.colcount = 3
         testobj.add_key()
         assert testobj.rowcount == 2
         assert capsys.readouterr().out == ("called EntryDialogGui.add_buttons with args"
@@ -5323,12 +5340,6 @@ class TestEntryDialog:
     def test_confirm(self, monkeypatch, capsys):
         """unittest for EntryDialog.confirm
         """
-        def mock_get_cols(arg):
-            print(f'called EntryDialogGui.get_table_columns with arg {arg}')
-            return 0
-        def mock_get_cols_2(arg):
-            print(f'called EntryDialogGui.get_table_columns with arg {arg}')
-            return 2
         def mock_get_val(*args):
             print('called EntryDialogGui.get_tableitem_value with args', args)
             return f'text{args[1]}\\n{args[2]}'
@@ -5337,27 +5348,26 @@ class TestEntryDialog:
         testobj.rowcount = 0
         testobj.parent = types.SimpleNamespace(book=types.SimpleNamespace(
             page=types.SimpleNamespace()))
-        testobj.gui = types.SimpleNamespace(get_table_columns=mock_get_cols,
-                                            get_tableitem_value=mock_get_val)
+        testobj.gui = types.SimpleNamespace(get_tableitem_value=mock_get_val)
         testobj.confirm()
         assert testobj.parent.book.page.data == {}
-        assert capsys.readouterr().out == (
-                "called EntryDialogGui.get_table_columns with arg p0list\n")
+        assert capsys.readouterr().out == ""
         testobj.rowcount = 2
+        testobj.colcount = 0
         testobj.confirm()
         assert testobj.parent.book.page.data == {}
-        assert capsys.readouterr().out == (
-                "called EntryDialogGui.get_table_columns with arg p0list\n")
-        testobj.gui.get_table_columns = mock_get_cols_2
+        assert capsys.readouterr().out == ""
+        testobj.colcount = 3
         testobj.confirm()
-        assert testobj.parent.book.page.data == {1: ['text0\n0', 'text0\n1'],
-                                                 2: ['text1\n0', 'text1\n1']}
+        assert testobj.parent.book.page.data == {1: ['text0\n0', 'text0\n1', 'text0\n2'],
+                                                 2: ['text1\n0', 'text1\n1', 'text1\n2']}
         assert capsys.readouterr().out == (
-                "called EntryDialogGui.get_table_columns with arg p0list\n"
                 "called EntryDialogGui.get_tableitem_value with args ('p0list', 0, 0)\n"
                 "called EntryDialogGui.get_tableitem_value with args ('p0list', 0, 1)\n"
+                "called EntryDialogGui.get_tableitem_value with args ('p0list', 0, 2)\n"
                 "called EntryDialogGui.get_tableitem_value with args ('p0list', 1, 0)\n"
-                "called EntryDialogGui.get_tableitem_value with args ('p0list', 1, 1)\n")
+                "called EntryDialogGui.get_tableitem_value with args ('p0list', 1, 1)\n"
+                "called EntryDialogGui.get_tableitem_value with args ('p0list', 1, 2)\n")
 
 
 class TestCompleteDialog:
