@@ -1724,7 +1724,7 @@ class DeleteDialog:
     def __init__(self, parent):
         self.parent = parent
         captions = parent.parent.captions
-        self.gui = gui.DeleteDialogGui(self, parent.gui, parent.title)
+        self.gui = gui.DeleteDialogGui(self, parent.gui, parent.parent.title)
         self.gui.add_text_line(captions['Q_REMPRG'])
         self.remove_keydefs = self.gui.add_checkbox_line(captions['Q_REMKDEF'])
         self.remove_plugins = self.gui.add_checkbox_line(captions['Q_REMPLG'])
