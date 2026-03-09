@@ -15,9 +15,12 @@ def test_layout_extra_fields_topline_qt(monkeypatch, capsys):
     win.feature_select = mockqtw.MockComboBox()
     box = mockqtw.MockVBoxLayout()
     assert capsys.readouterr().out == ("called Widget.__init__\n"
-                                       "called Label.__init__\ncalled LineEdit.__init__\n"
-                                       "called Label.__init__\ncalled LineEdit.__init__\n"
-                                       "called Label.__init__\ncalled ComboBox.__init__\n"
+                                       "called Label.__init__\n"
+                                       "called LineEdit.__init__ with args ()\n"
+                                       "called Label.__init__\n"
+                                       "called LineEdit.__init__ with args ()\n"
+                                       "called Label.__init__\n"
+                                       "called ComboBox.__init__\n"
                                        "called VBox.__init__\n")
     testee.layout_extra_fields_topline(win, box)
     assert capsys.readouterr().out == (

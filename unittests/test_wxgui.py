@@ -402,14 +402,14 @@ class TestTabbedInterface:
                 "called ComboBox.__init__ with args"
                 f" ({testobj},) {{'size': (140, -1), 'style': 16}}\n"
                 f"called ComboBox.Bind with args ({testee.wx.EVT_COMBOBOX}, {callback}) {{}}\n"
-                f"called NoteBook.__init__ with args ({testobj},)\n")
+                f"called NoteBook.__init__ with args ({testobj},) {{}}\n")
 
     def test_add_subscreen(self, monkeypatch, capsys):
         """unittest for TabbedInterface.add_subscreen
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.pnl = mockwx.MockNoteBook()
-        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
+        assert capsys.readouterr().out == "called NoteBook.__init__ with args () {}\n"
         testobj.add_subscreen('win')
         assert capsys.readouterr().out == "called NoteBook.AddPage with args ('win', '')\n"
 
@@ -586,7 +586,7 @@ class TestTabbedInterface:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.pnl = mockwx.MockNoteBook()
-        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
+        assert capsys.readouterr().out == "called NoteBook.__init__ with args () {}\n"
         assert testobj.get_selected_panel() == "page"
         assert capsys.readouterr().out == "called NoteBook.GetCurrentPage\n"
 
@@ -595,7 +595,7 @@ class TestTabbedInterface:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.pnl = mockwx.MockNoteBook()
-        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
+        assert capsys.readouterr().out == "called NoteBook.__init__ with args () {}\n"
         testobj.set_selected_panel('indx')
         assert capsys.readouterr().out == ("called NoteBook.SetSelection with args ('indx',)\n")
 
@@ -604,7 +604,7 @@ class TestTabbedInterface:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.pnl = mockwx.MockNoteBook()
-        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
+        assert capsys.readouterr().out == "called NoteBook.__init__ with args () {}\n"
         assert testobj.get_panel('indx') == "page"
         assert capsys.readouterr().out == ("called NoteBook.GetPage with args ('indx',)\n")
 
@@ -613,7 +613,7 @@ class TestTabbedInterface:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.pnl = mockwx.MockNoteBook()
-        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
+        assert capsys.readouterr().out == "called NoteBook.__init__ with args () {}\n"
         testobj.replace_panel('indx', 'win', 'newwin')
         assert capsys.readouterr().out == (
                 "called NoteBook.InsertPage with args ('indx', 'newwin')\n"
@@ -835,7 +835,7 @@ class TestTabbedInterface:
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.pnl = mockwx.MockNoteBook()
         testobj.pnl.GetPage = mock_get
-        assert capsys.readouterr().out == "called NoteBook.__init__ with args ()\n"
+        assert capsys.readouterr().out == "called NoteBook.__init__ with args () {}\n"
         assert testobj.remove_tool(1, 'program', []) is None
         assert capsys.readouterr().out == ("called NoteBook.GetPage with args (1,)\n"
                                            "called NoteBook.RemovePage with args (1,)\n"
@@ -1325,7 +1325,7 @@ class TestSingleDataInterface:
         p0list = mockwx.MockListCtrl()
         assert capsys.readouterr().out == "called ListCtrl.__init__ with args () {}\n"
         testobj.clear_list(p0list)
-        assert capsys.readouterr().out == "called ListCtrl.DeleteAllItems with args ()\n"
+        assert capsys.readouterr().out == "called ListCtrl.DeleteAllItems\n"
 
     def test_build_listitem(self, monkeypatch, capsys):
         """unittest for SingleDataInterface.build_listitem

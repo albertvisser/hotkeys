@@ -15,7 +15,8 @@ def test_layout_extra_fields(monkeypatch, capsys):
     win.lbl_controls = mockqtw.MockLabel()
     win.cmb_controls = mockqtw.MockComboBox()
     layout = mockqtw.MockVBoxLayout()
-    assert capsys.readouterr().out == ("called Label.__init__\ncalled LineEdit.__init__\n"
+    assert capsys.readouterr().out == ("called Label.__init__\n"
+                                       "called LineEdit.__init__ with args ()\n"
                                        "called Label.__init__\ncalled ComboBox.__init__\n"
                                        "called VBox.__init__\n")
     testee.layout_extra_fields(win, layout)

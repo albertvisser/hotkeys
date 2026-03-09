@@ -147,7 +147,7 @@ class TestGui:
         assert capsys.readouterr().out == "called VBox.__init__\n"
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.add_choicebook_to_display(vbox, 'book')
-        assert capsys.readouterr().out == "called VBox.addWidget with arg str\n"
+        assert capsys.readouterr().out == "called VBox.addWidget with arg 'book'\n"
 
     def test_add_exitbutton_to_display(self, monkeypatch, capsys):
         """unittest for Gui.add_exitbutton_to_display
@@ -1027,12 +1027,12 @@ class TestSingleDataInterface:
         result = testobj.add_textfield_to_line(hbox)
         assert isinstance(result, testee.qtw.QLineEdit)
         assert capsys.readouterr().out == (
-                "called LineEdit.__init__\n"
+                f"called LineEdit.__init__ with args ({testobj._frm},)\n"
                 "called HBox.addWidget with arg MockLineEdit\n")
         result = testobj.add_textfield_to_line(hbox, 8, callback)
         assert isinstance(result, testee.qtw.QLineEdit)
         assert capsys.readouterr().out == (
-                f"called LineEdit.__init__\n"
+                f"called LineEdit.__init__ with args ({testobj._frm},)\n"
                 "called LineEdit.setMaximumWidth with arg `8`\n"
                 f"called Signal.connect with args ({callback},)\n"
                 "called HBox.addWidget with arg MockLineEdit\n")
@@ -1136,7 +1136,7 @@ class TestSingleDataInterface:
         screenfields = [mockqtw.MockLineEdit(), mockqtw.MockCheckBox()]
         button1 = mockqtw.MockPushButton()
         button2 = mockqtw.MockPushButton()
-        assert capsys.readouterr().out == ("called LineEdit.__init__\n"
+        assert capsys.readouterr().out == ("called LineEdit.__init__ with args ()\n"
                                            "called CheckBox.__init__\n"
                                            "called PushButton.__init__ with args () {}\n"
                                            "called PushButton.__init__ with args () {}\n")
@@ -1357,7 +1357,7 @@ class TestSingleDataInterface:
         testobj = self.setup_testobj(monkeypatch, capsys)
         ted = mockqtw.MockLineEdit()
         ted.setText('xxx')
-        assert capsys.readouterr().out == ("called LineEdit.__init__\n"
+        assert capsys.readouterr().out == ("called LineEdit.__init__ with args ()\n"
                                            "called LineEdit.setText with arg `xxx`\n")
         assert testobj.get_widget_text(ted, 'text') == "xxx"
         assert capsys.readouterr().out == ("called LineEdit.text\n")
@@ -1372,7 +1372,7 @@ class TestSingleDataInterface:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         txt = mockqtw.MockLineEdit()
-        assert capsys.readouterr().out == "called LineEdit.__init__\n"
+        assert capsys.readouterr().out == "called LineEdit.__init__ with args ()\n"
         testobj.set_textfield_value(txt, 'value')
         assert capsys.readouterr().out == ("called LineEdit.setText with arg `value`\n")
 
@@ -2095,7 +2095,7 @@ class TestFilesDialogGui:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         browser = types.SimpleNamespace(input=mockqtw.MockLineEdit())
-        assert capsys.readouterr().out == "called LineEdit.__init__\n"
+        assert capsys.readouterr().out == "called LineEdit.__init__ with args ()\n"
         assert testobj.get_browser_value(browser) == ''
         assert capsys.readouterr().out == "called LineEdit.text\n"
 
@@ -2168,34 +2168,35 @@ class TestFileBrowseButton:
         testobj = testee.FileBrowseButton(parent)
         assert testobj.dialogtitle == ''
         assert isinstance(testobj.input, testee.qtw.QLineEdit)
-        assert capsys.readouterr().out == ("called Frame.__init__\n"
-                                           "called Frame.setFrameStyle with arg `34`\n"
-                                           "called VBox.__init__\n"
-                                           "called HBox.__init__\n"
-                                           "called LineEdit.__init__\n"
-                                           "called LineEdit.setMinimumWidth with arg `200`\n"
-                                           "called HBox.addWidget with arg MockLineEdit\n"
-                                           "called PushButton.__init__ with args"
-                                           f" ('', {testobj}) {{'clicked': {testobj.browse}}}\n"
-                                           "called HBox.addWidget with arg MockPushButton\n"
-                                           "called VBox.addLayout with arg MockHBoxLayout\n"
-                                           "called Frame.setLayout with arg MockVBoxLayout\n")
+        assert capsys.readouterr().out == (
+                "called Frame.__init__\n"
+                "called Frame.setFrameStyle with arg `34`\n"
+                "called VBox.__init__\n"
+                "called HBox.__init__\n"
+                f"called LineEdit.__init__ with args ('', {testobj})\n"
+                "called LineEdit.setMinimumWidth with arg `200`\n"
+                "called HBox.addWidget with arg MockLineEdit\n"
+                "called PushButton.__init__ with args"
+                f" ('', {testobj}) {{'clicked': {testobj.browse}}}\n"
+                "called HBox.addWidget with arg MockPushButton\n"
+                "called VBox.addLayout with arg MockHBoxLayout\n"
+                "called Frame.setLayout with arg MockVBoxLayout\n")
         testobj = testee.FileBrowseButton(parent, text="xxx\\yyy", buttoncaption="xxx",
                                           dialogtitle="yyy", tooltiptext="zzz")
         assert testobj.dialogtitle == 'yyy'
         assert isinstance(testobj.input, testee.qtw.QLineEdit)
         assert capsys.readouterr().out == ("called Frame.__init__\n"
-                                           "called Frame.setFrameStyle with arg `34`\n"
-                                           "called VBox.__init__\n"
-                                           "called HBox.__init__\n"
-                                           "called LineEdit.__init__\n"
-                                           "called LineEdit.setMinimumWidth with arg `200`\n"
-                                           "called HBox.addWidget with arg MockLineEdit\n"
-                                           "called PushButton.__init__ with args"
-                                           f" ('xxx', {testobj}) {{'clicked': {testobj.browse}}}\n"
-                                           "called HBox.addWidget with arg MockPushButton\n"
-                                           "called VBox.addLayout with arg MockHBoxLayout\n"
-                                           "called Frame.setLayout with arg MockVBoxLayout\n")
+                "called Frame.setFrameStyle with arg `34`\n"
+                "called VBox.__init__\n"
+                "called HBox.__init__\n"
+                f"called LineEdit.__init__ with args ('xxx\\\\yyy', {testobj})\n"
+                "called LineEdit.setMinimumWidth with arg `200`\n"
+                "called HBox.addWidget with arg MockLineEdit\n"
+                "called PushButton.__init__ with args"
+                f" ('xxx', {testobj}) {{'clicked': {testobj.browse}}}\n"
+                "called HBox.addWidget with arg MockPushButton\n"
+                "called VBox.addLayout with arg MockHBoxLayout\n"
+                "called Frame.setLayout with arg MockVBoxLayout\n")
 
     def test_browse(self, monkeypatch, capsys):
         """unittest for FileBrowseButton.browse
@@ -2208,7 +2209,7 @@ class TestFileBrowseButton:
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.input = mockqtw.MockLineEdit()
         testobj.dialogtitle = 'yyy'
-        assert capsys.readouterr().out == ("called LineEdit.__init__\n")
+        assert capsys.readouterr().out == ("called LineEdit.__init__ with args ()\n")
         testobj.browse()
         assert capsys.readouterr().out == (
                 "called LineEdit.text\n"
@@ -2216,7 +2217,7 @@ class TestFileBrowseButton:
                 f" ('yyy', '{testee.shared.HERE}/plugins') {{}}\n")
         monkeypatch.setattr(testee.qtw.QFileDialog, 'getOpenFileName', mock_get)
         testobj.input = mockqtw.MockLineEdit('qqq')
-        assert capsys.readouterr().out == ("called LineEdit.__init__\n")
+        assert capsys.readouterr().out == ("called LineEdit.__init__ with args ('qqq',)\n")
         testobj.browse()
         assert capsys.readouterr().out == (
                 "called LineEdit.text\n"
@@ -2274,7 +2275,7 @@ class TestSetupDialogGui:
         assert capsys.readouterr().out == (
                 f"called Label.__init__ with args ('text', {testobj})\n"
                 "called Grid.addWidget with arg MockLabel at (1, 0, 1, 3)\n"
-                "called LineEdit.__init__\n"
+                f"called LineEdit.__init__ with args ('suggest', {testobj})\n"
                 "called Grid.addWidget with arg MockLineEdit at (1, 3)\n")
 
     def test_add_checkbox_line(self, monkeypatch, capsys):
@@ -2350,7 +2351,7 @@ class TestSetupDialogGui:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         ted = mockqtw.MockLineEdit()
-        assert capsys.readouterr().out == "called LineEdit.__init__\n"
+        assert capsys.readouterr().out == "called LineEdit.__init__ with args ()\n"
         assert testobj.get_textinput_value(ted) == ''
         assert capsys.readouterr().out == ("called LineEdit.text\n")
 
@@ -2368,7 +2369,7 @@ class TestSetupDialogGui:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         fbb = types.SimpleNamespace(input=mockqtw.MockLineEdit())
-        assert capsys.readouterr().out == "called LineEdit.__init__\n"
+        assert capsys.readouterr().out == "called LineEdit.__init__ with args ()\n"
         assert testobj.get_filebrowse_value(fbb) == ''
         assert capsys.readouterr().out == ("called LineEdit.text\n")
 
@@ -2966,9 +2967,10 @@ class TestNewColumnsDialogGui:
         testobj.gsizer = mockqtw.MockGridLayout()
         assert capsys.readouterr().out == "called Grid.__init__\n"
         assert isinstance(testobj.add_text_entry('xxx', 1, 2, True), testee.qtw.QLineEdit)
-        assert capsys.readouterr().out == ("called LineEdit.__init__\n"
-                                           "called LineEdit.setEnabled with arg True\n"
-                                           "called Grid.addWidget with arg MockLineEdit at (1, 2)\n")
+        assert capsys.readouterr().out == (
+                f"called LineEdit.__init__ with args ('xxx', {testobj})\n"
+                "called LineEdit.setEnabled with arg True\n"
+                "called Grid.addWidget with arg MockLineEdit at (1, 2)\n")
 
     def test_add_okcancel_buttons(self, monkeypatch, capsys):
         """unittest for NewColumnsDialogGui.add_okcancel_buttons
@@ -2996,7 +2998,7 @@ class TestNewColumnsDialogGui:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         ted = mockqtw.MockLineEdit()
-        assert capsys.readouterr().out == "called LineEdit.__init__\n"
+        assert capsys.readouterr().out == "called LineEdit.__init__ with args ()\n"
         assert testobj.get_textentry_value(ted) == ''
         assert capsys.readouterr().out == ("called LineEdit.text\n")
 
@@ -3082,12 +3084,13 @@ class TestExtraSettingsDialogGui:
         testobj = self.setup_testobj(monkeypatch, capsys)
         result = testobj.add_textinput_line(vsizer, 'text', 'suggest')
         assert isinstance(result, testee.qtw.QLineEdit)
-        assert capsys.readouterr().out == ("called HBox.__init__\n"
-                                           f"called Label.__init__ with args ('text', {testobj})\n"
-                                           "called HBox.addWidget with arg MockLabel\n"
-                                           "called LineEdit.__init__\n"
-                                           "called HBox.addWidget with arg MockLineEdit\n"
-                                           "called VBox.addLayout with arg MockHBoxLayout\n")
+        assert capsys.readouterr().out == (
+                "called HBox.__init__\n"
+                f"called Label.__init__ with args ('text', {testobj})\n"
+                "called HBox.addWidget with arg MockLabel\n"
+                f"called LineEdit.__init__ with args ('suggest', {testobj})\n"
+                "called HBox.addWidget with arg MockLineEdit\n"
+                "called VBox.addLayout with arg MockHBoxLayout\n")
 
     def test_add_checkbox_line(self, monkeypatch, capsys):
         """unittest for ExtraSettingsDialogGui.add_checkbox_line
@@ -3229,12 +3232,12 @@ class TestExtraSettingsDialogGui:
         assert capsys.readouterr().out == (
                 f"called CheckBox.__init__ with args ({testobj},)\n"
                 "called Grid.addWidget with arg MockCheckBox at (1, 0)\n"
-                "called LineEdit.__init__\n"
+                f"called LineEdit.__init__ with args ('', {testobj})\n"
                 "called LineEdit.setFixedWidth with arg `88`\n"
                 "called Grid.addWidget with arg MockLineEdit at (1, 1)\n"
-                "called LineEdit.__init__\n"
+                f"called LineEdit.__init__ with args ('value', {testobj})\n"
                 "called Grid.addWidget with arg MockLineEdit at (1, 2)\n"
-                "called LineEdit.__init__\n"
+                f"called LineEdit.__init__ with args ('desc', {testobj})\n"
                 "called Grid.addWidget with arg MockLineEdit at (2, 2)\n"
                 "called Scrollbar.maximum\ncalled Scrollbar.setMaximum with value `161`\n"
                 "called Scrollbar.maximum\ncalled Scrollbar.setValue with value `99`\n")
@@ -3243,13 +3246,13 @@ class TestExtraSettingsDialogGui:
         assert capsys.readouterr().out == (
                 f"called CheckBox.__init__ with args ({testobj},)\n"
                 "called Grid.addWidget with arg MockCheckBox at (3, 0)\n"
-                "called LineEdit.__init__\n"
+                f"called LineEdit.__init__ with args ('name', {testobj})\n"
                 "called LineEdit.setFixedWidth with arg `88`\n"
                 "called LineEdit.setReadOnly with arg `True`\n"
                 "called Grid.addWidget with arg MockLineEdit at (3, 1)\n"
-                "called LineEdit.__init__\n"
+                f"called LineEdit.__init__ with args ('value', {testobj})\n"
                 "called Grid.addWidget with arg MockLineEdit at (3, 2)\n"
-                "called LineEdit.__init__\n"
+                f"called LineEdit.__init__ with args ('desc', {testobj})\n"
                 "called Grid.addWidget with arg MockLineEdit at (4, 2)\n"
                 "called Scrollbar.maximum\ncalled Scrollbar.setMaximum with value `161`\n"
                 "called Scrollbar.maximum\ncalled Scrollbar.setValue with value `99`\n")
@@ -3263,8 +3266,10 @@ class TestExtraSettingsDialogGui:
         value = mockqtw.MockLineEdit()
         desc = mockqtw.MockLineEdit()
         testobj.gsizer = mockqtw.MockGridLayout()
-        assert capsys.readouterr().out == ("called CheckBox.__init__\ncalled LineEdit.__init__\n"
-                                           "called LineEdit.__init__\ncalled LineEdit.__init__\n"
+        assert capsys.readouterr().out == ("called CheckBox.__init__\n"
+                                           "called LineEdit.__init__ with args ()\n"
+                                           "called LineEdit.__init__ with args ()\n"
+                                           "called LineEdit.__init__ with args ()\n"
                                            "called Grid.__init__\n")
         testobj.delete_row(testobj.gsizer, 1, [check, name, value, desc])
         assert capsys.readouterr().out == ("called Grid.removeWidget with arg MockCheckBox\n"
@@ -3290,7 +3295,7 @@ class TestExtraSettingsDialogGui:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         txt = mockqtw.MockLineEdit()
-        assert capsys.readouterr().out == "called LineEdit.__init__\n"
+        assert capsys.readouterr().out == "called LineEdit.__init__ with args ()\n"
         assert testobj.get_textinput_value(txt) == ''
         assert capsys.readouterr().out == "called LineEdit.text\n"
 
