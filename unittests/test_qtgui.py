@@ -948,7 +948,7 @@ class TestSingleDataInterface:
             f"called Signal.connect with args ({callback},)\n"
             "called Tree.header\n"
             "called Header.__init__\n"
-            "called Header.setSectionsClickable with value True\n"
+            "called Header.setSectionsClickable with arg True\n"
             "called Header.setStretchLastSection with arg True\n"
             "called Tree.setSortingEnabled with arg True\n")
         result = testobj.setup_list(['x', 'y'], [1, 2], callback)
@@ -963,7 +963,7 @@ class TestSingleDataInterface:
             f"called Signal.connect with args ({callback},)\n"
             "called Tree.header\n"
             "called Header.__init__\n"
-            "called Header.setSectionsClickable with value True\n"
+            "called Header.setSectionsClickable with arg True\n"
             "called Header.resizeSection with args (0, 1)\n"
             "called Header.resizeSection with args (1, 2)\n"
             "called Header.setStretchLastSection with arg True\n"
@@ -1220,7 +1220,7 @@ class TestSingleDataInterface:
         assert capsys.readouterr().out == ("called Tree.setColumnCount with arg `2`\n"
                                            "called Tree.setHeaderLabels with arg `['xxx', 'yyy']`\n"
                                            "called Tree.header\ncalled Header.__init__\n"
-                                           "called Header.setSectionsClickable with value True\n"
+                                           "called Header.setSectionsClickable with arg True\n"
                                            "called Header.resizeSection with args (0, 10)\n"
                                            "called Header.resizeSection with args (1, 20)\n"
                                            "called Header.setStretchLastSection with arg True\n")

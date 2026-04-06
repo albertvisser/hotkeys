@@ -99,7 +99,7 @@ class TestGui:
         assert capsys.readouterr().out == (
                 "called frame.__init__ with args (None,) {'size': (688, 594), 'style': 541072960}\n"
                 "called Frame.CreateStatusBar\n"
-                "called StatusBar.__init__\n"
+                "called StatusBar.__init__ with args ()\n"
                 "called MenuBar.__init__ with args ()\n"
                 "called Frame.SetMenuBar with args (A MenuBar,)\n")
         testee.shared.LIN = False
@@ -112,7 +112,7 @@ class TestGui:
         assert capsys.readouterr().out == (
                 "called frame.__init__ with args (None,) {'size': (688, 594), 'style': 541072960}\n"
                 "called Frame.CreateStatusBar\n"
-                "called StatusBar.__init__\n"
+                "called StatusBar.__init__ with args ()\n"
                 "called MenuBar.__init__ with args ()\n"
                 "called Frame.SetMenuBar with args (A MenuBar,)\n")
 
@@ -189,7 +189,7 @@ class TestGui:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.sb = mockwx.MockStatusBar()
-        assert capsys.readouterr().out == "called StatusBar.__init__\n"
+        assert capsys.readouterr().out == "called StatusBar.__init__ with args ()\n"
         testobj.statusbar_message('message')
         assert capsys.readouterr().out == "called statusbar.SetStatusText with args ('message',)\n"
 
@@ -3314,7 +3314,7 @@ class TestEntryDialogGui:
         result = testobj.add_table_to_display([('xxx', 10), ('yyy', 20)])
         assert capsys.readouterr().out == (
                 "called BoxSizer.__init__ with args (4,)\n"
-                f"called Grid.__init__ with args ({testobj},)\n"
+                f"called Grid.__init__ with args ({testobj},) {{}}\n"
                 "called Grid.CreateGrid with args (0, 2)\n"
                 "called Grid.SetRowLabelSize with args (20,)\n"
                 "called Grid.SetColLabelValue with args (0, 'xxx')\n"
@@ -3351,7 +3351,7 @@ class TestEntryDialogGui:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         p0list = mockwx.MockGrid()
-        assert capsys.readouterr().out == "called Grid.__init__ with args ()\n"
+        assert capsys.readouterr().out == "called Grid.__init__ with args () {}\n"
         testobj.add_row(p0list, 1, ['xxx', 'yyy'])
         assert capsys.readouterr().out == ("called Grid.AppendRows with args ()\n"
                                            "called Grid.SetCellValue with args (1, 0, 'xxx')\n"
@@ -3366,7 +3366,7 @@ class TestEntryDialogGui:
             return ['row1', 'row2']
         testobj = self.setup_testobj(monkeypatch, capsys)
         p0list = mockwx.MockGrid()
-        assert capsys.readouterr().out == "called Grid.__init__ with args ()\n"
+        assert capsys.readouterr().out == "called Grid.__init__ with args () {}\n"
         testobj.delete_key(p0list, 'event')
         assert capsys.readouterr().out == ("called Grid.GetSelectedRows\n")
         monkeypatch.setattr(mockwx.MockGrid, 'GetSelectedRows', mock_get)
@@ -3380,7 +3380,7 @@ class TestEntryDialogGui:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         p0list = mockwx.MockGrid()
-        assert capsys.readouterr().out == "called Grid.__init__ with args ()\n"
+        assert capsys.readouterr().out == "called Grid.__init__ with args () {}\n"
         assert testobj.get_tableitem_value(p0list, 'row', 'col') == "value at ('row', 'col')"
         assert capsys.readouterr().out == ("called Grid.GetCellValue with args ('row', 'col')\n")
 
@@ -3441,7 +3441,7 @@ class TestCompleteDialogGui:
         result = testobj.add_table_to_display([('xxx', 10), ('yyy', 20)])
         assert capsys.readouterr().out == (
                 "called BoxSizer.__init__ with args (4,)\n"
-                f"called Grid.__init__ with args ({testobj},)\n"
+                f"called Grid.__init__ with args ({testobj},) {{}}\n"
                 "called Grid.CreateGrid with args (0, 2)\n"
                 "called Grid.SetRowLabelSize with args (20,)\n"
                 "called Grid.SetColLabelValue with args (0, 'xxx')\n"
@@ -3456,7 +3456,7 @@ class TestCompleteDialogGui:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         p0list = mockwx.MockGrid()
-        assert capsys.readouterr().out == "called Grid.__init__ with args ()\n"
+        assert capsys.readouterr().out == "called Grid.__init__ with args () {}\n"
         testobj.add_row(p0list, 1, 'xxx', 'yyy', 'zzz')
         assert capsys.readouterr().out == ("called Grid.AppendRows with args ()\n"
                                            "called Grid.SetCellValue with args (1, 0, 'xxx')\n"
@@ -3485,7 +3485,7 @@ class TestCompleteDialogGui:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         p0list = mockwx.MockGrid()
-        assert capsys.readouterr().out == "called Grid.__init__ with args ()\n"
+        assert capsys.readouterr().out == "called Grid.__init__ with args () {}\n"
         testobj.set_focus_to_list(p0list)
         assert capsys.readouterr().out == ("called Grid.GoToCell with args (0, 1)\n")
 
