@@ -4183,8 +4183,8 @@ class TestDeleteDialog:
                 return args[0]
             def add_okcancel_buttons(self, *args):
                 print('called DeleteDialogGui.add_okcancel_buttons')
-        parent = types.SimpleNamespace(title='title', gui='FilesDialogGui',
-                                       parent=types.SimpleNamespace())
+        parent = types.SimpleNamespace(gui='FilesDialogGui',
+                                       parent=types.SimpleNamespace(title='title'))
         parent.parent.captions={'Q_REMPRG': 'prg', 'Q_REMKDEF': 'kdef', 'Q_REMPLG': 'plg'}
         monkeypatch.setattr(testee.gui, 'DeleteDialogGui', MockGui)
         testobj = testee.DeleteDialog(parent)
