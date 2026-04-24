@@ -472,14 +472,14 @@ class SingleDataInterface(qtw.QFrame):
         "delete and insert columns"
         p0list.setColumnCount(newcount)
 
-    def refresh_headers(self, p0list, column_info):
+    def refresh_headers(self, p0list, headers, widths):
         "apply changes in the column headers"
-        p0list.setColumnCount(len(column_info))
-        p0list.setHeaderLabels([x[0] for x in column_info])
+        p0list.setColumnCount(len(headers))
+        p0list.setHeaderLabels(headers)
         hdr = p0list.header()
         hdr.setSectionsClickable(True)
-        for indx, col in enumerate(column_info):
-            hdr.resizeSection(indx, col[1])
+        for indx, width in enumerate(widths):
+            hdr.resizeSection(indx, width)
         hdr.setStretchLastSection(True)
 
     def set_title(self, title):
@@ -1082,7 +1082,7 @@ class ColumnSettingsDialogGui(qtw.QDialog):
         "stuff to do when the area is filled up"
         # wx variant needs this to get the dimensions right
 
-    def add_checkbox_to_line(self, row, col, text, width, before, after):
+    def add_checkbox_to_line(self, row, col, text, width, checkvalue, before, after):
         "add a checkbox to the screen line"
         # if col == 0:
         #     self.rowsizer = qtw.QHBoxLayout()
@@ -1092,6 +1092,8 @@ class ColumnSettingsDialogGui(qtw.QDialog):
         cb = qtw.QCheckBox(text, self)
         if width:
             cb.setFixedWidth(width)
+        if checkvalue:
+            cb.setChecked(checkvalue)
         hsizer.addWidget(cb)
         if after:
             hsizer.addSpacing(after)

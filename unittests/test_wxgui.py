@@ -1267,9 +1267,9 @@ class TestSingleDataInterface:
         """
         testobj = self.setup_testobj(monkeypatch, capsys)
         p0list = mockwx.MockListCtrl
-        testobj.refresh_headers(p0list, [])
+        testobj.refresh_headers(p0list, [], [])
         assert capsys.readouterr().out == ("called ListCtrl.resizeLastColumn with args (100,)\n")
-        testobj.refresh_headers(p0list, [('x', 1), ('y', 2)])
+        testobj.refresh_headers(p0list, ['x', 'y'], [1, 2])
         assert capsys.readouterr().out == ("called ListCtrl.GetColumn with args ()\n"
                                            "called item.SetText with arg 'x'\n"
                                            "called item.SetWidth with arg 1\n"
@@ -2595,7 +2595,7 @@ class TestColumnSettingsDialogGui:
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.scrl = mockwx.MockScrolledPanel()
         assert capsys.readouterr().out == "called ScrolledPanel.__init__ with args () {}\n"
-        result = testobj.add_checkbox_to_line(0, 0, 'text', 10, True, False)
+        result = testobj.add_checkbox_to_line(0, 0, 'text', 10, False, True, False)
         assert isinstance(result, testee.wx.CheckBox)
         assert isinstance(testobj.rowsizer, testee.wx.BoxSizer)
         assert capsys.readouterr().out == (
@@ -2610,11 +2610,12 @@ class TestColumnSettingsDialogGui:
         testobj.rowsizer = mockwx.MockBoxSizer()
         assert capsys.readouterr().out == ("called ScrolledPanel.__init__ with args () {}\n"
                                            "called BoxSizer.__init__ with args ()\n")
-        result = testobj.add_checkbox_to_line(0, 1, 'text', 10, False, True)
+        result = testobj.add_checkbox_to_line(0, 1, 'text', 10, True, False, True)
         assert isinstance(result, testee.wx.CheckBox)
         assert capsys.readouterr().out == (
                 "called BoxSizer.__init__ with args (4,)\n"
                 f"called CheckBox.__init__ with args ({testobj.scrl}, 'text') {{'size': (10, -1)}}\n"
+                "called checkbox.Check with arg True\n"
                 "called hori sizer.Add with args MockCheckBox ()\n"
                 "called hori sizer.AddSpacer with args (True,)\n"
                 "called  sizer.Add with args MockBoxSizer (0,)\n")

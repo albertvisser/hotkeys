@@ -496,11 +496,11 @@ def test_update_paths(monkeypatch, capsys):
     assert capsys.readouterr().out == (
             f"called path.write with args ({testee.BASE / 'xx' / 'yy' / 'zz.py'!r},"
             f" {testee.plugin_skeleton!r})\n"
-            f"called initjson with args ({testee.BASE / 'yy.json'!r},"
+            f"called initjson with args ('{testee.BASE}/yy.json',"
             " ['xx.yy.zz', 'xxx', 1, 0, 0])\n"
             f"called path.write with args ({testee.BASE / 'bb' / 'cc.py'!r},"
             f" {testee.plugin_skeleton!r})\n"
-            f"called initjson with args ({testee.BASE / 'bb.json'!r}, ['.bb.cc', 'aaa', 1, 1, 1])\n")
+            f"called initjson with args ('{testee.BASE}/bb.json', ['.bb.cc', 'aaa', 1, 1, 1])\n")
 
 
 def test_initjson(monkeypatch, capsys):
@@ -2341,9 +2341,9 @@ class TestChoiceBook:
         testobj.sel = 'selector'
         testobj.gui.add_subscreen = mock_add
         testobj.gui.add_to_selector = mock_add_to
-        testobj.add_tool('program', 'win')
+        testobj.add_tool('program', types.SimpleNamespace(gui='newgui'))
         assert capsys.readouterr().out == (
-                "called TabbedInterface.add_subscreen with arg win\n"
+                "called TabbedInterface.add_subscreen with arg newgui\n"
                 "called TabbedInterface.add_to_selector with args ('selector', 'program')\n")
 
 
@@ -3003,10 +3003,9 @@ class TestEditor:
                 " {'page': 'settings'},"
                 " [('xx', 10, False, 0), ('yy', 15, False, 1)], None, {'other': 'stuff'})\n"
                 "called SDI.update_columns with args ('p0list', 1, 2)\n"
-                # "called TabbedInterface.refresh_combobox with args ('find_loc', ['aaa', 'bbb'])\n"
-                "called TabbedInterface.refresh_combobox with args ('find_loc', ['xx', 'yy'])\n"
+                "called TabbedInterface.refresh_combobox with args ('find_loc', ['aaa', 'bbb'])\n"
                 "called SDI.refresh_headers with args"
-                " ('p0list', [('xx', 10, False, 0), ('yy', 15, False, 1)])\n"
+                " ('p0list', ['aaa', 'bbb'], [10, 15])\n"
                 "called HotkeyPanel.populate_list with arg p0list\n")
 
     def test_build_new_pagedata(self, monkeypatch, capsys):
@@ -3625,6 +3624,9 @@ class TestFilesDialog:
         assert testobj.checks == []
         # assert testobj.paths == []
         assert testobj.progs == []
+        assert testobj.code_to_remove == []
+        assert testobj.data_to_remove == []
+        assert testobj.last_added == ''
         assert testobj.settingsdata == {}
         assert capsys.readouterr().out == (
                 f"called FilesDialogGui.__init__ with args ({testobj}, 'EditorGui', 'title')\n"
@@ -3645,6 +3647,9 @@ class TestFilesDialog:
         # assert testobj.paths == [('x', 'sel_x'), ('y', 'sel_y')]
         assert testobj.checks == [('cb_x', 'x', 'sel_x'), ('cb_y', 'y', 'sel_y')]
         assert testobj.progs == []
+        assert testobj.code_to_remove == []
+        assert testobj.data_to_remove == []
+        assert testobj.last_added == ''
         assert testobj.settingsdata == {'x': ('xxx',), 'y': ('yyy',)}
         assert capsys.readouterr().out == (
                 f"called FilesDialogGui.__init__ with args ({testobj}, 'EditorGui', 'title')\n"
@@ -3695,6 +3700,7 @@ class TestFilesDialog:
                 self.parent.data = ['aaa', 'bbb', 'ccc']
         def mock_add(*args, **kwargs):
             print('called FilesDialogGui.add_row with args', args, kwargs)
+            return 'checkbox', 'location'
         monkeypatch.setattr(testee.gui, 'get_textinput', mock_get)
         monkeypatch.setattr(testee.gui, 'show_message', mock_show)
         monkeypatch.setattr(testee.gui, 'ask_question', mock_ask)
@@ -3702,20 +3708,24 @@ class TestFilesDialog:
         monkeypatch.setattr(testee, 'SetupDialog', MockDialog)
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.settingsdata = {}
+        testobj.checks = []
         testobj.parent = types.SimpleNamespace(captions={'P_NEWPRG': 'newprg', 'C_BRWS': 'brws',
                                                          'C_SELFIL': 'selfil'})
         testobj.gui = types.SimpleNamespace(add_row=mock_add)
         testobj.parent.data = ['data_loc', 'prgloc', 'yyy']
         testobj.add_program()
+        assert testobj.checks == []
         assert capsys.readouterr().out == (
                 f"called get_textinput with args ({testobj.gui}, '', 'newprg')\n")
         monkeypatch.setattr(testee.gui, 'get_textinput', mock_get_2)
         testobj.add_program()
+        assert testobj.checks == []
         assert capsys.readouterr().out == (
                 f"called get_textinput with args ({testobj.gui}, '', 'newprg')\n"
                 f"called show_message with args ({testobj.gui}, 'I_NEEDNAME')\n")
         monkeypatch.setattr(testee.gui, 'get_textinput', mock_get_3)
         testobj.add_program()
+        assert testobj.checks == []
         assert capsys.readouterr().out == (
                 f"called get_textinput with args ({testobj.gui}, '', 'newprg')\n"
                 f"called ask_question with args ({testobj.gui}, 'P_INIKDEF')\n")
@@ -3724,6 +3734,7 @@ class TestFilesDialog:
         assert testobj.last_added == 'qqq'
         assert testobj.settingsdata == {'qqq': ('',)}
         testobj.add_program()
+        assert testobj.checks == []
         assert capsys.readouterr().out == (
                 f"called get_textinput with args ({testobj.gui}, '', 'newprg')\n"
                 f"called ask_question with args ({testobj.gui}, 'P_INIKDEF')\n"
@@ -3735,6 +3746,7 @@ class TestFilesDialog:
         testobj.add_program()
         assert testobj.last_added == 'qqq'
         assert testobj.settingsdata == {'qqq': ['bbb', 'ccc']}
+        assert testobj.checks == [('checkbox', 'qqq', 'location')]
         assert capsys.readouterr().out == (
                 f"called get_textinput with args ({testobj.gui}, '', 'newprg')\n"
                 f"called ask_question with args ({testobj.gui}, 'P_INIKDEF')\n"
@@ -3842,13 +3854,6 @@ class TestFilesDialog:
                 "called FilesDialogGui.delete_row with args (1, 'yyy', 'file_b')\n"
                 "called FilesDialogGui.delete_row with args (0, 'xxx', 'file_a')\n")
 
-    def _test_confirm(self, monkeypatch, capsys):
-        """unittest for FilesDialog.confirm
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
-        assert testobj.confirm()
-        assert capsys.readouterr().out == ("")
-
     def test_confirm(self, monkeypatch, capsys, tmp_path):
         """unittest for Editor.accept_pathsettings
         """
@@ -3873,29 +3878,29 @@ class TestFilesDialog:
         testobj.check_plugin_settings = mock_check
 
         testobj.last_added = 'xx'
-        testobj.ini = {'lang': 'en'}
+        testobj.parent = types.SimpleNamespace(ini={'lang': 'en'})
         # testobj.accept_pathsettings([], {}, [])
-        testobj.paths = []
+        testobj.checks = []
         testobj.settingsdata = {}
         testobj.code_to_remove, testobj.data_to_remove = [], []
         assert testobj.confirm()
         assert testobj.last_added == ''
-        assert testobj.ini['plugins'] == []
+        assert testobj.parent.ini['plugins'] == []
         assert testobj.last_added == ''
         assert capsys.readouterr().out == "called update_paths with args ([], {})\n"
 
         testobj.last_added = 'xx'
-        testobj.ini['startup'] = testee.shared.mode_f
-        testobj.ini['initial'] = 'yy'
-        testobj.ini['plugins'] = [('zz', 'path/to/zz')]
-        testobj.pluginfiles = {}
-        testobj.paths = [('xx', 'path/to/xx')]
+        testobj.parent.ini['startup'] = testee.shared.mode_f
+        testobj.parent.ini['initial'] = 'yy'
+        testobj.parent.ini['plugins'] = [('zz', 'path/to/zz')]
+        testobj.parent.pluginfiles = {}
+        testobj.checks = [('checkbox', 'xx', 'path/to/xx')]
         testobj.settingsdata = {'xx': ('path/to/xx',), 'zz': ('path/to/zz',)}
         testobj.code_to_remove, testobj.data_to_remove = [], []
         # assert not testobj.accept_pathsettings(name_path_list, settingsdata, [])
         assert not testobj.confirm()
-        assert testobj.ini["startup"] == testee.shared.mode_f
-        assert testobj.pluginfiles == {}
+        assert testobj.parent.ini["startup"] == testee.shared.mode_f
+        assert testobj.parent.pluginfiles == {}
         assert testobj.last_added == 'xx'
         assert capsys.readouterr().out == (
             # "called write_config with arg '{'lang': 'en', 'plugins': [('zz', 'path/to/zz')],"
@@ -3903,13 +3908,13 @@ class TestFilesDialog:
             "called FilesDialogGui.get_browser_value with arg path/to/xx\n"
             "called Editor.check_plugin_settings with args ('xx', 'path/to/xx', ('path/to/xx',))\n")
 
-        testobj.paths = [('zz', 'path/to/zz')]
+        testobj.checks = [('checkbox', 'zz', 'path/to/zz')]
         testobj.settingsdata = {'xx': ('path/to/xx',), 'zz': ('path/to/zz',)}
         testobj.code_to_remove, testobj.data_to_remove = [], []
         # assert testobj.accept_pathsettings(name_path_list, settingsdata, [])
         assert testobj.confirm()
-        assert testobj.ini["startup"] == testee.shared.mode_r
-        assert testobj.pluginfiles == {}
+        assert testobj.parent.ini["startup"] == testee.shared.mode_r
+        assert testobj.parent.pluginfiles == {}
         assert capsys.readouterr().out == (
             #    "called update_paths with args ([('zz', 'path/to/zz')], {})\n")
             "called FilesDialogGui.get_browser_value with arg path/to/zz\n"
@@ -3919,14 +3924,14 @@ class TestFilesDialog:
         testobj.check_plugin_settings = mock_check_2
         file_to_remove = tmp_path / 'obsolete'
         file_to_remove.touch()
-        testobj.paths = [('xx', 'path/to/xx')]
+        testobj.checks = [('checkbox', 'xx', 'path/to/xx')]
         testobj.settingsdata = {'xx': ('path/to/xx',), 'zz': ('path/to/zz',)}
         testobj.code_to_remove, testobj.data_to_remove = [], [str(file_to_remove)]
         # assert testobj.accept_pathsettings(name_path_list, settingsdata, [str(file_to_remove)])
         assert testobj.confirm()
-        assert testobj.ini["startup"] == testee.shared.mode_r
-        assert testobj.pluginfiles == {'xx': 'path/to/xx'}
-        assert testobj.ini['plugins'] == []
+        assert testobj.parent.ini["startup"] == testee.shared.mode_r
+        assert testobj.parent.pluginfiles == {'xx': 'path/to/xx'}
+        assert testobj.parent.ini['plugins'] == []
         assert capsys.readouterr().out == (
             "called FilesDialogGui.get_browser_value with arg path/to/xx\n"
             "called Editor.check_plugin_settings with args ('xx', 'path/to/xx', ('path/to/xx',))\n"
@@ -4343,14 +4348,16 @@ class TestColumnSettingsDialog:
         testobj.data = []
         testobj.add_row_to_display()
         assert testobj.checks == ['check']
-        assert testobj.data == [('selector', 'counter', 'check', 'counter', 'new')]
+        assert testobj.data == [('selector', 'counter', 'counter', 'check', 'new')]
         assert capsys.readouterr().out == (
-            "called ColumnSettingsDialogGui.add_checkbox_to_line with args (1, 0, '', 0, 0, 0)\n"
+            "called ColumnSettingsDialogGui.add_checkbox_to_line with args"
+            " (1, 0, '', 0, False, 0, 0)\n"
             "called ColumnSettingsDialogGui.add_combobox_to_line with args"
             " (1, 1, ['name1', 'name2'], 0)\n"
             "called ColumnSettingsDialogGui.add_spinbox_to_line with args"
             " (1, 2, 0, (1, 999), 48, (20, 20))\n"
-            "called ColumnSettingsDialogGui.add_checkbox_to_line with args (1, 3, '', 32, 40, 24)\n"
+            "called ColumnSettingsDialogGui.add_checkbox_to_line with args"
+            " (1, 3, '', 32, '', 40, 24)\n"
             "called ColumnSettingsDialogGui.add_spinbox_to_line with args"
             " (1, 4, 1, (0, 99), 36, (68, 0))\n"
             "called ColumnSettingsDilaogGui.finalize_line with args ('scrollarea', 'check')\n")
@@ -4360,14 +4367,16 @@ class TestColumnSettingsDialog:
         columnsettings = ('C02', 5, True)
         testobj.add_row_to_display(*columnsettings)
         assert testobj.checks == ['check']
-        assert testobj.data == [('selector', 'counter', 'check', 'counter', 'check')]
+        assert testobj.data == [('selector', 'counter', 'counter', 'check', 1)]
         assert capsys.readouterr().out == (
-            "called ColumnSettingsDialogGui.add_checkbox_to_line with args (1, 0, '', 0, 0, 0)\n"
+            "called ColumnSettingsDialogGui.add_checkbox_to_line with args"
+            " (1, 0, '', 0, False, 0, 0)\n"
             "called ColumnSettingsDialogGui.add_combobox_to_line with args"
             " (1, 1, ['name1', 'name2'], 2)\n"
             "called ColumnSettingsDialogGui.add_spinbox_to_line with args"
             " (1, 2, 5, (1, 999), 48, (20, 20))\n"
-            "called ColumnSettingsDialogGui.add_checkbox_to_line with args (1, 3, True, 32, 40, 24)\n"
+            "called ColumnSettingsDialogGui.add_checkbox_to_line with args"
+            " (1, 3, '', 32, True, 40, 24)\n"
             "called ColumnSettingsDialogGui.add_spinbox_to_line with args"
             " (1, 4, 1, (0, 99), 36, (68, 0))\n"
             "called ColumnSettingsDilaogGui.finalize_line with args ('scrollarea', 'check')\n")
@@ -4399,7 +4408,7 @@ class TestColumnSettingsDialog:
         testobj.checks = ['checkbox']
         testobj.data = [('xxx', 5, True)]
         testobj.gui = MockGui()
-        testobj.parent = 'parent'
+        testobj.parent = types.SimpleNamespace(gui='EditorGui')
         testobj.remove_columndefs()
         assert testobj.checks == ['checkbox']
         assert testobj.data == [('xxx', 5, True)]
@@ -4411,7 +4420,7 @@ class TestColumnSettingsDialog:
         assert testobj.data == [('xxx', 5, True)]
         assert capsys.readouterr().out == (
                 "called ColumnSettingsDialogGui.get_checkbox_value with arg checkbox\n"
-                "called gui.ask_question with args parent Q_REMCOL\n")
+                "called gui.ask_question with args EditorGui Q_REMCOL\n")
         monkeypatch.setattr(testee.gui, 'ask_question', mock_ask_2)
         testobj.checks = ['checkbox1', 'checkbox2']
         testobj.data = [('yyy', 7, False), ('xxx', 5, True, 'q', 'r')]
@@ -4421,7 +4430,7 @@ class TestColumnSettingsDialog:
         assert capsys.readouterr().out == (
                 "called ColumnSettingsDialogGui.get_checkbox_value with arg checkbox1\n"
                 "called ColumnSettingsDialogGui.get_checkbox_value with arg checkbox2\n"
-                "called gui.ask_question with args parent Q_REMCOL\n"
+                "called gui.ask_question with args EditorGui Q_REMCOL\n"
                 "called ColumnSettingsDialogGui.adapt_column_index with args (True, False)\n"
                 "called ColumnSettingsDialogGui.delete_row with args"
                 " (1, ['checkbox2', 'xxx', 5, True, 'q'])\n")
@@ -4452,6 +4461,7 @@ class TestColumnSettingsDialog:
         monkeypatch.setattr(testee.gui, 'show_message', mock_show)
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.gui = MockGui()
+        testobj.parent = types.SimpleNamespace()
         testobj.book = types.SimpleNamespace()
         testobj.book.page = MockHotkeyPanel(testobj.book, '')
         assert capsys.readouterr().out == (
@@ -4459,8 +4469,8 @@ class TestColumnSettingsDialog:
         testobj.captions = {}
         testobj.book.page.captions = {}
         testobj.build_new_title_data = mock_build
-        testobj.data = [('x', '1', 'False', '0', '0'), ('y', '2', 'False', '1', '1'),
-                        ('x', '3', 'False', '2', '2')]
+        testobj.data = [('x', '1', '0', 'False', '0'), ('y', '2', '1', 'False', '1'),
+                        ('x', '3', '2', 'False', '2')]
         # assert testobj.accept_columnsettings(data) == (False, False)
         assert not testobj.confirm()
         assert testobj.captions == {}
@@ -4478,8 +4488,8 @@ class TestColumnSettingsDialog:
                 "called ColumnSettingsDialogGui.get_checkbox_value with arg False\n"
                 "called ColumnSettingsDialogGui.get_spinbox_value with arg 2\n"
                 f"called gui.show_message with args ({testobj.gui}, 'I_DPLNAM') {{}}\n")
-        testobj.data = [('x', '1', 'False', '0', '0'), ('y', '2', 'False', '1', '1'),
-                        ('', '3', 'False', '2', '2')]
+        testobj.data = [('x', '1', '0', 'False', '0'), ('y', '2', '1', 'False', '1'),
+                        ('', '3', '2', 'False', '2')]
         # assert testobj.accept_columnsettings(data) == (False, False)
         assert not testobj.confirm()
         assert testobj.captions == {}
@@ -4497,8 +4507,8 @@ class TestColumnSettingsDialog:
                 "called ColumnSettingsDialogGui.get_checkbox_value with arg False\n"
                 "called ColumnSettingsDialogGui.get_spinbox_value with arg 2\n"
                 f"called gui.show_message with args ({testobj.gui}, 'I_MISSNAM') {{}}\n")
-        testobj.data = [('x', '1', 'False', '0', '0'), ('y', '2', 'False', '2', '1'),
-                        ('z', '3', 'False', '2', '2')]
+        testobj.data = [('x', '1', '0', 'False', '0'), ('y', '2', '2', 'False', '1'),
+                        ('z', '3', '2', 'False', '2')]
         # assert testobj.accept_columnsettings(data) == (False, False)
         assert not testobj.confirm()
         assert testobj.captions == {}
@@ -4518,17 +4528,17 @@ class TestColumnSettingsDialog:
                 f"called gui.show_message with args ({testobj.gui}, 'I_DPLCOL') {{}}\n")
         # data = [('xzz', '010', 0, False, 0), ('yyy', '020', 2, False, 1), ('zzz', '030', 3, False, 2),
         #         ('q', '040', 1, False, 'new')]
-        testobj.data = [('xzz', '010', 'False', '0', '0'), ('yyy', '020', 'False', '2', '1'),
-                        ('zzz', '030', 'False', '3', '2'), ('q', '040', 'False', '1', 'new')]
+        testobj.data = [('xzz', '010', '0', 'False', '0'), ('yyy', '020', '2', 'False', '1'),
+                        ('zzz', '030', '3', 'False', '2'), ('q', '040', '1', 'False', 'new')]
         testobj.col_names = ['xxx', 'yyy', 'zzz']
         testobj.col_textids = ['id1', 'id2', 'id3']
         testobj.book.page.column_info = []
         # assert testobj.accept_columnsettings(data) == (False, True)
         assert not testobj.confirm()
-        assert testobj.new_column_info == [('xzz', 10, 'False', -1, '0'),
-                                           ('id2', 20, 'False', 1, '1'),
-                                           ('id3', 30, 'False', 2, '2'),
-                                           ('q', 40, 'False', 0, 'new')]
+        assert testobj.parent.new_column_info == [('xzz', 10, 'False', -1, '0'),
+                                                  ('id2', 20, 'False', 1, '1'),
+                                                  ('id3', 30, 'False', 2, '2'),
+                                                  ('q', 40, 'False', 0, 'new')]
         assert testobj.captions == {}
         assert testobj.book.page.captions == {}
         assert capsys.readouterr().out == (
@@ -4556,10 +4566,10 @@ class TestColumnSettingsDialog:
         testobj.build_new_title_data = mock_build_2
         # assert testobj.accept_columnsettings(data) == (True, False)
         assert testobj.confirm()
-        assert testobj.new_column_info == [('ID1', 10, 'False', -1, '0'),
-                                           ('id2', 20, 'False', 1, '1'),
-                                           ('id3', 30, 'False', 2, '2'),
-                                           ('ID2', 40, 'False', 0, 'new')]
+        assert testobj.parent.new_column_info == [('ID1', 10, 'False', -1, '0'),
+                                                  ('id2', 20, 'False', 1, '1'),
+                                                  ('id3', 30, 'False', 2, '2'),
+                                                  ('ID2', 40, 'False', 0, 'new')]
         assert testobj.captions == {'ID1': 'xzz', 'ID2': 'q'}
         assert testobj.book.page.captions == {'ID1': 'xzz', 'ID2': 'q'}
         assert capsys.readouterr().out == (
@@ -4583,17 +4593,17 @@ class TestColumnSettingsDialog:
                 " [('xzz', 10, 'False', -1, '0'), ('id2', 20, 'False', 1, '1'),"
                 " ('id3', 30, 'False', 2, '2'), ('q', 40, 'False', 0, 'new')])\n")
 
-        testobj.data = [('xxx', '010', 'False', '0', '0'), ('yyy', '020', 'False', '1', '1'),
-                        ('zzz', '030', 'False', '2', '2')]
+        testobj.data = [('xxx', '010', '0', 'False', '0'), ('yyy', '020', '1', 'False', '1'),
+                        ('zzz', '030', '2', 'False', '2')]
         testobj.captions = {}
         testobj.book.page.captions = {}
         testobj.col_names = ['xxx', 'yyy', 'zzz']
         testobj.book.page.column_info = []
         # assert testobj.accept_columnsettings(data) == (True, False)
         assert testobj.confirm()
-        assert testobj.new_column_info == [('id1', 10, 'False', -1, '0'),
-                                           ('id2', 20, 'False', 0, '1'),
-                                           ('id3', 30, 'False', 1, '2')]
+        assert testobj.parent.new_column_info == [('id1', 10, 'False', -1, '0'),
+                                                  ('id2', 20, 'False', 0, '1'),
+                                                  ('id3', 30, 'False', 1, '2')]
         assert testobj.captions == {}
         assert testobj.book.page.captions == {}
         assert capsys.readouterr().out == (
@@ -5088,7 +5098,7 @@ class TestExtraSettingsDialog:
             print('called MockExtraSettingsDialogGui.delete_row with args', args)
         monkeypatch.setattr(testee.gui, 'ask_question', mock_ask)
         testobj = self.setup_testobj(monkeypatch, capsys)
-        testobj.parent = 'parent'
+        testobj.parent = types.SimpleNamespace(gui='EditorGui')
         testobj.gui = types.SimpleNamespace(get_checkbox_value=mock_get, delete_row=mock_delete)
         testobj.scroll = 'scroller'
         testobj.fields = []
@@ -5106,19 +5116,19 @@ class TestExtraSettingsDialog:
         assert testobj.fields == [('field1a', 'field1b'), ('field2a', 'field2b')]
         assert capsys.readouterr().out == (
                 "called MockExtraSettingsDialogGui.get_checkbox_value with arg field2a\n"
-                "called gui.ask_question with args ('parent', 'Q_REMSET')\n"
+                "called gui.ask_question with args ('EditorGui', 'Q_REMSET')\n"
                 "called MockExtraSettingsDialogGui.get_checkbox_value with arg field1a\n"
-                "called gui.ask_question with args ('parent', 'Q_REMSET')\n")
+                "called gui.ask_question with args ('EditorGui', 'Q_REMSET')\n")
         monkeypatch.setattr(testee.gui, 'ask_question', mock_ask_2)
         testobj.remove_settings()
         assert testobj.fields == []
         assert capsys.readouterr().out == (
                 "called MockExtraSettingsDialogGui.get_checkbox_value with arg field2a\n"
-                "called gui.ask_question with args ('parent', 'Q_REMSET')\n"
+                "called gui.ask_question with args ('EditorGui', 'Q_REMSET')\n"
                 "called MockExtraSettingsDialogGui.delete_row with args"
                 " ('scroller', 1, ('field2a', 'field2b'))\n"
                 "called MockExtraSettingsDialogGui.get_checkbox_value with arg field1a\n"
-                "called gui.ask_question with args ('parent', 'Q_REMSET')\n"
+                "called gui.ask_question with args ('EditorGui', 'Q_REMSET')\n"
                 "called MockExtraSettingsDialogGui.delete_row with args"
                 " ('scroller', 0, ('field1a', 'field1b'))\n")
 

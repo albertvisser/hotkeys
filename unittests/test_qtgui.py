@@ -1216,7 +1216,7 @@ class TestSingleDataInterface:
         testobj = self.setup_testobj(monkeypatch, capsys)
         p0list = mockqtw.MockTreeWidget()
         assert capsys.readouterr().out == "called Tree.__init__\n"
-        testobj.refresh_headers(p0list, (('xxx', 10), ('yyy', 20)))
+        testobj.refresh_headers(p0list, ['xxx', 'yyy'], [10, 20])
         assert capsys.readouterr().out == ("called Tree.setColumnCount with arg `2`\n"
                                            "called Tree.setHeaderLabels with arg `['xxx', 'yyy']`\n"
                                            "called Tree.header\ncalled Header.__init__\n"
@@ -1570,21 +1570,22 @@ def test_ask_question(monkeypatch, capsys):
     monkeypatch.setattr(testee.shared, 'get_text', mock_get_text)
     monkeypatch.setattr(testee.shared, 'get_title', mock_get_title)
     monkeypatch.setattr(testee.qtw.QMessageBox, 'question', mock_question)
-    assert not testee.ask_question('win')
+    win = 'win'
+    assert not testee.ask_question(win)
     buttons = testee.qtw.QMessageBox.StandardButton.Yes | testee.qtw.QMessageBox.StandardButton.No
     yesbutton = testee.qtw.QMessageBox.StandardButton.Yes
     assert capsys.readouterr().out == (
-            "called shared.get_text with args ('win', '', '', None)\n"
-            "called shared.get_title with args ('win',)\n"
+            f"called shared.get_text with args ('win', '', '', None)\n"
+            f"called shared.get_title with args ('win',)\n"
             f"called MessageBox.question with args ('win', 'title', 'text', {buttons!r},"
             f" {yesbutton!r})\n")
     monkeypatch.setattr(testee.qtw.QMessageBox, 'question', mock_question_2)
-    assert testee.ask_question('win', message_id='xxx', text='yyy', args={'aa': 'bbbb'})
+    assert testee.ask_question(win, message_id='xxx', text='yyy', args={'aa': 'bbbb'})
     buttons = testee.qtw.QMessageBox.StandardButton.Yes | testee.qtw.QMessageBox.StandardButton.No
     yesbutton = testee.qtw.QMessageBox.StandardButton.Yes
     assert capsys.readouterr().out == (
-            "called shared.get_text with args ('win', 'xxx', 'yyy', {'aa': 'bbbb'})\n"
-            "called shared.get_title with args ('win',)\n"
+            f"called shared.get_text with args ('win', 'xxx', 'yyy', {{'aa': 'bbbb'}})\n"
+            f"called shared.get_title with args ('win',)\n"
             f"called MessageBox.question with args ('win', 'title', 'text', {buttons!r},"
             f" {yesbutton!r})\n")
 
@@ -2674,15 +2675,16 @@ class TestColumnSettingsDialogGui:
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.gsizer = mockqtw.MockGridLayout()
         assert capsys.readouterr().out == "called Grid.__init__\n"
-        result = testobj.add_checkbox_to_line('row', 'col', 'text', '', False, True)
+        result = testobj.add_checkbox_to_line('row', 'col', 'text', '', True, False, True)
         assert isinstance(result, testee.qtw.QCheckBox)
         assert capsys.readouterr().out == (
                 "called HBox.__init__\n"
                 f"called CheckBox.__init__ with args ('text', {testobj})\n"
+                "called CheckBox.setChecked with arg True\n"
                 "called HBox.addWidget with arg MockCheckBox\n"
                 "called HBox.addSpacing\n"
                 "called Grid.addLayout with arg MockHBoxLayout at ('row', 'col')\n")
-        result = testobj.add_checkbox_to_line('row', 'col', 'text', 'width', True, False)
+        result = testobj.add_checkbox_to_line('row', 'col', 'text', 'width', False, True, False)
         assert isinstance(result, testee.qtw.QCheckBox)
         assert capsys.readouterr().out == (
                 "called HBox.__init__\n"

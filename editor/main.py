@@ -148,7 +148,7 @@ def update_paths(paths, pathdata):
             # with newfile.open('w') as _out:
             #    _out.write(plugin_skeleton)
             newfile.write_text(plugin_skeleton)
-            initjson(BASE / loc, data)
+            initjson(str(BASE / loc), data)
     return newpaths
 
 
@@ -862,7 +862,7 @@ class HotkeyPanel:
         # in de keydef zit ?
         if self.captions[f"{int(indx):03}"] == 'C_TYPE':
             if self.data[indx][1] == "S":  # can't delete standard key
-                gui.show_message(self.parent, 'I_STDDEF')
+                gui.show_message(self.parent.gui, 'I_STDDEF')
                 return
         elif self.captions[f"{int(indx):03}"] == 'C_KEY':
             if self.data[indx][0] in self.defkeys:  # restore standard if any
@@ -1081,7 +1081,7 @@ class ChoiceBook:
 
     def add_tool(self, program, win):
         "add a tool to the configuration"
-        self.gui.add_subscreen(win)
+        self.gui.add_subscreen(win.gui)
         self.gui.add_to_selector(self.sel, program)
 
 
@@ -1344,8 +1344,10 @@ class Editor:
                   self.book.page.column_info, self.book.page.data, self.book.page.otherstuff)
         self.book.page.gui.update_columns(self.book.page.p0list, oldcolcount,
                                           len(self.book.page.column_info))
-        self.book.gui.refresh_combobox(self.book.find_loc, [x[0] for x in self.book.page.column_info])
-        self.book.page.gui.refresh_headers(self.book.page.p0list, self.book.page.column_info)
+        headers = [self.captions[col[0]] for col in self.book.page.column_info]
+        widths = [x[1] for x in self.book.page.column_info]
+        self.book.gui.refresh_combobox(self.book.find_loc, headers)
+        self.book.page.gui.refresh_headers(self.book.page.p0list, headers, widths)
         self.book.page.populate_list(self.book.page.p0list)
 
     def build_new_pagedata(self):
@@ -1549,6 +1551,9 @@ class FilesDialog:
         self.checks = []
         # self.paths = []
         self.progs = []
+        self.code_to_remove = []
+        self.data_to_remove = []
+        self.last_added = ''
         self.settingsdata = {}
         # settingsdata is een mapping van pluginnaam op een tuple van programmanaam en
         # andere settings (alleen als er een nieuw keydef file voor moet worden aangemaakt)
@@ -1582,9 +1587,11 @@ class FilesDialog:
                     self.settingsdata[newtool] = self.data[1:]
                     prgloc = self.data[1]
                     dataloc = self.data[0]
-                    self.gui.add_row(newtool, path=dataloc,
-                                     buttoncaption=self.parent.captions['C_BRWS'],
-                                     dialogtitle=self.parent.captions['C_SELFIL'], tooltiptext="")
+                    x, y = self.gui.add_row(newtool, path=dataloc,
+                                            buttoncaption=self.parent.captions['C_BRWS'],
+                                            dialogtitle=self.parent.captions['C_SELFIL'],
+                                            tooltiptext="")
+                    self.checks.append((x, newtool, y))
 
     def remove_programs(self, *args):
         """alle aangevinkte items verwijderen uit self.gsizer"""
@@ -1618,7 +1625,7 @@ class FilesDialog:
     def confirm(self):
         """check and confirm input from FilesDialog
         """
-        name_path_list = [(x, self.gui.get_browser_value(y)) for x, y in self.paths]
+        name_path_list = [(x, self.gui.get_browser_value(y)) for _, x, y in self.checks]
         settingsdata = self.settingsdata
         names_to_remove = self.code_to_remove + self.data_to_remove
         # last_added leegmaken als deze niet meer bestaat
@@ -1627,21 +1634,21 @@ class FilesDialog:
 
         for entry in name_path_list:
             name, datafilename = entry
-            if name not in [x for x, y in self.ini['plugins']]:
+            if name not in [x for x, y in self.parent.ini['plugins']]:
                 if not self.check_plugin_settings(name, datafilename, settingsdata[name]):
                     return False
-                self.pluginfiles[name] = settingsdata[name][0]
+                self.parent.pluginfiles[name] = settingsdata[name][0]
         for filename in names_to_remove:
             os.remove(normalize_cloc(filename))
         newpathdata = {name: entry for name, entry in settingsdata.items() if len(entry) > 1}
-        self.ini["plugins"] = update_paths(name_path_list, newpathdata)  # , self.ini["lang"])
+        self.parent.ini["plugins"] = update_paths(name_path_list, newpathdata)  # , self.ini["lang"])
 
         # when setting is 'fixed', don't remember a startup tool that is removed from the config
         # dit stond eerst vóór de controles maar moet volgens mij erna?
-        mode = self.ini.get("startup", '')
-        pref = self.ini.get("initial", '')
-        if mode == shared.mode_f and pref not in [x[0] for x in self.ini['plugins']]:
-            self.ini['startup'] = shared.mode_r
+        mode = self.parent.ini.get("startup", '')
+        pref = self.parent.ini.get("initial", '')
+        if mode == shared.mode_f and pref not in [x[0] for x in self.parent.ini['plugins']]:
+            self.parent.ini['startup'] = shared.mode_r
         return True
 
     def check_plugin_settings(self, name, filename, settingsdata):
@@ -1770,17 +1777,17 @@ class ColumnSettingsDialog:
     def add_row_to_display(self, *columnsettings):
         """nieuwe rij aanmaken in self.gsizer"""
         self.rownum += 1
-        check = self.gui.add_checkbox_to_line(self.rownum, 0, '', 0, 0, 0)
+        check = self.gui.add_checkbox_to_line(self.rownum, 0, '', 0, False, 0, 0)
         selected = self.col_textids.index(columnsettings[0]) + 1 if columnsettings else 0
         name = self.gui.add_combobox_to_line(self.rownum, 1, self.col_names, selected)
         value = columnsettings[1] if columnsettings else 0
         width = self.gui.add_spinbox_to_line(self.rownum, 2, value, (1, 999), 48, (20, 20))
         value = columnsettings[2] if columnsettings else ''
-        colno = self.gui.add_checkbox_to_line(self.rownum, 3, value, 32, 40, 24)
-        flag = self.gui.add_spinbox_to_line(self.rownum, 4, self.rownum, (0, 99), 36, (68, 0))
+        flag = self.gui.add_checkbox_to_line(self.rownum, 3, '', 32, value, 40, 24)
+        colno = self.gui.add_spinbox_to_line(self.rownum, 4, self.rownum, (0, 99), 36, (68, 0))
         self.gui.finalize_line(self.scrl, check)
         self.checks.append(check)
-        old_colno = "new" if not columnsettings else colno
+        old_colno = "new" if not columnsettings else self.rownum
         self.data.append((name, width, colno, flag, old_colno))
 
     def remove_columndefs(self):
@@ -1789,7 +1796,7 @@ class ColumnSettingsDialog:
         checked = [x for x, y in enumerate(test) if y]
         if not any(test):
             return
-        if gui.ask_question(self.parent, 'Q_REMCOL'):
+        if gui.ask_question(self.parent.gui, 'Q_REMCOL'):
             for rownum in reversed(checked):
                 check = self.checks.pop(rownum)
                 data = self.data.pop(rownum)
@@ -1800,7 +1807,7 @@ class ColumnSettingsDialog:
     def confirm(self):
         "check and confirm input from columnsettings dialog"
         data = [(self.gui.get_combobox_value(x), self.gui.get_spinbox_value(y),
-                 self.gui.get_checkbox_value(a), self.gui.get_spinbox_value(b) - 1, c)
+                 self.gui.get_checkbox_value(b), self.gui.get_spinbox_value(a) - 1, c)
                 for x, y, a, b, c in self.data]
         column_info, new_titles = [], []
         # checken op dubbele en vergeten namen
@@ -1822,12 +1829,12 @@ class ColumnSettingsDialog:
         for value in column_info:
             if value[0] not in self.col_names:
                 new_titles.append(value[0])
-        self.new_column_info = column_info
+        self.parent.new_column_info = column_info
         # for value in self.new_column_info:
-        for ix, value in enumerate(self.new_column_info):
+        for ix, value in enumerate(self.parent.new_column_info):
             if value[0] in self.col_names:
                 # value = (self.col_textids[self.col_names.index(value[0])], value[1:])
-                self.new_column_info[ix] = (self.col_textids[self.col_names.index(value[0])],
+                self.parent.new_column_info[ix] = (self.col_textids[self.col_names.index(value[0])],
                                             *value[1:])
         if new_titles:
             canceled, titles, colinfo = self.build_new_title_data(new_titles, column_info)
@@ -1837,10 +1844,10 @@ class ColumnSettingsDialog:
                 self.captions[id_] = name
                 self.book.page.captions[id_] = name
                 # for value in self.new_column_info:
-                for ix, value in enumerate(self.new_column_info):
+                for ix, value in enumerate(self.parent.new_column_info):
                     if value[0] == name:
                         # value = (id_, value[1:])
-                        self.new_column_info[ix] = (id_, *value[1:])
+                        self.parent.new_column_info[ix] = (id_, *value[1:])
         # print(f"in accept_columnsettings, {self.new_column_info=}", flush=True)
         return True
 
@@ -1983,7 +1990,7 @@ class ExtraSettingsDialog:
         """alle aangevinkte items verwijderen uit self.gsizer"""
         for row in reversed(self.fields):
             if self.gui.get_checkbox_value(row[0]):
-                if gui.ask_question(self.parent, 'Q_REMSET'):
+                if gui.ask_question(self.parent.gui, 'Q_REMSET'):
                     rowindex = self.fields.index(row)
                     self.gui.delete_row(self.scroll, rowindex, row)
                     self.fields.pop(rowindex)

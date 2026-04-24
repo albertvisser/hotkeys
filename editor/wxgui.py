@@ -593,12 +593,12 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
             p0list.AppendColumn('')
             hlp -= 1
 
-    def refresh_headers(self, p0list, column_info):
+    def refresh_headers(self, p0list, headers, widths):
         "apply changes in the column headers"
-        for indx, coldata in enumerate(column_info):
+        for indx, header in enumerate(headers):
             hdr = p0list.GetColumn(indx)
-            hdr.SetText(coldata[0])
-            hdr.SetWidth(coldata[1])
+            hdr.SetText(header)
+            hdr.SetWidth(widths[indx])
             p0list.SetColumn(indx, hdr)
         p0list.resizeLastColumn(100)   # misschien te weinig
 
@@ -1219,7 +1219,7 @@ class ColumnSettingsDialogGui(wx.Dialog):
                 hbox.Add(btn)
         self.sizer.Add(hbox, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.TOP | wx.BOTTOM, 2)
 
-    def add_checkbox_to_line(self, row, col, text, width, before, after):
+    def add_checkbox_to_line(self, row, col, text, width, checkvalue, before, after):
         "add a checkbox to the screen line"
         # row wordt in deze variant niet gebruikt omdat we niet met een grid werken
         if col == 0:
@@ -1229,6 +1229,8 @@ class ColumnSettingsDialogGui(wx.Dialog):
             sizer.AddSpacer(before)
         width = width or 20
         cb = wx.CheckBox(self.scrl, text, size=(width, -1))
+        if checkvalue:
+            cb.Check(checkvalue)
         sizer.Add(cb)
         if after:
             sizer.AddSpacer(after)
