@@ -1332,8 +1332,7 @@ class Editor:
         oldcolcount = len(self.book.page.column_info)
         if not gui.show_dialog(ColumnSettingsDialog(self).gui):
             return
-        # if [x[:-1] for x in self.book.page.new_column_info] == self.book.page.column_info:
-        if self.new_column_info == self.book.page.column_info:
+        if [list(x[:-1]) for x in self.new_column_info] == self.book.page.column_info:
             gui.show_message(self.gui, 'I_NOCHG')
             return
         self.book.page.data = self.build_new_pagedata()
@@ -1825,7 +1824,7 @@ class ColumnSettingsDialog:
             return False
         # colno wordt alleen gebruikt voor het sorteren
         # old_colno hebben we nog nodig voor build_new_pagedata
-        column_info = sorted(data, key=lambda x: x[2])
+        column_info = sorted(data, key=lambda x: x[3])
         for value in column_info:
             if value[0] not in self.col_names:
                 new_titles.append(value[0])

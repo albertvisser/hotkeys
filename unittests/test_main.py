@@ -2967,7 +2967,7 @@ class TestEditor:
         testobj.book.page.p0list = 'p0list'
         testobj.book.find_loc = 'find_loc'
         testobj.book.page.settings = {}
-        testobj.book.page.column_info = [('xx', 10, False, 0, 0)]
+        testobj.book.page.column_info = [['xx', 10, False, 0]]
         testobj.new_column_info = [('xx', 10, False, 0, 0)]
         testobj.book.page.otherstuff = {'other': 'stuff'}
         testobj.book.page.pad = 'testfile.json'
@@ -4536,9 +4536,9 @@ class TestColumnSettingsDialog:
         # assert testobj.accept_columnsettings(data) == (False, True)
         assert not testobj.confirm()
         assert testobj.parent.new_column_info == [('xzz', 10, 'False', -1, '0'),
+                                                  ('q', 40, 'False', 0, 'new'),
                                                   ('id2', 20, 'False', 1, '1'),
-                                                  ('id3', 30, 'False', 2, '2'),
-                                                  ('q', 40, 'False', 0, 'new')]
+                                                  ('id3', 30, 'False', 2, '2')]
         assert testobj.captions == {}
         assert testobj.book.page.captions == {}
         assert capsys.readouterr().out == (
@@ -4559,17 +4559,17 @@ class TestColumnSettingsDialog:
                 "called ColumnSettingsDialogGui.get_checkbox_value with arg False\n"
                 "called ColumnSettingsDialogGui.get_spinbox_value with arg 1\n"
                 "called Editor.build_new_title_data with args (['xzz', 'q'],"
-                " [('xzz', 10, 'False', -1, '0'), ('id2', 20, 'False', 1, '1'),"
-                " ('id3', 30, 'False', 2, '2'), ('q', 40, 'False', 0, 'new')])\n")
+                " [('xzz', 10, 'False', -1, '0'), ('q', 40, 'False', 0, 'new'),"
+                " ('id2', 20, 'False', 1, '1'), ('id3', 30, 'False', 2, '2')])\n")
         testobj.captions = {}
         testobj.book.page.captions = {}
         testobj.build_new_title_data = mock_build_2
         # assert testobj.accept_columnsettings(data) == (True, False)
         assert testobj.confirm()
         assert testobj.parent.new_column_info == [('ID1', 10, 'False', -1, '0'),
+                                                  ('ID2', 40, 'False', 0, 'new'),
                                                   ('id2', 20, 'False', 1, '1'),
-                                                  ('id3', 30, 'False', 2, '2'),
-                                                  ('ID2', 40, 'False', 0, 'new')]
+                                                  ('id3', 30, 'False', 2, '2')]
         assert testobj.captions == {'ID1': 'xzz', 'ID2': 'q'}
         assert testobj.book.page.captions == {'ID1': 'xzz', 'ID2': 'q'}
         assert capsys.readouterr().out == (
@@ -4590,8 +4590,8 @@ class TestColumnSettingsDialog:
                 "called ColumnSettingsDialogGui.get_checkbox_value with arg False\n"
                 "called ColumnSettingsDialogGui.get_spinbox_value with arg 1\n"
                 "called Editor.build_new_title_data with args (['xzz', 'q'],"
-                " [('xzz', 10, 'False', -1, '0'), ('id2', 20, 'False', 1, '1'),"
-                " ('id3', 30, 'False', 2, '2'), ('q', 40, 'False', 0, 'new')])\n")
+                " [('xzz', 10, 'False', -1, '0'), ('q', 40, 'False', 0, 'new'),"
+                " ('id2', 20, 'False', 1, '1'), ('id3', 30, 'False', 2, '2')])\n")
 
         testobj.data = [('xxx', '010', '0', 'False', '0'), ('yyy', '020', '1', 'False', '1'),
                         ('zzz', '030', '2', 'False', '2')]
