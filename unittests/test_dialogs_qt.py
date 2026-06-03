@@ -1336,13 +1336,13 @@ class TestFilesDialog:
         check_c = mockqtw.MockCheckBox('zzz')
         file_c = MockFileBrowseButton('ccc')
         check_c.setChecked(True)
-        assert capsys.readouterr().out == (f"called CheckBox.__init__ with args ('xxx',)\n"
+        assert capsys.readouterr().out == ("called CheckBox.__init__ with args ('xxx',)\n"
                                            "called gui.FileBrowseButton with args ('aaa',) {}\n"
                                            "called LineEdit.__init__\n"
-                                           f"called CheckBox.__init__ with args ('yyy',)\n"
+                                           "called CheckBox.__init__ with args ('yyy',)\n"
                                            "called gui.FileBrowseButton with args ('bbb',) {}\n"
                                            "called LineEdit.__init__\n"
-                                           f"called CheckBox.__init__ with args ('zzz',)\n"
+                                           "called CheckBox.__init__ with args ('zzz',)\n"
                                            "called gui.FileBrowseButton with args ('ccc',) {}\n"
                                            "called LineEdit.__init__\n"
                                            "called CheckBox.setChecked with arg True\n")

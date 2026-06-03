@@ -264,7 +264,7 @@ def test_build_data(monkeypatch, capsys):
     page.gui = types.SimpleNamespace()
     assert testee.build_data(page) == (
             {'short': 'cuts'},
-            {'olddescs': {'old': 'descs'},'stdkeys': {'std': 'keys'},
+            {'olddescs': {'old': 'descs'}, 'stdkeys': {'std': 'keys'},
              'defaults': {'def': 'aults'}, 'cmddict': {'cmd': 'dict'},
              'contexts': ['con', 'texts'], 'restrictions': ['con', 'trols'],
              'cmdparms': {'params': ''}, 'catdict': {'cat': 'dict'}})
@@ -288,7 +288,7 @@ def test_build_data(monkeypatch, capsys):
     page.gui.master = page
     assert testee.build_data(page) == (
             {'short': 'cuts'},
-            {'olddescs': {'old': 'descs'},'stdkeys': {'std': 'keys'},
+            {'olddescs': {'old': 'descs'}, 'stdkeys': {'std': 'keys'},
              'defaults': {'def': 'aults'}, 'cmddict': {'cmd': 'dict'},
              'contexts': ['con', 'texts'], 'restrictions': ['con', 'trols'],
              'cmdparms': {'params': ''}, 'catdict': {'cat': 'dict'}})
@@ -315,7 +315,7 @@ def test_build_data(monkeypatch, capsys):
     page.name = 'newkbfile'
     assert testee.build_data(page) == (
             {'short': 'cuts'},
-            {'olddescs': {'old': 'descs'},'stdkeys': {'std': 'keys'},
+            {'olddescs': {'old': 'descs'}, 'stdkeys': {'std': 'keys'},
              'defaults': {'def': 'aults'}, 'cmddict': {'cmd': 'dict'},
              'contexts': ['con', 'texts'], 'restrictions': ['con', 'trols'],
              'cmdparms': {'params': ''}, 'catdict': {'cat': 'dict'}})

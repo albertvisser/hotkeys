@@ -60,7 +60,7 @@ def build_data(settnames, page):
     stuffdict = read_keydefs_and_stuff(kbfile)
     keydefs = stuffdict.pop('keydefs')
     actions = stuffdict['actions']
-    compare_descriptions(stuffdict['descriptions'], olddescs) # worden deze ge-update?
+    compare_descriptions(stuffdict['descriptions'], olddescs)  # worden deze ge-update?
     stuffdict['olddescs'] = olddescs
     omsdict = stuffdict['descriptions']
     # omsdict is uit de accelmap afgeleid waar gewoonlijk geen omschrijvingen in staan.

@@ -202,18 +202,24 @@ class TestDefaultKeys:
                 ('qq', ['qq', 'qqq']),
                 ('rr', ['9r', 'rrr']),
                 ('ss', ['ss', 'sss']),
-                # ('tt', ['10t', 'ttt']), # deze gaat desc1 ('?') overschrijven
+                ('tt', ['10t', 'ttt']), # deze gaat desc1 ('?') overschrijven
                 ('uu', ['bb', 'cc'])]
         assert testobj.parse_data() == (
                 {1: 'a1', 2: '1b', 3: 'cc', 4: '2d', 5: 'ee', 6: '3f', 7: 'gg', 8: '4h', 9: 'ii',
                  10: '5j', 11: 'kk', 12: '6l', 13: 'mm', 14: '7n', 15: 'oo', 16: '8p', 17: 'qq',
-                 18: '9r', 19: 'ss', 20: '10t', 20: 'bb'},
-                {1: {'aa': 'aaa'}, 2: {'bb': 'bbb'}, 3: {'cc': 'ccc'}, 4: {'dd': '?'},
-                 5: {'ee': 'eee'}, 6: {'ff': '?'}, 7: {'gg': 'ggg'}, 8: {'hh': '?'},
-                 9: {'ii': 'iii'}, 10: {'jj': '?'}, 11: {'kk': 'kkk'}, 12: {'ll': '?'},
-                 13: {'mm': 'mmm'}, 14: {'nn': '?'}, 15: {'oo': 'ooo'}, 16: {'pp': '?'},
-                 17: {'qq': 'qqq'}, 18: {'rr': '?'}, 19: {'ss': 'sss'}, 20: {'tt': '?'},
-                 20: {'uu': 'cc'}})
+                 18: '9r', 19: 'ss', 20: '10t', 21: 'bb'},
+                # {1: {'aa': 'aaa'}, 2: {'bb': 'bbb'}, 3: {'cc': 'ccc'}, 4: {'dd': '?'},
+                #  5: {'ee': 'eee'}, 6: {'ff': '?'}, 7: {'gg': 'ggg'}, 8: {'hh': '?'},
+                #  9: {'ii': 'iii'}, 10: {'jj': '?'}, 11: {'kk': 'kkk'}, 12: {'ll': '?'},
+                #  13: {'mm': 'mmm'}, 14: {'nn': '?'}, 15: {'oo': 'ooo'}, 16: {'pp': '?'},
+                #  17: {'qq': 'qqq'}, 18: {'rr': '?'}, 19: {'ss': 'sss'}, 20: {'tt': '?'},
+                #  21: {'uu': 'cc'}})
+                {1: {'aa': 'aaa'}, 2: {'bb': 'bbb'}, 3: {'cc': 'ccc'}, 4: {'dd': 'ttt'},
+                 5: {'ee': 'eee'}, 6: {'ff': 'ttt'}, 7: {'gg': 'ggg'}, 8: {'hh': 'ttt'},
+                 9: {'ii': 'iii'}, 10: {'jj': 'ttt'}, 11: {'kk': 'kkk'}, 12: {'ll': 'ttt'},
+                 13: {'mm': 'mmm'}, 14: {'nn': 'ttt'}, 15: {'oo': 'ooo'}, 16: {'pp': 'ttt'},
+                 17: {'qq': 'qqq'}, 18: {'rr': 'ttt'}, 19: {'ss': 'sss'}, 20: {'tt': 'ttt'},
+                 21: {'uu': 'cc'}})
         assert capsys.readouterr().out == (
                 "called DefaultKeys.parse_line_elems with arg ['a1', 'aaa']\n"
                 "called DefaultKeys.parse_line_elems with arg ['1b', 'bbb']\n"
@@ -234,7 +240,7 @@ class TestDefaultKeys:
                 "called DefaultKeys.parse_line_elems with arg ['qq', 'qqq']\n"
                 "called DefaultKeys.parse_line_elems with arg ['9r', 'rrr']\n"
                 "called DefaultKeys.parse_line_elems with arg ['ss', 'sss']\n"
-                # "called DefaultKeys.parse_line_elems with arg ['10t', 'ttt']\n"
+                "called DefaultKeys.parse_line_elems with arg ['10t', 'ttt']\n"
                 "called DefaultKeys.parse_line_elems with arg ['bb', 'cc']\n")
         testobj.data = [
                 ('aa', ['a1', 'aaa']),

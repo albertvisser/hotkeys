@@ -186,9 +186,9 @@ def test_compare_descriptions():
     """unittest for gtkaccel_keys.compare_descriptions
     """
     cmddict = {'x': 'y', 'a': 'b', 'p': '', 'g': 'h'}
-    olddescs = {'x': 'y', 'a': 'c', 'p':'q'}
-    testee.compare_descriptions(cmddict, olddescs) == ({'x': 'y', 'a': 'b', 'p': 'q', 'g': 'h'},
-                                                       {'a': 'c'})
+    olddescs = {'x': 'y', 'a': 'c', 'p': 'q'}
+    assert testee.compare_descriptions(cmddict, olddescs) == (
+            {'x': 'y', 'a': 'b', 'p': 'q', 'g': 'h'}, {'a': 'c'})
 
 
 def test_names2filenames(monkeypatch, capsys):

@@ -282,7 +282,7 @@ class CsvBuilder:
                    "viewer": "Viewer", "editor": "Editor", "differ": "Differ",
                    "hotkeys": "HotkeysDialog", "favtabs": "FavoriteTabsDialog",
                    "dirhotlist": "DirectoryHotlist"}
-    unmappable = "Confirmation" # deze kan ik niet mappen maar dat is geloof ik niet erg
+    unmappable = "Confirmation"  # deze kan ik niet mappen maar dat is geloof ik niet erg
     skip_contexts = ("intro", "options")
 
     def __init__(self, page):

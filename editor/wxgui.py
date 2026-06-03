@@ -1594,7 +1594,7 @@ class EntryDialogGui(wx.Dialog):
         "remove selected line(s) from the grid"
         # selected_rows = []
         for row in p0list.GetSelectedRows():  # moet misschien reversed?
-           p0list.DeleteRows(row)
+            p0list.DeleteRows(row)
 
     def get_tableitem_value(self, p0list, row, col):
         "return the value entered in a table cell"

@@ -4190,7 +4190,7 @@ class TestDeleteDialog:
                 print('called DeleteDialogGui.add_okcancel_buttons')
         parent = types.SimpleNamespace(gui='FilesDialogGui',
                                        parent=types.SimpleNamespace(title='title'))
-        parent.parent.captions={'Q_REMPRG': 'prg', 'Q_REMKDEF': 'kdef', 'Q_REMPLG': 'plg'}
+        parent.parent.captions = {'Q_REMPRG': 'prg', 'Q_REMKDEF': 'kdef', 'Q_REMPLG': 'plg'}
         monkeypatch.setattr(testee.gui, 'DeleteDialogGui', MockGui)
         testobj = testee.DeleteDialog(parent)
         assert testobj.remove_keydefs == 'kdef'

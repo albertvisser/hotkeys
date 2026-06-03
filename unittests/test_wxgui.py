@@ -1613,7 +1613,7 @@ def test_show_cancel_message(monkeypatch, capsys):
     """unittest for wxgui.show_cancel_message
     """
     def mock_messagebox_2(*args, **kwargs):
-        print(f'called wx.MessageBox with args', args, kwargs)
+        print('called wx.MessageBox with args', args, kwargs)
         return testee.wx.OK
     monkeypatch.setattr(testee.shared, 'get_text', mock_get_text)
     monkeypatch.setattr(testee.shared, 'get_title', mock_get_title)
@@ -2759,7 +2759,7 @@ class TestColumnSettingsDialogGui:
                 print('called ComboBox.GetItems')
                 return []
             def SetSelection(self, *args):
-                print(f'called combobox.SetSelection with args', args)
+                print('called combobox.SetSelection with args', args)
         def mock_get(self):
             print('called Event.GetEventObject')
             return name2

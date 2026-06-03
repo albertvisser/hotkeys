@@ -21,7 +21,7 @@ CATEGORYLIST = ((f'1. {CONTEXTS[1]}', ''),
                 ("2.6. Operator-pending mode", f'{CONTEXTS[0]}'),
                 (f'3. {CONTEXTS[2]}', ''),
                 (f'4. {CONTEXTS[3]}line editing', ''),
-                (f'5. Terminal-Job mode', ''),
+                ('5. Terminal-Job mode', ''),
                 (f'6. {EXCMD}', ''))
 STARTDELIMS, ENDDELIMS = '{[<', '}]>'
 
