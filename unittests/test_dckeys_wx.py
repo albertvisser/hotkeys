@@ -1,3 +1,5 @@
+"""unittests for ./editor/plugins/dckeys_wx.py
+"""
 import types
 from editor.plugins import dckeys_wx as testee
 from mockgui import mockwxwidgets as mockwx
