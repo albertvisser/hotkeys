@@ -1,7 +1,5 @@
 """unittests for ./editor/shared.py
 """
-"""HotKeys: non-gui and csv related functions
-"""
 import pytest
 import types
 import editor.shared as testee
