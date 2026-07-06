@@ -1,244 +1,226 @@
 """Hotkeys plugin for Total Commander - PyQt specific code
 """
+import contextlib
 import PyQt6.QtWidgets as qtw
 import PyQt6.QtGui as gui
 import PyQt6.QtCore as core
-import editor.plugins.mergetool_shared as shared
+# import editor.plugins.mergetool_shared as shared
 OKICON = '/usr/share/icons/Adwaita/16x16/emblems/emblem-ok-symbolic.symbolic.png'
 TODOICON = '/usr/share/icons/Adwaita/16x16/emblems/emblem-new.png'
 
 
-class MergeDialog(shared.MergeMixin, qtw.QDialog):
+# class MergeDialog(shared.MergeMixin, qtw.QDialog):
+class MergeDialogGui(qtw.QDialog):
     """Dialoog om een gedocumenteerde toetscombinatie te koppelen aan een commando
 
     In het ene ini bestand staat namelijk toets + omschrijving en in het andere
     command + omschrijving en de omschrijvingen hoeven uiteraard niet 100% gelijk
     te zijn, dus moeten ze handmatig gekoppeld worden.
     """
-    def __init__(self, parent, master):
+    def __init__(self, master, parent):
         """Opbouwen van het scherm
 
-        parent is een SingleDataInterface, master is een HotKeyPanel
+        parent is een SingleDataInterface, master is MergeTool
         """
-        shared.MergeMixin.__init__(self, master)
+        self.master = master
         qtw.QDialog.__init__(self, parent)
         self.setWindowTitle("TCCM")
         self.okicon = gui.QIcon(OKICON)
         self.todoicon = gui.QIcon(TODOICON)
-        self.resize(1000, 600)
+        self.resize(1500, 900)
 
-        self.listkeys = qtw.QTreeWidget(self)
-        self.listkeys.setColumnCount(2)
-        self.listkeys.setHeaderLabels(['Key', 'Description'])
-        self.listkeys.setMouseTracking(True)
-        self.listkeys.itemEntered.connect(self.popuptext)
-        self.listkeys.currentItemChanged.connect(self.select_match_fromkeys)
+    def init_display(self):
+        "build the screen container"
+        return qtw.QVBoxLayout()
 
-        self.findkeybutton = self.create_findbutton(columns=('key', 'text'))
-        # self.find_keylist_text()
-        self.findkeybutton.setCurrentIndex(1)
-        self.findkeytext = qtw.QLineEdit(self)
-        self.nextkey = qtw.QPushButton('&Next', self)
-        self.nextkey.setMaximumWidth(50)
-        self.nextkey.clicked.connect(self.findnextkey)
-        self.prevkey = qtw.QPushButton('&Prev', self)
-        self.prevkey.setMaximumWidth(50)
-        self.prevkey.clicked.connect(self.findprevkey)
+    def add_row(self, screen):
+        "create a horizontal subcontainer to add stuff into"
+        sizer = qtw.QHBoxLayout()
+        screen.addLayout(sizer)
+        return sizer
 
-        self.listcmds = qtw.QTreeWidget(self)
-        self.listcmds.setColumnCount(2)
-        self.listcmds.setHeaderLabels(['Command', 'Description'])
-        self.listcmds.setMouseTracking(True)
-        self.listcmds.itemEntered.connect(self.popuptext)
-        self.listcmds.currentItemChanged.connect(self.select_match_from_cmds)
+    def add_col_to_row(self, row):
+        "create a vertical subcontainer to add stuff into"
+        sizer = qtw.QVBoxLayout()
+        row.addLayout(sizer)
+        return sizer
 
-        self.findcmdbutton = self.create_findbutton(columns=('cmd', 'text'))
-        # self.find_cmdlist_text()
-        self.findcmdbutton.setCurrentIndex(1)
-        self.findcmdtext = qtw.QLineEdit(self)
-        self.nextcmd = qtw.QPushButton('Ne&xt', self)
-        self.nextcmd.setMaximumWidth(50)
-        self.nextcmd.clicked.connect(self.findnextcmd)
-        self.prevcmd = qtw.QPushButton('Pre&v', self)
-        self.prevcmd.setMaximumWidth(50)
-        self.prevcmd.clicked.connect(self.findprevcmd)
-
-        self.listmatches = qtw.QTreeWidget(self)
-        self.listmatches.setColumnCount(2)
-        self.listmatches.setHeaderLabels(['Key', 'Command'])
-        self.listmatches.currentItemChanged.connect(self.select_listitems_from_matches)
-
-        self.btn_match = qtw.QPushButton("&+ Add/Replace match", self)
-        self.btn_match.clicked.connect(self.make_match)
-        self.btn_delete = qtw.QPushButton("&- Discard match", self)
-        self.btn_delete.clicked.connect(self.delete_match)
-
-        self.btn_load = qtw.QPushButton("&Load matches", self)
-        self.btn_load.clicked.connect(self.load_matches)
-        self.btn_clear = qtw.QPushButton("&Clear All", self)
-        self.btn_clear.clicked.connect(self.reset_all)
-        self.btn_save = qtw.QPushButton("&Save matches", self)
-        self.btn_save.clicked.connect(self.save_matches)
-        self.btn_quit = qtw.QPushButton("&Afsluiten", self)
-        self.btn_quit.clicked.connect(self.close)
-        self.btn_build = qtw.QPushButton("&Build CSV", self)
-        self.btn_build.clicked.connect(self.confirm)
-
-        vbox = qtw.QVBoxLayout()
-        hbox = qtw.QHBoxLayout()
-
-        vbox2 = qtw.QVBoxLayout()
-        vbox2.addWidget(self.listkeys)
-        hbox2 = qtw.QHBoxLayout()
-        hbox2.addWidget(self.findkeybutton)
-        hbox2.addWidget(self.findkeytext)
-        hbox2.addWidget(self.nextkey)
-        hbox2.addWidget(self.prevkey)
-        hbox2.addStretch()
-        vbox2.addLayout(hbox2)
-        hbox.addLayout(vbox2)
-
-        vbox2 = qtw.QVBoxLayout()
-        vbox2.addWidget(self.listcmds)
-
-        hbox2 = qtw.QHBoxLayout()
-        hbox2.addWidget(self.findcmdbutton)
-        hbox2.addWidget(self.findcmdtext)
-        hbox2.addWidget(self.nextcmd)
-        hbox2.addWidget(self.prevcmd)
-        hbox2.addStretch()
-        vbox2.addLayout(hbox2)
-        hbox.addLayout(vbox2)
-
-        vbox2 = qtw.QVBoxLayout()
-        vbox2.addWidget(self.listmatches)
-
-        hbox2 = qtw.QHBoxLayout()
-        hbox2.addStretch()
-        hbox2.addWidget(self.btn_match)
-        hbox2.addWidget(self.btn_delete)
-        hbox2.addStretch()
-        vbox2.addLayout(hbox2)
-        hbox.addLayout(vbox2)
-        vbox.addLayout(hbox)
-
-        hbox = qtw.QHBoxLayout()
-        hbox.addStretch()
-        hbox.addWidget(self.btn_load)
-        hbox.addWidget(self.btn_clear)
-        hbox.addWidget(self.btn_save)
-        hbox.addWidget(self.btn_quit)
-        hbox.addWidget(self.btn_build)
-        hbox.addStretch()
-        vbox.addLayout(hbox)
-        self.setLayout(vbox)
-
-        for text, callback, keyseq, desc in self.getshortcuts():
-            act = gui.QAction(text, self)
-            act.triggered.connect(callback)
-            act.setShortcut(keyseq)
-            self.addAction(act)
-        self.load_files()
+    def create_list(self, columns, callback):
+        "create a listbox"
+        listbox = qtw.QTreeWidget(self)
+        listbox.setColumnCount(len(columns))
+        listbox.setHeaderLabels(columns)
+        listbox.setMouseTracking(True)  # t.b.v. drag&drop
+        listbox.currentItemChanged.connect(callback)
+        listbox.itemEntered.connect(self.popuptext)
+        return listbox
 
     def create_findbutton(self, columns):
-        """stel in waarop gezocht moet worden
-        """
+        "create a 'Find' combobox"
         control = qtw.QComboBox(self)
         control.setEditable(False)
         for text in columns:
             control.addItem('Find ' + text)
+        control.setCurrentIndex(1)
         return control
 
-    def clear_listkeys(self):
-        "initialize the list of keycombos"
-        self.listkeys.clear()
+    def create_text(self):
+        "create a text field"
+        return qtw.QLineEdit(self)
 
-    def add_listkeys_item(self, key, value):
-        "add an item to the list of keycombos"
-        new = qtw.QTreeWidgetItem()
-        new.setText(0, key)
-        new.setText(1, value['oms'])
-        self.listkeys.addTopLevelItem(new)
+    def create_button(self, text, callback, size=0):
+        "create a button"
+        button = qtw.QPushButton(text, self)
+        if size:
+            button.setMaximumWidth(size)
+        button.clicked.connect(callback)
+        return button
 
-    def clear_listcmds(self):
-        "initialize the list of mappable commands"
-        self.listcmds.clear()
+    def add_row_to_col(self, col, *args, **kwargs):
+        "create a horizontal subcontainer to add widgets to"
+        sizer = qtw.QHBoxLayout()
+        for arg in ('right_align', 'center'):
+            if kwargs.get(arg, False) and len(args) > 1:
+                sizer.addStretch()
+        for item in args:
+            sizer.addWidget(item)
+        for arg in ('left_align', 'center'):
+            if kwargs.get(arg, False) and len(args) > 1:
+                sizer.addStretch()
+        col.addLayout(sizer)
 
-    def add_listcmds_item(self, key, value):
-        "add an item to the list of mappable commands"
-        new = qtw.QTreeWidgetItem()
-        new.setText(0, key)
-        new.setText(1, value['oms'])
-        self.listcmds.addTopLevelItem(new)
+    # def create_row(self, *args, **kwargs):
+    #     "create a row (horizontal line) of widgets"
+    #     sizer = qtw.QHBoxLayout()
+    #     for arg in ('right_align', 'center'):
+    #         if kwargs.get(arg, False):
+    #             sizer.addStretch()
+    #     for item in args:
+    #         sizer.addWidget(item)
+    #     for arg in ('left_align', 'center'):
+    #         if kwargs.get(arg, False):
+    #             sizer.addStretch()
+    #     return sizer
 
-    def clear_listmatches(self):
-        "(re)initialize the list of mappings"
-        self.listmatches.clear()
-        for ix in range(self.listkeys.topLevelItemCount()):
-            item = self.listkeys.topLevelItem(ix)
-            self.reset_listitem_icon(item)
+    # def create_column(self, *args, **kwargs):
+    #     "create a column (vertical line) of widgets"
+    #     sizer = qtw.QVBoxLayout()
+    #     for arg in ('bottom_align', 'center'):
+    #         if kwargs.get(arg, False):
+    #             sizer.addStretch()
+    #     for item in args:
+    #         sizer.addWidget(item)
+    #     for arg in ('top_align', 'center'):
+    #         if kwargs.get(arg, False):
+    #             sizer.addStretch()
+    #     return sizer
 
-    def add_listmatches_item(self, keytext, command):
-        "add an item to the list of mappings"
+    # def add_to_screen(self, parent, sizer, **kwargs):
+    #     "add a row or column to the screen estate"
+    #     parent.addLayout(sizer)
+
+    def finalize_display(self, vbox):
+        "add the layout to the window"
+        self.setLayout(vbox)
+
+    def create_hotkey(self, text, callback, keyseq, desc):
+        "create shortcuts for actions"
+        act = gui.QAction(text, self)
+        act.triggered.connect(callback)
+        act.setShortcut(keyseq)
+        self.addAction(act)
+
+    def clear_list(self, listbox):
+        "initialize the list"
+        listbox.clear()
+
+    def get_listbox_count(self, listbox):
+        "return the number of entries in the list"
+        return listbox.topLevelItemCount()
+
+    def add_listitem(self, listbox, keytext, command):
+        "add an item to the list"
         new = qtw.QTreeWidgetItem()
         new.setText(0, keytext)
         new.setText(1, command)
-        return self.listmatches.addTopLevelItem(new)
+        listbox.addTopLevelItem(new)
+        return new
 
-    def set_listitem_icon(self, item):
+    def set_listitem_icon(self, listbox, item):
         "set the check image for a keycombo list item"
         item.setIcon(0, self.okicon)
 
-    def get_selected_key_data(self):
-        "get the texts for the selected keycombo"
-        keychoice = self.listkeys.currentItem()
-        return keychoice, keychoice.text(0), keychoice.text(1)
+    # def get_selected_key_data(self):
+    #     "get the texts for the selected keycombo"
+    #     keychoice = self.listkeys.currentItem()
+    #     return keychoice, keychoice.text(0), keychoice.text(1)
 
-    def get_selected_cmd_data(self):
-        "get the texts for the selected command"
-        cmdchoice = self.listcmds.currentItem()
-        return cmdchoice, cmdchoice.text(0)
+    # def get_selected_cmd_data(self):
+    #     "get the texts for the selected command"
+    #     cmdchoice = self.listcmds.currentItem()
+    #     return cmdchoice, cmdchoice.text(0)
 
-    def get_selected_matchitem(self):
-        "get the selected mapping item"
-        return self.listmatches.currentItem()
+    # def get_selected_matchitem(self):
+    #     "get the selected mapping item"
+    #     return self.listmatches.currentItem()
 
-    def find_in_listmatches(self, keytext):
-        "find a keycombo in the mappings list"
-        for ix in range(self.listmatches.topLevelItemCount()):
-            item = self.listmatches.topLevelItem(ix)
-            if item.text(0) == keytext:
+    def get_selected_listbox_data(self, listbox):
+        "get the selected item and the texts for it"
+        choice = listbox.currentItem()
+        text0 = text1 = ''
+        with contextlib.suppress(AttributeError):
+            text0 = choice.text(0)
+        with contextlib.suppress(AttributeError):
+            text1 = choice.text(1)
+        return choice, text0, text1
+
+    # def find_in_listmatches(self, keytext):
+    #     "find a keycombo in the mappings list"
+    #     for ix in range(self.listmatches.topLevelItemCount()):
+    #         item = self.listmatches.topLevelItem(ix)
+    #         if item.text(0) == keytext:
+    #             break
+    #     else:
+    #         item = None
+    #     return item
+
+    # def find_in_listkeys(self, keytext):
+    #     "find a keycombo in the shortcuts list"
+    #     for ix in range(self.listkeys.topLevelItemCount()):
+    #         item = self.listkeys.topLevelItem(ix)
+    #         if item.text(0) == keytext:
+    #             break
+    #     else:
+    #         item = None
+    #     return item
+
+    def find_in_listbox(self, listbox, text):
+        "find a text in a list (mainly for keycombos)"
+        for ix in range(listbox.topLevelItemCount()):
+            item = listbox.topLevelItem(ix)
+            if item.text(0) == text:
                 break
         else:
             item = None
         return item
 
-    def find_in_listkeys(self, keytext):
-        "find a keycombo in the shortcuts list"
-        for ix in range(self.listkeys.topLevelItemCount()):
-            item = self.listkeys.topLevelItem(ix)
-            if item.text(0) == keytext:
-                break
-        else:
-            item = None
-        return item
-
-    def replace_matchlist_item(self, item, cmdtext):
+    def replace_listbox_item(self, listbox, item, cmdtext):
         "replace the command in a mapping item"
         item.setText(1, cmdtext)
 
-    def ensure_item_visible(self, item):
+    def ensure_listitem_visible(self, listbox, item):
         "make sure the selected mapping can be viewed in the list"
-        self.listmatches.scrollTo(self.listmatches.indexFromItem(item))
+        listbox.scrollToItem(listbox.indexFromItem(item))
 
-    def remove_matchitem(self, item):
+    def remove_listbox_item(self, listbox, item):
         "delete a mapping from the list"
-        ix = self.listmatches.indexOfTopLevelItem(item)
-        item = self.listmatches.takeTopLevelItem(ix)
+        ix = listbox.indexOfTopLevelItem(item)
+        item = listbox.takeTopLevelItem(ix)
 
-    def reset_listitem_icon(self, item):
+    def reset_listitem_icon(self, listbox, ix):
         "find the corresponding keycombo item and unset the check image"
         # beetje omslachtige manier van een icon verwijderen bij een TreeWidgetItem!
+        item = listbox.topLevelItem(ix)
         # newitem = qtw.QTreeWidgetItem()
         # newitem.setText(0, item.text(0))
         # newitem.setText(1, item.text(1))
@@ -248,25 +230,29 @@ class MergeDialog(shared.MergeMixin, qtw.QDialog):
         # alternatief: "default" icon
         item.setIcon(0, self.todoicon)
 
-    def focuskeylist(self):
-        "shift focus for selecting a keycombo item"
-        self.listkeys.setFocus()
+    # def focuskeylist(self):
+    #     "shift focus for selecting a keycombo item"
+    #     self.listkeys.setFocus()
 
-    def focuscmdlist(self):
-        "shift focus for selecting a command item"
-        self.listcmds.setFocus()
+    # def focuscmdlist(self):
+    #     "shift focus for selecting a command item"
+    #     self.listcmds.setFocus()
 
-    def focusmatchlist(self):
-        "shift focus for selecting a mapping item"
-        self.listmatches.setFocus()
+    # def focusmatchlist(self):
+    #     "shift focus for selecting a mapping item"
+    #     self.listmatches.setFocus()
 
-    def focusfindkey(self):
-        "shift focus to enter a keycombo search phrase"
-        self.findkeytext.setFocus()
+    # def focusfindkey(self):
+    #     "shift focus to enter a keycombo search phrase"
+    #     self.findkeytext.setFocus()
 
-    def focusfindcmd(self):
-        "shift focus to enter a command search phrase"
-        self.findcmdtext.setFocus()
+    # def focusfindcmd(self):
+    #     "shift focus to enter a command search phrase"
+    #     self.findcmdtext.setFocus()
+
+    def set_focus_to(self, widget):
+        "shift focus to a specific screen element"
+        widget.setFocus()
 
     def popuptext(self, item, colno):
         "show complete text of description if moused over"
@@ -295,7 +281,7 @@ class MergeDialog(shared.MergeMixin, qtw.QDialog):
 
     def get_last_item(self, win):
         "get the last item of a list"
-        return win.topLevelItem(list.topLevelItemCount() - 1)
+        return win.topLevelItem(win.topLevelItemCount() - 1)
 
     def get_item_text(self, win, item, col):
         "get the text for a column of an item in one of the lists"
@@ -306,18 +292,14 @@ class MergeDialog(shared.MergeMixin, qtw.QDialog):
         # return list.currentItem() -- pardon?
         win.setCurrentItem(item)
 
-    def count_matches(self):
-        "get the current number of mappings in the list"
-        return self.listmatches.topLevelItemCount()
+    # def count_matches(self):
+    #     "get the current number of mappings in the list"
+    #     return self.listmatches.topLevelItemCount()
 
     # def matches_loaded(self):
     #    return self.listkeys.topLevelItemCount() > 0
 
-    def get_matchitem_data(self, ix):
-        "get the texts for a mapping item"
-        item = self.listmatches.topLevelItem(ix)
-        return item.text(0), item.text(1)
-
-    def finish(self):
-        "finalize confirmation and close the dialog"
-        self.accept()
+    # def get_matchitem_data(self, ix):
+    #     "get the texts for a mapping item"
+    #     item = self.listmatches.topLevelItem(ix)
+    #     return item.text(0), item.text(1)

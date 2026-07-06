@@ -3,12 +3,16 @@
 import os
 import collections
 import editor.gui
-import editor.plugins.mergetool_shared as shared
-from ..toolkit import toolkit
-if toolkit == 'qt':
-    from .mergetool_qt import MergeDialog
-elif toolkit == 'wx':
-    from .mergetool_wx import MergeDialog
+NEW = True
+if NEW:
+    import editor.plugins.mergetool as mergetool
+else:
+    import editor.plugins.mergetool_shared_old as shared
+    from ..toolkit import toolkit
+    if toolkit == 'qt':
+        from .mergetool_qt_old import MergeDialog
+    elif toolkit == 'wx':
+        from .mergetool_wx_old import MergeDialog
 DFLT_TCLOC = "C:/totalcmd"
 
 
@@ -222,17 +226,18 @@ def build_data(page):
     # start bij loading the stuff we need for the dialog
     page.matchfile = os.path.join(os.path.dirname(__file__), 'tc_default_hotkeys_mapped.csv')
     page.keylist_data = defaultkeys(page.settings['KB_PAD'])
-    # user defined keys (should be added to left list box)
-    # page.keylist_data.update((userkeys(self.parent.settings['TC_PAD'])))
     page.cmdlist_data = defaultcommands(page.settings['CI_PAD'])
-    # user commands (should be added to right list box)
-    # usrdict, uomsdict = usercommands(self.parent.settings['UC_PAD'])
-    # page.cmdlist_data.update({usrdict[y]: uomsdict[x] for x, y in usrdict.items()}
-    page.matchlist_data = shared.load_matchdata(page.matchfile)
-
-    ok = editor.gui.show_dialog(page, MergeDialog)
+    if NEW:
+        page.matchlist_data = mergetool.load_matchdata(page.matchfile)
+        ok = editor.gui.show_dialog(mergetool.Merger(page, page.gui).gui)
+    else:
+        page.matchlist_data = shared.load_matchdata(page.matchfile)
+        ok = editor.gui.show_dialog(MergeDialog(page.gui, page))
     if ok:
-        shared.save_matchdata(page.tempdata, page.matchfile)
+        if NEW:
+            mergetool.save_matchdata(page.tempdata, page.matchfile)
+        else:
+            shared.save_matchdata(page.tempdata, page.matchfile)
         shortcuts, ix = {}, 0
         for keytext, cmd in page.tempdata:
             key, mods = keytext.split(' ', 1)
@@ -242,6 +247,11 @@ def build_data(page):
     else:
         # shortcuts = []
         return None
+    # na het matchen gaan we nog de user defined zaken toevoegen
+    # deze zouden niet gematched moeten hoeven worden?
+    # page.keylist_data.update((userkeys(self.parent.settings['TC_PAD'])))
+    # usrdict, uomsdict = usercommands(self.parent.settings['UC_PAD'])
+    # page.cmdlist_data.update({usrdict[y]: uomsdict[x] for x, y in usrdict.items()}
     return shortcuts, {}
 
 
