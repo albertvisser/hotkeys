@@ -145,7 +145,6 @@ class TestSettings:
         """unittest for Settings.write
         """
         fnaam = tmp_path / 'testfile'
-        fnaam_o = tmp_path / 'testfile.bak'
         fnaam.write_text('\n# comment\nOP_STD=xxx\nOP_USER=yyy\nOP_CSV=zzz\nLANG=en\nqqq=rrr\nst')
         testobj = self.setup_testobj(monkeypatch, capsys, str(fnaam))
         testobj.std = 'aaa'
