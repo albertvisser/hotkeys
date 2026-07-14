@@ -5,7 +5,7 @@ import pytest
 from editor.plugins import dckeys as testee
 
 
-def test__shorten_mods():
+def test_shorten_mods():
     """unittest for dckeys._shorten_mods
     """
     assert testee._shorten_mods([]) == ""
@@ -15,7 +15,7 @@ def test__shorten_mods():
     assert testee._shorten_mods(['xxx']) == ""
 
 
-def test__translate_keynames():
+def test_translate_keynames():
     """unittest for dckeys._translate_keynames
     """
     assert testee._translate_keynames('') == ''
