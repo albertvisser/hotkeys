@@ -3,7 +3,6 @@
 import os
 import sys
 import pathlib
-import contextlib
 import enum
 import logging
 
@@ -100,7 +99,7 @@ def get_title(win):
 def get_appropriate_window(win):
     "find the widget associated with a window"
     # kijk of win een gui klasse is, zo ja ga naar de master ervan
-    # alleen bij de main gui heet deze editor ( TODO: aanpassen)
+    # alleen bij de main gui heet deze editor
     if hasattr(win, 'editor'):
         win = win.editor
     elif hasattr(win, 'master'):
