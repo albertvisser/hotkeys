@@ -1078,9 +1078,9 @@ class ColumnSettingsDialogGui(qtw.QDialog):
         hsizer.addStretch()
         self.sizer.addLayout(hsizer)
 
-    def finalize_columndefs_area(self, scroller):
-        "stuff to do when the area is filled up"
-        # wx variant needs this to get the dimensions right
+    # def finalize_columndefs_area(self, scroller):
+    #     "stuff to do when the area is filled up"
+    #     # wx variant needs this to get the dimensions right
 
     def add_checkbox_to_line(self, row, col, text, width, checkvalue, before, after):
         "add a checkbox to the screen line"
@@ -1109,8 +1109,8 @@ class ColumnSettingsDialogGui(qtw.QDialog):
         cmb.editTextChanged.connect(self.on_text_changed)
         if selected:
             cmb.setCurrentIndex(selected - 1)
-        # else:
-        #     cmb.clearEditText()
+        else:
+            cmb.clearEditText()
         # self.rowsizer.addWidget(cmb)  #, rownum)
         self.gsizer.addWidget(cmb, row, col)
         return cmb

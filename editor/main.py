@@ -1586,11 +1586,11 @@ class FilesDialog:
                     self.settingsdata[newtool] = self.data[1:]
                     prgloc = self.data[1]
                     dataloc = self.data[0]
-                    x, y = self.gui.add_row(newtool, path=dataloc,
-                                            buttoncaption=self.parent.captions['C_BRWS'],
-                                            dialogtitle=self.parent.captions['C_SELFIL'],
-                                            tooltiptext="")
-                    self.checks.append((x, newtool, y))
+            x, y = self.gui.add_row(newtool, path=dataloc,
+                                    buttoncaption=self.parent.captions['C_BRWS'],
+                                    dialogtitle=self.parent.captions['C_SELFIL'],
+                                    tooltiptext="")
+            self.checks.append((x, newtool, y))
 
     def remove_programs(self, *args):
         """alle aangevinkte items verwijderen uit self.gsizer"""
@@ -1762,13 +1762,13 @@ class ColumnSettingsDialog:
         self.col_textids, self.col_names = parent.col_textids, parent.col_names
         for item in parent.book.page.column_info:
             self.add_row_to_display(*item)
-        self.gui.finalize_columndefs_area(self.scrl)
+        # self.gui.finalize_columndefs_area(self.scrl)
         self.gui.add_buttons([(parent.captions['C_ADDCOL'], self.add_columndef),
                               (parent.captions['C_REMCOL'], self.remove_columndefs),
                               ('ok', self.gui.accept), ('cancel', self.gui.reject)])
         self.initializing = False
 
-    def add_columndef(self):
+    def add_columndef(self, *args):
         """ruimte maken voor nieuwe kolom definitie
         """
         self.add_row_to_display()
@@ -1784,12 +1784,12 @@ class ColumnSettingsDialog:
         value = columnsettings[2] if columnsettings else ''
         flag = self.gui.add_checkbox_to_line(self.rownum, 3, '', 32, value, 40, 24)
         colno = self.gui.add_spinbox_to_line(self.rownum, 4, self.rownum, (0, 99), 36, (68, 0))
-        self.gui.finalize_line(self.scrl, check)
+        self.gui.finalize_line(self.scrl, name)  # check)  width)  colno)
         self.checks.append(check)
         old_colno = "new" if not columnsettings else self.rownum
         self.data.append((name, width, colno, flag, old_colno))
 
-    def remove_columndefs(self):
+    def remove_columndefs(self, *args):
         """alle aangevinkte items verwijderen uit self.gsizer"""
         test = [self.gui.get_checkbox_value(x) for x in self.checks]
         checked = [x for x, y in enumerate(test) if y]
@@ -1834,7 +1834,7 @@ class ColumnSettingsDialog:
             if value[0] in self.col_names:
                 # value = (self.col_textids[self.col_names.index(value[0])], value[1:])
                 self.parent.new_column_info[ix] = (self.col_textids[self.col_names.index(value[0])],
-                                            *value[1:])
+                                                   *value[1:])
         if new_titles:
             canceled, titles, colinfo = self.build_new_title_data(new_titles, column_info)
             if canceled:
@@ -1981,11 +1981,11 @@ class ExtraSettingsDialog:
                                      (parent.captions['C_REMSET'], self.remove_settings)])
         self.gui.add_okcancel_buttons()
 
-    def add_setting(self):
+    def add_setting(self, *args):
         """nieuwe rij aanmaken in self.gsizer"""
         self.fields.append(self.gui.add_row(self.scroll, '', '', ''))
 
-    def remove_settings(self):
+    def remove_settings(self, *args):
         """alle aangevinkte items verwijderen uit self.gsizer"""
         for row in reversed(self.fields):
             if self.gui.get_checkbox_value(row[0]):

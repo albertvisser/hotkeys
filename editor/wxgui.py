@@ -1,7 +1,5 @@
 """HotKeys main program - gui specific code - wxPython version
 """
-import os
-import collections
 import wx
 import wx.adv
 import wx.grid as wxg
@@ -329,7 +327,7 @@ class TabbedInterface(wx.Panel):
         for i in range(p0list.GetItemCount()):
             # item = page.gui.p0list.GetItem(i)
             if text in p0list.GetItemText(i, zoekcol):
-                result.append(i + 1)  # tem) - geen items maar indexes in de lijst opnemen
+                result.append(i)  # tem) - geen items maar indexes in de lijst opnemen
         return result
 
     def set_selected_keydef_item(self, p0list, items, index):
@@ -911,7 +909,7 @@ class FilesDialogGui(wx.Dialog):
     def __init__(self, master, parent, title):
         # self.parent = parent
         self.master = master
-        super().__init__(parent, size=(680, 400), title=title)
+        super().__init__(parent, size=(800, 640), title=title)
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
     def add_explanation(self, text):
@@ -940,7 +938,7 @@ class FilesDialogGui(wx.Dialog):
         # wx variant needs this to get the dimensions right
         self.scrl.Fit()
         self.scrl.SetSizer(self.gsizer)
-        self.gsizer.SetSizeHints(self.scrl)
+        # self.gsizer.SetSizeHints(self.scrl)
         self.scrl.SetupScrolling()
         self.sizer.Add(self.scrl, 1, wx.EXPAND | wx.ALL, 5)
 
@@ -961,21 +959,21 @@ class FilesDialogGui(wx.Dialog):
     def finish_display(self):
         "stuff to do now that the display is built"
         # wx variant needs this to get the dimensions right
-        self.sizer.SetSizeHints(self)
+        # self.sizer.SetSizeHints(self)
         self.SetSizer(self.sizer)
 
     def add_row(self, name, path='', buttoncaption="", dialogtitle="", tooltiptext=""):
         """create a row for defining a file location
         """
-        if not path:                                # komt op deze manier wel ook in het tekstveld
-            path = str(shared.HERE / 'plugins')     # terecht, moet eigenlijk alleen in de browser
+        startdir = str(shared.HERE / 'plugins')
         self.rownum += 1
         line = wx.BoxSizer(wx.HORIZONTAL)
         check = wx.CheckBox(self.scrl, label=name, size=(150, -1))
         line.Add(check, 0, wx.ALIGN_CENTER_VERTICAL, wx.LEFT, 5)
         # browse = wxfb.FilebrowseButton(self, startDirectory=startdir, initialValue=path, fileMask=
-        browse = wxfb.FileBrowseButton(self.scrl, size=(400, -1), style=wx.BORDER_SUNKEN,
-                                       labelText='', buttonText=buttoncaption, initialValue=path,
+        browse = wxfb.FileBrowseButton(self.scrl, size=(620, -1),  # style=wx.BORDER_SUNKEN,
+                                       labelText='', buttonText=buttoncaption,
+                                       startDirectory=startdir, initialValue=path,
                                        toolTip=tooltiptext, dialogTitle=dialogtitle)
         line.Add(browse, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         self.gsizer.Add(line, 0)
@@ -1075,7 +1073,7 @@ class SetupDialogGui(wx.Dialog):
     def add_checkbox_line(self, text):
         "add a line with a checkbox to the display"
         self.lineno += 1
-        cb = wx.CheckBox(self, text)
+        cb = wx.CheckBox(self, label=text)
         self.box.Add(cb, 0, wx.LEFT, 15)
         return cb
 
@@ -1111,7 +1109,7 @@ class SetupDialogGui(wx.Dialog):
 
     def get_filebrowse_value(self, fbb):
         "return the value entered/seected in a file browser"
-        return fbb.input.GetValue()
+        return fbb.GetValue()
 
     def accept(self):
         """set self.parent.loc to the chosen filename
@@ -1171,9 +1169,9 @@ class ColumnSettingsDialogGui(wx.Dialog):
     def __init__(self, master, parent, title):
         # self.parent = parent
         self.master = master
-        super().__init__(parent, title=title)
+        super().__init__(parent, title=title, size=(640, 400))
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.sizer.SetSizeHints(self)
+        # self.sizer.SetSizeHints(self)
         self.SetSizer(self.sizer)
 
     def add_explanation(self, text):
@@ -1186,24 +1184,28 @@ class ColumnSettingsDialogGui(wx.Dialog):
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
         for text, margin in captiondefs:
             hsizer.AddSpacer(margin)
-            hsizer.Add(wx.StaticText(self, label=text), 0, wx.LEFT, margin)
+            hsizer.Add(wx.StaticText(self, label=text), 0)  # , wx.LEFT, margin)
         self.sizer.Add(hsizer)
 
     def add_columndefs_area(self):
         "add a scrollarea for showing column definitions"
         self.scrl = wxsp.ScrolledPanel(self, style=wx.BORDER_RAISED)
         self.gsizer = wx.BoxSizer(wx.VERTICAL)
+        self.scrl.SetSizer(self.gsizer)
+        self.scrl.SetupScrolling()
+        self.scrl.Fit()
+        self.sizer.Add(self.scrl, 1, wx.EXPAND | wx.ALL, 5)
         return self.scrl
 
-    def finalize_columndefs_area(self, scroller):
-        "stuff to do when the area is filled up"
-        # wx variant needs this to get the dimensions right
-        scroller.Fit()
-        scroller.SetSizer(self.gsizer)
-        # self.gsizer.Fit(scroller)
-        self.gsizer.SetSizeHints(scroller)
-        scroller.SetupScrolling()
-        self.sizer.Add(scroller, 1, wx.EXPAND | wx.ALL, 5)
+    # def finalize_columndefs_area(self, scroller):
+    #     "stuff to do when the area is filled up"
+    #     # wx variant needs this to get the dimensions right
+    #     # scroller.Fit()
+    #     # scroller.SetSizer(self.gsizer)
+    #     # self.gsizer.Fit(scroller)
+    #     # self.gsizer.SetSizeHints(scroller)
+    #     # scroller.SetupScrolling()
+    #     # self.sizer.Add(scroller, 1, wx.EXPAND | wx.ALL, 5)
 
     def add_buttons(self, buttondefs):
         "add a strip with buttons to the display"
@@ -1228,9 +1230,9 @@ class ColumnSettingsDialogGui(wx.Dialog):
         if before:
             sizer.AddSpacer(before)
         width = width or 20
-        cb = wx.CheckBox(self.scrl, text, size=(width, -1))
+        cb = wx.CheckBox(self.scrl, label=text, size=(width, -1))
         if checkvalue:
-            cb.Check(checkvalue)
+            cb.SetValue(checkvalue)
         sizer.Add(cb)
         if after:
             sizer.AddSpacer(after)
@@ -1243,7 +1245,7 @@ class ColumnSettingsDialogGui(wx.Dialog):
         "add a combobox to the screen line"
         cmb = wx.ComboBox(self.scrl, size=(140, -1), style=wx.CB_DROPDOWN, choices=values)
         if selected:
-            cmb.SetSelection(selected)
+            cmb.SetSelection(selected - 1)
         # else:
         #     w_name.SetSelection('')
         cmb.Bind(wx.EVT_TEXT, self.on_text_changed)
@@ -1274,15 +1276,11 @@ class ColumnSettingsDialogGui(wx.Dialog):
     def finalize_line(self, scroller, check):
         "stuff to do now that the line is built"
         # wx variant needs this to get the dimensions right
-        self.gsizer.Add(self.rowsizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
+        self.gsizer.Add(self.rowsizer, 0, wx.EXPAND | wx.TOP | wx.LEFT | wx.RIGHT, 5)
         self.gsizer.Layout()
-        scroller.Fit()
+        # scroller.Fit()
         self.sizer.Layout()
-        # scroller.ScrollChildIntoView(check)  # TODO uitzoeken waarom dit niet werkt
-        # self.scrl.SetScrollbar(wx.VERTICAL, 0, 1, self.rownum * 62)
-        # vbar = self.scrl.verticalScrollBar()
-        # vbar.setMaximum(vbar.maximum() + 62)
-        # vbar.setValue(vbar.maximum())
+        scroller.ScrollChildIntoView(check)
 
     def adapt_column_index(self, removed_widget, current_widget):
         """maak alle kolomnummers die groter zijn dan het net verwijderde
@@ -1389,19 +1387,20 @@ class ExtraSettingsDialogGui(wx.Dialog):
     def __init__(self, master, parent, title):
         # self.parent = parent
         self.master = master
-        super().__init__(parent, size=(680, 400), title=title)
+        super().__init__(parent, size=(640, 600), title=title)
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         # perhaps this should be executed at the end of the screen
-        self.sizer.SetSizeHints(self)
+        # self.sizer.SetSizeHints(self)
         self.SetSizer(self.sizer)
 
     def start_block(self):
         "start a new block of input items"
+        grow_factor = 1 if hasattr(self, 'pnl') else 0
         self.pnl = wx.Panel(self, style=wx.BORDER_RAISED)
         vsizer = wx.BoxSizer(wx.VERTICAL)
         # perhaps this should be executed at the end of the block
         self.pnl.SetSizer(vsizer)
-        self.sizer.Add(self.pnl, 0, wx.EXPAND | wx.ALL, 10)
+        self.sizer.Add(self.pnl, grow_factor, wx.EXPAND | wx.ALL, 10)
         return vsizer
 
     def add_textinput_line(self, vsizer, text, inputsuggestion):
@@ -1438,16 +1437,18 @@ class ExtraSettingsDialogGui(wx.Dialog):
 
     def add_inputarea(self, vsizer):
         "add a scrollarea for the settings definitions to the block"
-        self.scrl = wxsp.ScrolledPanel(self.pnl, style=wx.BORDER_SIMPLE)
+        scrl = wxsp.ScrolledPanel(self.pnl, style=wx.BORDER_SIMPLE)
         # self.scrl = wx.ScrolledWindow(pnl, style=wx.BORDER_SIMPLE)
-        self.gsizer = wx.BoxSizer(wx.VERTICAL)
-        return self.scrl
+        gsizer = wx.BoxSizer(wx.VERTICAL)
+        return scrl, gsizer
 
     def finalize_inputarea(self, vsizer, scroller):
         "missing in qt variant, needed here to get proportions right"
-        scroller.SetSizer(self.gsizer)
-        self.gsizer.Fit(scroller)
-        self.gsizer.SetSizeHints(scroller)
+        scroller, gsizer = scroller
+        scroller.SetSizer(gsizer)
+        scroller.Fit()
+        # self.gsizer.Fit(scroller)   # of moet dit scroller.Fit() zijn?
+        # self.gsizer.SetSizeHints(scroller)
         scroller.SetupScrolling()
         vsizer.Add(scroller, 1, wx.EXPAND | wx.ALL, 5)
         # sizer.Add(self.scrl, 1, wx.ALL, 5)
@@ -1471,28 +1472,29 @@ class ExtraSettingsDialogGui(wx.Dialog):
     def add_row(self, gsizer, name, value, desc):
         """add a row for defining a setting (name, value)
         """
+        scrl, gsizer = gsizer
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
-        check = wx.CheckBox(self.scrl)
+        check = wx.CheckBox(scrl)
         hsizer.Add(check, 0, wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
         # self.checks.append(check)
-        w_name = wx.TextCtrl(self.scrl, value=name, size=(120, -1))
+        w_name = wx.TextCtrl(scrl, value=name, size=(120, -1))
         if name:
             w_name.SetEditable(False)
         hsizer.Add(w_name, 0, wx.LEFT | wx.RIGHT, 2)
         hbox.Add(hsizer, 0)
         vsizer = wx.BoxSizer(wx.VERTICAL)
-        w_value = wx.TextCtrl(self.scrl, value=value, size=(320, -1))
+        w_value = wx.TextCtrl(scrl, value=value, size=(320, -1))
         vsizer.Add(w_value, 1)  # , wx.EXPAND | wx.RIGHT, 5)
         # self.rownum += 1
-        w_desc = wx.TextCtrl(self.scrl, value=desc, size=(320, -1))
+        w_desc = wx.TextCtrl(scrl, value=desc, size=(320, -1))
         vsizer.Add(w_desc, 1)  # , wx.EXPAND | wx.RIGHT, 5)
         hbox.Add(vsizer, 0, wx.EXPAND | wx.RIGHT, 5)
         gsizer.Add(hbox, 0, wx.EXPAND)
         # self.data.append((w_name, w_value, w_desc))
         gsizer.Layout()
-        self.scrl.Fit()
-        self.scrl.ScrollChildIntoView(w_desc)
+        scrl.Fit()
+        scrl.ScrollChildIntoView(w_desc)
         self.sizer.Layout()
         # self.scrl.SetScrollbar(wx.VERTICAL, 0, 1, self.rownum * 62)
         # vbar = self.scrl.verticalScrollBar()
@@ -1510,6 +1512,7 @@ class ExtraSettingsDialogGui(wx.Dialog):
     def delete_row(self, gsizer, rowindex, fields):
         """delete a setting definition row
         """
+        scrl, gsizer = gsizer
         start = rowindex * 4
         end = start + 4
         for num in range(start, end):
@@ -1517,7 +1520,7 @@ class ExtraSettingsDialogGui(wx.Dialog):
         for widget in fields:
             widget.Destroy()
         gsizer.Layout()
-        self.scrl.Fit()
+        scrl.Fit()
         self.sizer.Layout()
 
     def get_checkbox_value(self, cb):

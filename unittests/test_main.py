@@ -3725,23 +3725,27 @@ class TestFilesDialog:
                 f"called show_message with args ({testobj.gui}, 'I_NEEDNAME')\n")
         monkeypatch.setattr(testee.gui, 'get_textinput', mock_get_3)
         testobj.add_program()
-        assert testobj.checks == []
+        assert testobj.checks == [('checkbox', 'qqq', 'location')]
         assert capsys.readouterr().out == (
                 f"called get_textinput with args ({testobj.gui}, '', 'newprg')\n"
-                f"called ask_question with args ({testobj.gui}, 'P_INIKDEF')\n")
-                # "called FilesDialog with args ('qqq',) {'path': ''}\n")
+                f"called ask_question with args ({testobj.gui}, 'P_INIKDEF')\n"
+                "called FilesDialogGui.add_row with args ('qqq',) {'path': '',"
+                " 'buttoncaption': 'brws', 'dialogtitle': 'selfil', 'tooltiptext': ''}\n")
         monkeypatch.setattr(testee.gui, 'ask_question', mock_ask_2)
         assert testobj.last_added == 'qqq'
         assert testobj.settingsdata == {'qqq': ('',)}
+        testobj.checks = []
         testobj.add_program()
-        assert testobj.checks == []
+        assert testobj.checks == [('checkbox', 'qqq', 'location')]
         assert capsys.readouterr().out == (
                 f"called get_textinput with args ({testobj.gui}, '', 'newprg')\n"
                 f"called ask_question with args ({testobj.gui}, 'P_INIKDEF')\n"
                 f"called SetupDialog.__init__ with args ({testobj}, 'qqq')\n"
-                "called gui.show_dialog with args ('SetupDialogGui',)\n")
-                # "called FilesDialog with args ('qqq',) {'path': ''}\n")
+                "called gui.show_dialog with args ('SetupDialogGui',)\n"
+                "called FilesDialogGui.add_row with args ('qqq',) {'path': '',"
+                " 'buttoncaption': 'brws', 'dialogtitle': 'selfil', 'tooltiptext': ''}\n")
         testobj.settingsdata = {}
+        testobj.checks = []
         monkeypatch.setattr(testee.gui, 'show_dialog', mock_dialog_2)
         testobj.add_program()
         assert testobj.last_added == 'qqq'
@@ -4286,7 +4290,7 @@ class TestColumnSettingsDialog:
                 "called ColumnSettingsDialogGui.add_captions with args"
                 " ([('ttl', 41), ('wid', 102), ('ind', 8), ('seq', 0)],)\n"
                 "called ColumnSettingsDialogGui.add_columndefs_area\n"
-                "called ColumnSettingsDialogGui.finalize_columndefs_area with arg scrollarea\n"
+                # "called ColumnSettingsDialogGui.finalize_columndefs_area with arg scrollarea\n"
                 "called ColumnSettingsDialogGui.add_buttons with args"
                 f" ([('addcol', {testobj.add_columndef}), ('remcol', {testobj.remove_columndefs}),"
                 f" ('ok', {testobj.gui.accept}), ('cancel', {testobj.gui.reject})],)\n")
@@ -4306,7 +4310,7 @@ class TestColumnSettingsDialog:
                 "called ColumnSettingsDialogGui.add_columndefs_area\n"
                 f"called ColumnSettingsDialog.add_row_to_display with args ({testobj}, 'a', 'b')\n"
                 f"called ColumnSettingsDialog.add_row_to_display with args ({testobj}, 'c', 'd')\n"
-                "called ColumnSettingsDialogGui.finalize_columndefs_area with arg scrollarea\n"
+                # "called ColumnSettingsDialogGui.finalize_columndefs_area with arg scrollarea\n"
                 "called ColumnSettingsDialogGui.add_buttons with args"
                 f" ([('addcol', {testobj.add_columndef}), ('remcol', {testobj.remove_columndefs}),"
                 f" ('ok', {testobj.gui.accept}), ('cancel', {testobj.gui.reject})],)\n")
@@ -4360,7 +4364,7 @@ class TestColumnSettingsDialog:
             " (1, 3, '', 32, '', 40, 24)\n"
             "called ColumnSettingsDialogGui.add_spinbox_to_line with args"
             " (1, 4, 1, (0, 99), 36, (68, 0))\n"
-            "called ColumnSettingsDilaogGui.finalize_line with args ('scrollarea', 'check')\n")
+            "called ColumnSettingsDilaogGui.finalize_line with args ('scrollarea', 'selector')\n")
         testobj.rownum = 0
         testobj.checks = []
         testobj.data = []
@@ -4379,7 +4383,7 @@ class TestColumnSettingsDialog:
             " (1, 3, '', 32, True, 40, 24)\n"
             "called ColumnSettingsDialogGui.add_spinbox_to_line with args"
             " (1, 4, 1, (0, 99), 36, (68, 0))\n"
-            "called ColumnSettingsDilaogGui.finalize_line with args ('scrollarea', 'check')\n")
+            "called ColumnSettingsDilaogGui.finalize_line with args ('scrollarea', 'selector')\n")
 
     def test_remove_columndefs(self, monkeypatch, capsys):
         """unittest for ColumnSettingsDialog.remove_columndefs

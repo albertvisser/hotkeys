@@ -2709,6 +2709,7 @@ class TestColumnSettingsDialogGui:
                 "called ComboBox.addItems with arg []\n"
                 "called ComboBox.setEditable with arg `True`\n"
                 f"called Signal.connect with args ({testobj.on_text_changed},)\n"
+                "called ComboBox.clearEditText\n"
                 "called Grid.addWidget with arg MockComboBox at ('row', 'col')\n")
         result = testobj.add_combobox_to_line('row', 'col', ['x', 'y'], 1)
         assert isinstance(result, testee.qtw.QComboBox)

@@ -764,7 +764,7 @@ class TestTabbedInterface:
         p0list = mockwx.MockListCtrl()
         assert capsys.readouterr().out == "called ListCtrl.__init__ with args () {}\n"
         counter = 0
-        assert testobj.find_items(p0list, 'xxx', 'text') == [2]
+        assert testobj.find_items(p0list, 'xxx', 'text') == [1]
         assert capsys.readouterr().out == ("called ListCtrl.GetItemCount\n"
                                            "called ListCtrl.GetItemText with args (0, 'xxx')\n"
                                            "called ListCtrl.GetItemText with args (1, 'xxx')\n")
@@ -1982,7 +1982,7 @@ class TestFilesDialogGui:
         assert testobj.master == 'master'
         assert isinstance(testobj.sizer, testee.wx.BoxSizer)
         assert capsys.readouterr().out == (
-                "called Dialog.__init__ with args () {'size': (680, 400), 'title': 'title'}\n"
+                "called Dialog.__init__ with args () {'size': (800, 640), 'title': 'title'}\n"
                 "called BoxSizer.__init__ with args (8,)\n")
 
     def test_add_explanation(self, monkeypatch, capsys):
@@ -2041,7 +2041,7 @@ class TestFilesDialogGui:
         assert capsys.readouterr().out == (
                 "called ScrolledPanel.Fit with args ()\n"
                 "called ScrolledPanel.SetSizer with args ( sizer,)\n"
-                f"called  sizer.SetSizeHints with args ({testobj.scrl},)\n"
+                # f"called  sizer.SetSizeHints with args ({testobj.scrl},)\n"
                 "called ScrolledPanel.SetupScrolling\n"
                 "called  sizer.Add with args MockScrolledPanel (1, 8432, 5)\n")
 
@@ -2076,7 +2076,7 @@ class TestFilesDialogGui:
         assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
         testobj.finish_display()
         assert capsys.readouterr().out == (
-                f"called  sizer.SetSizeHints with args ({testobj},)\n"
+                # f"called  sizer.SetSizeHints with args ({testobj},)\n"
                 "called dialog.SetSizer with args ( sizer,)\n")
 
     def test_add_row(self, monkeypatch, capsys):
@@ -2102,9 +2102,9 @@ class TestFilesDialogGui:
                 f" ({testobj.scrl},) {{'label': 'name', 'size': (150, -1)}}\n"
                 "called hori sizer.Add with args MockCheckBox (0, 2048, 16, 5)\n"
                 "called FileBrowseButton.__init__ with args"
-                f" ({testobj.scrl},) {{'size': (400, -1), 'style': 134217728,"
+                f" ({testobj.scrl},) {{'size': (620, -1),"  # 'style': 134217728,"
                 " 'labelText': '', 'buttonText': '',"
-                f" 'initialValue': '{testee.shared.HERE}/plugins',"
+                f" 'startDirectory': '{testee.shared.HERE}/plugins', 'initialValue': '',"
                 " 'toolTip': '', 'dialogTitle': ''}\n"
                 "called hori sizer.Add with args MockFileBrowse (0, 8240, 5)\n"
                 "called  sizer.Add with args MockBoxSizer (0,)\n"
@@ -2122,8 +2122,9 @@ class TestFilesDialogGui:
                 f" ({testobj.scrl},) {{'label': 'name', 'size': (150, -1)}}\n"
                 "called hori sizer.Add with args MockCheckBox (0, 2048, 16, 5)\n"
                 "called FileBrowseButton.__init__ with args"
-                f" ({testobj.scrl},) {{'size': (400, -1), 'style': 134217728,"
-                " 'labelText': '', 'buttonText': 'btcp', 'initialValue': 'xxx',"
+                f" ({testobj.scrl},) {{'size': (620, -1),"  # 'style': 134217728,"
+                " 'labelText': '', 'buttonText': 'btcp',"
+                f" 'startDirectory': '{testee.shared.HERE}/plugins', 'initialValue': 'xxx',"
                 " 'toolTip': 'tttext', 'dialogTitle': 'dlgttl'}\n"
                 "called hori sizer.Add with args MockFileBrowse (0, 8240, 5)\n"
                 "called  sizer.Add with args MockBoxSizer (0,)\n"
@@ -2276,7 +2277,7 @@ class TestSetupDialogGui:
         assert isinstance(result, testee.wx.CheckBox)
         assert testobj.lineno == 2
         assert capsys.readouterr().out == (
-                f"called CheckBox.__init__ with args ({testobj}, 'text') {{}}\n"
+                f"called CheckBox.__init__ with args ({testobj},) {{'label': 'text'}}\n"
                 "called GridSizer.Add with args MockCheckBox (0, 16, 15)\n")
 
     def test_add_filebrowse_line(self, monkeypatch, capsys):
@@ -2351,7 +2352,7 @@ class TestSetupDialogGui:
     def test_get_filebrowse_value(self, monkeypatch, capsys):
         """unittest for SetupDialogGui.get_filebrowse_value
         """
-        fbb = types.SimpleNamespace(input=mockwx.MockTextCtrl())
+        fbb = mockwx.MockTextCtrl()
         assert capsys.readouterr().out == "called TextCtrl.__init__ with args () {}\n"
         testobj = self.setup_testobj(monkeypatch, capsys)
         assert testobj.get_filebrowse_value(fbb) == 'value from textctrl'
@@ -2500,9 +2501,9 @@ class TestColumnSettingsDialogGui:
         assert testobj.master == 'master'
         assert isinstance(testobj.sizer, testee.wx.BoxSizer)
         assert capsys.readouterr().out == (
-                "called Dialog.__init__ with args () {'title': 'title'}\n"
+                "called Dialog.__init__ with args () {'title': 'title', 'size': (640, 400)}\n"
                 "called BoxSizer.__init__ with args (8,)\n"
-                f"called vert sizer.SetSizeHints with args ({testobj},)\n"
+                # f"called vert sizer.SetSizeHints with args ({testobj},)\n"
                 "called dialog.SetSizer with args (vert sizer,)\n")
 
     def test_add_explanation(self, monkeypatch, capsys):
@@ -2530,10 +2531,10 @@ class TestColumnSettingsDialogGui:
                 "called BoxSizer.__init__ with args (4,)\n"
                 "called hori sizer.AddSpacer with args (10,)\n"
                 f"called StaticText.__init__ with args ({testobj},) {{'label': 'cap'}}\n"
-                "called hori sizer.Add with args MockStaticText (0, 16, 10)\n"
+                "called hori sizer.Add with args MockStaticText (0,)\n"  # 16, 10)\n"
                 "called hori sizer.AddSpacer with args (20,)\n"
                 f"called StaticText.__init__ with args ({testobj},) {{'label': 'tions'}}\n"
-                "called hori sizer.Add with args MockStaticText (0, 16, 20)\n"
+                "called hori sizer.Add with args MockStaticText (0,)\n"  # 16, 20)\n"
                 "called  sizer.Add with args MockBoxSizer ()\n")
 
     def test_add_columndefs_area(self, monkeypatch, capsys):
@@ -2542,28 +2543,38 @@ class TestColumnSettingsDialogGui:
         monkeypatch.setattr(testee.wxsp, 'ScrolledPanel', mockwx.MockScrolledPanel)
         monkeypatch.setattr(testee.wx, 'BoxSizer', mockwx.MockBoxSizer)
         testobj = self.setup_testobj(monkeypatch, capsys)
-        assert isinstance(testobj.add_columndefs_area(), testee.wxsp.ScrolledPanel)
-        assert capsys.readouterr().out == (
-                f"called ScrolledPanel.__init__ with args ({testobj},) {{'style': 67108864}}\n"
-                "called BoxSizer.__init__ with args (8,)\n")
-
-    def test_finalize_columndefs_area(self, monkeypatch, capsys):
-        """unittest for ColumnSettingsDialogGui.finalize_columndefs_area
-        """
-        testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.sizer = mockwx.MockBoxSizer()
-        scrl = mockwx.MockScrolledPanel()
+        testobj.scrl = mockwx.MockScrolledPanel()
         testobj.gsizer = mockwx.MockBoxSizer()
         assert capsys.readouterr().out == ("called BoxSizer.__init__ with args ()\n"
                                            "called ScrolledPanel.__init__ with args () {}\n"
                                            "called BoxSizer.__init__ with args ()\n")
-        testobj.finalize_columndefs_area(scrl)
+        assert isinstance(testobj.add_columndefs_area(), testee.wxsp.ScrolledPanel)
         assert capsys.readouterr().out == (
-                "called ScrolledPanel.Fit with args ()\n"
-                "called ScrolledPanel.SetSizer with args ( sizer,)\n"
-                f"called  sizer.SetSizeHints with args ({scrl},)\n"
+                f"called ScrolledPanel.__init__ with args ({testobj},) {{'style': 67108864}}\n"
+                "called BoxSizer.__init__ with args (8,)\n"
+                "called ScrolledPanel.SetSizer with args (vert sizer,)\n"
                 "called ScrolledPanel.SetupScrolling\n"
+                "called ScrolledPanel.Fit with args ()\n"
                 "called  sizer.Add with args MockScrolledPanel (1, 8432, 5)\n")
+
+    # def test_finalize_columndefs_area(self, monkeypatch, capsys):
+    #     """unittest for ColumnSettingsDialogGui.finalize_columndefs_area
+    #     """
+    #     testobj = self.setup_testobj(monkeypatch, capsys)
+    #     # testobj.sizer = mockwx.MockBoxSizer()
+    #     # testobj.scrl = mockwx.MockScrolledPanel()
+    #     # testobj.gsizer = mockwx.MockBoxSizer()
+    #     # assert capsys.readouterr().out == ("called BoxSizer.__init__ with args ()\n"
+    #     #                                    "called ScrolledPanel.__init__ with args () {}\n"
+    #     #                                    "called BoxSizer.__init__ with args ()\n")
+    #     testobj.finalize_columndefs_area(scrl)
+    #     assert capsys.readouterr().out == (
+    #             "called ScrolledPanel.Fit with args ()\n"
+    #             "called ScrolledPanel.SetSizer with args ( sizer,)\n"
+    #             f"called  sizer.SetSizeHints with args ({scrl},)\n"
+    #             "called ScrolledPanel.SetupScrolling\n"
+    #             "called  sizer.Add with args MockScrolledPanel (1, 8432, 5)\n")
 
     def test_add_buttons(self, monkeypatch, capsys):
         """unittest for ColumnSettingsDialogGui.add_buttons
@@ -2602,7 +2613,8 @@ class TestColumnSettingsDialogGui:
                 "called BoxSizer.__init__ with args (4,)\n"
                 "called BoxSizer.__init__ with args (4,)\n"
                 "called hori sizer.AddSpacer with args (True,)\n"
-                f"called CheckBox.__init__ with args ({testobj.scrl}, 'text') {{'size': (10, -1)}}\n"
+                f"called CheckBox.__init__ with args ({testobj.scrl},)"
+                " {'label': 'text', 'size': (10, -1)}\n"
                 "called hori sizer.Add with args MockCheckBox ()\n"
                 "called hori sizer.Add with args MockBoxSizer (0,)\n")
         testobj = self.setup_testobj(monkeypatch, capsys)
@@ -2614,8 +2626,9 @@ class TestColumnSettingsDialogGui:
         assert isinstance(result, testee.wx.CheckBox)
         assert capsys.readouterr().out == (
                 "called BoxSizer.__init__ with args (4,)\n"
-                f"called CheckBox.__init__ with args ({testobj.scrl}, 'text') {{'size': (10, -1)}}\n"
-                "called checkbox.Check with arg True\n"
+                f"called CheckBox.__init__ with args ({testobj.scrl},)"
+                " {'label': 'text', 'size': (10, -1)}\n"
+                "called checkbox.SetValue with args (True,)\n"
                 "called hori sizer.Add with args MockCheckBox ()\n"
                 "called hori sizer.AddSpacer with args (True,)\n"
                 "called  sizer.Add with args MockBoxSizer (0,)\n")
@@ -2643,7 +2656,7 @@ class TestColumnSettingsDialogGui:
         assert capsys.readouterr().out == (
                 "called ComboBox.__init__ with args"
                 f" ({testobj.scrl},) {{'size': (140, -1), 'style': 32, 'choices': ['x', 'y']}}\n"
-                "called combobox.SetSelection with args (1,)\n"
+                "called combobox.SetSelection with args (0,)\n"
                 "called ComboBox.Bind with args"
                 f" ({testee.wx.EVT_TEXT}, {testobj.on_text_changed}) {{}}\n"
                 "called  sizer.Add with args MockComboBox (0, 16, 2)\n")
@@ -2695,10 +2708,11 @@ class TestColumnSettingsDialogGui:
                                            "called BoxSizer.__init__ with args ()\n")
         testobj.finalize_line(scrl, 'checkbox')
         assert capsys.readouterr().out == (
-                "called  sizer.Add with args MockBoxSizer (0, 8240, 5)\n"
+                "called  sizer.Add with args MockBoxSizer (0, 8304, 5)\n"
                 "called  sizer.Layout with args ()\n"
-                "called ScrolledPanel.Fit with args ()\n"
-                "called  sizer.Layout with args ()\n")
+                # "called ScrolledPanel.Fit with args ()\n"
+                "called  sizer.Layout with args ()\n"
+                "called ScrolledPanel.ScrollChildIntoView with arg checkbox\n")
 
     def test_adapt_column_index(self, monkeypatch, capsys):
         """unittest for ColumnSettingsDialogGui.adapt_column_index
@@ -2962,9 +2976,9 @@ class TestExtraSettingsDialogGui:
         assert testobj.master == 'master'
         assert isinstance(testobj.sizer, testee.wx.BoxSizer)
         assert capsys.readouterr().out == (
-                "called Dialog.__init__ with args () {'size': (680, 400), 'title': 'title'}\n"
+                "called Dialog.__init__ with args () {'size': (640, 600), 'title': 'title'}\n"
                 "called BoxSizer.__init__ with args (8,)\n"
-                f"called vert sizer.SetSizeHints with args ({testobj},)\n"
+                # f"called vert sizer.SetSizeHints with args ({testobj},)\n"
                 "called dialog.SetSizer with args (vert sizer,)\n")
 
     def test_start_block(self, monkeypatch, capsys):
@@ -3072,9 +3086,9 @@ class TestExtraSettingsDialogGui:
         assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
         testobj.pnl = mockwx.MockPanel()
         assert capsys.readouterr().out == "called Panel.__init__ with args () {}\n"
-        assert isinstance(testobj.add_inputarea(vsizer), testee.wxsp.ScrolledPanel)
-        assert isinstance(testobj.scrl, testee.wxsp.ScrolledPanel)
-        assert isinstance(testobj.gsizer, testee.wx.BoxSizer)
+        result = testobj.add_inputarea(vsizer)
+        assert isinstance(result[0], testee.wxsp.ScrolledPanel)
+        assert isinstance(result[1], testee.wx.BoxSizer)
         assert capsys.readouterr().out == (
                 f"called ScrolledPanel.__init__ with args ({testobj.pnl},) {{'style': 33554432}}\n"
                 "called BoxSizer.__init__ with args (8,)\n")
@@ -3085,16 +3099,16 @@ class TestExtraSettingsDialogGui:
         testobj = self.setup_testobj(monkeypatch, capsys)
         vsizer = mockwx.MockBoxSizer()
         scroller = mockwx.MockScrolledPanel()
-        testobj.gsizer = mockwx.MockBoxSizer()
+        gsizer = mockwx.MockBoxSizer()
         assert capsys.readouterr().out == ("called BoxSizer.__init__ with args ()\n"
                                            "called ScrolledPanel.__init__ with args () {}\n"
                                            "called BoxSizer.__init__ with args ()\n")
-        testobj.finalize_inputarea(vsizer, scroller)
+        testobj.finalize_inputarea(vsizer, (scroller, gsizer))
         assert capsys.readouterr().out == (
-                # "called ScrolledPanel.Fit with args ()\n"
                 "called ScrolledPanel.SetSizer with args ( sizer,)\n"
-                f"called  sizer.Fit with args ({scroller},)\n"
-                f"called  sizer.SetSizeHints with args ({scroller},)\n"
+                "called ScrolledPanel.Fit with args ()\n"
+                # f"called  sizer.Fit with args ({scroller},)\n"
+                # f"called  sizer.SetSizeHints with args ({scroller},)\n"
                 "called ScrolledPanel.SetupScrolling\n"
                 "called  sizer.Add with args MockScrolledPanel (1, 8432, 5)\n")
 
@@ -3148,12 +3162,12 @@ class TestExtraSettingsDialogGui:
         monkeypatch.setattr(testee.wx, 'TextCtrl', mockwx.MockTextCtrl)
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.sizer = mockwx.MockBoxSizer()
+        scrl = mockwx.MockScrolledPanel()
         gsizer = mockwx.MockBoxSizer()
-        testobj.scrl = mockwx.MockScrolledPanel()
         assert capsys.readouterr().out == ("called BoxSizer.__init__ with args ()\n"
-                                           "called BoxSizer.__init__ with args ()\n"
-                                           "called ScrolledPanel.__init__ with args () {}\n")
-        result = testobj.add_row(gsizer, '', '', '')
+                                           "called ScrolledPanel.__init__ with args () {}\n"
+                                           "called BoxSizer.__init__ with args ()\n")
+        result = testobj.add_row((scrl, gsizer), '', '', '')
         assert isinstance(result[0], testee.wx.CheckBox)
         assert isinstance(result[1], testee.wx.TextCtrl)
         assert isinstance(result[2], testee.wx.TextCtrl)
@@ -3161,18 +3175,18 @@ class TestExtraSettingsDialogGui:
         assert capsys.readouterr().out == (
                 "called BoxSizer.__init__ with args (4,)\n"
                 "called BoxSizer.__init__ with args (4,)\n"
-                f"called CheckBox.__init__ with args ({testobj.scrl},) {{}}\n"
+                f"called CheckBox.__init__ with args ({scrl},) {{}}\n"
                 "called hori sizer.Add with args MockCheckBox (0, 2064, 5)\n"
                 "called TextCtrl.__init__ with args"
-                f" ({testobj.scrl},) {{'value': '', 'size': (120, -1)}}\n"
+                f" ({scrl},) {{'value': '', 'size': (120, -1)}}\n"
                 "called hori sizer.Add with args MockTextCtrl (0, 48, 2)\n"
                 "called hori sizer.Add with args MockBoxSizer (0,)\n"
                 "called BoxSizer.__init__ with args (8,)\n"
                 "called TextCtrl.__init__ with args"
-                f" ({testobj.scrl},) {{'value': '', 'size': (320, -1)}}\n"
+                f" ({scrl},) {{'value': '', 'size': (320, -1)}}\n"
                 "called vert sizer.Add with args MockTextCtrl (1,)\n"
                 "called TextCtrl.__init__ with args"
-                f" ({testobj.scrl},) {{'value': '', 'size': (320, -1)}}\n"
+                f" ({scrl},) {{'value': '', 'size': (320, -1)}}\n"
                 "called vert sizer.Add with args MockTextCtrl (1,)\n"
                 "called hori sizer.Add with args MockBoxSizer (0, 8224, 5)\n"
                 "called  sizer.Add with args MockBoxSizer (0, 8192)\n"
@@ -3180,7 +3194,7 @@ class TestExtraSettingsDialogGui:
                 "called ScrolledPanel.Fit with args ()\n"
                 f"called ScrolledPanel.ScrollChildIntoView with arg {result[3]}\n"
                 "called  sizer.Layout with args ()\n")
-        result = testobj.add_row(gsizer, name='xxx', value='yyy', desc='zzz')
+        result = testobj.add_row((scrl, gsizer), name='xxx', value='yyy', desc='zzz')
         assert isinstance(result[0], testee.wx.CheckBox)
         assert isinstance(result[1], testee.wx.TextCtrl)
         assert isinstance(result[2], testee.wx.TextCtrl)
@@ -3188,19 +3202,19 @@ class TestExtraSettingsDialogGui:
         assert capsys.readouterr().out == (
                 "called BoxSizer.__init__ with args (4,)\n"
                 "called BoxSizer.__init__ with args (4,)\n"
-                f"called CheckBox.__init__ with args ({testobj.scrl},) {{}}\n"
+                f"called CheckBox.__init__ with args ({scrl},) {{}}\n"
                 "called hori sizer.Add with args MockCheckBox (0, 2064, 5)\n"
                 "called TextCtrl.__init__ with args"
-                f" ({testobj.scrl},) {{'value': 'xxx', 'size': (120, -1)}}\n"
+                f" ({scrl},) {{'value': 'xxx', 'size': (120, -1)}}\n"
                 "called text.SetEditable with arg False\n"
                 "called hori sizer.Add with args MockTextCtrl (0, 48, 2)\n"
                 "called hori sizer.Add with args MockBoxSizer (0,)\n"
                 "called BoxSizer.__init__ with args (8,)\n"
                 "called TextCtrl.__init__ with args"
-                f" ({testobj.scrl},) {{'value': 'yyy', 'size': (320, -1)}}\n"
+                f" ({scrl},) {{'value': 'yyy', 'size': (320, -1)}}\n"
                 "called vert sizer.Add with args MockTextCtrl (1,)\n"
                 "called TextCtrl.__init__ with args"
-                f" ({testobj.scrl},) {{'value': 'zzz', 'size': (320, -1)}}\n"
+                f" ({scrl},) {{'value': 'zzz', 'size': (320, -1)}}\n"
                 "called vert sizer.Add with args MockTextCtrl (1,)\n"
                 "called hori sizer.Add with args MockBoxSizer (0, 8224, 5)\n"
                 "called  sizer.Add with args MockBoxSizer (0, 8192)\n"
@@ -3215,7 +3229,7 @@ class TestExtraSettingsDialogGui:
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.sizer = mockwx.MockBoxSizer()
         gsizer = mockwx.MockBoxSizer()
-        testobj.scrl = mockwx.MockScrolledPanel()
+        scrl = mockwx.MockScrolledPanel()
         widget1 = mockwx.MockControl()
         widget2 = mockwx.MockControl()
         widget3 = mockwx.MockControl()
@@ -3227,7 +3241,7 @@ class TestExtraSettingsDialogGui:
                                            "called Control.__init__\n"
                                            "called Control.__init__\n"
                                            "called Control.__init__\n")
-        testobj.delete_row(gsizer, 1, [widget1, widget2, widget3, widget4])
+        testobj.delete_row((scrl, gsizer), 1, [widget1, widget2, widget3, widget4])
         assert capsys.readouterr().out == ("called BoxSizer.Remove with args (4,)\n"
                                            "called BoxSizer.Remove with args (5,)\n"
                                            "called BoxSizer.Remove with args (6,)\n"
