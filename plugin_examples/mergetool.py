@@ -285,7 +285,7 @@ class Merger:
             return None
         newsearch, search, results = search
         current = self.gui.get_selected_item(itemlist)
-        if current == -1:  # FIXME: hier niet ook kijken naar None?
+        if current == -1 or current is None:
             current = self.gui.get_last_item(itemlist)
         if newsearch:
             # positioneren vóór huidige en klaar
@@ -351,8 +351,12 @@ class Merger:
         """
         fromlist, fromcol = fromstuff
         to_list, to_col = to_stuff
-        findstr = self.gui.get_item_text(fromlist, self.gui.get_selected_item(fromlist), fromcol)
-        result = self.gui.find_listitems(to_list, findstr, to_col)
+        test = self.gui.get_selected_item(fromlist)
+        if test is None or test == -1:
+            result = None
+        else:
+            findstr = self.gui.get_item_text(fromlist, test, fromcol)
+            result = self.gui.find_listitems(to_list, findstr, to_col)
         return result[0] if result else None
 
     def confirm(self, event=None):
