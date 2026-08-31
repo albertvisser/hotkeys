@@ -401,6 +401,7 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
     def setup_empty_screen(self, nodata, title):
         """build a subscreen with only a message
         """
+        self.title = title
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(wx.StaticText(self, label=nodata))
         self._sizer.Add(sizer)
@@ -515,6 +516,37 @@ class SingleDataInterface(wx.Panel, listmix.ColumnSorterMixin):
         fld = wx.TextCtrl(self._frm, style=wx.TE_MULTILINE | wx.TE_READONLY)
         hsizer.Add(fld, 1, wx.EXPAND | wx.ALL, 5)
         return fld
+
+    def add_grid_to_line(self, hsizer):
+        "add a grid block to the line"
+        sizer = wx.FlexGridSizer(2, 2, 2)
+        hsizer.Add(sizer, 0, wx.LEFT, 5)
+        return sizer
+
+    def add_label_to_grid(self, gsizer, row, col, text, **kwargs):
+        "put the given text at the given position in the block"
+        fld = wx.StaticText(self._frm, label=text + " ")
+        gsizer.Add(fld, row, col)
+        return fld
+
+    def add_textfield_to_grid(self, gsizer, row, col, width=None, callback=None, **kwargs):
+        "add a field to enter text at the given position in the block"
+        if not width:
+            width = -1
+        fld = wx.TextCtrl(self._frm, size=(width, -1))
+        if callback:
+            fld.Bind(wx.EVT_TEXT, callback)
+        gsizer.Add(fld, row, col)
+        return fld
+
+    def add_combobox_to_grid(self, gsizer, row, col, items, width=None, **kwargs):
+        "add a combobox with the given caption and a standard callback to the block"
+        if not width:
+            width = -1
+        cmb = wx.ComboBox(self._frm, size=(width, -1), style=wx.CB_READONLY, choices=items)
+        cmb.Bind(wx.EVT_COMBOBOX, self.master.on_combobox)
+        gsizer.Add(cmb, row, col)
+        return cmb
 
     def set_extrapanel_editable(self, screenfields, buttons, switch):
         """open up fields in extra screen when applicable
@@ -1124,7 +1156,7 @@ class DeleteDialogGui(wx.Dialog):
     """
     def __init__(self, master, parent, title):
         self.master = master
-        super().__init__(parent)
+        super().__init__(parent, title=title)
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer.SetSizeHints(self)
         self.SetSizer(self.sizer)
@@ -1439,8 +1471,8 @@ class ExtraSettingsDialogGui(wx.Dialog):
         "add a scrollarea for the settings definitions to the block"
         scrl = wxsp.ScrolledPanel(self.pnl, style=wx.BORDER_SIMPLE)
         # self.scrl = wx.ScrolledWindow(pnl, style=wx.BORDER_SIMPLE)
-        gsizer = wx.BoxSizer(wx.VERTICAL)
-        return scrl, gsizer
+        # gsizer = wx.BoxSizer(wx.VERTICAL)
+        return scrl  # , gsizer
 
     def finalize_inputarea(self, vsizer, scroller):
         "missing in qt variant, needed here to get proportions right"

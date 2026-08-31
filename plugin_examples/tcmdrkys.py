@@ -3,16 +3,7 @@
 import os
 import collections
 import editor.gui
-NEW = True
-if NEW:
-    import editor.plugins.mergetool as mergetool
-else:
-    import editor.plugins.mergetool_shared_old as shared
-    from ..toolkit import toolkit
-    if toolkit == 'qt':
-        from .mergetool_qt_old import MergeDialog
-    elif toolkit == 'wx':
-        from .mergetool_wx_old import MergeDialog
+import editor.plugins.mergetool.main as mergetool
 DFLT_TCLOC = "C:/totalcmd"
 
 
@@ -227,17 +218,10 @@ def build_data(page):
     page.matchfile = os.path.join(os.path.dirname(__file__), 'tc_default_hotkeys_mapped.csv')
     page.keylist_data = defaultkeys(page.settings['KB_PAD'])
     page.cmdlist_data = defaultcommands(page.settings['CI_PAD'])
-    if NEW:
-        page.matchlist_data = mergetool.load_matchdata(page.matchfile)
-        ok = editor.gui.show_dialog(mergetool.Merger(page, page.gui).gui)
-    else:
-        page.matchlist_data = shared.load_matchdata(page.matchfile)
-        ok = editor.gui.show_dialog(MergeDialog(page.gui, page))
+    page.matchlist_data = mergetool.load_matchdata(page.matchfile)
+    ok = editor.gui.show_dialog(mergetool.Merger(page, page.gui).gui)
     if ok:
-        if NEW:
-            mergetool.save_matchdata(page.tempdata, page.matchfile)
-        else:
-            shared.save_matchdata(page.tempdata, page.matchfile)
+        mergetool.save_matchdata(page.tempdata, page.matchfile)
         shortcuts, ix = {}, 0
         for keytext, cmd in page.tempdata:
             key, mods = keytext.split(' ', 1)

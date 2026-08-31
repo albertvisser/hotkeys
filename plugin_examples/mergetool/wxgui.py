@@ -3,7 +3,7 @@
 import contextlib
 import wx
 # import editor.plugins.mergetool_shared as shared
-from ..wxgui import MyListCtrl     # wx.ListCtrl with mixins
+from ...wxgui import MyListCtrl     # wx.ListCtrl with mixins
 
 
 # class MergeDialog(shared.MergeMixin, wx.Dialog):
@@ -165,8 +165,9 @@ class MergeDialogGui(wx.Dialog):
         self.SetSizer(vbox)
         # vbox.SetSizeHints(self)  # dit dus juist niet; sizer bepaalt grootte van venster
 
-    def create_hotkey(self, text, callback, keyseq, desc):
+    def create_hotkey(self, *args):  # text, callback, keyseq, desc):
         "create shortcuts for actions"
+        text, callback, keyseq = args[:3]
         menuitem = wx.MenuItem(None, -1, text)
         self.Bind(wx.EVT_MENU, callback, menuitem)
         accel = wx.AcceleratorEntry(cmd=menuitem.GetId())

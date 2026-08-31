@@ -1,11 +1,11 @@
-"""unittests for ./plugin_examples/mergetool.py
+"""unittests for ./plugin_examples/mergetool/mergetool.py
 """
 import types
-from editor.plugins import mergetool as testee
+from editor.plugins.mergetool import main as testee
 
 
 def test_load_matchdata(monkeypatch, capsys, tmp_path):
-    """unittest for mergetool.load_matchdata
+    """unittest for mergetool.main.load_matchdata
     """
     matchfile = tmp_path / 'matches'
     assert testee.load_matchdata(matchfile) == []
@@ -16,7 +16,7 @@ def test_load_matchdata(monkeypatch, capsys, tmp_path):
 
 
 def test_save_matchdata(monkeypatch, capsys, tmp_path):
-    """unittest for mergetool.save_matchdata
+    """unittest for mergetool.main.save_matchdata
     """
     matchfile = tmp_path / 'matches'
     testee.save_matchdata([], matchfile)
@@ -112,10 +112,10 @@ class MockGui:
 
 
 class TestMerger:
-    """unittests for mergetool.Merger
+    """unittests for mergetool.main.Merger
     """
     def setup_testobj(self, monkeypatch, capsys):
-        """stub for mergetool.Merger object
+        """stub for mergetool.main.Merger object
 
         create the object skipping the normal initialization
         intercept messages during creation

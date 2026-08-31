@@ -436,6 +436,38 @@ class SingleDataInterface(qtw.QFrame):
         hbox.addWidget(fld, 1)   # proportie wordt gebruikt om de eventuele extra kolom in te perken
         return fld
 
+    def add_grid_to_line(self, hbox):
+        "add a grid block to the line"
+        sizer = qtw.QGridLayout()
+        hbox.addLayout(sizer)
+        return sizer
+
+    def add_label_to_grid(self, gbox, row, col, text, **kwargs):
+        "put the given text at the given position in the block"
+        fld = qtw.QLabel(text, self._frm)
+        gbox.addWidget(fld, row, col)
+        return fld
+
+    def add_textfield_to_grid(self, gbox, row, col, width=None, callback=None, **kwargs):
+        "add a field to enter text at the given position in the block"
+        fld = qtw.QLineEdit(self._frm)
+        if width:
+            fld.setMaximumWidth(width)
+        if callback:
+            fld.textChanged.connect(callback)
+        gbox.addWidget(fld, row, col)
+        return fld
+
+    def add_combobox_to_grid(self, gbox, row, col, items, width=None, **kwargs):
+        "add a combobox with the given caption and a standard callback to the block"
+        cb = qtw.QComboBox(self._frm)
+        if width:
+            cb.setMaximumWidth(width)
+        cb.addItems(items)
+        cb.currentTextChanged[str].connect(functools.partial(self.master.on_combobox, cb, str))
+        gbox.addWidget(cb, row, col)
+        return cb
+
     def set_extrapanel_editable(self, screenfields, buttons, switch):
         """open up fields in extra screen when applicable
         """
@@ -656,7 +688,7 @@ def get_file_to_open(win, oms='', extension='', start=''):
     """toon een dialoog waarmee een file geopend kan worden om te lezen
     """
     what = shared.get_open_title(win, 'C_SELFIL', oms)
-    fname, ok = qtw.QFileDialog.getOpenFileName(win, what, directory=start, filter=extension)
+    fname = qtw.QFileDialog.getOpenFileName(win, what, directory=start, filter=extension)[0]
     return fname
 
 
@@ -664,7 +696,7 @@ def get_file_to_save(win, oms='', extension='', start=''):
     """toon een dialoog waarmee een file geopend kan worden om te schrijven
     """
     what = shared.get_open_title(win, 'C_SELFIL', oms)
-    fname, ok = qtw.QFileDialog.getSaveFileName(win, what, filter=extension)
+    fname = qtw.QFileDialog.getSaveFileName(win, what, filter=extension)[0]
     return fname
 
 

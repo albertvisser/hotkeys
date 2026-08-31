@@ -962,7 +962,7 @@ def test_savekeys(monkeypatch, capsys):
     def mock_parse(self, *args):
         print('called ET.ElementTree.parse with args', args)
         root = MockElement('doublecmd', DCVersion='dcv')
-        head = MockSubElement(root, 'Hotkeys', Version='ver')
+        MockSubElement(root, 'Hotkeys', Version='ver')
         return MockElementTree(root)
     monkeypatch.setattr(testee, 'show_cancel_message', mock_show)
     monkeypatch.setattr(testee, 'get_file_to_save', mock_get)
@@ -1130,6 +1130,7 @@ def test_get_frameheight():
     """unittest for dckeys.get_frameheight
     """
     assert testee.get_frameheight() == 120
+
 
 def test_update_descriptions(monkeypatch):
     """unittest for dckeys.update_descriptions

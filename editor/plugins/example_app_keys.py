@@ -1,10 +1,31 @@
 """Hotkeys plugin example
-
-this module contains the general, non gui-toolkit specific part of the code
 """
+from ..toolkit import toolkit
 # uncomment these where appropriate
 # import collections
-# from example_app_keys_gui import layout_extra_fields_*  # om dit beschikbaar te maken voor import
+
+# uncomment these to implement routines for converting "otherstuff" elements that can't be stored
+# in json format
+# def update_otherstuff_outbound():
+#     """modify dict keys from list to space-separated string to accomodate json format
+#     """
+#     newstuff = {}
+#     for key, value in otherstuff["..."].items():
+#         newkey = ' '.join(list(key))
+#         if isinstance(value, set):
+#             value = list(value)
+#         newstuff[newkey] = value
+#     otherstuff["..."] = newstuff
+#     return otherstuff
+# def update_otherstuff_inbound():
+#     """convert dict keys from space-separated string to key-modifier-context format
+#     """
+#     newstuff = {}
+#     for key, value in otherstuff["..."].items():
+#         newkey = key.split(' ')  # split explicitely on one space
+#         newstuff[newkey] = value
+#     otherstuff["..."] = newstuff
+#     return otherstuff
 
 # uncomment this to define a routine to (re)build the csv file from source data
 # ** corresponds to the Rebuild_data setting **
@@ -32,3 +53,21 @@ this module contains the general, non gui-toolkit specific part of the code
 # ** corresponds to the RedefineKeys setting **
 # def savekeys(parent):
 #     pass
+
+# uncomment this if you need a non-standard height for the desription field and the extra fields
+# next to it
+# def get_frameheight():
+#     "return the height for the descriptions field if different from the default"
+#     return x
+
+# uncomment and implement this to preserve descriptions not found in the tool data
+# -incoming newdescs need to be stored in win.descriptions and win.otherstuff
+# -they also need to be extracted into the description part of the win.data items (for display)
+# def update_descriptions(win, newdescs):
+#     """merge edited descriptions back into the data to save
+#     """
+#     win.descriptions = newdescs
+#     win.otherstuff['...'] = win.descriptions
+#     for key, data in win.data.items():
+#         if data[..] in win.descriptions and data[-1] != win.descriptions[data['']]:
+#             win.data[key] = tuple(list(data[:-1]) + [win.descriptions[data[..]]])

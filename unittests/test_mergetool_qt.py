@@ -1,15 +1,15 @@
-"""unittests for ./plugin_examples/mergetool_qt.py
+"""unittests for ./plugin_examples/mergetool/mergetool_qt.py
 """
 import types
-from editor.plugins import mergetool_qt as testee
+from editor.plugins.mergetool import qtgui as testee
 from mockgui import mockqtwidgets as mockqtw
 
 
 class TestMergeDialogGui:
-    """unittests for mergetool_qt.MergeDialogGui
+    """unittests for mergetool.qtgui.MergeDialogGui
     """
     def setup_testobj(self, monkeypatch, capsys):
-        """stub for mergetool_qt.MergeDialogGui object
+        """stub for mergetool.qtgui.MergeDialogGui object
 
         create the object skipping the normal initialization
         intercept messages during creation
@@ -296,7 +296,7 @@ class TestMergeDialogGui:
         class MockTree:
             "teststub"
             def topLevelItemCount(self):
-                print(f'called Tree.topLevelItemCount')
+                print('called Tree.topLevelItemCount')
                 return count
             def topLevelItem(self, ix):
                 print(f'called Tree.topLevelItem with arg {ix}')

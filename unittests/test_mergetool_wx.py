@@ -1,15 +1,15 @@
-"""unittests for ./plugin_examples/mergetool_wx.py
+"""unittests for ./plugin_examples/mergetool/mergetool_wx.py
 """
-import types
+# import types
 from mockgui import mockwxwidgets as mockwx
-from editor.plugins import mergetool_wx as testee
+from editor.plugins.mergetool import wxgui as testee
 
 
 class TestMergeDialogGui:
-    """unittests for mergetool_wx.MergeDialogGui
+    """unittests for mergetool.wxgui.MergeDialogGui
     """
     def setup_testobj(self, monkeypatch, capsys):
-        """stub for mergetool_wx.MergeDialogGui object
+        """stub for mergetool.wxgui.MergeDialogGui object
 
         create the object skipping the normal initialization
         intercept messages during creation
@@ -316,7 +316,7 @@ class TestMergeDialogGui:
         assert capsys.readouterr().out == ("called ListCtrl.GetItemCount\n"
                                            "called ListCtrl.GetItemText with args (0, 0)\n"
                                            "called ListCtrl.GetItemText with args (1, 0)\n")
-        assert testobj.find_in_listbox(listbox, 'twO') == None
+        assert testobj.find_in_listbox(listbox, 'twO') is None
         assert capsys.readouterr().out == ("called ListCtrl.GetItemCount\n"
                                            "called ListCtrl.GetItemText with args (0, 0)\n"
                                            "called ListCtrl.GetItemText with args (1, 0)\n")

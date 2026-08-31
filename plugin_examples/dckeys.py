@@ -6,12 +6,13 @@ import os
 import collections
 import subprocess
 import shutil
-import csv
 import xml.etree.ElementTree as ET
 import bs4 as bs  # import BeautifulSoup
-from ..gui import (show_cancel_message, get_file_to_open, get_file_to_save, show_dialog,
+from ..gui import (show_cancel_message, get_file_to_open, get_file_to_save,  # show_dialog,
                    show_message, ask_ync_question)
-from .dckeys_gui import layout_extra_fields  # , DcCompleteDialog
+# from .dckeys_gui import layout_extra_fields  # , DcCompleteDialog
+# from ..toolkit import toolkit
+
 
 CONFPATH = '/home/albert/.config/doublecmd'
 # DOCSPATH = '/usr/share/doublecmd/doc/en'
@@ -234,7 +235,8 @@ def build_data(page):
     olddescs = page.descriptions    # veilig stellen om straks te vergelijken
                                     # en te bewaren wat niet uit de tool settings komt
     builder = CsvBuilder(page)
-    kbfile, dc_keys, dc_cmds, dc_sett, dc_desc = builder.get_settings_pathnames()
+    # kbfile, dc_keys, dc_cmds, dc_sett, dc_desc = builder.get_settings_pathnames()
+    kbfile, dc_keys, dc_cmds, dc_sett = builder.get_settings_pathnames()[:4]
     # breakpoint()
     while True:
         new_kbfile = builder.check_path_setting(kbfile)
@@ -328,7 +330,7 @@ class CsvBuilder:
         """show instructions and ask for keyboard shortcuts file to use
         """
         kbfile = ''
-        ok, cancel = ask_ync_question(self.page.gui, text=instructions)
+        ok = ask_ync_question(self.page.gui, text=instructions)[0]
         if ok:
             kbfile = get_file_to_open(self.page.gui, extension='SCF files (*.scf)',
                                       start=initial)  # self.kbfile)
@@ -638,6 +640,7 @@ def savekeys(page):
         if context != oldform:
             newform = ET.SubElement(head, 'Form', Name=context)
             oldform = context
+        # wat als context == oldfrom, dan failt het volgende statement
         hotkey = ET.SubElement(newform, 'Hotkey')
         shortcut = ET.SubElement(hotkey, 'Shortcut')
         shortcut.text = build_shortcut(key, mods)

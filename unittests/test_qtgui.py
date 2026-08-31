@@ -871,6 +871,7 @@ class TestTabbedInterface:
                                            f"called StackedWidget.removeWidget with arg {win}\n")
 
 
+# 440-442, 446-448, 452-458, 462-468
 class TestSingleDataInterface:
     """unittests for qtgui.SingleDataInterface
     """
@@ -1128,6 +1129,87 @@ class TestSingleDataInterface:
                 f"called Editor.__init__ with args ({testobj._frm},)\n"
                 "called Editor.setReadOnly with arg `True`\n"
                 "called HBox.addWidget with arg MockEditorWidget\n")
+
+    def test_add_grid_to_line(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.add_grid_to_line
+        """
+        monkeypatch.setattr(testee.qtw, 'QGridLayout', mockqtw.MockGridLayout)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        hbox = mockqtw.MockHBoxLayout()
+        assert capsys.readouterr().out == "called HBox.__init__\n"
+        result = testobj.add_grid_to_line(hbox)
+        assert isinstance(result, testee.qtw.QGridLayout)
+        assert capsys.readouterr().out == (
+                "called Grid.__init__\n"
+                "called HBox.addLayout with arg MockGridLayout\n")
+
+    def test_add_label_to_grid(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.add_label_to_grid
+        """
+        monkeypatch.setattr(testee.qtw, 'QLabel', mockqtw.MockLabel)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj._frm = mockqtw.MockFrame()
+        gbox = mockqtw.MockGridLayout()
+        assert capsys.readouterr().out == "called Frame.__init__\ncalled Grid.__init__\n"
+        result = testobj.add_label_to_grid(gbox, 1, 2, 'xxx')
+        assert isinstance(result, testee.qtw.QLabel)
+        assert capsys.readouterr().out == (
+                f"called Label.__init__ with args ('xxx', {testobj._frm})\n"
+                "called Grid.addWidget with arg MockLabel at (1, 2)\n")
+
+    def test_add_textfield_to_grid(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.add_textfield_to_grid
+        """
+        def callback():
+            "dummy function"
+        monkeypatch.setattr(testee.qtw, 'QLineEdit', mockqtw.MockLineEdit)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj._frm = mockqtw.MockFrame()
+        gbox = mockqtw.MockGridLayout()
+        assert capsys.readouterr().out == "called Frame.__init__\ncalled Grid.__init__\n"
+        result = testobj.add_textfield_to_grid(gbox, 1, 2)
+        assert isinstance(result, testee.qtw.QLineEdit)
+        assert capsys.readouterr().out == (
+                f"called LineEdit.__init__ with args ({testobj._frm},)\n"
+                "called Grid.addWidget with arg MockLineEdit at (1, 2)\n")
+        result = testobj.add_textfield_to_grid(gbox, 1, 2, 8, callback)
+        assert isinstance(result, testee.qtw.QLineEdit)
+        assert capsys.readouterr().out == (
+                f"called LineEdit.__init__ with args ({testobj._frm},)\n"
+                "called LineEdit.setMaximumWidth with arg `8`\n"
+                f"called Signal.connect with args ({callback},)\n"
+                "called Grid.addWidget with arg MockLineEdit at (1, 2)\n")
+
+    def test_add_combobox_to_grid(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.add_combobox_to_grid
+        """
+        def callback():
+            "dummy function"
+        monkeypatch.setattr(mockqtw.MockComboBox, 'currentTextChanged', {str: mockqtw.MockSignal()})
+        assert capsys.readouterr().out == "called Signal.__init__\n"
+        monkeypatch.setattr(testee.qtw, 'QComboBox', mockqtw.MockComboBox)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.master.on_combobox = callback
+        testobj._frm = mockqtw.MockFrame()
+        gbox = mockqtw.MockGridLayout()
+        assert capsys.readouterr().out == "called Frame.__init__\ncalled Grid.__init__\n"
+        result = testobj.add_combobox_to_grid(gbox, 1, 2, 'xxx')
+        assert isinstance(result, testee.qtw.QComboBox)
+        assert capsys.readouterr().out == (
+                f"called ComboBox.__init__\n"
+                "called ComboBox.addItems with arg xxx\n"
+                "called Signal.connect with args"
+                f" (functools.partial({callback}, {result}, <class 'str'>),)\n"
+                "called Grid.addWidget with arg MockComboBox at (1, 2)\n")
+        result = testobj.add_combobox_to_grid(gbox, 1, 2, 'xxx', 10)
+        assert isinstance(result, testee.qtw.QComboBox)
+        assert capsys.readouterr().out == (
+                f"called ComboBox.__init__\n"
+                "called ComboBox.setMaximumWidth with arg `10`\n"
+                "called ComboBox.addItems with arg xxx\n"
+                "called Signal.connect with args"
+                f" (functools.partial({callback}, {result}, <class 'str'>),)\n"
+                "called Grid.addWidget with arg MockComboBox at (1, 2)\n")
 
     def test_set_extrapanel_editable(self, monkeypatch, capsys):
         """unittest for SingleDataInterface.set_extrapanel_editable

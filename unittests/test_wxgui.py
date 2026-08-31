@@ -1103,6 +1103,85 @@ class TestSingleDataInterface:
                 f"called TextCtrl.__init__ with args ({testobj._frm},) {{'style': 48}}\n"
                 "called  sizer.Add with args MockTextCtrl (1, 8432, 5)\n")
 
+# 520-522, 526-528, 532-538, 542-547
+    def test_add_grid_to_line(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.add_grid_to_line
+        """
+        monkeypatch.setattr(testee.wx, 'FlexGridSizer', mockwx.MockGridSizer)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        hsizer = mockwx.MockBoxSizer()
+        assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
+        result = testobj.add_grid_to_line(hsizer)
+        assert isinstance(result, testee.wx.FlexGridSizer)
+        assert capsys.readouterr().out == (
+                "called GridSizer.__init__ with args (2, 2, 2) {}\n"
+                "called  sizer.Add with args MockGridSizer (0, 16, 5)\n")
+
+    def test_add_label_to_grid(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.add_label_to_grid
+        """
+        monkeypatch.setattr(testee.wx, 'StaticText', mockwx.MockStaticText)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj._frm = mockwx.MockPanel()
+        gsizer = mockwx.MockGridSizer()
+        assert capsys.readouterr().out == ("called Panel.__init__ with args () {}\n"
+                                           "called GridSizer.__init__ with args () {}\n")
+        result = testobj.add_label_to_grid(gsizer, 1, 2, 'xxx')
+        assert isinstance(result, testee.wx.StaticText)
+        assert capsys.readouterr().out == (
+                f"called StaticText.__init__ with args ({testobj._frm},) {{'label': 'xxx '}}\n"
+                "called GridSizer.Add with args MockStaticText (1, 2)\n")
+
+    def test_add_textfield_to_grid(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.add_textfield_to_grid
+        """
+        def callback():
+            "dummy function"
+        monkeypatch.setattr(testee.wx, 'TextCtrl', mockwx.MockTextCtrl)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj._frm = mockwx.MockFrame()
+        gsizer = mockwx.MockGridSizer()
+        assert capsys.readouterr().out == ("called frame.__init__ with args () {}\n"
+                                           "called GridSizer.__init__ with args () {}\n")
+        result = testobj.add_textfield_to_grid(gsizer, 1, 2)
+        assert isinstance(result, testee.wx.TextCtrl)
+        assert capsys.readouterr().out == (
+                f"called TextCtrl.__init__ with args ({testobj._frm},) {{'size': (-1, -1)}}\n"
+                "called GridSizer.Add with args MockTextCtrl (1, 2)\n")
+        result = testobj.add_textfield_to_grid(gsizer, 1, 2, 8, callback)
+        assert isinstance(result, testee.wx.TextCtrl)
+        assert capsys.readouterr().out == (
+                f"called TextCtrl.__init__ with args ({testobj._frm},) {{'size': (8, -1)}}\n"
+                f"called TextCtrl.Bind with args ({testee.wx.EVT_TEXT}, {callback})\n"
+                "called GridSizer.Add with args MockTextCtrl (1, 2)\n")
+
+    def test_add_combobox_to_grid(self, monkeypatch, capsys):
+        """unittest for SingleDataInterface.add_combobox_to_grid
+        """
+        def callback():
+            "dummy function"
+        monkeypatch.setattr(testee.wx, 'ComboBox', mockwx.MockComboBox)
+        testobj = self.setup_testobj(monkeypatch, capsys)
+        testobj.master.on_combobox = callback
+        testobj._frm = mockwx.MockFrame()
+        gsizer = mockwx.MockGridSizer()
+        assert capsys.readouterr().out == ("called frame.__init__ with args () {}\n"
+                                           "called GridSizer.__init__ with args () {}\n")
+        result = testobj.add_combobox_to_grid(gsizer, 1, 2, 'xxx')
+        assert isinstance(result, testee.wx.ComboBox)
+        assert capsys.readouterr().out == (
+                "called ComboBox.__init__ with args"
+                f" ({testobj._frm},) {{'size': (-1, -1), 'style': 16, 'choices': 'xxx'}}\n"
+                f"called ComboBox.Bind with args ({testee.wx.EVT_COMBOBOX}, {callback}) {{}}\n"
+                "called GridSizer.Add with args MockComboBox (1, 2)\n")
+        result = testobj.add_combobox_to_grid(gsizer, 1, 2, 'xxx', 10)
+        assert isinstance(result, testee.wx.ComboBox)
+        assert capsys.readouterr().out == (
+                "called ComboBox.__init__ with args"
+                f" ({testobj._frm},) {{'size': (10, -1), 'style': 16, 'choices': 'xxx'}}\n"
+                f"called ComboBox.Bind with args ({testee.wx.EVT_COMBOBOX}, {callback}) {{}}\n"
+                "called GridSizer.Add with args MockComboBox (1, 2)\n")
+
     def test_set_extrapanel_editable(self, monkeypatch, capsys):
         """unittest for SingleDataInterface.set_extrapanel_editable
         """
@@ -3327,6 +3406,7 @@ class TestEntryDialogGui:
         testobj.sizer = mockwx.MockBoxSizer()
         assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
         result = testobj.add_table_to_display([('xxx', 10), ('yyy', 20)])
+        assert isinstance(result, testee.wxg.Grid)
         assert capsys.readouterr().out == (
                 "called BoxSizer.__init__ with args (4,)\n"
                 f"called Grid.__init__ with args ({testobj},) {{}}\n"
@@ -3454,6 +3534,7 @@ class TestCompleteDialogGui:
         testobj.sizer = mockwx.MockBoxSizer()
         assert capsys.readouterr().out == "called BoxSizer.__init__ with args ()\n"
         result = testobj.add_table_to_display([('xxx', 10), ('yyy', 20)])
+        assert isinstance(result, testee.wxg.Grid)
         assert capsys.readouterr().out == (
                 "called BoxSizer.__init__ with args (4,)\n"
                 f"called Grid.__init__ with args ({testobj},) {{}}\n"

@@ -1,9 +1,8 @@
 """Total  Commander plugin for HotKeys - main code
 """
-import contextlib
 import csv
 import editor.gui as gui
-from editor.plugins.mergetool_gui import MergeDialogGui
+from editor.plugins.mergetool.gui import MergeDialogGui
 
 
 def load_matchdata(matchfile):
@@ -15,7 +14,7 @@ def load_matchdata(matchfile):
     else:
         with _in:
             rdr = csv.reader(_in)
-            data = [row for row in rdr]
+            data = list(rdr)
     return data
 
 
@@ -52,7 +51,7 @@ class Merger:
         self.listkeys = self.gui.create_list(columns=['Key', 'Description'],
                                              callback=self.select_match_fromkeys)
         self.gui.add_row_to_col(col, self.listkeys, left_align=True)
-        self.findkeybutton = self.gui.create_findbutton( columns=('key', 'text'))
+        self.findkeybutton = self.gui.create_findbutton(columns=('key', 'text'))
         self.findkeytext = self.gui.create_text()
         self.nextkey = self.gui.create_button('&Next', self.findnextkey, size=50)
         self.prevkey = self.gui.create_button('&Prev', self.findprevkey, size=50)
@@ -63,7 +62,7 @@ class Merger:
         self.listcmds = self.gui.create_list(columns=['Command', 'Description'],
                                              callback=self.select_match_from_cmds)
         self.gui.add_row_to_col(col, self.listcmds, center=True)
-        self.findcmdbutton = self.gui.create_findbutton( columns=('cmd', 'text'))
+        self.findcmdbutton = self.gui.create_findbutton(columns=('cmd', 'text'))
         self.findcmdtext = self.gui.create_text()
         self.nextcmd = self.gui.create_button('Ne&Xt', self.findnextcmd, size=50)
         self.prevcmd = self.gui.create_button('Pre&V', self.findprevcmd, size=50)
@@ -91,23 +90,23 @@ class Merger:
     def create_shortcuts(self):
         "provide data for dialog command shortcuts"
         shortcuts = (
-                ('keylist', self.focus_keylist, 'Ctrl+1', 'Focus list of keyboard shortcuts'),
-                ('cmdlist', self.focus_cmdlist, 'Ctrl+2', 'Focus list of commands'),
-                ('matchlist', self.focus_matchlist, 'Ctrl+3', 'Focus list of connections'),
-                ('findkey', self.focus_findkey, 'Ctrl+F', 'Enter search phrase for shortcut'),
-                ('nextkey', self.findnextkey, 'Ctrl+N', 'Forward in shortcut search results'),
-                ('prevkey', self.findprevkey, 'Ctrl+P', 'Back in shortcut search results'),
-                ('findcmd', self.focus_findcmd, 'Ctrl+Shift+F', 'Enter search phrase for command'),
-                ('nextcmd', self.findnextcmd, 'Ctrl+Shift+N', 'Forward in command search results'),
-                ('prevcmd', self.findprevcmd, 'Ctrl+Shift+P', 'Back in command search results'),
-                ('match', self.make_match, 'Ctrl+M', 'Connect command to shortcut'),
-                ('delmatch', self.delete_match, 'Ctrl+Shift+M', 'Disconnect command from shortcut'),
-                ('load', self.load_matches, 'Ctrl+L', 'Load previously made connections'),
-                ('update', self.save_matches, 'Ctrl+U', 'Save all command-shortcut connections'),
-                ('clear', self.reset_all, 'Ctrl+Del', 'Discard all command-shortcut connections'),
-                ('save', self.confirm, 'Ctrl+S', 'Save connections to settings and leave dialog'),
-                ('quit', self.close, 'Ctrl+Q', 'Leave dialog without saving'),
-                ('help', self.help, 'F1', 'This help'))
+            ('keylist', self.focus_keylist, 'Ctrl+1', 'Focus list of keyboard shortcuts'),
+            ('cmdlist', self.focus_cmdlist, 'Ctrl+2', 'Focus list of commands'),
+            ('matchlist', self.focus_matchlist, 'Ctrl+3', 'Focus list of connections'),
+            ('findkey', self.focus_findkey, 'Ctrl+F', 'Enter search phrase for shortcut'),
+            ('nextkey', self.findnextkey, 'Ctrl+N', 'Forward in shortcut search results'),
+            ('prevkey', self.findprevkey, 'Ctrl+P', 'Back in shortcut search results'),
+            ('findcmd', self.focus_findcmd, 'Ctrl+Shift+F', 'Enter search phrase for command'),
+            ('nextcmd', self.findnextcmd, 'Ctrl+Shift+N', 'Forward in command search results'),
+            ('prevcmd', self.findprevcmd, 'Ctrl+Shift+P', 'Back in command search results'),
+            ('match', self.make_match, 'Ctrl+M', 'Connect command to shortcut'),
+            ('delmatch', self.delete_match, 'Ctrl+Shift+M', 'Disconnect command from shortcut'),
+            ('load', self.load_matches, 'Ctrl+L', 'Load previously made connections'),
+            ('update', self.save_matches, 'Ctrl+U', 'Save all command-shortcut connections'),
+            ('clear', self.reset_all, 'Ctrl+Del', 'Discard all command-shortcut connections'),
+            ('save', self.confirm, 'Ctrl+S', 'Save connections to settings and leave dialog'),
+            ('quit', self.close, 'Ctrl+Q', 'Leave dialog without saving'),
+            ('help', self.help, 'F1', 'This help'))
         for item in shortcuts:
             self.gui.create_hotkey(*item)
         return shortcuts
@@ -120,7 +119,7 @@ class Merger:
 
     def load_keys(self):
         """load keyboard definitions"""
-        self.keydict = {x: y for x, y in sorted(self.parent.keylist_data.items())}
+        self.keydict = dict(sorted(self.parent.keylist_data.items()))
         self.gui.clear_list(self.listkeys)
         self.keydata, self.keytexts = [], []
         for key, value in sorted(self.keydict.items()):
@@ -131,7 +130,7 @@ class Merger:
 
     def load_commands(self):
         """load command definitions"""
-        self.cmddict = {x: y for x, y in sorted(self.parent.cmdlist_data.items())}
+        self.cmddict = dict(sorted(self.parent.cmdlist_data.items()))
         self.gui.clear_list(self.listcmds)
         self.cmddata, self.cmdtexts = [], []
         for key, value in sorted(self.cmddict.items()):
@@ -162,8 +161,10 @@ class Merger:
     def make_match(self, event=None):
         """connect the choices and register connection in keycombo listbox
         """
-        keychoice, keytext, keyoms = self.gui.get_selected_listbox_data(self.listkeys)
-        cmdchoice, cmdtext = self.gui.get_selected_listbox_data(self.listcmds)[:-1]
+        # keychoice, keytext, keyoms = self.gui.get_selected_listbox_data(self.listkeys)
+        keychoice, keytext = self.gui.get_selected_listbox_data(self.listkeys)[:2]
+        # cmdchoice, cmdtext = self.gui.get_selected_listbox_data(self.listcmds)[:-1]
+        cmdtext = self.gui.get_selected_listbox_data(self.listcmds)[1]
         itemindex = self.gui.find_in_listbox(self.listmatches, keytext)
         if itemindex is not None:  # != -1:
             self.gui.replace_listbox_item(self.listmatches, itemindex, cmdtext)

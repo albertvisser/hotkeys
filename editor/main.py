@@ -34,8 +34,8 @@ CONF = BASE / 'editor' / 'hotkey_config.json'
 plugin_skeleton = '''\n
 """
 See example_app_keys.py for a description of the plugin API.
-Only define the functions that need to be defined,
-for everything that's not in here
+Only define the functions that need to be defined.
+For everything that's not in here,
 the default code in the main program will be used.
 """
 '''
@@ -241,6 +241,7 @@ class HotkeyPanel:
         self.initializing_screen = True
         self.gui = gui.SingleDataInterface(self.parent.gui, self)
 
+        # breakpoint()
         nodata, settings = self.read_settings_from_path(self.pad)
         self.settings, self.column_info, self.data, self.otherstuff = settings
         if nodata:
@@ -452,16 +453,6 @@ class HotkeyPanel:
             items = self.commandslist if 'C_CNTXT' not in self.fields else []
             self.cmb_commando = self.gui.add_combobox_to_line(line, width=150, items=items)
             screenfields.append(self.cmb_commando)
-        if 'C_PARMS' in self.fields:
-            # eigenlijk moet dit veld niet op deze regel komen, in elk geval niet voor DC
-            self.lbl_parms = self.gui.add_label_to_line(line, self.captions['C_PARMS'], add=False)
-            self.txt_parms = self.gui.add_textfield_to_line(line, width=280, add=False)
-            screenfields.append(self.txt_parms)
-        if 'C_CTRL' in self.fields:
-            # eigenlijk moet dit veld niet op deze regel komen, in elk geval niet voor DC
-            self.lbl_controls = self.gui.add_label_to_line(line, self.captions['C_CTRL'], add=False)
-            self.cmb_controls = self.gui.add_combobox_to_line(line, items=self.controlslist, add=False)
-            screenfields.append(self.cmb_controls)
         if 'C_BPARMS' in self.fields:
             self.pre_parms_label = self.gui.add_label_to_line(line, self.captions['C_BPARMS'])
             self.pre_parms_text = self.gui.add_textfield_to_line(line)
@@ -481,8 +472,18 @@ class HotkeyPanel:
         if 'C_DESC' in self.fields:
             self.txt_oms = self.gui.add_descfield_to_line(line)  # , frameheight)
         # als DC dan extra velden aan de zijkant tonen
-        if hasattr(self.reader, 'layout_extra_fields'):
-            self.reader.layout_extra_fields(self, line)  # user exit
+        if 'C_PARMS' in self.fields or 'C_CTRL' in self.fields:
+            gbox = self.gui.add_grid_to_line(line)
+        if 'C_PARMS' in self.fields:
+            self.lbl_parms = self.gui.add_label_to_grid(gbox, 0, 0, self.captions['C_PARMS'])
+            self.txt_parms = self.gui.add_textfield_to_grid(gbox, 0, 1, width=280)
+            screenfields.append(self.txt_parms)
+        if 'C_CTRL' in self.fields:
+            self.lbl_controls = self.gui.add_label_to_grid(gbox, 1, 0, self.captions['C_CTRL'])
+            self.cmb_controls = self.gui.add_combobox_to_grid(gbox, 1, 1, items=self.controlslist)
+            screenfields.append(self.cmb_controls)
+        # if hasattr(self.reader, 'layout_extra_fields'):
+        #     self.reader.layout_extra_fields(self, line)  # user exit
         return screenfields
 
     def set_title(self, modified=None):
@@ -812,7 +813,8 @@ class HotkeyPanel:
     def apply_changes(self, found, indx, keydefdata):
         "effectuate the changes as indicated in the gui"
         # key, mods, cmnd, context = keydefdata - we moeten kijken naar self._newdata (alles)
-        item, pos = self.gui.get_listbox_selection(self.p0list)
+        # item, pos = self.gui.get_listbox_selection(self.p0list)
+        pos = self.gui.get_listbox_selection(self.p0list)[1]
         # pos = self.gui.get_listitem_position(self.p0list, item)
         if found:
             for fieldnum, field in enumerate(self.fields):
@@ -1634,7 +1636,8 @@ class FilesDialog:
         for entry in name_path_list:
             name, datafilename = entry
             if name not in [x for x, y in self.parent.ini['plugins']]:
-                if not self.check_plugin_settings(name, datafilename, settingsdata[name]):
+                # if not self.check_plugin_settings(name, datafilename, settingsdata[name]):
+                if not self.check_plugin_settings(datafilename, settingsdata[name]):
                     return False
                 self.parent.pluginfiles[name] = settingsdata[name][0]
         for filename in names_to_remove:
@@ -1650,7 +1653,8 @@ class FilesDialog:
             self.parent.ini['startup'] = shared.mode_r
         return True
 
-    def check_plugin_settings(self, name, filename, settingsdata):
+    # def check_plugin_settings(self, name, filename, settingsdata):
+    def check_plugin_settings(self, filename, settingsdata):
         """check if data for the plugin was entered correctly and is usable
         """
         if not filename:
@@ -1836,12 +1840,12 @@ class ColumnSettingsDialog:
                 self.parent.new_column_info[ix] = (self.col_textids[self.col_names.index(value[0])],
                                                    *value[1:])
         if new_titles:
-            canceled, titles, colinfo = self.build_new_title_data(new_titles, column_info)
+            canceled, titles = self.build_new_title_data(new_titles, column_info)[:2]
             if canceled:
                 return False
             for id_, name in titles:
-                self.captions[id_] = name
-                self.book.page.captions[id_] = name
+                self.parent.captions[id_] = name
+                self.parent.book.page.captions[id_] = name
                 # for value in self.new_column_info:
                 for ix, value in enumerate(self.parent.new_column_info):
                     if value[0] == name:
@@ -1904,15 +1908,13 @@ class NewColumnsDialog:
             self.widgets.append(entry_row)
         self.gui.add_okcancel_buttons()
 
-    # accept roept Editor.accept_newcolumns aan
-    # def accept_newcolumns(self, entries):
     def confirm(self):
         "check and confirm input from newcolumns dialog"
         languages = self.parent.dialog_data['languages']
         modeltext = self.parent.dialog_data['textid']
         # get all the symbols from a language file
         used_symbols = []
-        with (shared.HERELANG / self.ini['lang']).open() as _in:
+        with (shared.HERELANG / self.parent.ini['lang']).open() as _in:
             for line in _in:
                 if line.strip() and not line.startswith('#'):
                     used_symbols.append(line.split()[0])

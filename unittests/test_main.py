@@ -26,6 +26,9 @@ class MockSDI:
     def add_checkbox_to_line(self, *args):
         print("called SDI.add_checkbox_to_line with args", args)
         return 'checkbox'
+    def add_combobox_to_grid(self, *args, **kwargs):
+        print("called SDI.add_combobox_to_grid with args", args, kwargs)
+        return 'combobox'
     def add_combobox_to_line(self, *args, **kwargs):
         print("called SDI.add_combobox_to_line with args", args, kwargs)
         return 'combobox'
@@ -34,6 +37,12 @@ class MockSDI:
         return 'textarea'
     def add_extra_fields(self):
         print('called SDI.add_extra_fields')
+    def add_grid_to_line(self, *args, **kwargs):
+        print("called SDI.add_grid_to_line with args", args, kwargs)
+        return 'grid'
+    def add_label_to_grid(self, *args, **kwargs):
+        print("called SDI.add_label_to_grid with args", args, kwargs)
+        return 'label'
     def add_label_to_line(self, *args, **kwargs):
         print("called SDI.add_label_to_line with args", args, kwargs)
         return 'label'
@@ -41,6 +50,9 @@ class MockSDI:
         print('called SDI.add_listitem with args', args)
     def add_separator_to_line(self, line):
         print(f"called SDI.add_separator_to_line with arg {line}")
+    def add_textfield_to_grid(self, *args, **kwargs):
+        print("called SDI.add_textfield_to_grid with args", args, kwargs)
+        return 'textinput'
     def add_textfield_to_line(self, *args, **kwargs):
         print("called SDI.add_textfield_to_line with args", args, kwargs)
         return 'textinput'
@@ -1108,11 +1120,6 @@ class TestHotkeyPanel:
                 " ('line',) {'width': 110, 'items': ['contexts']}\n"
                 "called SDI.add_label_to_line with args ('line', 'cmnd') {}\n"
                 "called SDI.add_combobox_to_line with args ('line',) {'width': 150, 'items': []}\n"
-                "called SDI.add_label_to_line with args ('line', 'params') {'add': False}\n"
-                "called SDI.add_textfield_to_line with args ('line',) {'width': 280, 'add': False}\n"
-                "called SDI.add_label_to_line with args ('line', 'where') {'add': False}\n"
-                "called SDI.add_combobox_to_line with args ('line',)"
-                " {'items': ['controls'], 'add': False}\n"
                 "called SDI.add_label_to_line with args ('line', 'fore') {}\n"
                 "called SDI.add_textfield_to_line with args ('line',) {}\n"
                 "called SDI.add_label_to_line with args ('line', 'aft') {}\n"
@@ -1123,7 +1130,12 @@ class TestHotkeyPanel:
                 f"called SDI.add_button_to_line with args ('line', 'del', {testobj.on_delete})\n"
                 "called SDI.start_line with arg panel\n"
                 "called SDI.add_descfield_to_line with arg line\n"
-                f"called reader.layout_extra_fields with args ({testobj}, 'line')\n")
+                "called SDI.add_grid_to_line with args ('line',) {}\n"
+                "called SDI.add_label_to_grid with args ('grid', 0, 0, 'params') {}\n"
+                "called SDI.add_textfield_to_grid with args ('grid', 0, 1) {'width': 280}\n"
+                "called SDI.add_label_to_grid with args ('grid', 1, 0, 'where') {}\n"
+                "called SDI.add_combobox_to_grid with args ('grid', 1, 1)"
+                " {'items': ['controls']}\n")
         testobj.fields = ['C_KEY']
         testobj.keylist = ['keys']
         testobj.add_extrapanel_fields()
@@ -1141,8 +1153,7 @@ class TestHotkeyPanel:
                 "called SDI.add_separator_to_line with arg line\n"
                 f"called SDI.add_button_to_line with args ('line', 'save', {testobj.on_update})\n"
                 f"called SDI.add_button_to_line with args ('line', 'del', {testobj.on_delete})\n"
-                "called SDI.start_line with arg panel\n"
-                f"called reader.layout_extra_fields with args ({testobj}, 'line')\n")
+                "called SDI.start_line with arg panel\n")
 
     def test_set_title(self, monkeypatch, capsys):
         """unittest for HotkeyPanel.set_title
@@ -3910,7 +3921,8 @@ class TestFilesDialog:
             # "called write_config with arg '{'lang': 'en', 'plugins': [('zz', 'path/to/zz')],"
             # " 'startup': 'Remember', 'initial': 'yy'}'\n"
             "called FilesDialogGui.get_browser_value with arg path/to/xx\n"
-            "called Editor.check_plugin_settings with args ('xx', 'path/to/xx', ('path/to/xx',))\n")
+            # "called Editor.check_plugin_settings with args ('xx', 'path/to/xx', ('path/to/xx',))\n")
+            "called Editor.check_plugin_settings with args ('path/to/xx', ('path/to/xx',))\n")
 
         testobj.checks = [('checkbox', 'zz', 'path/to/zz')]
         testobj.settingsdata = {'xx': ('path/to/xx',), 'zz': ('path/to/zz',)}
@@ -3938,7 +3950,8 @@ class TestFilesDialog:
         assert testobj.parent.ini['plugins'] == []
         assert capsys.readouterr().out == (
             "called FilesDialogGui.get_browser_value with arg path/to/xx\n"
-            "called Editor.check_plugin_settings with args ('xx', 'path/to/xx', ('path/to/xx',))\n"
+            # "called Editor.check_plugin_settings with args ('xx', 'path/to/xx', ('path/to/xx',))\n"
+            "called Editor.check_plugin_settings with args ('path/to/xx', ('path/to/xx',))\n"
             "called update_paths with args ([('xx', 'path/to/xx')], {})\n")
 
     def test_check_plugin_settings(self, monkeypatch, capsys):
@@ -3976,10 +3989,10 @@ class TestFilesDialog:
         testobj.parent = types.SimpleNamespace(
                 captions={'I_FILLALL': 'fillall error', 'I_NOKDEF': 'nokeydef error: {}',
                           'I_NOPLNAM': 'noplnam error: {}', 'I_NOPLREF': 'noplref error: {}'})
-        assert not testobj.check_plugin_settings('pluginname', '', [])
+        assert not testobj.check_plugin_settings('', [])
         assert capsys.readouterr().out == (
                f"called gui.show_message with args ('{testobj.gui}',) {{'text': 'fillall error'}}\n")
-        assert testobj.check_plugin_settings('pluginname', 'datafilename', ('xxx', ''))
+        assert testobj.check_plugin_settings('datafilename', ('xxx', ''))
         assert capsys.readouterr().out == ''
         # assert not testobj.check_plugin_settings('pluginname', 'datafilename.csv', ('',))
         # assert capsys.readouterr().out == (
@@ -3987,19 +4000,19 @@ class TestFilesDialog:
         #         f"called gui.show_message with args ({testobj.gui},)"
         #         " {'text': 'nokeydef error: datafilename.csv'}\n")
         monkeypatch.setattr(testee, 'readjson', mock_readjson_2)
-        assert not testobj.check_plugin_settings('pluginname', 'datafilename.json', ('',))
+        assert not testobj.check_plugin_settings('datafilename.json', ('',))
         assert capsys.readouterr().out == (
                 "called readjson with arg 'datafilename.json'\n"
                 f"called gui.show_message with args ('{testobj.gui}',)"
                 " {'text': 'nokeydef error: datafilename.json'}\n")
         monkeypatch.setattr(testee, 'readjson', mock_readjson_3)
-        assert not testobj.check_plugin_settings('pluginname', 'datafilename.json', ('',))
+        assert not testobj.check_plugin_settings('datafilename.json', ('',))
         assert capsys.readouterr().out == (
                 "called readjson with arg 'datafilename.json'\n"
                 f"called gui.show_message with args ('{testobj.gui}',)"
                 " {'text': 'noplnam error: datafilename.json'}\n")
         monkeypatch.setattr(testee, 'readjson', mock_readjson_4)
-        assert not testobj.check_plugin_settings('pluginname', 'datafilename.json', ('',))
+        assert not testobj.check_plugin_settings('datafilename.json', ('',))
         assert capsys.readouterr().out == (
                 "called readjson with arg 'datafilename.json'\n"
                 "called importlib.import_module with args ('prog',)\n"
@@ -4007,13 +4020,13 @@ class TestFilesDialog:
                 " {'text': 'noplref error: datafilename.json'}\n")
         monkeypatch.setattr(testee, 'readjson', mock_readjson_3)
         monkeypatch.setattr(testee.importlib, 'import_module', mock_import_nok)
-        assert not testobj.check_plugin_settings('pluginname', 'datafilename.json', ('prgname',))
+        assert not testobj.check_plugin_settings('datafilename.json', ('prgname',))
         assert capsys.readouterr().out == (
                 "called importlib.import_module with args ('prgname',)\n"
                 f"called gui.show_message with args ('{testobj.gui}',)"
                 " {'text': 'noplref error: datafilename.json'}\n")
         monkeypatch.setattr(testee.importlib, 'import_module', mock_import_ok)
-        assert testobj.check_plugin_settings('pluginname', 'datafilename.json', ('prgname',))
+        assert testobj.check_plugin_settings('datafilename.json', ('prgname',))
         assert capsys.readouterr().out == "called importlib.import_module with args ('prgname',)\n"
 
 
@@ -4465,19 +4478,18 @@ class TestColumnSettingsDialog:
         monkeypatch.setattr(testee.gui, 'show_message', mock_show)
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.gui = MockGui()
-        testobj.parent = types.SimpleNamespace()
-        testobj.book = types.SimpleNamespace()
-        testobj.book.page = MockHotkeyPanel(testobj.book, '')
+        testobj.parent = types.SimpleNamespace(captions={})
+        testobj.parent.book = types.SimpleNamespace()
+        testobj.parent.book.page = MockHotkeyPanel(testobj.parent.book, '')
         assert capsys.readouterr().out == (
                 "called HotkeyPanel.__init__ with args (namespace(), '')\n")
-        testobj.captions = {}
-        testobj.book.page.captions = {}
+        testobj.parent.book.page.captions = {}
         testobj.build_new_title_data = mock_build
         testobj.data = [('x', '1', '0', 'False', '0'), ('y', '2', '1', 'False', '1'),
                         ('x', '3', '2', 'False', '2')]
         # assert testobj.accept_columnsettings(data) == (False, False)
         assert not testobj.confirm()
-        assert testobj.captions == {}
+        assert testobj.parent.captions == {}
         assert capsys.readouterr().out == (
                 "called ColumnSettingsDialogGui.get_combobox_value with arg x\n"
                 "called ColumnSettingsDialogGui.get_spinbox_value with arg 1\n"
@@ -4496,7 +4508,7 @@ class TestColumnSettingsDialog:
                         ('', '3', '2', 'False', '2')]
         # assert testobj.accept_columnsettings(data) == (False, False)
         assert not testobj.confirm()
-        assert testobj.captions == {}
+        assert testobj.parent.captions == {}
         assert capsys.readouterr().out == (
                 "called ColumnSettingsDialogGui.get_combobox_value with arg x\n"
                 "called ColumnSettingsDialogGui.get_spinbox_value with arg 1\n"
@@ -4515,7 +4527,7 @@ class TestColumnSettingsDialog:
                         ('z', '3', '2', 'False', '2')]
         # assert testobj.accept_columnsettings(data) == (False, False)
         assert not testobj.confirm()
-        assert testobj.captions == {}
+        assert testobj.parent.captions == {}
         assert capsys.readouterr().out == (
                 "called ColumnSettingsDialogGui.get_combobox_value with arg x\n"
                 "called ColumnSettingsDialogGui.get_spinbox_value with arg 1\n"
@@ -4536,15 +4548,15 @@ class TestColumnSettingsDialog:
                         ('zzz', '030', '3', 'False', '2'), ('q', '040', '1', 'False', 'new')]
         testobj.col_names = ['xxx', 'yyy', 'zzz']
         testobj.col_textids = ['id1', 'id2', 'id3']
-        testobj.book.page.column_info = []
+        testobj.parent.book.page.column_info = []
         # assert testobj.accept_columnsettings(data) == (False, True)
         assert not testobj.confirm()
         assert testobj.parent.new_column_info == [('xzz', 10, 'False', -1, '0'),
                                                   ('q', 40, 'False', 0, 'new'),
                                                   ('id2', 20, 'False', 1, '1'),
                                                   ('id3', 30, 'False', 2, '2')]
-        assert testobj.captions == {}
-        assert testobj.book.page.captions == {}
+        assert testobj.parent.captions == {}
+        assert testobj.parent.book.page.captions == {}
         assert capsys.readouterr().out == (
                 "called ColumnSettingsDialogGui.get_combobox_value with arg xzz\n"
                 "called ColumnSettingsDialogGui.get_spinbox_value with arg 010\n"
@@ -4565,8 +4577,8 @@ class TestColumnSettingsDialog:
                 "called Editor.build_new_title_data with args (['xzz', 'q'],"
                 " [('xzz', 10, 'False', -1, '0'), ('q', 40, 'False', 0, 'new'),"
                 " ('id2', 20, 'False', 1, '1'), ('id3', 30, 'False', 2, '2')])\n")
-        testobj.captions = {}
-        testobj.book.page.captions = {}
+        testobj.parent.captions = {}
+        testobj.parent.book.page.captions = {}
         testobj.build_new_title_data = mock_build_2
         # assert testobj.accept_columnsettings(data) == (True, False)
         assert testobj.confirm()
@@ -4574,8 +4586,8 @@ class TestColumnSettingsDialog:
                                                   ('ID2', 40, 'False', 0, 'new'),
                                                   ('id2', 20, 'False', 1, '1'),
                                                   ('id3', 30, 'False', 2, '2')]
-        assert testobj.captions == {'ID1': 'xzz', 'ID2': 'q'}
-        assert testobj.book.page.captions == {'ID1': 'xzz', 'ID2': 'q'}
+        assert testobj.parent.captions == {'ID1': 'xzz', 'ID2': 'q'}
+        assert testobj.parent.book.page.captions == {'ID1': 'xzz', 'ID2': 'q'}
         assert capsys.readouterr().out == (
                 "called ColumnSettingsDialogGui.get_combobox_value with arg xzz\n"
                 "called ColumnSettingsDialogGui.get_spinbox_value with arg 010\n"
@@ -4599,17 +4611,17 @@ class TestColumnSettingsDialog:
 
         testobj.data = [('xxx', '010', '0', 'False', '0'), ('yyy', '020', '1', 'False', '1'),
                         ('zzz', '030', '2', 'False', '2')]
-        testobj.captions = {}
-        testobj.book.page.captions = {}
+        testobj.parent.captions = {}
+        testobj.parent.book.page.captions = {}
         testobj.col_names = ['xxx', 'yyy', 'zzz']
-        testobj.book.page.column_info = []
+        testobj.parent.book.page.column_info = []
         # assert testobj.accept_columnsettings(data) == (True, False)
         assert testobj.confirm()
         assert testobj.parent.new_column_info == [('id1', 10, 'False', -1, '0'),
                                                   ('id2', 20, 'False', 0, '1'),
                                                   ('id3', 30, 'False', 1, '2')]
-        assert testobj.captions == {}
-        assert testobj.book.page.captions == {}
+        assert testobj.parent.captions == {}
+        assert testobj.parent.book.page.captions == {}
         assert capsys.readouterr().out == (
                 "called ColumnSettingsDialogGui.get_combobox_value with arg xxx\n"
                 "called ColumnSettingsDialogGui.get_spinbox_value with arg 010\n"
@@ -4803,7 +4815,7 @@ class TestNewColumnsDialog:
         testobj = self.setup_testobj(monkeypatch, capsys)
         testobj.parent = types.SimpleNamespace()
         testobj.gui = types.SimpleNamespace(get_textentry_value=mock_get)
-        testobj.ini = {'lang': 'en.lng'}
+        testobj.parent.ini = {'lang': 'en.lng'}
         testobj.parent.dialog_data = {'textid': 'C_XXX', 'new_titles': ['x'],
                                'languages': ['en.lng', 'nl.lng'], 'colno': 1}
         counter = 0

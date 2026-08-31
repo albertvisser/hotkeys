@@ -123,8 +123,9 @@ class MergeDialogGui(qtw.QDialog):
         "add the layout to the window"
         self.setLayout(vbox)
 
-    def create_hotkey(self, text, callback, keyseq, desc):
+    def create_hotkey(self, *args):  # text, callback, keyseq, desc):
         "create shortcuts for actions"
+        text, callback, keyseq = args[:3]
         act = gui.QAction(text, self)
         act.triggered.connect(callback)
         act.setShortcut(keyseq)
